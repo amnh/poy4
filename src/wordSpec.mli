@@ -52,5 +52,3 @@ val wordlength : word:t -> elem:string -> float
 (** [to_list t] returns an association list with the probability of each word
 * length in the word specifications [t]. *)
 val to_list : t -> (int * float) list
-
-val to_formatter : t -> Tags.output Sexpr.t

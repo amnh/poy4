@@ -215,7 +215,6 @@ let dependency_relations (init : Methods.script) =
                 | `Annchrom_to_Breakinv _
                 | `Change_Dyn_Pam _
                 | `Breakinv_to_Seq _
-                | `Seq_to_Kolmogorov _
                 | `Fixed_States _
                 | `Prioritize
                 | `ReWeight _
@@ -1340,7 +1339,6 @@ let script_to_string (init : Methods.script) =
                 | `Change_Dyn_Pam _
                 | `Chrom_to_Seq _
                 | `Breakinv_to_Seq _
-                | `Seq_to_Kolmogorov _
                 | `Fixed_States _
                 | `Prioritize
                 | `ReWeight _

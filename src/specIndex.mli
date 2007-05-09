@@ -43,4 +43,3 @@ val find : index:t -> name:string -> s
 val name : index:t -> item:s -> string
 val to_list : t -> (string * s) list
 val k : t -> float
-val to_formatter : t -> Tags.output

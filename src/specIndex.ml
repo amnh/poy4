@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SpecIndex" "$Revision: 1644 $"
+let () = SadmanOutput.register "SpecIndex" "$Revision: 1805 $"
 
 open StdLabels
 
@@ -76,24 +76,3 @@ let k c =
         res +. accu
     in
     List.fold_left ~f:process ~init:0.0 c
-
-
-let to_formatter s : Tags.output =
-    let mapper (name, item) =
-        let name = (Tags.KolSpecs.spec_name, name) in
-        match item with
-        | Alph t -> 
-                let clas = (Tags.KolSpecs.spec_class, Tags.KolSpecs.alphabet) in
-                `Single (Tags.KolSpecs.set_spec, [clas; name], `Structured
-                (AlphSpec.to_formatter t))
-        | Int t ->
-                let clas = (Tags.KolSpecs.spec_class, Tags.KolSpecs.integers) in
-                `Single (Tags.KolSpecs.set_spec, [clas; name], `Structured
-                (IntSpec.to_formatter t))
-        | Word t ->
-                let clas = (Tags.KolSpecs.spec_class, Tags.KolSpecs.words) in
-                `Single (Tags.KolSpecs.set_spec, [clas; name], `Structured
-                (WordSpec.to_formatter t))
-    in
-    let items = List.map mapper s in
-    (Tags.KolSpecs.spec_index, [], `Structured (`Set items))

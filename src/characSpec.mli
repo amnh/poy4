@@ -137,7 +137,5 @@ val get_decoder : t -> float
 * *)
 val k : t -> float
 
-val to_formatter : (string * t) list -> Tags.output
-
 val non_standard : t -> string list
 

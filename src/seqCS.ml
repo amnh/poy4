@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 1776 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 1805 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -550,85 +550,3 @@ let get_sequence_union code x =
 let encoding enc x =
     Codes.fold (fun _ x acc -> acc +. (Sequence.encoding enc x)) x.sequences 0.0
 
-module Kolmogorov = struct
-
-    let create_function distr =
-        let init = distr.Data.selfp in
-        match distr.Data.distr with
-        | Data.Items (IntSpec.Constant arr) ->
-                fun len -> init +. ((float_of_int len) *. arr.(0))
-        | Data.Items (IntSpec.Variable arr) ->
-                fun len -> init +. arr.(len)
-        | Data.MaxLength (len, IntSpec.Constant arr) ->
-                fun clen ->
-                    let c = float_of_int (clen / len)
-                    and r = clen mod len in
-                    (init *. (c +. 1.)) +. (arr.(0) *. c) +. ((float_of_int r) *.
-                    arr.(0))
-        | Data.MaxLength (len, IntSpec.Variable arr) ->
-                fun clen ->
-                    let c = float_of_int (clen / len)
-                    and r = clen mod len in
-                    (init *. (c +. 1.)) +. (arr.(len) *. c) +. arr.(r)
-
-    let correct_cost t m = 
-        let tcm = m.Data.dhs.Data.tcm2d in
-        match m.Data.ks.Data.kolmo_spec.Data.mo with
-        | Data.InDels _ 
-        | Data.InDelSub _ 
-        | Data.Subs _ -> 
-                { t with total_cost = t.total_cost /. Data.kolmo_round_factor }
-        | Data.AffInDelSub (ins, del, sub) ->
-                let ins = create_function ins
-                and del = create_function del 
-                and gap = Cost_matrix.Two_D.gap tcm in
-                let pair_cost _ (s1, s2) acc =
-                    let len = Sequence.length s1 
-                    and i = ref 0 in
-                    while !i < len do
-                        let b1 = Sequence.get s1 !i
-                        and b2 = Sequence.get s2 !i in
-                        if b1 <> gap && b2 <> gap then begin
-                            acc := 
-                                !acc +. ((float_of_int (Cost_matrix.Two_D.cost
-                                b1 b2 tcm)) /. Data.kolmo_round_factor);
-                            incr i;
-                        end else if b1 = gap && b2 <> gap then
-                            let total = 
-                                let len = 
-                                    incr i;
-                                    ref 1 
-                                in
-                                while (!i < !len) && (gap <> Sequence.get s1 !i) do
-                                    incr i;
-                                    incr len;
-                                done;
-                                !len
-                            in
-                            acc := !acc +. (ins total)
-                        else if b2 = gap && b1 <> gap then
-                            let total = 
-                                let len = 
-                                    incr i;
-                                    ref 0 
-                                in
-                                while (!i < !len) && (gap <> Sequence.get s2 !i) do
-                                    let b2 = Sequence.get s2 !i in
-                                    incr i;
-                                    incr len;
-                                    acc :=
-                                        !acc +. ((float_of_int
-                                        (Cost_matrix.Two_D.cost gap b2 tcm)) /.
-                                        Data.kolmo_round_factor);
-                                done;
-                                !len
-                            in
-                            acc := !acc +. (del total)
-                        else incr i
-                    done;
-                    acc
-                in
-                let cost = Codes.fold pair_cost t.aligned_children (ref 0.0) in
-                { t with total_cost = !cost }
-        | _ -> failwith "Still programming it"
-end

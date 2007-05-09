@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1801 2007-05-08 18:50:43Z andres $ *)
+(* $Id: charTransform.ml 1805 2007-05-09 21:46:45Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1801 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1805 $"
 
 module type S = sig
     type a 
@@ -778,8 +778,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             * transformation *)
             let dyn = 
                 (Data.get_code_from_characters_restricted `Dynamic data 
-                (`Some codes)) @
-                (Data.get_code_from_characters_restricted `Kolmogorov data
                 (`Some codes))
             in
             List.filter (fun x -> List.exists (fun y -> y = x) dyn) codes 

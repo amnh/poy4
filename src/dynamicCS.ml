@@ -406,9 +406,3 @@ let to_single parent mine =
 
 let to_single_root mine = to_single mine mine
 
-module Kolmogorov = struct
-    let correct_cost t m = 
-        match t with
-        | SeqCS t -> SeqCS (SeqCS.Kolmogorov.correct_cost t m)
-        | _ -> t
-end

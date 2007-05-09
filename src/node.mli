@@ -65,7 +65,6 @@ type cs =
     | Add of AddCS.t r                  (** A set of additive characters *)
     | Sank of SankCS.t r                (** A set of sankoff characters *)
     | Dynamic of DynamicCS.t r                  (** A set of dynamics *)
-    | Kolmo of KolmoCS.t r              (** A set of kolmogorov characters *)
     | Set of cs css r                   (** A set of other characters *)
 
 type exclude = ([`Excluded | `NotExcluded | `Either] * int * int * int) list

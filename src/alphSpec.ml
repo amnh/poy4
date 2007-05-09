@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AlphSpec" "$Revision: 1644 $"
+let () = SadmanOutput.register "AlphSpec" "$Revision: 1805 $"
 
 open StdLabels
 
@@ -62,12 +62,3 @@ let decoder x =
     let e = exp 1.0 in
     let len = float_of_int (List.length x) in
     ((e *. len) -. 1.0) /. (e -. 1.0)
-
-let to_formatter t = 
-    let mapper (item, prob) =
-        `Single 
-            (Tags.KolSpecs.alph_element, 
-            [(Tags.KolSpecs.value, item); (Tags.KolSpecs.prob, string_of_float
-            prob)], `Structured `Empty)
-    in
-    `Set (List.map mapper t)

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1732 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1805 $"
 
 exception NotASequence of int
 
@@ -1225,8 +1225,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     let create filter_fn codes data tree = 
         let codes = (* Check if the codes are sequence codes or not *) 
             List.filter (fun x -> 
-                if (List.exists (fun y -> x = y) data.Data.dynamics) ||
-                    (List.exists (fun y -> x = y) data.Data.kolmogorov) then true
+                if (List.exists (fun y -> x = y) data.Data.dynamics) then true
                 else begin
                     Status.user_message Status.Error
                     ("The character with code " ^ string_of_int x ^
@@ -1264,8 +1263,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             * transformation *)
             let dyn = 
                 (Data.get_code_from_characters_restricted `Dynamic data 
-                (`Some codes)) @
-                (Data.get_code_from_characters_restricted `Kolmogorov data
                 (`Some codes))
             in
             List.filter (fun x -> List.exists (fun y -> y = x) dyn) codes 

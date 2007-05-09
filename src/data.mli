@@ -111,32 +111,8 @@ type model =
 
 type arr = (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t
 
-type basic_kolmo_spec = {
-    tm : float list list;     (* The transformation cost matrix *)
-    be : arr;         (* Base encodings *)
-    simplebe : float array;              (** The original encoding cost *)
-    simplebed : float array;            (** The deletion cost in the tips *)
-    ins : float; (* Insertion encoding cost *)
-    del : float; (* Deletion encoding cost *)
-    sub : float; (* Substitution encoding cost *)
-    ins_opening : float;        (** Insertion opening *)
-    del_opening : float;        (** Deletion opening *)
-    sub_opening : float;        (** Substitution opening *)
-    mo : model; (* The model *)
-}
-
-type aux_kolmo_spec = {
-    funset : string;
-    alphset : string;
-    wordset : string;
-    intset : string;
-    kolmo_spec : basic_kolmo_spec;
-}
-
-
-type kolmo_spec = {
+type spec = {
     dhs : dynamic_hom_spec;
-    ks : aux_kolmo_spec;
 }
 
 (** A character specification. Contains the information regarding the
@@ -156,7 +132,6 @@ type specs =
      * alignments.  Also, we store the alphabet used. *)
     | Dynamic of dynamic_hom_spec
     | Set 
-    | Kolmogorov of kolmo_spec
 
 
 (** [specified] tells us whether or not the user left out the given character
@@ -304,7 +279,6 @@ type d = {
     additive : int list;
     sankoff : int list list;
     dynamics : int list;
-    kolmogorov : int list;
 
     complex_schema : Parser.SetGroups.t list;
     (** Tree for how to arrange taxa into complex terminals *)
@@ -418,12 +392,12 @@ val to_formatter : Tags.attributes -> d -> Tags.output
 
 val get_code_from_characters_restricted :
     [ `Dynamic |  `NonAdditive |
-        `Additive | `Sankoff | `Kolmogorov | `AllStatic | `AllDynamic ] ->
+        `Additive | `Sankoff | `AllStatic | `AllDynamic ] ->
              d -> characters -> int list
 
 val get_code_from_characters_restricted_comp :
     [ `Dynamic |  `NonAdditive |
-        `Additive | `Sankoff | `Kolmogorov | `AllStatic | `AllDynamic ] ->
+        `Additive | `Sankoff | `AllStatic | `AllDynamic ] ->
              d -> bool_characters -> int list
 
 val transform_dynamic :
@@ -467,8 +441,7 @@ val transform_dynamic :
    | `Chrom_to_Seq of 'a * 'b list
    | `Breakinv_to_Seq of 'a * 'b list
    | `Seq_to_Breakinv of 'a * 'b list
-   | `Seq_to_Chrom of 'a * 'b list
-   | `Seq_to_Kolmogorov of 'a * (string * string * string * string * string) ] ->
+   | `Seq_to_Chrom of 'a * 'b list ] ->
   d -> d
 
 
@@ -517,8 +490,7 @@ val transform_chrom_to_rearranged_seq :
    | `Change_Dyn_Pam of 'a * 'b list
    | `Chrom_to_Seq of 'a * 'b list
    | `Seq_to_Breakinv of 'a * 'b list
-   | `Seq_to_Chrom of 'a * 'b list
-   | `Seq_to_Kolmogorov of 'a * (string * string * string * string * string) ] ->
+   | `Seq_to_Chrom of 'a * 'b list ] ->
     'c -> (int * int array list All_sets.IntegerMap.t list) list list list -> d
 
 val print : d -> unit
@@ -582,8 +554,6 @@ val get_empty_seq: Alphabet.a -> Sequence.s seq_t
 
 val find_max_seq_id : d -> int
 val flush : d -> unit
-
-val kolmo_round_factor : float
 
 val transform_weight : [ `ReWeight of (bool_characters * float) | `WeightFactor of
 (bool_characters * float) ] -> d -> d

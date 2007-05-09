@@ -1,4 +1,4 @@
-# $Id: Makefile 1799 2007-05-08 01:01:22Z andres $
+# $Id: Makefile 1805 2007-05-09 21:46:45Z andres $
 
 # Instructions:
 # You can compile a debug bytecode app by specifying DEBUG=-g
@@ -145,7 +145,7 @@ ANNCHROM_OBJS = grappa/grappa.cma utl.cmo utlPoy.cmo \
 
 CHARACTER = sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
 	sankCS.cmo seqCS.cmo chromCS.cmo genomeCS.cmo  breakinvCS.cmo annchromCS.cmo \
-	dynamicCS.cmo kolmoCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
+	dynamicCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
 	characterScripting.cmo  metric.cmo
 
 PARSER = parser.cmo $(LANGUAGE) 

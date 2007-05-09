@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1794 $"
+let () = SadmanOutput.register "Node" "$Revision: 1805 $"
 
 let debug = false
 let debug_exclude = false
@@ -96,7 +96,6 @@ type cs =
     | Add of AddCS.t r
     | Sank of SankCS.t r
     | Dynamic of DynamicCS.t r
-    | Kolmo of KolmoCS.t r
     | Set of cs css r
 
 let rec to_string_ch ch1 =
@@ -119,8 +118,6 @@ let rec to_string_ch ch1 =
           | `Strictly_Same -> "same"
           | `Any_Of _ -> "any-of" in
           "set(" ^ stype ^ "): [" ^ (String.concat "; " sub) ^ "]"
-    | Kolmo a ->
-            ("kolmo: " ^ KolmoCS.to_string a.final)
 
 let extract_cost = function
     | Nonadd8 v -> v.cost
@@ -130,7 +127,6 @@ let extract_cost = function
     | Sank v -> v.cost
     | Dynamic v -> v.cost
     | Set v -> v.cost
-    | Kolmo v -> v.cost
 
 (** Helper function for recursing into sets *)
 let setrec a fn = { a with set = List.map fn a.set }
@@ -204,7 +200,6 @@ let rec prelim_to_final =
         | Add a -> Add (cs_prelim_to_final a)
         | Sank a -> Sank (cs_prelim_to_final a)
         | Dynamic a -> Dynamic (cs_prelim_to_final a)
-        | Kolmo a -> Kolmo (cs_prelim_to_final a)
         | Set a ->
               let r = setrec a.preliminary prelim_to_final in
               Set { a with preliminary = r; final = r; }
@@ -315,23 +310,6 @@ let rec cs_median anode bnode prev a b =
                 } 
             in
             Dynamic res
-    | Kolmo ca, Kolmo cb ->
-            assert (ca.weight = cb.weight);
-            let ca, cb =
-                if anode.min_child_code < bnode.min_child_code then ca, cb
-                else cb, ca
-            in
-            let median = KolmoCS.median ca.preliminary cb.preliminary in
-            let total_cost = KolmoCS.total_cost median in 
-            let res = 
-                { ca with 
-                    preliminary = median;
-                    final = median;
-                    cost = ca.weight *. total_cost;
-                    sum_cost = ca.sum_cost +. cb.sum_cost +. total_cost;
-                } 
-            in
-            Kolmo res
     | Set ca, Set cb ->
 (*           assert (ca.sid = cb.sid); *)
           assert (same_ct_method ca.preliminary.smethod cb.preliminary.smethod);
@@ -398,7 +376,7 @@ let rec cs_median anode bnode prev a b =
                     res
           end
     | Nonadd8 _, _ | Nonadd16 _, _| Nonadd32 _, _ | Add _, _ | Sank _, _ 
-    | Dynamic _, _ |  Set _, _ | Kolmo _, _ -> raise (Illegal_argument "cs_median")
+    | Dynamic _, _ |  Set _, _ -> raise (Illegal_argument "cs_median")
 
 let map2 f a b =
     let rec mapper a b acc =
@@ -459,12 +437,6 @@ let rec cs_median_3 pn nn c1n c2n p n c1 c2 =
               cc2.preliminary
           in
           Dynamic { cn with final = m }
-    | Kolmo cp, Kolmo cn, Kolmo cc1, Kolmo cc2 ->
-          let m = 
-              KolmoCS.median_3 cp.final cn.preliminary cc1.preliminary
-              cc2.preliminary
-          in
-          Kolmo { cn with final = m }
     | Set cp, Set cn, Set cc1, Set cc2 ->
           (match cn.preliminary.smethod with
            | `Strictly_Same ->
@@ -537,7 +509,7 @@ let rec cs_median_3 pn nn c1n c2n p n c1 c2 =
           )
     | Nonadd8 _, _, _, _ | Nonadd16 _, _, _, _ | Nonadd32 _, _, _, _ 
     | Add _, _, _, _ | Sank _, _, _, _ | Dynamic _, _, _, _  
-    | Set _, _, _, _ | Kolmo _, _, _, _ ->
+    | Set _, _, _, _ ->
           raise (Illegal_argument "cs_median_3")
 
 let new_median_code () = incr Data.median_code_count; !(Data.median_code_count)
@@ -616,7 +588,6 @@ let median code old a b =
 let root_cost root =
     let adder acc character = 
         match character with
-        | Kolmo v -> acc +. KolmoCS.root_cost v.preliminary
         | _ -> acc
     in
     List.fold_left adder root.total_cost root.characters
@@ -642,9 +613,6 @@ let rec cs_reroot_median na nb old a b =
     | Dynamic old, Dynamic a, Dynamic b ->
           let median = DynamicCS.median a.final b.final in
           Dynamic { old with preliminary = median; final = median }
-    | Kolmo old, Kolmo a, Kolmo b ->
-          let median = KolmoCS.median a.final b.final in
-          Kolmo { old with preliminary = median; final = median }
     | Set old, Set a, Set b ->
           (* just re-take the median... *)
           (match a.preliminary.smethod with
@@ -660,7 +628,7 @@ let rec cs_reroot_median na nb old a b =
           )
     | Dynamic _, _, _ 
     | Sank _, _, _ | Add _, _, _ | Nonadd32 _, _, _ 
-    | Nonadd16 _, _, _ | Nonadd8 _, _, _ | Set _, _, _ | Kolmo _, _, _ ->
+    | Nonadd16 _, _, _ | Nonadd8 _, _, _ | Set _, _, _ ->
           failwith "cs_reroot_median"
 
 let reroot_median old a b =
@@ -729,8 +697,6 @@ let compare_data_final {characters=chs1} {characters=chs2} =
               SankCS.compare_data a.final b.final
         | Dynamic a, Dynamic b ->
               DynamicCS.compare_data a.final b.final
-        | Kolmo a, Kolmo b ->
-              KolmoCS.compare_data a.final b.final
         | Set { final = { set = a } }, Set { final = { set = b } } ->
               (* Temporary solution.  The problem is: our `Any_Of nodes need to
                  know from which nodes they were made as a median.  Even if two
@@ -770,8 +736,6 @@ let compare_data_preliminary {characters=chs1} {characters=chs2} =
               SankCS.compare_data a.preliminary b.preliminary
         | Dynamic a, Dynamic b ->
               DynamicCS.compare_data a.preliminary b.preliminary
-        | Kolmo a, Kolmo b ->
-              KolmoCS.compare_data a.preliminary b.preliminary
         | Set { preliminary = { set = a } }, Set {preliminary = { set = b }} ->
               (* See above... *)
               -1
@@ -813,8 +777,6 @@ let edge_distance nodea nodeb =
         | Dynamic a, Dynamic b ->
               let d = DynamicCS.tabu_distance a.final b.final in
               a.weight *. d
-        | Kolmo a, Kolmo b ->
-              a.weight *. KolmoCS.tabu_distance a.final b.final
         | Set a, Set b ->
               (match a.final.smethod with
                | `Strictly_Same ->
@@ -849,8 +811,6 @@ let distance ?(para=None) ?(parb=None) ({characters=chs1} as nodea) ({characters
               a.weight *. SankCS.distance a.final b.final
         | Dynamic a, Dynamic b ->
               a.weight *. DynamicCS.distance a.final b.final
-        | Kolmo a, Kolmo b ->
-              a.weight *. KolmoCS.distance a.final b.final
         | Set a, Set b ->
               (match a.final.smethod with
                | `Strictly_Same ->
@@ -891,12 +851,6 @@ let dist_2 minimum_delta n a b =
                 in
                 let d  = (DynamicCS.dist_2 delta_left nc.final ac.final bc.final) in
                 nc.weight *. d
-        | Kolmo nc, Kolmo ac, Kolmo bc ->
-                let ac, bc = 
-                    if a.min_child_code < b.min_child_code then ac, bc
-                    else bc, ac
-                in
-                nc.weight *. (KolmoCS.dist_2 delta_left nc.final ac.final bc.final)
         | Set sn, Set sa, Set sb ->
               let b_code = b.taxon_code in
               (match sn.final.smethod with
@@ -950,7 +904,7 @@ let dist_2 minimum_delta n a b =
                      !cmin)
         | Nonadd8 _, _, _ | Nonadd16 _, _, _ | Nonadd32 _, _, _
         | Add _, _, _ | Sank _, _, _ | Dynamic _, _, _ 
-        | Set _, _, _ | Kolmo _, _, _ ->
+        | Set _, _, _ ->
                 (* These are explicitly left so that modifying code is easier,
                  * the compiler guides the changes *)
               raise (Illegal_argument "dist_2")
@@ -996,30 +950,6 @@ let extract_dynamic data dyna tcode =
           } 
     | Data.Stat (code, _), _ ->
           raise (Illegal_argument ("Stat" ^ (string_of_int code))) 
-
-let extract_kolmo data kolmo tcode = 
-    match kolmo with
-    | (Data.Dyna (chcode, chrom_data), _) -> 
-          let specs = Hashtbl.find data.Data.character_specs chcode in  
-          let kspec =
-              match specs with 
-              | Data.Kolmogorov d -> d
-              | _ -> failwith "extract dynamic"
-          in 
-          let dyna =  
-              let num_taxa = Data.number_of_taxa data in
-              KolmoCS.of_array kspec [|(chrom_data, chcode)|] chcode tcode 
-              num_taxa
-          in 
-          { preliminary = dyna; 
-            final = dyna; 
-            cost = 0.; 
-            weight = 1.;
-            sum_cost = 0. 
-          } 
-    | Data.Stat (code, _), _ ->
-          raise (Illegal_argument ("Stat" ^ (string_of_int code))) 
-              
 
 type ms = All_sets.Integers.t
 
@@ -1145,7 +1075,7 @@ let classify doit chars data =
 
 let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms) 
     (lnadd16code : ms) (lnadd32code : ms) (lnadd33code : ms) lsankcode dynamics 
-    kolmogorov data =
+    data =
         let add_character =  Data.add_character_spec 
         and set = Data.Set 
         and data = ref data in
@@ -1206,7 +1136,6 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             | Data.Static (encoding, _) -> encoding
             | Data.Sankoff _
             | Data.Dynamic _
-            | Data.Kolmogorov _
             | Data.Set -> failwith "get_static_encoding" in
 
         let module Enc = Parser.Hennig.Encoding in
@@ -1279,8 +1208,6 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             and lnadd33_chars = []
             and ldynamic_chars = 
                 List.fold_left (get_character_with_code gen_dynamic) [] dynamics
-            and lkolmo_chars = 
-                List.fold_left (get_character_with_code gen_dynamic) [] kolmogorov
             and lsank_chars =
                 List.map 
                 (fun (x, y) -> x, List.fold_left (get_character_with_code gen_sank) 
@@ -1350,18 +1277,6 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                       { result with characters = c @ result.characters } 
             in
             let result = 
-                match lkolmo_chars with
-                | [] -> result
-                | _ ->
-                        let c = 
-                            List.map 
-                            (fun kolm -> extract_kolmo !data kolm tcode)
-                            lkolmo_chars
-                        in
-                        let c = List.map (fun c -> Kolmo c) c in
-                        { result with characters = c @ result.characters }
-            in
-            let result = 
                 let single_lsank_chars_process result (code, lst) =
                     match lst with
                     | [] -> result
@@ -1393,9 +1308,7 @@ let node_contents_compare a b =         (* sets? *)
     | Add _     , Add _
     | Sank _    , Sank _
     | Dynamic _     , Dynamic _
-    | Kolmo _     , Kolmo _
     | Set _     , Set _      -> 0
-
     | Nonadd8 _ , _          -> (-1)
     | _         , Nonadd8 _  -> ( 1)
     | Nonadd16 _, _          -> (-1)
@@ -1408,8 +1321,6 @@ let node_contents_compare a b =         (* sets? *)
     | _         , Sank _     -> ( 1)
     | Dynamic _     , _          -> (-1)
     | _         , Dynamic _      -> ( 1)
-    | Kolmo _, _ -> (-1)
-    | _, Kolmo _ -> (1)
 
 
 (** [structure_into_sets data nodes] reads the complex terminal structure
@@ -1527,7 +1438,7 @@ let load_data ?taxa ?codes ?(classify=true) data =
                 and nadd_32 = make_set_of_list data.Data.non_additive_32
                 and nadd_33 = make_set_of_list data.Data.non_additive_33 in
                 generate_taxon classify add nadd_8 nadd_16 nadd_32 nadd_33 
-                data.Data.sankoff data.Data.dynamics data.Data.kolmogorov data 
+                data.Data.sankoff data.Data.dynamics data 
         | Some codes ->
                 let codes = make_set_of_list codes in
                 let is_mem x = All_sets.Integers.mem x codes in
@@ -1537,14 +1448,13 @@ let load_data ?taxa ?codes ?(classify=true) data =
                 and n33 = List.filter is_mem data.Data.non_additive_33
                 and add = List.filter is_mem data.Data.additive
                 and sank = List.map (List.filter is_mem) data.Data.sankoff
-                and dynamics = List.filter is_mem data.Data.dynamics 
-                and kolmogorov = List.filter is_mem data.Data.kolmogorov in
+                and dynamics = List.filter is_mem data.Data.dynamics in
                 let n8 = make_set_of_list n8
                 and n16 = make_set_of_list n16
                 and n32 = make_set_of_list n32
                 and n33 = make_set_of_list n33
                 and add = make_set_of_list add in
-                generate_taxon classify add n8 n16 n32 n33 sank dynamics kolmogorov data
+                generate_taxon classify add n8 n16 n32 n33 sank dynamics data
     in
     let nodes = 
         match taxa with
@@ -1777,9 +1687,6 @@ let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs
                 cs_single.preliminary (Some parent_cs_single.preliminary) d)
           | _ -> failwith "Fucking up with Dynamic at cs_to_formatter in node.ml"
       end 
-    | Kolmo x, _ -> 
-          KolmoCS.to_formatter pre_ref_codes pre x.preliminary d @
-              KolmoCS.to_formatter fi_ref_codes  fin x.final d
     | Set x, _ ->
           let attributes =
               [(Tags.Characters.name, (Data.code_character x.final.sid d))] in
@@ -1910,7 +1817,6 @@ let lnon32 cs acc = listify (Nonadd32 cs) acc
 let ladd cs acc = listify (Add cs) acc
 let lsank cs acc = listify (Sank cs) acc
 let ldynamic cs acc = listify (Dynamic cs) acc
-let lkolmo cs acc = listify (Kolmo cs) acc
 
 let rec convert_data
         ?(tnon8=lnon8)
@@ -1919,7 +1825,6 @@ let rec convert_data
         ?(tadd=ladd)
         ?(tsank=lsank)
         ?(tdynamic=ldynamic)
-        ?(tkolmo=lkolmo)
         node =
     let rec conv cs acc = match cs with
              | Nonadd8 cs -> tnon8 cs acc
@@ -1928,7 +1833,6 @@ let rec convert_data
              | Add cs -> tadd cs acc
              | Sank cs -> tsank cs acc
              | Dynamic cs -> tdynamic cs acc
-             | Kolmo cs -> tkolmo cs acc
              | Set set ->
                    let res = List.fold_right conv set.preliminary.set [] in
                    let res = { set.preliminary with set = res } in
@@ -1967,8 +1871,6 @@ let rec filter_character_codes (codes : All_sets.Integers.t) item =
           Sank (do_filter SankCS.cardinal SankCS.f_codes c codes)
     | Dynamic c ->
           Dynamic (do_filter DynamicCS.cardinal DynamicCS.f_codes c codes)
-    | Kolmo c ->
-            Kolmo (do_filter KolmoCS.cardinal KolmoCS.f_codes c codes)
     | Set s ->
           if All_sets.Integers.mem s.final.sid codes
           then Set s
@@ -1992,8 +1894,6 @@ let rec filter_character_codes_complement codes = function
           Some (Sank (do_filter SankCS.cardinal SankCS.f_codes_comp c codes))
     | Dynamic c ->
           Some (Dynamic (do_filter DynamicCS.cardinal DynamicCS.f_codes_comp c codes))
-    | Kolmo c ->
-          Some (Kolmo (do_filter KolmoCS.cardinal KolmoCS.f_codes_comp c codes))
     | Set s ->
           if All_sets.Integers.mem s.final.sid codes
           then None
@@ -2155,7 +2055,6 @@ let rec internal_n_chars acc (chars : cs list) =
                 | Add r -> AddCS.cardinal r.preliminary
                 | Sank r -> SankCS.cardinal r.preliminary
                 | Dynamic r -> DynamicCS.cardinal r.preliminary
-                | Kolmo r -> KolmoCS.cardinal r.preliminary
                 | Set s -> internal_n_chars acc s.preliminary.set
             in
             internal_n_chars (acc + count) cs
@@ -2183,7 +2082,6 @@ module Union = struct
         | AddU of AddCS.t ru
         | SankU of SankCS.t ru
         | DynamicU of DynamicCS.u ru
-        | KolmoU of KolmoCS.u ru
 
     (* In this first implementation, sets can not use the union heuristics, this is
     * work to be done *)
@@ -2208,7 +2106,6 @@ module Union = struct
                         | Nonadd32U _
                         | AddU _ 
                         | SankU _ -> None
-                        | KolmoU x 
                         | DynamicU x -> DynamicCS.get_sequence_union code x.ch)
             None
             c.charactersu
@@ -2242,7 +2139,6 @@ module Union = struct
                     let card = float_of_int (SankCS.cardinal x) in
                     SankCS.poly_saturation x *. card, card +. lenacc
                     *)
-            | KolmoU x
             | DynamicU x ->
                     let card = float_of_int (DynamicCS.cardinal_union x.ch) in
                     (DynamicCS.poly_saturation x.ch 1) *. card, card +. lenacc
@@ -2294,13 +2190,6 @@ module Union = struct
                     }
                     in
                     DynamicU r
-            | Kolmo cs, KolmoU u1, KolmoU u2 ->
-                    let r = {
-                        ch = (KolmoCS.union cs.preliminary u1.ch u2.ch);
-                        u_weight = u1.u_weight;
-                    }
-                    in
-                    KolmoU r
             | _ -> failwith "Node.Union.union"
         in
         let rec map3 c d e =
@@ -2383,8 +2272,6 @@ module Union = struct
                     (* TODO
                     Sank (SankCS.to_union c.Node.preliminary)
                     *)
-            | Kolmo c ->
-                    (KolmoU (create_union KolmoCS.to_union c)) :: acc
             | Set _ -> failwith "Node.Union.leaf TODO"
         in
         let nc = List.fold_left single_leaf [] c.characters in
@@ -2418,9 +2305,6 @@ module Union = struct
                     (* TODO
                     SankCS.distance a b, at, ct
                     *)
-            | (KolmoU a) :: at, (KolmoU b) :: bt ->
-                    distance (acc +. (a.u_weight *. (KolmoCS.distance_union a.ch
-                    b.ch))) at bt
             | (DynamicU a) :: at, (DynamicU b) :: bt ->
                     distance (acc +. (a.u_weight *. (DynamicCS.distance_union
                     a.ch b.ch))) at bt
@@ -2431,7 +2315,6 @@ module Union = struct
             | (AddU _) :: _, _
             | (SankU _) :: _, _
             | (DynamicU _) :: _, _
-            | (KolmoU _) :: _, _ 
             | [], _ -> failwith "Node.Union.distance TODO"
         in
         distance 0.0 a.charactersu b.charactersu
@@ -2459,7 +2342,6 @@ module Union = struct
                 0.0, at, bt
                 SankCS.distance a b, at, ct
                 *)
-        | (KolmoU a), (KolmoU b)
         | (DynamicU a), (DynamicU b) ->
                 DynamicCS.compare_union a.ch b.ch
         | _ -> failwith "Node.Union.distance TODO"
@@ -2515,12 +2397,11 @@ let support_chars starting _ n =
 let get_dynamic_preliminary data =
     let data = data.characters in
     let data =
-        List.filter (function Dynamic _ | Kolmo _ -> true | _ -> false) data
+        List.filter (function Dynamic _ | _ -> false) data
     in
     List.map 
         (function 
             | Dynamic d -> d.preliminary 
-            | Kolmo d -> KolmoCS.get_dynamic_preliminary d.preliminary
             | _ -> failwith "Impossible")
         data
 

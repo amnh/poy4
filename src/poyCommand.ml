@@ -95,7 +95,6 @@ type transform_method = [
     | `AnnchromToBreakinv of chromosome_args list
     | `ChromToSeq of chromosome_args list
     | `BreakinvToSeq of chromosome_args list
-    | `Seq_to_Kolmogorov of (string * string * string * string * string)
     | `OriginCost of float
 ]
 
@@ -349,7 +348,6 @@ let transform_transform acc (id, x) =
             | `SeqToChrom x -> (`Seq_to_Chrom (id, x)) :: acc
             | `SeqToBreakinv x -> (`Seq_to_Breakinv (id, x)) :: acc
             | `AnnchromToBreakinv x -> (`Annchrom_to_Breakinv (id, x)) :: acc
-            | `Seq_to_Kolmogorov x -> (`Seq_to_Kolmogorov (id, x)) :: acc
             | `ChangeDynPam x -> (`Change_Dyn_Pam (id, x)) :: acc
             | `ChromToSeq x -> (`Chrom_to_Seq (id, x)) :: acc
             | `BreakinvToSeq x -> (`Breakinv_to_Seq (id, x)) :: acc
@@ -957,21 +955,8 @@ let create_expr lexer =
                 [ LIDENT "dynamic_pam"; ":"; left_parenthesis; x = LIST0 
                         chromosome_argument SEP ","; right_parenthesis -> `ChangeDynPam x ] | 
                 [ LIDENT "chrom_to_seq" -> `ChromToSeq [] ] |
-                [ LIDENT "breakinv_to_seq" -> `BreakinvToSeq [] ] |
-                [ LIDENT "kolmogorov"; ":"; left_parenthesis; funset = UIDENT; ","; 
-                    alphset = UIDENT; ","; wordset = UIDENT; ","; intset = UIDENT;
-                    lenset = OPT optional_length; right_parenthesis -> 
-                        let lenset = 
-                            match lenset with
-                                | None -> ""
-                                | Some x -> x
-                        in
-                        `Seq_to_Kolmogorov (funset, alphset, wordset, intset,
-                        lenset) 
-                ] 
+                [ LIDENT "breakinv_to_seq" -> `BreakinvToSeq [] ] 
             ];
-        optional_length:
-            [ [","; lenset = UIDENT -> lenset ] ];
         informative_characters:
             [
                 [ ":"; LIDENT "keep" -> false ] |

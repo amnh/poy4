@@ -112,4 +112,3 @@ val get_sequence_union : SeqCS.Codes.key -> u -> Sequence.Unions.u option
 val encoding :
   (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t ->
   t -> float
-module Kolmogorov : sig val correct_cost : t -> Data.kolmo_spec -> t end

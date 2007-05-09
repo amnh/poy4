@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 1734 $"
+let () = SadmanOutput.register "Tags" "$Revision: 1805 $"
 
 type tag = string
 type value = tag
@@ -66,7 +66,6 @@ module Characters = struct
     let molecular = "Molecular" ^ suffix
     let sankoff = "Sankoff" ^ suffix
     let set = "Set" ^ suffix
-    let kolmogorov = "Kolmogorov" ^ suffix
 
     (* Their attributes *)
     let name = "Name"
@@ -139,38 +138,6 @@ module Data = struct
     let ignored_characters = "Ignored Characters"
     let characters = "Characters"
 end
-
-(* The Kolmogorov complexity characters specifications *)
-module KolSpecs = struct
-    let spec_index = "Specifications Index"
-    let char_index = "Character Index"
-    let set_spec = "Set Specification"
-    let char_spec = "Character Specification"
-    let spec_class = "Class"
-    let alphabet = "Alphabet"
-    let integers = "Integers"
-    let words = "Words"
-    let spec_name = "Name"
-    let char_name = spec_name
-    let fun_name = spec_name
-    let char_fun = "Function"
-
-    let alph_element = "Alphabet Element"
-    let value = "Value"
-    let prob = "Nats"
-    let int_set = "Integer Set"
-    let word_set = "Word Set"
-    let min = "Min"
-    let max = "Max"
-
-    let model = "model"
-    let indelsonly =  "Insertions and Deletions"
-    let indelsub =  "Insertions, Deletions, and Substitutions"
-    let subsonly =  "Substitutions"
-    let affineindelssub = "Affine insertions and deletions, and atomic substitutions"
-    let affineindelsaffsub = "Affine insertions, deletions, and substitutions"
-end
-
 
 module GenomeMap = struct
     let genome = "GenomeMap"

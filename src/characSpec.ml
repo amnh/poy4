@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "CharacSpec" "$Revision: 1644 $"
+let () = SadmanOutput.register "CharacSpec" "$Revision: 1805 $"
 
 exception Illegal_Assigned_Probabilities of float
 exception Undefined_Variable of string
@@ -218,22 +218,3 @@ let k c =
         | _, count -> (len *. (float_of_int count)) +. accu 
     in
     All_sets.StringMap.fold summation c.counter c.decoders_length
-
-let to_formatter items =
-    let mapper (name, spec) =
-        `Single (Tags.KolSpecs.char_spec, 
-        [(Tags.KolSpecs.char_name, name); (Tags.KolSpecs.prob, string_of_float
-        (k spec))], 
-        `Structured 
-        (`Set 
-            (List.map (fun (func, prob) ->
-                `Single (Tags.KolSpecs.char_fun, [(Tags.KolSpecs.fun_name,
-                func); (Tags.KolSpecs.prob, string_of_float prob)], `Structured
-                `Empty)) spec.probabilities)))
-    in
-    let res = 
-        match items with
-        | [] -> `Empty
-        | items -> `Set (List.map mapper items)
-    in
-    (Tags.KolSpecs.char_index, [], `Structured res)

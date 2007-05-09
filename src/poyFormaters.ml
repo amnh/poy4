@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyFormaters" "$Revision: 1728 $"
+let () = SadmanOutput.register "PoyFormaters" "$Revision: 1805 $"
 
 exception Illegal_formater of string
 
@@ -134,8 +134,6 @@ let character_type_as_attribute (tag, attributes, contents) =
             "Sankoff"
         else if tag = Tags.Characters.molecular then 
             "Molecular"
-        else if tag = Tags.Characters.kolmogorov then 
-            "Kolmogorov"
         else failwith "Unexpected"
     in
     (tag, ((t, attr) :: attributes), contents)
@@ -179,14 +177,12 @@ let output_characters st (characters : Tags.output)=
     let additive = filter_tag Tags.Characters.additive characters
     and nonadditive = filter_tag Tags.Characters.nonadditive characters
     and sankoff = filter_tag Tags.Characters.sankoff characters
-    and molecular = filter_tag Tags.Characters.molecular characters
-    and kolmogorov = filter_tag Tags.Characters.kolmogorov characters in
+    and molecular = filter_tag Tags.Characters.molecular characters in
     Status.user_message st "@[<v 4>@{<b>Characters@}@,@[<v 0>";
     output_table_of_list "Non Additive" "Set" nonadditive;
     output_table_of_list "Additive" "Range" additive;
     output_table_of_list "Sankoff" "Set" sankoff;
     output_table_of_list "Molecular" " " molecular;
-    output_table_of_list "Kolmogorov" " " kolmogorov;
     Status.user_message st "@]@]@,"
 
 let output_taxa st (_, _, taxa) =

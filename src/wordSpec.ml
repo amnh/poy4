@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "WordSpec" "$Revision: 1644 $"
+let () = SadmanOutput.register "WordSpec" "$Revision: 1805 $"
 
 open StdLabels
 
@@ -63,10 +63,3 @@ let to_list w =
         res := (i, w.codes_spec i) :: !res;
     done;
     !res
-
-let to_formatter t =
-    `Single 
-    (Tags.KolSpecs.word_set, 
-    [(Tags.KolSpecs.min, string_of_int t.minlen);
-    (Tags.KolSpecs.max, string_of_int t.maxlen)], 
-    `Structured (AlphSpec.to_formatter t.alph))
