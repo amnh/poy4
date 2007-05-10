@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1805 2007-05-09 21:46:45Z andres $ *)
+(* $Id: charTransform.ml 1812 2007-05-10 21:50:09Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1805 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1812 $"
 
 module type S = sig
     type a 
@@ -529,20 +529,13 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             in
             { final_tree with Ptree.component_root = roots }
         in
-        let location_msg msg x =
-            Status.user_message Status.Information msg;
-            x
-        in
         { Ptree.empty with 
         Ptree.edge_data = ptree.Ptree.edge_data; 
         Ptree.tree = ptree.Ptree.tree}
-        --> location_msg "I will do the postorder"
         --> 
             post_order_in_every_handle 
             (convert_vertex_post_order ptree) ptree
-        --> location_msg "I will do the convert roots"
         --> convert_roots ptree.Ptree.component_root
-        --> location_msg "Finished tupled tree"
 
 
     let insert_union parent union_node (a, b, c, d, e) =

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Sexpr" "$Revision: 1802 $"
+let () = SadmanOutput.register "Sexpr" "$Revision: 1812 $"
 
 type 'a t = [ `Empty | `Set of 'a t list | `Single of 'a ]
 
@@ -87,7 +87,7 @@ let rec first = function
             match lst with
             | h :: t ->
                     begin try first h with
-                    | _ -> first (`Set t)
+                    | Failure "Sexpr.first" -> first (`Set t)
                     end
             | [] -> failwith "Sexpr.first"
 

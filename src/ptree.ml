@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1801 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 1812 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1525,7 +1525,10 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
                       get_children b
                   else [b]
               in
-              let data = str_gen our_id in
+              let data = 
+                  try str_gen our_id 
+                  with Not_found -> ""
+              in
               if bd > ad then
                   Parser.Tree.Node (a @ b, data), bd + 1, bo
               else if bd = ad then sortthem a b ao bo data ad bd
@@ -1551,7 +1554,10 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
                    let acc, accd, acco = rec_down par handle in
                    let acc1, acc1d, acc1o = rec_down ch1 handle in
                    let acc2, acc2d, acc2o = rec_down ch2 handle in
-                   let data = str_gen self in
+                   let data = 
+                       try str_gen self with
+                       | Not_found -> ""
+                   in
                    if acc2d > acc1d then
                        if acc1d > accd then
                            Parser.Tree.Node ([Parser.Tree.Node ([acc; acc1], 
@@ -1562,17 +1568,17 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
                    else if acc1d > accd then
                        if acc2d > accd then 
                            Parser.Tree.Node ([Parser.Tree.Node ([acc; acc2], 
-                           str_gen self); acc1], root)
+                           (try str_gen self with Not_found -> "")); acc1], root)
                        else 
                            Parser.Tree.Node ([Parser.Tree.Node ([acc2; acc], 
-                           str_gen self); acc1], root)
+                           (try str_gen self with Not_found -> "")); acc1], root)
                    else 
                        if acc2d > acc1d then
                            Parser.Tree.Node ([Parser.Tree.Node ([acc1; acc2], 
-                           str_gen self); acc], root)
+                           (try str_gen self with Not_found -> "")); acc], root)
                        else 
                            Parser.Tree.Node ([Parser.Tree.Node ([acc2; acc1], 
-                           str_gen self); acc], root)
+                           (try str_gen self with Not_found -> "")); acc], root)
              | Tree.Single self -> 
                      Parser.Tree.Node
                    ([(Parser.Tree.Leaf (str_gen self))], root))
