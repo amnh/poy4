@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1805 $"
+let () = SadmanOutput.register "Node" "$Revision: 1806 $"
 
 let debug = false
 let debug_exclude = false
@@ -2397,7 +2397,7 @@ let support_chars starting _ n =
 let get_dynamic_preliminary data =
     let data = data.characters in
     let data =
-        List.filter (function Dynamic _ | _ -> false) data
+        List.filter (function Dynamic _ -> true | _ -> false) data
     in
     List.map 
         (function 
