@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 1805 $"
+let () = SadmanOutput.register "Tags" "$Revision: 1819 $"
 
 type tag = string
 type value = tag
@@ -28,31 +28,32 @@ type output =
 
 let make tag atv out = (tag, atv, out)
 
+let remove_non_alpha_numeric str =
+    Str.global_replace (Str.regexp "[^0-9a-zA-Z]") "_" str
+
 let to_xml fo item =
     let output_attrs (fo : string -> unit) (a, b) =
-        fo a;
+        fo (remove_non_alpha_numeric a);
         fo "=\"";
         fo b;
         fo "\" "
     in
 
     let rec to_xml fo ((tag, attributes, contents) : output) : unit = 
-        fo "@[<v 2>@[";
-        fo "@ <@ ";
-        fo tag;
+        fo " <";
+        fo (remove_non_alpha_numeric tag);
         fo " ";
         List.iter (output_attrs fo) attributes;
-        fo ">";
-        fo "@]@,";
+        fo ">@\n";
         begin match contents with
         | `String x -> 
               fo x; 
         | `Structured x ->
                 Sexpr.leaf_iter (to_xml fo) x;
         end;
-        fo "@ </"; fo tag; fo ">@]@,"
+        fo " </"; fo tag; fo ">@\n"
     in
-    fo "@[<v>";
+    fo "@[<h>";
     to_xml fo item;
     fo "@]%!"
 

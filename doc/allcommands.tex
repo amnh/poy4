@@ -851,7 +851,7 @@
         TinySeq, and XML. Filenames should be enclosed in quotes and if multiple
         filenames are specified, they must be separated by commas.
         \poycommand{read} automatically detects the type of the input file.
-        \poycommand{read} can use wildcard expressions (such as ``*'') to
+        \poycommand{read} can use wildcard expressions (such as *) to
         refer to multiple files in a single step: for example, \poycommand{read
         ("biv*")} imports all data files the names of which start
         with \texttt{biv} or \poycommand{read ("*.ss")} imports all files with
@@ -988,11 +988,11 @@
             row correspond to a gap. It is impotant that the cost matrix must be symmetrical. Here
             is an example of a valid custom alphabet input file:
        	  
-	  \texttt{alpha beta gamma delta\\*
-            0 2 1 2 5 \\*
-            2 0 2 1 5 \\*
-            1 2 0 2 5 \\*
-            2 1 2 0 5 \\*
+	  \texttt{alpha beta gamma delta \\
+            0 2 1 2 5 \\
+            2 0 2 1 5 \\
+            1 2 0 2 5 \\
+            2 1 2 0 5 \\
             5 5 5 5 0}
             
            In this example, the cost of transformation of \texttt{alpha} into \texttt{beta} is \texttt{2},
@@ -1024,8 +1024,8 @@
         
         \argumentdefinition{genome}{\obligatory{(\poystring list)}}
             {Specifies that the data listed in the string argument are
-            multichromosomal nucleotide sequences with the ``at'' sign 
-            (``@'') separating individual chromosomes. This data type
+            multichromosomal nucleotide sequences with the ``\atsymbol'' sign 
+            separating individual chromosomes. This data type
             allows for chromosome-level rearrangements specified by
             the argument
             \nccross{dynamic\_pam}{dynamicpam} of the command

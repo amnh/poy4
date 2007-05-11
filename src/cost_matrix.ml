@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 1758 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 1819 $"
 
 
 exception Illegal_Cm_Format;;
@@ -552,7 +552,15 @@ module Two_D = struct
         let l = List.flatten l in 
         fill_cost_matrix ~use_comb:use_comb l w
 
+    let list_is_metric l =
+        let w = List.length l 
+        and l = List.flatten l in
+        is_metric l w
 
+    let channel_is_metric ch =
+        let l = load_file_as_list ch in
+        let w = calculate_alphabet_size l in
+        is_metric l w
 
     let of_channel_nocomb ?(orientation=false) ch =
         of_channel ~orientation:orientation ~use_comb:false ch

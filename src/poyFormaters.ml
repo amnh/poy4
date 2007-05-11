@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyFormaters" "$Revision: 1805 $"
+let () = SadmanOutput.register "PoyFormaters" "$Revision: 1819 $"
 
 exception Illegal_formater of string
 
@@ -254,6 +254,7 @@ let rec aux_data_to_status st ((tag, attributes, contents) as c : Tags.output) =
 (* [data_to_status filename tag] outputs the contents of Data.to_formatter in a table
 * format presented in the ncurses and non-ncurses interface. *)
 let data_to_status filename tag =
+    StatusCommon.Files.set_margin filename 0;
     let st = Status.Output (filename, false, []) in
     if is_xml_filename filename then
         Tags.to_xml (Status.user_message st) tag
@@ -558,6 +559,7 @@ let trees_to_formater st ((tag, _, _) as r) =
 
 
 let trees_to_formater filename fo_ls tree = 
+    StatusCommon.Files.set_margin filename 0;
     let st = Status.Output (filename, false, fo_ls) in
     if is_xml_filename filename then
         Tags.to_xml (Status.user_message st) tree

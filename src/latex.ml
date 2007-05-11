@@ -60,6 +60,7 @@ let rec produce_element = function
             | "poyalso" -> o "@,@[<v 2>@[@{<c:cyan>See Also@}@]@,@,@["
             | "flushleft" 
             | "center" -> o "@[<v 2>@,@[" 
+            | "atsymbol" -> o "@@"
             | _ -> ())
     | Command ("%", []) -> o "%"
     | Command (h, []) when h = "" -> ()

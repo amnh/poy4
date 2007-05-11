@@ -2,30 +2,45 @@
 # clusters, or non interactive sessions), ncurses for the terminal based
 # interface, and gtk2 for the gtk2 based interface. ncurses and gtk2 require the
 # respective libraries; the later requires lablgtk2 installed in the system.
-export USEINTERFACE = ncurses
+export USEINTERFACE = flat
 
 # Parallel options
 # do you want to run in parallel?
 export USEPARALLEL = false
+
+# The standard c compiler
+export CC = gcc -arch ppc
+
 # The processes do NOT share a hard drive? do you want the master to broadcast
 # the input files to each process? (requires a hard drive available for each processor)
 export USENOSHAREDHD = false
-export DESTDIRMPI = /usr/local/ocamlmpi
-export DESTDIRPOY = /usr/local/poy
-export MPIINCDIR = /usr/share/mpich/include
-export MPILIBDIR = /usr/share/mpich/lib
-export MPILNAME = mpich
+export DESTDIRMPI = /usr/local/poy4/mpich2-1.0.5p2/gforker/
+export DESTDIRPOY = /usr/local/poy4/mpich2-1.0.5p2/gforker/
+export MPIINCDIR = /usr/local/poy4/mpich2-1.0.5p2/gforker/include
+export MPILIBDIR = /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/lib
+#The standard
+#export MPILNAME = mpich
+# For ppc  under Mac
+export MPILNAME = mpich_ppc
+# For i486 under Mac 
+# export MPILNAME = mpich_i486
+# For every other architecture (we leave the standard internal mpich)
+# export MPILNAME = mpich
 
 # Compilers of choice
-export OCAML = ocaml
-export OCAMLC = ocamlc.opt
-export OCAMLOPT = ocamlopt.opt #-cc /opt/intel/cc/9.0/bin/icc -ccopt -i-static
-export OCAMLDEP = ocamldep
-export OCAMLTOP = ocamlmktop
-export OCAMLMKLIB = ocamlmklib
-export OCAMLYACC = ocamlyacc
-export OCAMLLEX = ocamllex
-export INCLUDE = `ocamlc -where`
+# Compiling for ppc
+export THEPROG = /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin/
+# Compiling for x86
+#export THEPROG = /opt/ocaml/3.09.3
+export OCAML = $(THEPROG)/ocaml
+export OCAMLC = $(THEPROG)/ocamlc.opt -dtypes
+export OCAMLOPT = $(THEPROG)/ocamlopt.opt 
+export OCAMLDEP = $(THEPROG)/ocamldep
+export OCAMLTOP = $(THEPROG)/ocamlmktop
+export OCAMLMKLIB = $(THEPROG)/ocamlmklib
+export OCAMLYACC = $(THEPROG)/ocamlyacc
+export OCAMLLEX = $(THEPROG)/ocamllex
+export INCLUDE = `$(THEPROG)/ocamlc -where`
 export DEPEND = .depend
 
 # Compilation flags
@@ -36,11 +51,18 @@ export MKLIBOPT =
 # If you want to compile with USEPARALLEL = true, make sure you add -cc mpicc in
 # the CCOPT of your choice.
 # Intel Processors
-CCOPT := -ccopt -O3 -ccopt -msse2 -ccopt -mmmx -ccopt -march=pentium4
+#export THEROOT= /Developer/SDKs/MacOSX10.4u.sdk
+#CCOPT := -cc "$(CC)" -ccopt '-I /usr/include/malloc/' -ccopt "-isysroot $(THEROOT)" -ccopt -O3 -ccopt -msse2 -ccopt -mmmx -ccopt -march=pentium4
 
-# PowerPC G4 and G5
-#export CCOPT = -ccopt -O3 -ccopt -maltivec -ccopt -mpim-altivec -ccopt -I/usr/include/malloc/ -ccopt -mcpu=G4 -ccopt -g
+# PowerPC G4 under Panther
+export THEROOT= /Developer/SDKs/MacOSX10.3.9.sdk
+export CCOPT = -cc "$(CC)" -ccopt "-isysroot $(THEROOT)" -ccopt -O3 -ccopt -maltivec -ccopt -mpim-altivec -ccopt -I/usr/include/malloc/ -ccopt -mcpu=G4
 
+#PowerPC G4 and G5 under Tiger
+#export THEROOT= /Developer/SDKs/MacOSX10.4u.sdk
+#export CCOPT = -cc "$(CC) -arch ppc" -ccopt "-isysroot $(THEROOT)" -ccopt -O3 \
+#    -ccopt -maltivec -ccopt -I/usr/include/malloc/ -ccopt -mcpu=G4 -ccopt -g \
+#    -ccopt -L$(MPILIBDIR)
 
 # graphical output options: ocaml,tk
 # non-graphical output: none  
