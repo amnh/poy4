@@ -20,8 +20,8 @@
 (** queues.ml - contains the serach managers that manage the queue of trees to
  * be searched. *)
 
-(* $Id: queues.ml 1758 2007-04-17 15:46:48Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 1758 $"
+(* $Id: queues.ml 1814 2007-05-11 15:02:58Z andres $ *)
+let () = SadmanOutput.register "Queues" "$Revision: 1814 $"
 
 (** {1 Types} *)
 
@@ -771,8 +771,15 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         new_tabu#update_join t j;
                         new_tabu) in
 
-                    if self#filter ltree cost
-                    then self#insert (ltree, cost, ltabu);
+                    if self#filter ltree cost then 
+                        let cost = 
+                            let nt = Lazy.force ltree in
+                            Ptree.get_cost `Unadjusted nt 
+                        in
+                        if self#filter ltree cost then
+                            self#insert (ltree, cost, ltabu)
+                        else ()
+                    else ();
                     (* insert self-call here *)
                     self#trajectory cc cd_nd b_delta j1 j2 pt ljoin ltabu cost
 

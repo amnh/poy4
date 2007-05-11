@@ -14,19 +14,16 @@
         the evaluation of many more possible tree topologies and generates a
         diversity of trees for subsequent analysis.
 
-        It might be desirable (for example, if computer memory were limited) to
-        generate a large number of trees by appending trees from multiple
-        separate builds. \poy replaces the trees stored in memory with
-        those generated in a subsequent build. 
-        For example, executing \poycommand{build(10)}
+        By default \poy replaces the trees stored in memory with those generated
+        in a subsequent build. For example, executing \poycommand{build(10)}
         followed by \poycommand{build(20)} will replace 10 trees generated
-        during the first build with 20 new trees. To keep trees from consecutive
+        during the first build with 20 new trees. However, it might be desirable
+        (for example, if computer memory were limited) to generate a large number of trees by
+        appending trees from multiple separate builds. To keep trees from consecutive
         builds, a tree output file must be specified using~\ccross{report} that must 
         precede the subsequent \poycommand{build} command. This will produce a file
-        containing the
-        trees appended from all builds. Alternatively, trees from different
-        builds can be redirected to separate files if different file names are
-        specified.
+        containing the trees appended from all builds. Alternatively, trees from different
+        builds can be redirected to separate files if different file names are specified.
         
         The command \poycommand{build} is also used as
         an argument for the command \poycommand{calculate\_support}.
@@ -53,13 +50,13 @@
             \poyargument{trees} label. Therefore, \poycommand{build(5)} is
             equivalent to \poycommand{build(trees:5)}.  Note that  \poyargument{trees} is
             also used as an argument of the command~\nccross{swap}{swapcommand}
-            but with different meaning. 
-            The value 0 has a slightly different meaning though: instead of
-            generating 0 trees, and therefore eliminating all trees in memory,
-            it will not change the trees stored in memory. This is useful for
-            example in the \ccross{bremer} support calculations, when the user
-            would prefer to limit the search to the trees in the neighborhood of
-            the current trees in memory. }
+            but with different meaning.
+            
+            The value \texttt{0} generates no trees, but, unlike other values,
+            it \emph{retains} all trees in memory instead of eliminating them.
+            This is useful, for example, in the \ccross{bremer} support calculation,
+            where instead of generating new trees per each node, the searches are
+            performed on the trees in the neighborhood of the current trees in memory.}
             {treesbuild}
             
         \argumentdefinition{INTEGER}{}
@@ -68,12 +65,13 @@
             {}
 
         \argumentdefinition{of\_file}{\obligatory{\poystring}}
-            {Do not create trees, but only use those included in the file path
-            of the argument.}
+            {Imports tree file included in the file path of the argument. This command is
+            useful for importing starting trees for calculating \ccross{bremer} support.
+            In other contexts the command \ccross{read} is used.}
             {offile}
 
         \argumentdefinition{STRING}{}
-            { This is a shortcut of the argument \poyargument{of\_file}}
+            {This is a shortcut of the argument \poyargument{of\_file}.}
             {}
 
    \end{arguments}
@@ -146,9 +144,20 @@
                 generated based on an implied alignment
                 using~\ccross{phastwinclad} that can subsequently be analyzed
                 using other programs such as NONA or TNT.
+                
+                
+                It is important to remember that the local optimum for the dynamic
+                homology characters can differ from that for the static homology characters
+                based on the same sequence data. Therefore, in calculating support values by
+                sampling individual nucleotides based on the static homology data (obtained by
+                 \poyargument{static\_approx}) can produce a discrepancy in tree costs when
+                 compared to the tree cost based on the original dynamic homology data.
+                 Therefore, it is recommended to perform an extra round of swapping on the
+                 transformed data to insure that the local maximum is reached for the static
+                 homology characters prior to calculating support values.
             \end{statement}
             
-	\end{poydescription}
+            \end{poydescription}
 
 	\begin{arguments}
 		\begin{argumentgroup}{Support calculation methods}
@@ -198,8 +207,16 @@
 		 
 	     \argumentdefinition{build}{}
              {For calculating Bremer support, the integer value of
-             \poyargument{build} specifies the
-             number of Wagner tree builds per node. For calculating Jackknife
+             \poyargument{build} specifies the number of independent
+             Wagner tree builds per node. The integer value \texttt{0}
+             (\texttt{build:0}) specifies that Bremer support values are
+             calculated on the starting trees currently
+             in memory, rather than on newly generated trees.
+             Alternatively, the initial trees for calculating Bremer support
+             can be imported using the argument \poyargument{of\_file}
+             of the command ~\nccross{build}{buildcommand}.
+             
+             For calculating Jackknife
              and Bootstrap supports, it specifies the number of
              Wagner tree builds per pseudoreplicate.  Single best trees from all
              psudoreplicates are used to calculate the support values. If
@@ -234,6 +251,18 @@
             {Calculates Bremer support values by performing
             independent searches for every node. This is equivalent to executing \\
             \poycommand{calculate\_support()} (the default setting.)}
+         
+         \poyexample{calculate\_support(bremer, build(trees:0), swap(trees:2))}
+            {Calculates Bremer support values by performing swapping on 
+            each tree in memory for every node and keeping up to two
+            best trees per search round.}
+          
+          \poyexample{calculate\_support(bremer, build(of\_file:"new\_trees"),
+          swap(tbr, trees:2))}
+            {Calculates Bremer support values by performing TBR swapping on 
+            each tree in the file \texttt{new\_trees} located in the current
+            working directory for every node and keeping up to two
+            best trees per search round.}  
             
          \poyexample{calculate\_support(bootstrap)}
          {Calculates Bootstrap support values under default settings. This command
@@ -2386,7 +2415,7 @@
 
     \poydefaults{trees:1, alternate, threshold:0, bfs}{By default, current trees are
     submitted to a round of SPR followed by TBR using breath first search under
-    default setting, and  keeping one optimal tree per each starting tree.}
+    default setting, and  keeping one best tree per each starting tree.}
 
 	\begin{poyexamples} 
 		\poyexample{swap()}
@@ -2542,8 +2571,8 @@
             created.
             
             The lident value \texttt{remove} excludes all uninformative characters
-            information (except autoapomorphies), whereas the value \texttt{keep}
-            will retains these characters. The default is \texttt{remove}.}
+            information (except autapomorphies), whereas the value \texttt{keep}
+            retains these characters. The default is \texttt{remove}.}
             {staticapprox}
             
             \begin{statement}
@@ -2552,6 +2581,14 @@
 	  if sequence characters  have been transformed into static characters to calculate
 	  jackknife or bootstrap support values based on sampling of individual nucleotides,
 	  all commands executed subsequently will be applied to the transform data.
+	\end{statement}
+	
+	\begin{statement}
+  	  It is important to remember that the local optimum for the dynamic homology
+	  characters can differ from that for the static homology characters based on the
+	  same sequence data. Therefore, performing additional searches on the transformed
+	  data (for example, in calculating support values based on individual nucleotides
+	  rather than on sequence fragments) can produce a discrepancy in tree costs.
 	\end{statement}
 
         \argumentdefinition{trailing\_insertion}{\obligatory{\poystring /(\poyint list)}}
