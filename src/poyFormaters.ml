@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyFormaters" "$Revision: 1819 $"
+let () = SadmanOutput.register "PoyFormaters" "$Revision: 1822 $"
 
 exception Illegal_formater of string
 
@@ -167,23 +167,23 @@ let output_characters st (characters : Tags.output)=
         let matrix = build_table_with_contents_as_set ~cn:cn lst in
         sort_matrix matrix;
         Status.user_message st ("@[<v 4>@{<b>" ^ title ^ 
-        "@}@,@[<v 0>@,@{<u>Total@} ");
+        "@}@\n@[<v 0>@\n@{<u>Total@} ");
         output_rows st matrix;
-        Status.user_message st "@,";
+        Status.user_message st "@\n";
         Status.output_table st matrix;
-        Status.user_message st "@]@]@,"
+        Status.user_message st "@]@]@\n"
     in
     (* For each tag we will output the appropriate character *)
     let additive = filter_tag Tags.Characters.additive characters
     and nonadditive = filter_tag Tags.Characters.nonadditive characters
     and sankoff = filter_tag Tags.Characters.sankoff characters
     and molecular = filter_tag Tags.Characters.molecular characters in
-    Status.user_message st "@[<v 4>@{<b>Characters@}@,@[<v 0>";
+    Status.user_message st "@[<v 4>@{<b>Characters@}@\n@[<v 0>";
     output_table_of_list "Non Additive" "Set" nonadditive;
     output_table_of_list "Additive" "Range" additive;
     output_table_of_list "Sankoff" "Set" sankoff;
     output_table_of_list "Molecular" " " molecular;
-    Status.user_message st "@]@]@,"
+    Status.user_message st "@]@]@\n"
 
 let output_taxa st (_, _, taxa) =
     match taxa with
@@ -192,20 +192,20 @@ let output_taxa st (_, _, taxa) =
             let mtx = build_table_with_contents_as_set lst in
             sort_matrix mtx;
             Status.user_message st 
-            "@[<v 4>@{<b>Taxa@}@,@[<v 0>@,@{<u>Total@} ";
+            "@[<v 4>@{<b>Taxa@}@\n@[<v 0>@\n@{<u>Total@} ";
             output_rows st mtx;
-            Status.user_message st "@,";
+            Status.user_message st "@\n";
             Status.output_table st mtx;
-            Status.user_message st "@]@]@,"
+            Status.user_message st "@]@]@\n"
     | `String _ -> ()
 
 (* [output_files st c] outputs the list of files from the output c as a list of
 * elements separated by semicolon. All the contents, all the values are
 * converted into a list. *)
 let output_list title st c =
-    Status.user_message st ("@[<v 4>@{<b>" ^ title ^ "@}@,@[");
+    Status.user_message st ("@[<v 4>@{<b>" ^ title ^ "@}@\n@[");
     build_values_as_list st c;
-    Status.user_message st "@]@]@,"
+    Status.user_message st "@]@]@\n"
 
 (* This is a general purpose formatter for attributes.*)
 let format_attributes st attributes = 
@@ -214,9 +214,9 @@ let format_attributes st attributes =
         Status.user_message st a;
         Status.user_message st " : ";
         Status.user_message st b;
-        Status.user_message st "@]@,";
+        Status.user_message st "@]@\n";
     in
-    Status.user_message st "@[<v 0>@,";
+    Status.user_message st "@[<v 0>@\n";
     List.iter format_attribute attributes;
     Status.user_message st "@]"
 
@@ -239,7 +239,7 @@ let rec aux_data_to_status st ((tag, attributes, contents) as c : Tags.output) =
         Status.user_message st tag;
         Status.user_message st "@}";
         Status.user_message st str;
-        Status.user_message st "@,";
+        Status.user_message st "@\n";
         format_attributes st attributes;
         Status.user_message st "@ ";
         begin match contents with
@@ -248,7 +248,7 @@ let rec aux_data_to_status st ((tag, attributes, contents) as c : Tags.output) =
         | `String value ->
                 Status.user_message st value;
         end;
-        Status.user_message st "@]@,"
+        Status.user_message st "@]@\n@]@\n"
     end
 
 (* [data_to_status filename tag] outputs the contents of Data.to_formatter in a table
@@ -513,10 +513,10 @@ let node_to_formater st ((tag, attr, cont) : Tags.output) =
         let lst = [|"@{<u>Characters@}"; "@{<u>Class@}"; "@{<u>Cost@}"; "@{<u>Rearrangement Cost@}"; "@{<u>Chrom Ref@}"; "@{<u>Median Map@}"; "@{<u>States@}"|] :: lst
         in
 
-        Status.user_message st ("@,@,@[<v 0>@{<b>" ^ name ^ "@}@,");
-        Status.user_message st ("@[<v 0>@{<u>Cost " ^ cost ^ "@}@,");
-        Status.user_message st ("@[<v 0>@{<u>Rearrangement cost " ^ recost ^ "@}@,");
-        Status.user_message st ("@[<v 0>@{<u>Children: " ^ child1_name ^ " " ^ child2_name ^ "@}@,");
+        Status.user_message st ("@\n@\n@[<v 0>@{<b>" ^ name ^ "@}@\n");
+        Status.user_message st ("@[<v 0>@{<u>Cost " ^ cost ^ "@}@\n");
+        Status.user_message st ("@[<v 0>@{<u>Rearrangement cost " ^ recost ^ "@}@\n");
+        Status.user_message st ("@[<v 0>@{<u>Children: " ^ child1_name ^ " " ^ child2_name ^ "@}@\n");
 
         Status.output_table st (Array.of_list lst);
         Status.user_message st ("@\n");
@@ -543,7 +543,7 @@ let forest_to_formater st ((tag, attr, cont) as v) =
                     | `Structured v -> Sexpr.leaf_iter do_nodes v
                     | `String _ -> ()
             in
-            Status.user_message st ("@[<v 0>@{<b>Tree@}@,@{<u>Tree cost: @}");
+            Status.user_message st ("@[<v 4>@{<b>Tree@}@\n@{<u>Tree cost: @}");
             Status.user_message st (cost ^ "@\n");
             Status.user_message st ("@{<u>Tree rearrangement cost: @}");
             Status.user_message st (recost ^ "@\n@\n");

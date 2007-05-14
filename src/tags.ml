@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 1819 $"
+let () = SadmanOutput.register "Tags" "$Revision: 1822 $"
 
 type tag = string
 type value = tag
@@ -51,7 +51,7 @@ let to_xml fo item =
         | `Structured x ->
                 Sexpr.leaf_iter (to_xml fo) x;
         end;
-        fo " </"; fo tag; fo ">@\n"
+        fo ( " </" ^ (remove_non_alpha_numeric tag) ^ ">@\n")
     in
     fo "@[<h>";
     to_xml fo item;

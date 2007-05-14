@@ -17,10 +17,10 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 1684 $"
+let () = SadmanOutput.register "" "$Revision: 1822 $"
 
 exception Illegal_update
-let () = SadmanOutput.register "Status_flat" "$Revision: 1684 $"
+let () = SadmanOutput.register "Status_flat" "$Revision: 1822 $"
 
 let _ = Format.pp_set_margin Format.std_formatter 78
 
@@ -40,9 +40,10 @@ let get_verbosity () = !verbosity
 
 let stdferr = Format.formatter_of_out_channel stderr
 let stdfout = Format.formatter_of_out_channel stdout
+let _ = Format.pp_set_margin stdfout 0
 
 let build_prefix_suffix title =
-    ("@[" ^ title ^ "@ :@ @["), "@]@]@.%!"
+    ("@[" ^ title ^ "@ :@ @["), "@]@]@\n%!"
 
 let type_string = function
     | SearchReport
@@ -205,9 +206,9 @@ let do_output_table t v =
     match t with
     | Output (Some f, do_close, fo_ls) ->
           let a = StatusCommon.Files.openf f fo_ls in
-          StatusCommon.Tables.output a do_close (StatusCommon.Files.closef f) v 
+         StatusCommon.Tables.output a do_close (StatusCommon.Files.closef f) v 
     | _ ->
-            let f = Format.std_formatter in
+            let f = stdfout in
             let do_nothing = fun () -> () in
             StatusCommon.Tables.output f false do_nothing v;
             let _ = 
@@ -222,7 +223,10 @@ let do_output_table t v =
 let output_table t v =
     match t with
     | Status -> ()
-    | _ -> do_output_table t v
+    | Output _ -> do_output_table t v
+    | _ -> 
+            do_output_table t v;
+            Format.fprintf stdferr (StatusCommon.string_to_format "@.")
             
 
 let resize_history _ = ()
