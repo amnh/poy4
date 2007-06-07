@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1701 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1865 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -66,6 +66,7 @@ module Files = struct
     let openf ?(mode = `Append) name fo_ls = 
         if Hashtbl.mem opened_files name then 
             let _, f = Hashtbl.find opened_files name in 
+            let _ = assign_formatter_output f fo_ls in
             f
         else 
             (let file_options = 
@@ -80,7 +81,6 @@ module Files = struct
             let ch = open_out_gen file_options 0o644 name in
             let f = Format.formatter_of_out_channel ch in
             assign_formatter_output f fo_ls;
-
             Hashtbl.add opened_files name (ch, f);
             f)
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 1693 $"
+let () = SadmanOutput.register "Tree" "$Revision: 1865 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -171,6 +171,33 @@ type u_tree = {
     avail_ids : id list;
     new_ids : id;
 }
+
+let replace_codes f tree =
+    let topo = 
+        let fix_node = function
+            | Single x -> Single (f x)
+            | Leaf (x, y) -> Leaf ((f x), (f y))
+            | Interior (a, b, c, d) -> Interior ((f a), (f b), (f c), (f d))
+        in
+        All_sets.IntegerMap.fold 
+        (fun code node acc -> 
+            All_sets.IntegerMap.add (f code) (fix_node node) acc)
+        tree.u_topo
+        All_sets.IntegerMap.empty
+    and edges =
+        let fix_edge (Edge (a, b)) = Edge ((f a), (f b)) in
+        EdgeSet.fold 
+        (fun edge acc -> EdgeSet.add (fix_edge edge) acc)
+        tree.d_edges
+        EdgeSet.empty
+    and handles = 
+        All_sets.Integers.fold
+        (fun code acc -> All_sets.Integers.add (f code) acc) 
+        tree.handles
+        All_sets.Integers.empty
+    and avail_ids = List.map f tree.avail_ids in
+    { tree with u_topo = topo; d_edges = edges; handles = handles; avail_ids =
+        avail_ids }
 
 let set_avail_start tree id =
     { tree with new_ids = id }
@@ -1697,21 +1724,27 @@ module CladeFP = struct
                   let bset, m = r n b m in
                   let set = Set.union aset bset in
                   set, add p n set m in
+                    match get_node h tree with
+                    | Leaf (id, par) ->
+                          let set = Set.singleton id in
+                          let m = add par id set m in
+                          let _, m = r id par m in
+                          m
+                    | Single _ -> m
+                    | Interior (id, a, b, c) ->
+                          let _, m = r id a m in
+                          let _, m = r id b m in
+                          let _, m = r id c m in
+                          m in
+                (Set.fold calc_component tree.handles Map.empty : t)
 
-            match get_node h tree with
-            | Leaf (id, par) ->
-                  let set = Set.singleton id in
-                  let m = add par id set m in
-                  let _, m = r id par m in
-                  m
-            | Single _ -> m
-            | Interior (id, a, b, c) ->
-                  let _, m = r id a m in
-                  let _, m = r id b m in
-                  let _, m = r id c m in
-                  m in
-        (All_sets.Integers.fold calc_component tree.handles EdgeMap.empty
-             : t)
+    module CladeSet = Set.Make (Ordered)
+
+    let sets t =
+        let module Set = All_sets.Integers in
+        let module Map = EdgeMap in
+        Map.fold (fun _ set acc -> CladeSet.add set acc) (calc t) 
+        CladeSet.empty
 
     let query = (EdgeMap.find : edge -> t -> fp)
 
@@ -1719,6 +1752,7 @@ module CladeFP = struct
 
     let fold (fn : edge -> fp -> 'a -> 'a) t a =
         EdgeMap.fold fn t a
+
 end
 
 (** [get_break_handles delta tree] returns the ids of the handles of the left
@@ -1877,6 +1911,7 @@ let source_to_target (source, snode) (target, tnode) =
     target
 
 
+module CladeSet = Set.Make (CladeFP.Ordered)
 module CladeFPMap = Map.Make (CladeFP.Ordered)
 
 let tree_fps_map ?(map=CladeFPMap.empty) tree =

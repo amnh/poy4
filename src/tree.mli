@@ -222,11 +222,17 @@ sig
 
     module Ordered : Map.OrderedType with type t = fp
 
+    (* A module of sets of clades *)
+    module CladeSet : Set.S with type elt = fp
+
     (** [fpcompare] compares two fingerprints *)
     val fpcompare : fp -> fp -> int
 
     (** [calc tree] calculates the set of fingerprints for [tree] *)
     val calc : u_tree -> t
+
+    (* [sets t] Returns the set of all the clades contained in [t]. *)
+    val sets : u_tree -> CladeSet.t
 
     (** [query edge fps] retrieves the fingerprint for [edge] *)
     val query : edge -> t -> fp
@@ -282,3 +288,4 @@ val compare_cannonical : u_tree -> u_tree -> bool
 
 val get_unique : ('a * u_tree) list -> ('a * u_tree) list
 
+val replace_codes : (int -> int) -> u_tree -> u_tree

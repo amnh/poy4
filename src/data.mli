@@ -122,9 +122,6 @@ type specs =
     * parser and the name of the file it comes from (the name includes the
     * column number). *)
     | Static of (Parser.Hennig.Encoding.s * string)
-    (** A Sankoff character type. Store a list of strings and the list of
-        possible states. *)
-    | Sankoff of (string list * int list)
     (** A dynamic homology based character type, with three parameters, the
     * file name containing the set of sequences, the filename of the valid 
     * fixed states that can be used for that set of sequences, and the file
@@ -510,8 +507,8 @@ val process_analyze_only_characters_file : bool -> bool -> d -> Parser.filename 
 
 val process_rename_characters : d -> (string * string) -> d
 
-val assign_tcm_to_characters :
-    d -> bool_characters -> string -> Cost_matrix.Two_D.m -> d
+val assign_transformation_gaps :
+    d -> bool_characters -> int -> int -> d
 
 val assign_affine_gap_cost : 
     d -> bool_characters -> Cost_matrix.cost_model -> d
@@ -563,6 +560,8 @@ val file_exists : d -> Parser.filename -> bool
 val make_fixed_states : bool_characters -> d -> d
 
 val has_dynamic : d -> bool 
+
+val randomize_taxon_codes : d -> d * (int, int) Hashtbl.t
 
 module Sample : sig
     val generate : d -> [ `Bootstrap | `Jackknife of int ] -> d

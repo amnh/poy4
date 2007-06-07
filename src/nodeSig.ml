@@ -239,6 +239,8 @@ module type S = sig
         int -> (int * n) list -> int list -> int list -> n list
 
     val root_cost : n -> float
+
+    val to_single : int option -> n -> int option -> n -> n
 end
 
 

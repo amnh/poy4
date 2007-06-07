@@ -94,6 +94,10 @@ val to_single_root : t -> float * float * t
 * and [ch2] parent, and [c] is the new readjusted [mine]. *)
 val readjust : t -> t -> t -> t -> float * float * t 
 val median_3 : t -> t -> t -> t -> t
+(* Like [distance] but calculates it only if the type of the characters match
+* one of those listed. *)
+val distance_of_type : 
+    [`Seq | `Breakinv | `Chrom | `Annchrom | `Genome] list  -> t -> t -> float
 val distance : t -> t -> float
 val distance_union : u -> u -> float
 val to_string : t -> string

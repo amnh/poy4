@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1803 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1865 $"
 
 module IntSet = All_sets.Integers
 
@@ -56,48 +56,49 @@ let build_has_exact = function
     | `Mst _ 
     | `Prebuilt _ -> false
     | `Build (_, _, l)
-    | `Build_Random (_, _, l) -> has_exact l
+    | `Build_Random (_, _, l, _) -> has_exact l
 
 
 module type S = sig
-        type a 
-        type b
-        type c
-type tree = (a, b) Ptree.p_tree 
+    type a 
+    type b
+    type c
+    type tree = (a, b) Ptree.p_tree 
 
-type r = (a, b, c) run
+    type r = (a, b, c) run
 
-type minimum_spanning_tree = tree 
-type build = minimum_spanning_tree list
-type minimum_spanning_family = minimum_spanning_tree list
-type build_optimum = tree list
+    type minimum_spanning_tree = tree 
+    type build = minimum_spanning_tree list
+    type minimum_spanning_family = minimum_spanning_tree list
+    type build_optimum = tree list
 
-type script = Methods.script
+    type script = Methods.script
 
-val empty : unit -> r
+    val empty : unit -> r
 
-val run : 
-    ?folder:(r -> script -> r) ->
-    ?output_file:string -> ?start:r -> script list -> r
+    val run : 
+        ?folder:(r -> script -> r) ->
+        ?output_file:string -> ?start:r -> script list -> r
 
-val update_mergingscript : (r -> script -> r) -> script list -> r -> r -> r
+    val update_mergingscript : (r -> script -> r) -> script list -> r -> r -> r
 
-val process_input : r -> 
-    Methods.input -> r
+    val process_input : r -> 
+        Methods.input -> r
 
-val get_dump : ?file:string -> unit -> r * script list
+    val get_dump : ?file:string -> unit -> r * script list
 
-val restart : ?file:string -> unit -> r
+    val restart : ?file:string -> unit -> r
 
-val process_random_seed_set : r -> int -> r
+    val process_random_seed_set : r -> int -> r
 
-val console_run : string -> unit
+    val console_run : string -> unit
 
-val channel_run : in_channel -> unit
+    val channel_run : in_channel -> unit
 
-val get_console_run : unit -> r
+    val get_console_run : unit -> r
 
-val update_trees_to_data : r -> r
+    val update_trees_to_data : r -> r
+
 end
 
 
@@ -353,6 +354,20 @@ let process_transform (run : r) (meth : Methods.transform) =
                   [meth] 
           in
           update_trees_to_data { run with nodes = nodes; data = data }
+    | #Methods.terminal_transform ->
+            let data, htbl = Data.randomize_taxon_codes run.data in
+            let data, nodes = Node.load_data data in
+            let trees = 
+                Sexpr.map 
+                (fun x ->
+                    { Ptree.empty with Ptree.tree = 
+                        Tree.replace_codes 
+                        (fun x -> try Hashtbl.find htbl x with _ -> x)
+                        x.Ptree.tree })
+                run.trees 
+            in
+            update_trees_to_data 
+            { run with nodes = nodes; data = data; trees = trees }
 
 let temporary_transform run meth =
     let run1 = process_transform run meth in
@@ -373,6 +388,8 @@ let temporary_transform run meth =
     | #Methods.char_transform ->
           run1,
           `UntransformChar
+    | #Methods.terminal_transform ->
+            run1, `UntransformChar
 
 (** [temporary_transforms run meths] transforms [run] as specified by the list
     of transformations [meths].  It returns the transformed [run] and a list of
@@ -884,7 +901,16 @@ let get_trees_for_support support_class run =
                 run.trees
     in
     match support_class with
-    | `Bremer ->
+    | `Bremer (Some input_file) ->
+                S.bremer_of_input_file_but_trust_input_cost 
+                (match run.data.Data.root_at with
+                | Some x -> x | None -> failwith "no root?")
+                (fun x -> Data.code_taxon x run.data)
+                run.data
+                input_file
+                run.trees, 
+                "Bremer"
+    | `Bremer None ->
             Sexpr.map (S.support_to_string_tree run.data)
             run.bremer_support, "Bremer"
     | `Jackknife ->
@@ -912,7 +938,7 @@ let rec handle_support_output run meth =
                 Sexpr.leaf_iter output trees;
                 Status.user_message fo "@,%!@]";
             | None ->
-                    let a = Some `Bremer
+                    let a = Some (`Bremer None)
                     and b = Some `Jackknife
                     and c = Some `Bootstrap in
                     handle_support_output run (`Supports (a, filename));
@@ -922,6 +948,9 @@ let rec handle_support_output run meth =
             (match support_class with
             | Some support_class ->
                 let trees, title = get_trees_for_support support_class run in
+                let ch = open_out_bin "trees" in
+                Marshal.to_channel ch trees [] ;
+                close_out ch;
                 let trees = Sexpr.to_list trees in
                 let trees = Array.of_list trees in
                 if 0 = Array.length trees then ()
@@ -941,7 +970,7 @@ let rec handle_support_output run meth =
                                 Status.user_message fo "@,@]@]@]%!";) 
                             trees;)
                 | None ->
-                    let a = Some `Bremer
+                    let a = Some (`Bremer None)
                     and b = Some `Jackknife
                     and c = Some `Bootstrap in
                     handle_support_output run (`GraphicSupports (a, filename));
@@ -1724,7 +1753,7 @@ module DNA = struct
             let lst = Array.to_list lst in
             of_list lst
 
-        let of_sub_indel = Cost_matrix.Two_D.of_transformations_and_gaps
+        let of_sub_indel = Cost_matrix.Two_D.of_transformations_and_gaps true 5
 
         let of_sub_indel_affine a b c = 
             let mt = of_sub_indel a b in

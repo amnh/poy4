@@ -518,11 +518,28 @@ val choose_leaf : ('a, 'b) p_tree -> int
 
 val cannonize :  string Parser.Tree.t -> string * string Parser.Tree.t
 
-val consensus : (('a, 'b) p_tree -> int -> int -> bool) -> (int -> string) -> int -> 
+val consensus :
+    (('a, 'b) p_tree -> int -> int -> bool) -> (int -> string) -> int -> 
     ('a, 'b) p_tree list -> int -> string Parser.Tree.t
 
-val add_tree_to_counters : (int -> int -> bool) -> int Tree.CladeFPMap.t ->
+val add_tree_to_counters :
+    (int -> int -> bool) -> int Tree.CladeFPMap.t ->
     Tree.u_tree -> int Tree.CladeFPMap.t
 
-val supports : (int -> string) -> int -> float -> Tree.u_tree -> int Tree.CladeFPMap.t ->
+val supports :
+    (int -> string) -> int -> float -> Tree.u_tree -> int Tree.CladeFPMap.t ->
     string Parser.Tree.t
+
+(** [bremer to_string cost t sets] calculates a bremer support tree (for
+* printing purposes) of the tree [t] (which must be properly rooted) which has
+* cost [cost] (the cost must be an integer, as bremer is only used in parsimony
+* and this improves function reusage inside the library), using the
+* function [to_string] to convert leaves in the tree to strings (taxon names),
+* and the sexpr of clades and costs [sets], that is, an sexpr of tuples [(a,
+* b)], where [a] is the cost of the tree containing the sets [b]. 
+*
+* The resulting tree assigns to each branch the minimum cost found for a tree
+* not containing the child clade of the branch within [sets]. *)
+val bremer :
+    (int -> string) -> int -> Tree.u_tree -> 
+        (int * Tree.CladeFP.CladeSet.t) Sexpr.t -> string Parser.Tree.t

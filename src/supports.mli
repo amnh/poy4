@@ -17,11 +17,10 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.mli 1803 2007-05-09 20:09:27Z andres $ *)
+(* $Id: supports.mli 1865 2007-06-07 16:58:32Z andres $ *)
 (* Created Thu Feb  2 16:04:01 2006 (Illya Bomash) *)
 
 (** This module implements computing a support diagnosis of a tree. *)
-
 module type S = sig
     type a 
     type b
@@ -45,6 +44,25 @@ val support_to_string_tree : Data.d -> Methods.support_tree -> string Parser.Tre
 (** [join_support_trees trees] takes a list of [(iterations, support_tree)]
     pairs and combines them into a single support tree *)
 val join_support_trees : (int * Methods.support_tree) list -> Methods.support_tree
+
+
+(** [bremer_of_input_file cg r ts d f t] returns an sexpr which is a map of the
+* sexpr of the phylogenetic trees [t], where the input file [f] holds a list of
+* phylogenetic trees for the loaded data [d], where each tree holds some annotated
+* information in square brackets. The root of the trees is [r], and the, and the
+* taxon name generation function (for each node code) is [ts]. The resulting
+* sexpr is a set of printable trees with their associated bremer support values,
+* as inferred from the input trees in [f]. *) 
+val bremer_of_input_file :
+    (Tree.u_tree -> string -> int) -> int ->
+        (int -> string) -> Data.d -> Methods.filename -> 
+            (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+
+(** Like [bremer_of_input_file] but trust whatever input cost is provided with
+* each tree in it's annotated information.*)
+val bremer_of_input_file_but_trust_input_cost : int ->
+    (int -> string) -> Data.d -> Methods.filename -> 
+        (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 
 end

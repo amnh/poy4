@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 1738 $"
+let () = SadmanOutput.register "Parser" "$Revision: 1865 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -234,31 +234,6 @@ module Fasta = struct
     let is_taxon line = line.[0] = '>'
     exception Finished
 
-
-(*
-    let split_subsequences pattern sequence =
-        let divider = Str.regexp pattern in
-
-        let builder (prev, acc) item =
-            match Str.split_delim divider item with
-            | [h] -> (h :: prev), acc
-            | [] -> prev, acc
-            | hd :: tl ->
-                    let adder (prev, acc) item =
-                        [item], (prev :: acc)
-                    in
-                    List.fold_left adder ((hd :: prev), acc) tl
-        in 
-        let lst = 
-            match List.fold_left builder ([], []) sequence with
-            | [], tl -> tl
-            | hd, tl -> hd :: tl 
-        in 
-        List.rev lst 
-*)
-
-
-
     let split_subsequences pattern sequence =
         let divider = Str.regexp pattern in        
         let builder item (prev, acc)  =
@@ -284,10 +259,7 @@ module Fasta = struct
             | [], tl -> tl 
             | hd, tl -> hd :: tl  
         in  
-
         lst
-
-        
 
     let split_frag = split_subsequences "#"
     let split_loci = split_subsequences "|"
@@ -351,7 +323,10 @@ module Fasta = struct
                                   in 
                                   let seqs4 = List.map  
                                       (fun s3 ->  
-                                           List.map (fun s2 -> List.map (process_sequence remove_gaps lexer alph) s2 ) s3 
+                                           List.map 
+                                           (fun s2 -> List.map 
+                                           (process_sequence remove_gaps lexer 
+                                           alph) s2 ) s3 
                                       ) seqs4  
                                   in                    
 
@@ -954,7 +929,7 @@ module Tree = struct
         | Node (list, d) ->
               Node (List.map (map fn) list, fn d)
 
-    let aux_of_stream stream =
+    let gen_aux_of_stream stream =
         let taxon_name = function 
             | 'a' .. 'z'
             | 'A' .. 'Z'
@@ -970,6 +945,11 @@ module Tree = struct
             stream#read_excl close_squared_parenthesis;
             ignore (stream#getch);
             ()
+        in
+        let get_cost_bracket () =
+            let res = stream#read_excl close_squared_parenthesis in
+            ignore (stream#getch);
+            res
         in
         let read_taxon_name () = 
             stream#read_while taxon_name
@@ -1016,17 +996,24 @@ module Tree = struct
                                     let msg = "Unexpected end of file" in
                                     raise (Illegal_tree_format msg)
                         in
-                        read_tree acc1 (res :: acc2)
+                        read_tree acc1 ((res, "") :: acc2)
                 | '*'
                 | ';' -> 
                         let acc1 = acc2 :: acc1 in
                         (try read_tree acc1 [] with
                         | End_of_file -> acc1)
                 | '[' -> 
-                        let _ = 
-                            try ignore_cost_bracket () with
+                        let contents = 
+                            try get_cost_bracket () with
                             | End_of_file ->
                                     let msg = "Unexpected end of file" in
+                                    raise (Illegal_tree_format msg)
+                        in
+                        let acc2 = 
+                            match acc2 with
+                            | (h, _) :: t -> (h, contents) :: t
+                            | [] -> 
+                                    let msg = "Unexpected cost spec" in
                                     raise (Illegal_tree_format msg)
                         in
                         read_tree acc1 acc2
@@ -1043,7 +1030,10 @@ module Tree = struct
                     | _ -> acc2 :: acc1
         in
         read_tree [] []
-        
+
+    let aux_of_stream stream =
+        List.map (List.map (fun (a, _) -> a)) (gen_aux_of_stream stream)
+
     let aux_of_string str =
         let str = Str.global_replace (Str.regexp "\\[[^]]*\\]") "" str in
         let res = Str.full_split (Str.regexp "[(), ]") str in
@@ -1066,25 +1056,30 @@ module Tree = struct
         let _, res = List.fold_left (builder) ([], []) res in
         res
 
-    let of_string str = 
+
+    let gen_of_string f str = 
         try
             let stream = new FileStream.string_reader str in
-            aux_of_stream stream
+            f stream
         with
         | Trailing_characters -> 
                 raise (Illegal_tree_format "Trailing characters in tree.")
 
-    let of_channel ch =
+    let of_string str = gen_of_string aux_of_stream str
+
+    let gen_of_channel f ch =
         try
             let stream = new FileStream.stream_reader ch in
-            aux_of_stream stream;
+            f stream;
         with
         | End_of_file -> failwith "Unexpected end of file"
 
-    let of_file file =
+    let of_channel ch = gen_of_channel aux_of_stream ch
+
+    let gen_of_file f file =
         try
             let ch = FileStream.open_in file in
-            of_channel ch
+            f ch
         with
         | Failure msg ->
                 let file = FileStream.filename file in
@@ -1096,6 +1091,14 @@ module Tree = struct
                 ".@ The@ error@ message@ is@ @[" ^ err ^ "@]"in
                 Status.user_message Status.Error msg;
                 raise e
+
+    let of_file file = gen_of_file of_channel file
+
+    let of_file_annotated = gen_of_file (gen_of_channel gen_aux_of_stream)
+
+    let of_channel_annotated = gen_of_channel gen_aux_of_stream
+
+    let of_string_annotated = gen_of_string gen_aux_of_stream
 
     let cannonic_order tree =
         let rec build_cannonic_order = function
@@ -1290,8 +1293,6 @@ module Hennig = struct
                 if not ndebug then print_endline matrix_string;
                 let matrix_list = load_all_integers matrix_string [] in
                 let matrix = convert_list_to_matrix size matrix_list in 
-                let res = Str.global_replace (Str.regexp "[.]+")
-                        " " res in
                 let res = process_an_option res characters [] in 
                 List.map (fun x -> Sankoff (matrix, x)) res
             end

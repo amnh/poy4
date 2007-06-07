@@ -36,6 +36,7 @@ struct cm {
     int cost_model_type;
     int combinations;
     int gap_open;
+    int is_metric;
     int *cost;
     int *median;
     int *worst;         /* Missing in 3d */

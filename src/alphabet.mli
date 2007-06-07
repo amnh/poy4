@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: alphabet.mli 1644 2007-02-14 19:05:47Z andres $ *)
+(* $Id: alphabet.mli 1865 2007-06-07 16:58:32Z andres $ *)
 (* Alphabet.
 *
 * Description and handling of different kinds of alphabets for the analysis of
@@ -36,6 +36,14 @@ exception Illegal_Code of int
 
 (** {2 Types} *)
 
+(** The type of the alphabet, either a sequence of integers, up to 32 elements,
+* each represented by a bit, or each represented by a bit including all the
+* combinations. *)
+type kind = 
+    | Sequential
+    | Simple_Bit_Flags
+    | Extended_Bit_Flags
+
 (** Alphabet type *)
 type a
 
@@ -48,11 +56,6 @@ val dna : a
 * combinations, including gaps, represented as "_". The alphabet used follows
 * the IUPAC specification. *)
 val nucleotides : a
-
-(* [nucleotides_annotated] in addition to the elements of [nucleotides] contains
-* the symbol for the pipe '|' which separates annotated genes within a sequence.
-* *)
-val nucleotides_annotated : a
 
 (** [aminoacids] contains aminoacids alphabet according to the IUPAC.
 * Combinations are not considered in this alphabet. *)
@@ -89,10 +92,37 @@ val rnd : a -> (unit -> int)
 (** [size a] gets the size of the alphabet [a]. *)
 val size : a -> int
 
-
+(** [get_all a] returns the assigned code to represent all the elements in the
+* alphabet [a]. *)
 val get_all : a -> int
+
+(** [get_gap a] returns the assigned code to represent the gap element in the
+* alphabet [a]. *)
 val get_gap : a -> int
 
+(** [kind a] returns the kind of the alphabet [a]. *)
+val kind : a -> kind
+
+(** [distinct_size a] returns the number of distinguishable elements in [a]. Two
+* elements are distinguishable if their codes are different. *)
+val distinct_size : a -> int
+
+val print : a -> unit
+
+(** {2 Extracting and Generating Alphabets} *)
+
+(** [list_to_a l g a k] generate an alphabet using the association
+* list of strings and codes [l], with gap code [g] and all code [a], to create
+* an alphabet of kind [k] *)
+val list_to_a :
+  (All_sets.StringMap.key * All_sets.IntegerMap.key) list ->
+  All_sets.StringMap.key -> All_sets.StringMap.key -> kind -> a
+
+(** [simplified_alphabet a] return an alphabet with the following conditions:
+* If the kind of [a] is [Sequential] or [Simple_Bit_Flags], then the same 
+* alphabet is returned, otherwise, only the bit flags, and the all elements are
+* returned in a fresh alphabet, of type [Simple_Bit_Flags]. *)
+val simplified_alphabet : a -> a 
 
 val to_list : a -> (string * int) list
 
@@ -105,10 +135,4 @@ module Lexer : sig
     val make_lexer : 
         bool -> a -> (char Stream.t -> int list -> int -> int list * int)
 end
-
-val print : a -> unit
-
-val list_to_a :
-  (All_sets.StringMap.key * All_sets.IntegerMap.key) list ->
-  All_sets.StringMap.key -> All_sets.StringMap.key -> a
 

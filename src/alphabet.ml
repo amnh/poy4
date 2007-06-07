@@ -17,12 +17,17 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 1644 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 1865 $"
 
-(* $Id: alphabet.ml 1644 2007-02-14 19:05:47Z andres $ *)
+(* $Id: alphabet.ml 1865 2007-06-07 16:58:32Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
+
+type kind = 
+    | Sequential
+    | Simple_Bit_Flags
+    | Extended_Bit_Flags
 
 type a = {
     string_to_code : int All_sets.StringMap.t;
@@ -30,6 +35,7 @@ type a = {
     gap : int;
     all : int;
     size : int;
+    kind : kind;
 }
 
 (* The alphabet type *)
@@ -62,16 +68,18 @@ let lysine = 12
 let methionine = 13
 let phenylalanine = 14
 let proline = 15
-let serine = 17
-let threonine = 18
-let tryptophan = 19
-let tyrosine = 20
-let valine = 21
+let serine = 16
+let threonine = 17
+let tryptophan = 18
+let tyrosine = 19
+let valine = 20
+let aa_gap = 21
 let unspecified = 22
+let all_aminoacids = 22
 
 
 
-let list_to_a lst gap all = 
+let list_to_a lst gap all kind = 
     let add (s2c, c2s, cnt) (a, b) =
         All_sets.StringMap.add a b s2c,
         (if All_sets.IntegerMap.mem b c2s then c2s
@@ -83,7 +91,7 @@ let list_to_a lst gap all =
     let gap_code = All_sets.StringMap.find gap s2c    
     and all_code = All_sets.StringMap.find all s2c in
     { string_to_code = s2c; code_to_string = c2s; gap = gap_code; all = all_code;
-      size = cnt }
+      size = cnt; kind = kind }
 
 (* The alphabet limited to the four bases *)
 let dna =
@@ -95,7 +103,7 @@ let dna =
         ("T", timine);
         ("_", gap);
         ("X", (adenine lor citosine lor guanine lor timine lor gap))
-    ] "_" "X"
+    ] "_" "X" Simple_Bit_Flags
 
 (* The alphabet of accepted IUPAC codes (up to N), and other codes used in the
 * POY file format (_ up to |). *)
@@ -154,12 +162,7 @@ let nucleotides =
         ("b", citosine lor guanine lor timine); 
         ("x", adenine lor citosine lor timine lor guanine); 
         ("n", adenine lor citosine lor timine lor guanine); 
-    ] "_" "*"
-
-let nucleotides_annotated = 
-    { nucleotides with string_to_code = All_sets.StringMap.add "|" 32
-    nucleotides.string_to_code; code_to_string = All_sets.IntegerMap.add 32 "|"
-    nucleotides.code_to_string; size = nucleotides.size + 1 }
+    ] "_" "*" Extended_Bit_Flags
 
 (* The list of aminoacids *)
 let aminoacids =
@@ -185,8 +188,9 @@ let aminoacids =
         ("W", tryptophan); 
         ("Y", tyrosine); 
         ("V", valine); 
-        ("X", gap); 
-        ("_", gap);
+        ("X", all_aminoacids); 
+        ("_", aa_gap);
+        ("-", aa_gap);
         ("a", alanine); 
         ("r", arginine); 
         ("n", asparagine); 
@@ -207,8 +211,8 @@ let aminoacids =
         ("w", tryptophan); 
         ("y", tyrosine); 
         ("v", valine); 
-        ("x", gap); 
-    ] "_" "X"
+        ("x", all_aminoacids); 
+    ] "_" "X" Sequential
 
 let match_base x alph =
     try
@@ -239,9 +243,7 @@ let of_string ?(orientation = false) x gap all =
         | [] -> List.rev alph
     in
     let res = builder [] 1 x in
-
-    let alpha = list_to_a res gap all in 
-
+    let alpha = list_to_a res gap all Sequential in 
     alpha
 
 let size a = a.size
@@ -345,8 +347,41 @@ let print alpha =
     All_sets.IntegerMap.iter (fun code char -> 
                        Printf.fprintf stdout "%6i %s\n" code char)
     alpha.code_to_string;
-    print_newline ();
-    
+    print_newline ()
+
+let kind alpha = alpha.kind
+
+let simplified_alphabet alph =
+    match alph.kind with
+    | Simple_Bit_Flags
+    | Sequential -> alph
+    | Extended_Bit_Flags ->
+            (* We need to extract those numbers that only have one bit on *)
+            let gap = get_gap alph
+            and all = get_all alph in
+            let has_one_bit_or_all v =
+                if v = all then true
+                else
+                    let rec has_only_one_bit_on v =
+                        if v = 1 then true
+                        else if 0 <> (1 land v) then false
+                        else has_only_one_bit_on (v lsr 1)
+                    in
+                    has_only_one_bit_on v
+            in
+            let add_those_who_have_it v name acc =
+                if has_one_bit_or_all v then (name, v) :: acc
+                else acc
+            in
+            let list = 
+                All_sets.IntegerMap.fold add_those_who_have_it 
+                alph.code_to_string []
+            in
+            list_to_a list (find_code gap alph) 
+            (try find_code all alph with _ -> "*") Simple_Bit_Flags
+
+let distinct_size alph =
+    All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1) alph.code_to_string 0
 
 (*    code_to_string : string All_sets.IntegerMap.t;    *)
 (* vim: set et sw=4 tw=80: *)

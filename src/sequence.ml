@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 1775 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 1865 $"
 
 module Pool = struct
     type p
@@ -916,18 +916,41 @@ let select_one_randomized s cm =
 
 let readjust a b m cm parent =
     let matr = Matrix.default in
-    let cost_f a b = Align.cost_2 a b cm matr in
     let make_center a b other =
         let medianf a b other = 
             let median a b = 
-                select_one_randomized (Align.full_median_2 a b cm
-                Matrix.default) cm
+                Align.closest other (Align.full_median_2 a b cm
+                Matrix.default) cm Matrix.default
             in
-            let medianc = median a b in
-            let oa = cost_f other a
-            and ob = cost_f other b 
-            and om = cost_f other medianc in
-            if om < oa && om < ob then Some (median other medianc)
+            let median2 other medianc =
+                select_one_randomized (Align.full_median_2 other medianc cm
+                Matrix.default) cm 
+            in
+            let medianc, _ = median a b in
+            let cost_calculation a b c x =
+                let cst a x = Align.cost_2 a x cm Matrix.default in
+                (cst a x) + (cst b x) + (cst c x) 
+            in
+            let medianc = median2 other medianc in
+            (*
+            let _ = 
+                Status.user_message Status.Information 
+                ("The old cost used to be " ^ 
+                (string_of_int (cost_calculation a b parent m)) ^ 
+                " but now it's " ^ 
+                (string_of_int (cost_calculation a b parent medianc))
+                ^ " for the sequences " ^ to_string m
+                Alphabet.nucleotides ^ " and now " ^ to_string medianc
+                Alphabet.nucleotides)
+            in
+            *)
+            if (cost_calculation a b parent m) > 
+                (cost_calculation a b parent medianc) then
+                    (*
+                    let _ = Status.user_message Status.Information
+                    "choosen!" in
+                    *)
+                    Some medianc
             else None
         in
         match medianf a b parent with
@@ -940,18 +963,7 @@ let readjust a b m cm parent =
                         | Some x -> x
                         | None -> m
     in
-    let center =
-        let c_ab = Align.cost_2 a b cm Matrix.default
-        and c_pb = Align.cost_2 b parent cm Matrix.default
-        and c_ap = Align.cost_2 a parent cm Matrix.default in
-        if c_ab < c_pb then
-            if c_ab < c_ap then 
-                make_center a b parent 
-            else make_center a parent b
-        else if c_pb < c_ap then
-            make_center parent b a
-        else make_center a parent b
-    in
+    let center = make_center a b parent in
     (Align.cost_2 a center cm matr) + (Align.cost_2 b center cm matr),
     center
 

@@ -129,7 +129,7 @@ module DNA : sig
         (** Handling transformation cost matrices for DNA or RNA sequences *)
 
         (** The type of a two dimensional transformation cost matrix *)
-        type cm2
+        type cm2 = Cost_matrix.Two_D.m
 
         (** [of_list lst] converts the 5x5 matrix [lst] to the corresponding
         * transformation cost matrix. The function assumes that rows and columns

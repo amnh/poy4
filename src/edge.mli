@@ -43,8 +43,6 @@ module SelfEdge : EdgeSig with type e = Node.node_data with type n = Node.node_d
 module LazyEdge : EdgeSig with type e = AllDirNode.OneDirF.n with type n =
     AllDirNode.AllDirF.n 
 
-module HybridEdge : EdgeSig with type e = AllDirNode.OneHybrid.n with type n =
-    AllDirNode.Hybrid.n 
 (*
 module SuperRoot (Node : NodeSig.S) : 
     EdgeSig with type e = Node.n with type n = Node.n

@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 1803 2007-05-09 20:09:27Z andres $ *)
+(* $Id: supports.ml 1865 2007-06-07 16:58:32Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 1803 $"
+let () = SadmanOutput.register "Support" "$Revision: 1865 $"
 
 module type S = sig
         type a 
@@ -46,6 +46,17 @@ module type S = sig
         pairs and combines them into a single support tree *)
     val join_support_trees : 
         (int * Methods.support_tree) list -> Methods.support_tree
+
+val bremer_of_input_file :
+    (Tree.u_tree -> string -> int) -> int ->
+        (int -> string) -> Data.d -> Methods.filename -> 
+            (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+
+(** Like [bremer_of_input_file] but trust whatever input cost is provided with
+* each tree .*)
+val bremer_of_input_file_but_trust_input_cost : int ->
+    (int -> string) -> Data.d -> Methods.filename -> 
+        (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 
 end
@@ -665,6 +676,34 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
               let (iter, tree) = List.fold_left join2 tree trees in
               tree
 
+    let generate_sets_for_bremer process_cost root data file =
+        let pair tree = 
+            match Tree.get_node root tree with
+            | Tree.Leaf (a, b) 
+            | Tree.Interior (a, b, _, _) -> (a, b)
+            | Tree.Single _ -> failwith "Not a tree?"
+        in
+        let generate_sets (tree, expected_cost) =
+            let tree = Tree.convert_to [tree] data in
+            let tree = Tree.reroot (pair tree) tree in
+            process_cost tree expected_cost, Tree.CladeFP.sets tree
+        in
+        let trees = Parser.Tree.of_file_annotated file in
+        let for_brem = List.flatten (List.map (List.map generate_sets) trees) in
+        Sexpr.of_list for_brem
+
+    let bremer_of_input_file process_cost root to_string data file 
+    (trees : (a, b) Ptree.p_tree Sexpr.t) = 
+        let sets = generate_sets_for_bremer process_cost root data file in
+        let process_one_tree tree =
+            Ptree.bremer to_string (int_of_float (Ptree.get_cost `Adjusted tree)) 
+            tree.Ptree.tree sets
+        in
+        Sexpr.map process_one_tree trees
+
+    let bremer_of_input_file_but_trust_input_cost =
+        bremer_of_input_file (fun _ b -> int_of_float (float_of_string b))
+
 end
 
 module Inexact = struct let exact = false end
@@ -712,5 +751,10 @@ module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n)
     let support_to_string_tree = DH.support_to_string_tree
 
     let join_support_trees = DH.join_support_trees
+
+    let bremer_of_input_file = DH.bremer_of_input_file
+
+    let bremer_of_input_file_but_trust_input_cost = 
+        DH.bremer_of_input_file_but_trust_input_cost
 
 end

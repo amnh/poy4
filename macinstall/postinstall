@@ -9,10 +9,13 @@ else
     fi
 fi
 
-cp -r '/usr/local/poy4/poy/bin/POY4 Beta Parallel.app' /Applications/
-cp -r '/usr/local/poy4/poy/bin/POY4 Beta.app' /Applications/
-cp -r /usr/local/poy4/poy/bin/cores_macosx.app /Applications/
-open -a cores_macosx
-cp /tmp/cores /usr/local/poy4/poy/bin/cores
-echo 'export PATH=/usr/local/poy4/poy/bin:$PATH' >> $HOME/.bashrc
-rm -fr /Applications/cores_macosx.app
+rm -fr /Applications/POY4\ Beta\ Parallel.app
+rm -fr /Applications/POY4\ Beta.app 
+cp -fr '/usr/local/poy4/poy/bin/POY4 Beta Parallel.app' /Applications/
+ln -s /usr/local/poy4/poy/bin/poy.command /Applications/POY4\ Beta.app
+if grep -q "/usr/local/poy4/poy/bin" $HOME/.bashrc
+then
+    echo ""
+else
+    echo 'export PATH=/usr/local/poy4/poy/bin:$PATH' >> $HOME/.bashrc
+fi

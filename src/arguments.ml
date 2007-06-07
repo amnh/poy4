@@ -17,13 +17,24 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Arguments" "$Revision: 1800 $"
+let () = SadmanOutput.register "Arguments" "$Revision: 1865 $"
 
 let just_exit = ref false
 let dump_file = ref "ft_output.poy"
 let input : string list ref = ref []
 
+let change_working_directory str =
+    try Sys.chdir str with
+    | err ->
+            prerr_endline 
+            ("Attemting to change to directory " ^ str ^ 
+            " failed misserably. I am cancelling this run, check your " ^
+            "path.\n");
+            exit 1
+
 let parse_list = [
+    ("-w", Arg.String change_working_directory,
+    "Run poy in the specified working directory"); 
     ("-e", Arg.Unit (fun () -> just_exit := true), "Exit upon error");
     ("-d", Arg.String (fun str -> dump_file := str), "Dump filename in case of \
     error");

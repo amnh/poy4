@@ -692,11 +692,7 @@ algn_fill_plane_2 (const seqt s1, int *prec, int s1_len, int s2_len, int *mm, \
  * here must also go there.
  */
 
-inline void
-algn_assign_dm (unsigned char *dm, int pos, int v) {
-    dm[pos] = dm[pos] | v;
-    return;
-}
+#define algn_assign_dm(dm,pos,v) dm[pos] = dm[pos] | v
 
 #ifdef _WIN32
 __inline void 
@@ -721,27 +717,31 @@ algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
         dm[i] = 0;
         { /* We deal with the difficultness of using an opening gap as 
              another unsigned character */
-            if (((0 == cprev) && (0 != c)) || 
-                    ((0 != cprev) && (0 == c)))
+            if ((0 == cprev) && (0 != c)) {
                 tmp1 = pdnmm[i] + open_gap + c;
-            else
-                tmp1 = pdnmm[i] + c;
-
-            if (((0 == gap_row[i - 1]) && (0 != gap_row[i])) ||
-                ((0 != gap_row[i - 1]) && (0 == gap_row[i])))
-                tmp5 = htmm[i - 1] + open_gap + gap_row[i];
-            else
-                tmp5 = htmm[i - 1] + gap_row[i];
-
-            if ((0 != cprev) && (0 == c))
-                tmp4 = pm[i];
-            else
                 tmp4 = pm[i] + open_gap + c;
+            }
+            else if ((0 != cprev) && (0 == c)) {
+                tmp1 = pdnmm[i] + open_gap + c;
+                tmp4 = pm[i];
+            }
+            else {
+                tmp1 = pdnmm[i] + c;
+                tmp4 = pm[i] + open_gap + c;
+            }
 
-            if ((0 != gap_row[i - 1]) && (0 == gap_row[i]))
-                tmp2 = mm[i - 1];
-            else
+            if ((0 == gap_row[i - 1]) && (0 != gap_row[i])) {
+                tmp5 = htmm[i - 1] + open_gap + gap_row[i];
                 tmp2 = mm[i - 1] + open_gap + gap_row[i];
+            } 
+            else if ((0 != gap_row[i - 1]) && (0 == gap_row[i])) {
+                tmp5 = htmm[i - 1] + open_gap + gap_row[i];
+                tmp2 = mm[i - 1];
+            }
+            else {
+                tmp2 = mm[i - 1] + open_gap + gap_row[i];
+                tmp5 = htmm[i - 1] + gap_row[i];
+            }
 
             if ((((0 == gap_row[i]) && (0 != c)) ||
                     ((0 != gap_row[i]) && (0 == c))) &&
@@ -751,18 +751,18 @@ algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
                 tmp3 = pm[i - 1] + alg_row[i];
         }
         if (tmp1 < tmp4)
-            algn_assign_dm (dm, i, DELETE_V);
+            algn_assign_dm(dm,i,DELETE_V);
         else {
-            algn_assign_dm (dm, i, ALIGN_V);
+            algn_assign_dm(dm,i,ALIGN_V);
             tmp1 = tmp4;
         }
 
         if (tmp2 <= tmp5) {
-            algn_assign_dm (dm, i, ALIGN_H);
+            algn_assign_dm(dm,i,ALIGN_H);
         }
         else {
             tmp2 = tmp5;
-            algn_assign_dm (dm, i, INSERT_H);
+            algn_assign_dm(dm,i,INSERT_H);
         }
         dnmm[i] = tmp1;
         htmm[i] = tmp2;
@@ -775,43 +775,43 @@ algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
         if (tmp1 < tmp3) { 
             if (tmp1 < tmp2) {
                 mm[i] = tmp1;
-                algn_assign_dm (dm, i, DELETE);
+                algn_assign_dm(dm,i,DELETE);
             }
             else if (tmp2 < tmp1) {
                 mm[i] = tmp2;
-                algn_assign_dm (dm, i, INSERT);
+                algn_assign_dm(dm,i,INSERT);
             }
             else {
                 mm[i] = tmp2;
-                algn_assign_dm (dm, i, (DELETE | INSERT));
+                algn_assign_dm(dm,i,(DELETE | INSERT));
             }
         }
         else if (tmp3 < tmp1) {
             if (tmp3 < tmp2) {
                 mm[i] = tmp3;
-                algn_assign_dm (dm, i, (ALIGN));
+                algn_assign_dm(dm,i,(ALIGN));
             } 
             else if (tmp2 < tmp3) {
                 mm[i] = tmp2;
-                algn_assign_dm (dm, i, (INSERT));
+                algn_assign_dm(dm,i,(INSERT));
             }
             else {
                 mm[i] = tmp2;
-                algn_assign_dm (dm, i, ((ALIGN | INSERT)));
+                algn_assign_dm(dm,i,((ALIGN | INSERT)));
             }
         }
         else { /* tmp3 == tmp1 */
             if (tmp3 < tmp2) {
                 mm[i] = tmp3;
-                algn_assign_dm (dm, i, ((ALIGN | DELETE)));
+                algn_assign_dm(dm,i,((ALIGN | DELETE)));
             }
             else if (tmp2 < tmp3) {
                 mm[i] = tmp2; 
-                algn_assign_dm (dm, i, (INSERT));
+                algn_assign_dm(dm,i,(INSERT));
             }
             else {
                 mm[i] = tmp2;
-                algn_assign_dm (dm, i, ((DELETE | INSERT | ALIGN)));
+                algn_assign_dm(dm,i,((DELETE | INSERT | ALIGN)));
             }
         }
         if (!NDEBUG && !NPRINT_DM) {
@@ -874,25 +874,25 @@ algn_fill_ukk_right_cell_aff (int *mm, const int *pm, const int *gap_row, \
             tmp3 = pm[pos - 1] + alg_row[pos];
     }
     if (tmp2 <= tmp4) 
-        algn_assign_dm (dm, pos, ALIGN_H);
+        algn_assign_dm(dm,pos,ALIGN_H);
     else {
         tmp2 = tmp4;
-        algn_assign_dm (dm, pos, INSERT_H);
+        algn_assign_dm(dm,pos,INSERT_H);
     }
     htmm[pos] = tmp2;
     dnmm[pos] = HIGH_NUM;
     /* check whether insertion is better */
     if (tmp2 < tmp3) {
         mm[pos] = tmp2;
-        algn_assign_dm (dm, pos, (INSERT));
+        algn_assign_dm(dm,pos,(INSERT));
     }
     else if (tmp3 < tmp2) {
         mm[pos] = tmp3;
-        algn_assign_dm (dm, pos, (ALIGN));
+        algn_assign_dm(dm,pos,(ALIGN));
     }
     else {
         mm[pos] = tmp3;
-        algn_assign_dm (dm, pos, (INSERT | ALIGN));
+        algn_assign_dm(dm,pos,(INSERT | ALIGN));
     }
     if (!NDEBUG && !NPRINT_DM) {
         /* Print the alignment matrix */
@@ -951,24 +951,24 @@ algn_fill_ukk_left_cell_aff (int *mm, const int *pm, const int *gap_row, \
             tmp3 = pm[pos - 1] + alg_row[pos];
     }
     if (tmp1 <= tmp5) 
-        algn_assign_dm (dm, pos, ALIGN_V);
+        algn_assign_dm(dm,pos,ALIGN_V);
     if (tmp5 < tmp1) {
-        algn_assign_dm (dm, pos, DELETE_V);
+        algn_assign_dm(dm,pos,DELETE_V);
         tmp1 = tmp5;
     }
     dnmm[pos] = tmp1;
     htmm[pos] = HIGH_NUM;
         if (tmp1 < tmp3) {
             mm[pos] = tmp1;
-            algn_assign_dm (dm, pos, (DELETE));
+            algn_assign_dm(dm,pos,(DELETE));
         } 
         else if (tmp3 < tmp1) {
             mm[pos] = tmp3;
-            algn_assign_dm (dm, pos, (ALIGN));
+            algn_assign_dm(dm,pos,(ALIGN));
         } 
         else {
             mm[pos] = tmp1;
-            algn_assign_dm (dm, pos, (ALIGN | DELETE));
+            algn_assign_dm(dm,pos,(ALIGN | DELETE));
         }
     if (!NDEBUG && !NPRINT_DM) {
         /* Print the alignment matrix */
@@ -1011,18 +1011,18 @@ algn_fill_last_column_aff (int *mm, const int *pm, int tlc, int tlcprev, \
             cst = pdnmm[l] + tlc;
     }
     if (cst < tmp2)
-        algn_assign_dm (dm, l, DELETE_V);
+        algn_assign_dm(dm,l,DELETE_V);
     else {
         cst = tmp2;
-        algn_assign_dm (dm,l, ALIGN_V);
+        algn_assign_dm(dm,l,ALIGN_V);
     }
     dnmm[l] = cst;
     if (cst < mm[l]) {
         mm[l] = cst;
-        algn_assign_dm (dm, l, (DELETE));
+        algn_assign_dm(dm,l,(DELETE));
     } 
     else if (cst == mm[l])
-        algn_assign_dm (dm, l, DELETE);
+        algn_assign_dm(dm,l,DELETE);
     return;
 }
 

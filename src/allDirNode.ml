@@ -255,6 +255,9 @@ module OneDirF :
 
     let root_cost a = 
         Node.Standard.root_cost (Lazy.force_val a)
+
+    let to_single a b c d =
+        lazy (Node.Standard.to_single a (Lazy.force_val b) c (Lazy.force_val d))
 end
 
 module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
@@ -284,6 +287,20 @@ type nad8 = Node.Standard.nad8 = struct
         data, List.map to_n nodes
 
     let fix_preliminary x = x
+
+    let to_single a b c d =
+        let get_code x = 
+            match x with
+            | Some x -> x
+            | None -> failwith "huh?"
+        in
+        let a' = get_code a
+        and c' = get_code c in
+        let b' = not_with a' b.unadjusted
+        and d' = not_with c' d.unadjusted in
+        let lazy_node = OneDirF.to_single a b'.lazy_node c d'.lazy_node in
+        let node = { d' with lazy_node = lazy_node } in
+        { d with unadjusted = [node] }
 
     let distance ?(para=None) ?(parb=None) a b =
         match a.unadjusted, b.unadjusted with
@@ -334,7 +351,12 @@ type nad8 = Node.Standard.nad8 = struct
         in
         { unadjusted = [node]; adjusted = [node] }
 
-    let to_string _ = ""
+    let to_string nodes = 
+        let res = 
+            List.map (fun x -> OneDirF.to_string x.lazy_node)
+            nodes.unadjusted 
+        in
+        String.concat "\n" res
 
     let total_cost par n =
         match par with
@@ -572,382 +594,3 @@ type 'a node_hybrid = {
 module HybridF = struct
     let get_dynamic x = x.dy
 end
-
-module MakeHybrid (LazyNode : NodeSig.S with type e = exclude) : NodeSig.S with
-type e = exclude with type n = LazyNode.n node_hybrid =
-    struct
-
-        type n = LazyNode.n node_hybrid
-
-        let apply_each_1 static dynamic n =
-            match n.st with
-            | None ->
-                    { st = None; dy = dynamic n.dy }
-            | Some st ->
-                    { st = Some (static st); dy = dynamic n.dy }
-
-        let apply_each_2 static dynamic n n' =
-            match n.st, n'.st with
-            | None, None ->
-                    { st = None; dy = dynamic n.dy n'.dy }
-            | Some st, Some st' ->
-                    { st = Some (static st st'); dy = dynamic n.dy n'.dy }
-            | _ -> failwith "AllDirNode.MakeHybrid.apply_each_2"
-
-        let apply_two static dynamic cmp default n n' =
-            match n.st, n'.st with
-            | None, None ->
-                    cmp default (dynamic n.dy n'.dy)
-            | Some st, Some st' ->
-                    cmp (static st st') (dynamic n.dy n'.dy)
-            | _ -> failwith "AllDirNode.apply_two"
-
-        let apply_additive_2 static dynamic n n' =
-            match n.st, n'.st with
-            | None, None ->
-                    (dynamic n.dy n'.dy) 
-            | Some st, Some st' ->
-                    (dynamic n.dy n'.dy) +. (static st st')
-            | _ -> failwith "AllDirNode.apply_additive_2"
-
-        let apply_additive static dynamic n =
-            match n.st with
-            | None -> dynamic n.dy
-            | Some st -> (dynamic n.dy) +. (static st)
-
-        let apply_additive_int static dynamic n =
-            match n.st with
-            | None -> (dynamic n.dy) 
-            | Some st -> (dynamic n.dy) + (static st)
-
-        let fix_preliminary (n : n) =
-            match n.st with
-            | Some st ->
-                    { dy = LazyNode.fix_preliminary n.dy;
-                    st = Some (Node.Standard.fix_preliminary st)}
-            | None ->
-                    { dy = LazyNode.fix_preliminary n.dy;
-                    st = None }
-
-        let distance ?(para=None) ?(parb=None) a b =
-            apply_additive_2 
-            (Node.Standard.distance ~para ~parb)
-            (LazyNode.distance ~para ~parb)
-            a b
-
-        let median a b c d e =
-            let dyc, stc = 
-                match c with
-                | None -> None, None
-                | Some c -> 
-                        Some c.dy, 
-                        match c.st with 
-                        | None -> None 
-                        | Some v -> Some v
-            in
-            match d.st, e.st with
-            | None, None ->
-                        { dy = LazyNode.median a b dyc d.dy e.dy;
-                        st = None }
-            | Some dst, Some est ->
-                        { dy = LazyNode.median a b dyc d.dy e.dy;
-                        st = Some (Node.Standard.median a b stc dst est) }
-            | _, _ -> failwith "AllDirNode.MakeHybrid.median"
-
-        let to_string n =
-            LazyNode.to_string n.dy ^ " " ^ 
-            match n.st with
-            | None -> ""
-            | Some st -> Node.Standard.to_string st
-
-        let total_cost a b =
-            apply_additive 
-            (Node.Standard.total_cost a) 
-            (LazyNode.total_cost a) 
-            b
-
-        let node_cost a b = 
-            apply_additive
-            (Node.Standard.node_cost a)
-            (LazyNode.node_cost a)
-            b
-
-        let update_leaf n =
-            apply_each_1
-            Node.Standard.update_leaf 
-            LazyNode.update_leaf
-            n
-
-        let apply_any dynamic n = dynamic n.dy
-
-        let taxon_code n =
-            apply_any 
-            LazyNode.taxon_code
-            n
-
-        let union_distance a b = 
-            apply_additive_2
-            Node.Standard.union_distance
-            LazyNode.union_distance
-            a
-            b
-
-        let is_collapsable a b =
-            apply_two 
-            Node.Standard.is_collapsable
-            LazyNode.is_collapsable
-            (fun a b -> a & b) 
-            true
-            a 
-            b
-
-        let to_xml _ _ _ = ()
-
-        let num_height a b =
-            apply_any 
-            (LazyNode.num_height a)
-            b
-
-        let num_otus a b =
-            apply_any 
-            (LazyNode.num_otus a)
-            b
-
-        let dynamic_only dynamic n = dynamic n.dy
-
-        let static_only default static n = 
-            match n.st with
-            | None -> default
-            | Some v -> static v
-
-        let get_sequences n =
-            dynamic_only LazyNode.get_sequences n
-
-        let get_dynamic_preliminary a b =
-            dynamic_only (LazyNode.get_dynamic_preliminary a) b
-
-        let edge_distance a b =
-            apply_additive_2 
-            Node.Standard.edge_distance 
-            LazyNode.edge_distance
-            a 
-            b
-
-        let support_chars a b n =
-            static_only [] (Node.Standard.support_chars a b) n
-
-        let load_data ?taxa ?codes ?(classify=true) data = 
-            let static_data = 
-                Data.process_ignore_characters false data `AllDynamic
-            and dynami_data =
-                Data.process_ignore_characters false data `AllStatic
-            and make_some = List.map (fun x -> Some x) in
-            let res1, res2 = 
-                match taxa, codes with
-                | Some x, Some y ->
-                        let _, a =
-                            LazyNode.load_data ~taxa:x ~codes:y ~classify 
-                            dynami_data
-                        in
-                        let _, b = 
-                            Node.Standard.load_data ~taxa:x ~codes:y ~classify
-                            static_data
-                        in
-                        a, make_some b
-                | Some x, None ->
-                        let _, a = 
-                            LazyNode.load_data ~taxa:x ~classify dynami_data
-                        in
-                        let _, b = 
-                            Node.Standard.load_data ~taxa:x ~classify 
-                            static_data 
-                        in
-                        a, make_some b
-                | None, Some y ->
-                        let _, a = 
-                            LazyNode.load_data ~codes:y ~classify dynami_data 
-                        in
-                        let _, b = 
-                            Node.Standard.load_data ~codes:y ~classify 
-                            static_data 
-                        in
-                        a, make_some b
-                | None, None ->
-                        let _, a = LazyNode.load_data ~classify dynami_data in
-                        let _, b = 
-                            Node.Standard.load_data ~classify static_data 
-                        in
-                        a, make_some b
-            in
-            let res = List.combine res1 res2 in
-            data, List.map (fun (x, y) ->  {dy = x; st = y}) res
-
-        let n_chars ?(acc = 0) n =
-            apply_additive_int
-            (Node.Standard.n_chars ~acc)
-            (LazyNode.n_chars ~acc:0)
-            n
-
-        let prioritize n =
-            apply_each_1 
-            Node.Standard.prioritize
-            LazyNode.prioritize
-            n
-
-        let reprioritize a b =
-            apply_each_2
-            Node.Standard.reprioritize
-            LazyNode.reprioritize
-            a
-            b
-
-        let f_codes lst n =
-            apply_each_1 
-            (Node.Standard.f_codes lst)
-            (LazyNode.f_codes lst)
-            n
-
-        let min_child_code x n =
-            apply_any
-            (LazyNode.min_child_code x)
-            n
-
-        type e = exclude
-
-        type nad8 = Node.Standard.nad8
-
-        let new_characters = Node.Standard.new_characters
-
-        let build_node a b c =
-            match c.st with
-            | None -> c
-            | Some st ->
-                    { c with st = Some (Node.Standard.build_node a b st) }
-
-        let set_exclude_info a b = 
-            match b.st with
-            | None -> b
-            | Some st ->
-                    { b with st = Some (Node.Standard.set_exclude_info a st) }
-
-        let excludes_median a b c =
-            match b.st, c.st with
-            | None, None -> []
-            | Some b, Some c ->
-                    Node.Standard.excludes_median a b c
-            | _ -> failwith "AllDirNode.excludes_median"
-
-        let has_excluded = Node.Standard.has_excluded
-
-        module T = struct
-
-            let add_exclude a n =
-                match n.st with
-                | Some st ->
-                        { n with st = Some (Node.Standard.T.add_exclude a st) }
-                | None -> n
-
-        end
-
-        module Union = struct
-
-            type u = {
-                stu : Node.Standard.Union.u option;
-                dyu : LazyNode.Union.u;
-            }
-
-            let union a n x y =
-                match n.st, x.stu, y.stu with
-                | None, None, None ->
-                        { dyu = 
-                            LazyNode.Union.union a n.dy x.dyu y.dyu;
-                            stu = None }
-                | Some nst, Some xstu, Some ystu ->
-                    { dyu = 
-                        LazyNode.Union.union a n.dy x.dyu y.dyu;
-                    stu = 
-                        Some (Node.Standard.Union.union a nst xstu ystu) }
-                | _ -> failwith "AllDirNode.MakeHybrid.Union.union"
-
-            let unprepost static dynamic a b c =
-                match b.stu, c.st with
-                | None, None ->
-                        { dyu = dynamic a b.dyu c.dy;
-                        stu = None }
-                | Some bstu, Some cst ->
-                        { dyu = dynamic a b.dyu c.dy;
-                        stu = Some (static a bstu cst) }
-                | _ -> failwith "AllDirNode.MakeHybrid.Union.unprepost"
-                        
-            let union_preliminary a b c = 
-                unprepost 
-                Node.Standard.Union.union_preliminary
-                LazyNode.Union.union_preliminary
-                a 
-                b 
-                c
-
-            let union_final a b c = 
-                unprepost 
-                Node.Standard.Union.union_final
-                LazyNode.Union.union_final
-                a 
-                b 
-                c
-
-            let leaf a b n =
-                match n.st with
-                | Some nst ->
-                        { stu = Some (Node.Standard.Union.leaf a b nst);
-                        dyu = LazyNode.Union.leaf a b n.dy }
-                | None ->
-                        { stu = None;
-                        dyu = LazyNode.Union.leaf a b n.dy }
-
-            let distance a b =
-                (LazyNode.Union.distance a.dyu b.dyu)
-                +.
-                match a.stu, b.stu with
-                | Some astu, Some bstu ->
-                        (Node.Standard.Union.distance astu bstu) 
-                | None, None -> 0.0
-                | _ -> failwith "AllDirNode.MakeHybrid.Union.distance"
-
-            let saturation u = 
-                failwith "Not implemented!  LazyNode.Hybrid.Union.saturation"
-
-            let distance_node a b c =
-                (LazyNode.Union.distance_node a b.dy c.dyu ) 
-                +.
-                match b.st, c.stu with
-                | Some bst, Some cstu ->
-                        (Node.Standard.Union.distance_node a bst cstu)
-                | None, None -> 0.0
-                | _ -> failwith "AllDirNode.MakeHybrid.Union.distance"
-
-            let compare a b = 
-                let initial =
-                    match a.stu, b.stu with
-                    | None, None -> 0
-                    | Some a, Some b -> Node.Standard.Union.compare a b 
-                    | _ -> failwith "How am I going to compare them?"
-                in
-                if initial = 0 then LazyNode.Union.compare a.dyu b.dyu
-                else initial
-
-            let get_sequence a b c =
-                LazyNode.Union.get_sequence a b c.dyu
-
-        end
-
-        let for_support a b c d = failwith "MOVE ANDRES!"
-
-        let root_cost n =
-            apply_additive 
-            Node.Standard.root_cost 
-            LazyNode.root_cost
-            n
-    end
-
-module Hybrid = MakeHybrid (AllDirF)
-module OneHybrid = MakeHybrid (OneDirF)

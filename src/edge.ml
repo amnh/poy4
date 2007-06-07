@@ -102,32 +102,3 @@ module LazyEdge : EdgeSig with type e = AllDirNode.OneDirF.n with type n =
                     | _ -> failwith "Edge.LazyEdge.of_node"
     end
 
-module HybridEdge : EdgeSig with type e = AllDirNode.OneHybrid.n with type n =
-    AllDirNode.Hybrid.n = struct
-        type e = AllDirNode.OneHybrid.n
-        type n = AllDirNode.Hybrid.n
-        let has_information = true
-
-        let to_node code dir e = 
-            let dy = 
-                let tmp =
-                    [{ AllDirNode.lazy_node = e.AllDirNode.dy;
-                    dir = Some dir; code = code}]
-                in
-                { AllDirNode.unadjusted = tmp; adjusted = tmp }
-            in
-            { AllDirNode.st = e.AllDirNode.st; dy = dy }
-
-        let of_node a b = 
-            match a with
-            | Some a -> 
-                    { AllDirNode.st = b.AllDirNode.st; 
-                    dy = (AllDirNode.not_with a
-                    b.AllDirNode.dy.AllDirNode.unadjusted).AllDirNode.lazy_node }
-            | None ->
-                    match b.AllDirNode.dy.AllDirNode.unadjusted with
-                    | [x] -> 
-                            { AllDirNode.st = b.AllDirNode.st;
-                            AllDirNode.dy = x.AllDirNode.lazy_node}
-                    | _ -> failwith "Edge.LazyEdge.of_node"
-    end

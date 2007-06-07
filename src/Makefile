@@ -1,4 +1,4 @@
-# $Id: Makefile 1819 2007-05-11 21:42:42Z andres $
+# $Id: Makefile 1865 2007-06-07 16:58:32Z andres $
 
 # Instructions:
 # You can compile a debug bytecode app by specifying DEBUG=-g
@@ -233,7 +233,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \" 1812 \"" > $@
+	echo "let build = \" 1865 \"" > $@
 
 compileFlags.ml: ../config
 	echo "(** automatically generated description of compile-time flags *)" \

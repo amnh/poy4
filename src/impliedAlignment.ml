@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1805 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1865 $"
 
 exception NotASequence of int
 
@@ -91,10 +91,6 @@ let create_ias s code cg =
 
 
 let create_ias_chrom s code cg =
-(*
-    print_endline "Create isa";
-    UtlPoy.printDNA s;
-*)
     let add_codes (code_acc, hom_acc, order_lst) pos _ =
         let code = cg () in 
         Hashtbl.add code_acc pos code; 
@@ -132,8 +128,10 @@ let print_debug a' b' a b m =
 let print_algn_debug = false
 let print_anc_debug = false
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
+(** [ancestor a b cm m] creates a common ancestor for sequences [a] and [b]
+ * using the cost matrix [cm] and the alignment matrix [m] 
+ * The resulting common ancestor holds the homology
+ * relationships of the codes assigned in [a] and [b]. *)
 let ancestor all_minus_gap a b cm m = 
     let codea = a.cannonic_code
     and codeb = b.cannonic_code in
@@ -181,8 +179,8 @@ let ancestor all_minus_gap a b cm m =
             let is_gap_median =
                 if it_a <> gap && it_b <> gap then
                     (((Cost_matrix.Two_D.cost it_a it_b cm) <
-                    (Cost_matrix.Two_D.cost (it_a land all_minus_gap)
-                    (it_b land all_minus_gap) cm)) || (med = gap))
+                    (Cost_matrix.Two_D.cost (all_minus_gap it_a)
+                    (all_minus_gap it_b) cm)) || (med = gap))
                 else (med = gap)
             in
             let code, hom, n_a_pos, n_b_pos, na_hom, nb_hom, a_or, b_or, res_or =
@@ -199,7 +197,6 @@ let ancestor all_minus_gap a b cm m =
                             prepend_until_shared res_or a_or codea in
                         let new_res_or, new_b_or = 
                             prepend_until_shared new_res_or b_or codeb in
-                                                
                         Hashtbl.replace hom codea new_ab;
                         codea, hom, a_pos - 1, b_pos - 1, a_hom, 
                         b_hom, new_a_or, new_b_or, (codea :: new_res_or)
@@ -255,7 +252,6 @@ let ancestor all_minus_gap a b cm m =
             
 (*            List.iter (fun ord -> fprintf stdout "%i " ord) res_or;
             print_newline (); *)
-
             builder (position - 1) n_a_pos n_b_pos n_anc_pos codes hom na_hom
             nb_hom a_or b_or res_or
         end else begin
@@ -273,10 +269,6 @@ let ancestor all_minus_gap a b cm m =
             in
             (* Now we add the homologies that are in the tree above us, after
             * the current sequence. *)
-            (*
-            let hom = Codes.fold (fun x y acc -> Codes.add x y acc) hom a_hom in
-            let hom = Codes.fold (fun x y acc -> Codes.add x y acc) hom b_hom in
-            *)
             Hashtbl.iter (Hashtbl.replace a_hom) hom;
             Hashtbl.iter (Hashtbl.replace a_hom) b_hom;
             let new_res_or = prepend_all res_or a_or in
@@ -284,48 +276,31 @@ let ancestor all_minus_gap a b cm m =
             codes, a_hom, new_res_or
         end
     in
-
     let initial_codes = Hashtbl.create 1667
     and initial_hom = Hashtbl.create 1667 in
     let codes, hom, order = 
         builder (lena' - 1) (lena - 1) (lenb - 1) 0 initial_codes
         initial_hom a.homologous b.homologous a_ord b_ord []
     in
-(*
-    List.iter (fun code -> fprintf stdout "%i " code) (List.rev a.order);
-    print_newline ();
-    List.iter (fun code -> fprintf stdout "%i " code) (List.rev b.order);
-    print_newline ();
-    List.iter (fun code -> fprintf stdout "%i " code) (order);
-    print_newline ();
-*)
-
     let order = List.rev order in
     { seq = anc; codes = codes; homologous = hom; cannonic_code = mincode;
     order = order }
-
-
-
 
 let cmp_chrom_cost isa1 isa2 c2 chrom_pam = 
     let med1 = ChromAli.create_med isa1.seq in 
     let med2 = ChromAli.create_med isa2.seq in
     let cost, _ = ChromAli.cmp_cost med1 med2 c2 chrom_pam in 
     cost
-    
 
 (* Merge the implied alignments of two clades and their respective roots into
 * one common ancestor *)
-let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m = 
+let ancestor_chrom a_ls b_ls cm chrom_pam m = 
     let first_a = List.hd a_ls in  
     let first_b = List.hd b_ls in 
-
     let a_ls, b_ls, min_can_code = 
         if first_a.cannonic_code < first_b.cannonic_code then a_ls, b_ls, first_a.cannonic_code
         else b_ls, a_ls, first_b.cannonic_code
     in
-
-
     let _, a, b = 
         List.fold_left 
             (fun (min_cost, best_a, best_b) isa_a -> 
@@ -337,7 +312,6 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
                      ) (min_cost, best_a, best_b) b_ls                  
             ) (max_int, first_a, first_b) a_ls  
     in 
-
     let lena = Sequence.length a.seq
     and lenb = Sequence.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
@@ -354,17 +328,13 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
             a.seq, (create_gaps lena)
         else a.seq, b.seq
     in  
-    
     let med_a = ChromAli.create_med seq_a in 
     let med_b = ChromAli.create_med seq_b in 
     let _, _, med_ls = ChromAli.find_med2_ls med_a med_b cm chrom_pam in 
-
-    
     let ordera_arr = Array.of_list a.order in 
     let orderb_arr = Array.of_list b.order in 
     let homs_a = a.homologous in 
     let homs_b = b.homologous in 
-
     let create_order_map order_ls = 
         let order_map, _ = 
             List.fold_left (fun (order_map, p) code ->  
@@ -373,27 +343,18 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
         in 
         order_map
     in 
-
     let codea_set = Hashtbl.fold 
         (fun _ code codea_set -> IntSet.add code codea_set) a.codes IntSet.empty
     in 
-
     let codeb_set = Hashtbl.fold 
         (fun _ code codeb_set -> IntSet.add code codeb_set) b.codes IntSet.empty
     in 
-
-
-    
     let ordera_map = create_order_map a.order in 
     let orderb_map = create_order_map b.order in 
-    
-
     let add_deled_pos code order_arr order_map code_set homs res_order_ls res_homs = 
         let rec adder p delted_order_ls =
             if p >= 0 then begin
                 let delted_code = order_arr.(p) in 
-
-
                 let stop = 
                     match IntSet.mem delted_code code_set with 
                     | true ->  true
@@ -404,22 +365,16 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
                 in 
                 if stop = true then List.rev delted_order_ls
                 else adder (p - 1) (delted_code::delted_order_ls) 
-
             end else List.rev delted_order_ls
         in 
- 
         let pos = 
             try 
                 Codes.find code order_map 
             with Not_found -> Array.length order_arr            
         in 
-
-
         let delted_order_ls = adder (pos - 1) [] in
         (List.append delted_order_ls res_order_ls), res_homs
-        
     in 
-
     let builder_med ias_ls med =
         let builder (res_codes, res_homs, res_or) (med_pos, med, a_pos, it_a, b_pos, it_b) = 
 (*
@@ -435,36 +390,28 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
                       fprintf stdout "codea: %i\n" codea; flush stdout;
                       fprintf stdout "codeb: %i\n" codeb; flush stdout;
 *)
-
                       let hom_a = Hashtbl.find homs_a codea 
                       and hom_b = Hashtbl.find homs_b codeb in
-
                       let new_ab = `Set [hom_a; hom_b] in
                       let res_or, res_homs = add_deled_pos codea ordera_arr
                           ordera_map codea_set homs_a res_or res_homs
                       in 
-
                       let res_or, res_homs = add_deled_pos codeb orderb_arr
                           orderb_map codeb_set homs_b res_or res_homs
                       in 
-
                       Hashtbl.replace res_homs codea new_ab; 
                       codea, res_homs, (codea :: res_or) 
                 | true, false, false ->
                       let codea = Hashtbl.find a.codes a_pos in
                       let codeb = Hashtbl.find b.codes b_pos in
-
                       let hom_b = Hashtbl.find homs_b codeb 
                       and hom_a = Hashtbl.find homs_a codea in
-
                       let res_or, res_homs = add_deled_pos codea ordera_arr
                           ordera_map codea_set homs_a res_or res_homs
                       in 
-
                       let res_or, res_homs = add_deled_pos codeb orderb_arr
                           orderb_map codeb_set homs_b res_or res_homs
                       in 
-
                       Hashtbl.add res_homs codeb hom_b;
                       Hashtbl.add res_homs codea hom_a;
                       let res_or = (codea :: codeb :: res_or) in
@@ -472,19 +419,15 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
                 | _, true, false ->
                       let codeb = Hashtbl.find b.codes b_pos in
                       let hom_b = Hashtbl.find homs_b codeb in
-
                       Hashtbl.replace res_homs codeb hom_b;
                       let res_or, res_homs = add_deled_pos codeb orderb_arr
                           orderb_map codeb_set homs_b res_or res_homs
                       in 
-
                       codeb, res_homs, (codeb :: res_or)
                 | _, false, true ->
                       let codea = Hashtbl.find a.codes a_pos in
                       let hom_a = Hashtbl.find homs_a codea in
-
                       Hashtbl.replace res_homs codea hom_a;
-
                       let res_or, res_homs = add_deled_pos codea ordera_arr
                           ordera_map codea_set homs_a res_or res_homs
                       in 
@@ -492,18 +435,12 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
                 | _, true, true ->
                       (-1), res_homs, res_or
             in 
-
             (if (med != gap) then 
                 Hashtbl.replace res_codes med_pos code);
-
             res_codes, res_homs,  res_or        
         in 
-                    
-
-
         let init_codes = Hashtbl.create 1667
         and init_hom = Hashtbl.create 1667 in
-
         let map = ChromAli.convert_map med in  
         let res_codes, res_homs, res_or =
             List.fold_left builder 
@@ -515,65 +452,15 @@ let ancestor_chrom all_minus_gap a_ls b_ls cm chrom_pam m =
         let res_or, res_homs = add_deled_pos (-1) orderb_arr orderb_map codeb_set homs_b
             res_or res_homs 
         in 
-
-(*
-        let get_all_homs homs = 
-            Hashtbl.fold (fun _ column all_homs -> 
-                             Sexpr.fold_left (fun all_homs hom_code ->
-                                                  IntSet.add hom_code all_homs
-                                             ) all_homs column
-                        ) homs IntSet.empty 
-        in     
-    
-        let all_homs_a = get_all_homs homs_a in 
-        let all_homs_b = get_all_homs homs_b in 
-        let all_homs_ab = IntSet.union all_homs_a all_homs_b in 
-
-        let all_res_homs = get_all_homs res_homs in 
-        let all_diff_homs = IntSet.diff all_homs_ab all_res_homs in 
-        (if IntSet.is_empty all_diff_homs = false then begin
-             IntSet.iter (fun hom_code -> fprintf stdout "%i " hom_code) all_diff_homs;
-             failwith "All_homs_ab and all_res_homs are not identical"
-         end);
-*)
-
-(* 
-        List.iter (fun code -> fprintf stdout "%i " code) (List.rev a.order);
-        print_newline ();
-        List.iter (fun code -> fprintf stdout "%i " code) (List.rev b.order);
-        print_newline ();
-        List.iter (fun code -> fprintf stdout "%i " code) (res_or);
-        print_newline ();
-        
-
-
-        List.iter (fun code -> 
-                       let hom_codes = Hashtbl.find res_homs code in 
-                       let hom_codes = Sexpr.to_list hom_codes in
-                       fprintf stdout "%i: " code;
-                       List.iter (fun hom_code -> fprintf stdout "%i " hom_code) hom_codes;
-                       print_newline ();
-                  ) res_or;
-
-      print_newline ();
-        UtlPoy.printDNA med.ChromAli.seq;
-*)
-        
         let rev_res_or = List.rev res_or in
-  
         let ias = {seq = med.ChromAli.seq; codes = res_codes; 
                    homologous = res_homs; cannonic_code = min_can_code;
                    order = rev_res_or}
         in 
         ias::ias_ls
-
     in 
     let ias_ls = List.fold_left builder_med [] med_ls in 
     ias_ls
-
-    
-
-
     
 
 
@@ -584,7 +471,7 @@ module type S = sig
             
     (** [of_tree t] generates the implied alignment of all the sequences in the tree
     * [t]. *)
-    val of_tree : (int * tree) -> Methods.implied_alignment
+    val of_tree : ((int -> int) * tree) -> Methods.implied_alignment
 
 
     val concat_alignment :
@@ -607,7 +494,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     (** return (taxon_id, character_ls) list (of taxa) * (final ias for each
         character set) list (of characters) *)
     let of_tree_handle all_minus_gap cg handle ptree =
-
         let vertices = 
             try
                 let root = Ptree.get_component_root handle ptree in
@@ -622,15 +508,18 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             Status.create "Implied Alignments" vertices 
             "vertices calculated"
         in
-        let convert_node _ id _ =
+        let convert_node parent ptree _ id _ =
             let data = Ptree.get_node_data id ptree in
             let taxon_id = Node.taxon_code data in
             let data = 
-                Node.get_dynamic_preliminary 
-                (Some (Ptree.get_parent taxon_id ptree)) 
-                data
+                let par = 
+                    match parent with
+                    | Some _ -> parent
+                    | None ->
+                            Some (Ptree.get_parent taxon_id ptree)
+                in
+                Node.get_dynamic_preliminary par data
             in
-
             let data = List.map 
                 (fun dyn ->
                      let sequences = DynamicCS.leaf_sequences dyn in      
@@ -641,7 +530,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                    (fun code seq acc ->
                                         Codes.add code ([create_ias seq taxon_id cg]) acc
                                    ) sequences Codes.empty  
-
                          | `Chromosome -> 
                                Codes.fold 
                                    (fun code seq acc ->
@@ -649,7 +537,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                    ) sequences Codes.empty  
                          | _ -> failwith "create_new_sequences in Impliedalignment"
                      in                                   
-
                      {sequences = new_sequences;   
                       c2 = DynamicCS.c2 dyn;   
                       chrom_pam = DynamicCS.chrom_pam dyn;  
@@ -661,7 +548,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             Status.full_report ~adv:(did + 1) st;
             AssList.singleton (taxon_id, data), data
         in
-
         let join_2_nodes _ _ (ac, a) (bc, b) =
             let t_ancestor x y =
                 let state = x.state in 
@@ -674,7 +560,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                       in 
                                       [anc]
                                 | `Chromosome ->
-                                      ancestor_chrom all_minus_gap v hom x.c2
+                                      ancestor_chrom v hom x.c2
                                           x.chrom_pam Matrix.default 
                                 | _ -> failwith "Only implied alignment for Seq and Chrom"
                                 in 
@@ -691,33 +577,49 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             in
             AssList.union ac bc, ancestor_builder a b
         in 
-
         match Tree.get_node handle ptree.Ptree.tree with
         | Tree.Single self -> 
-                let a, b = convert_node () self ([], []) in
+                let a, b = convert_node None ptree () self ([], []) in
                 Status.finished st;
                 AssList.elements a, b
         | _ ->
                 let self, other = 
                     let root = Ptree.get_component_root handle ptree in
                     match root.Ptree.root_median with
-                    | Some ((`Edge (a, b)), _) -> a, b
+                    | Some ((`Edge (a, b)), the_root) -> a, b
                     | _ -> failwith "no root?"
                 in
                 let a, b = 
                     Ptree.post_order_node_with_edge_visit 
-                    convert_node join_2_nodes (Tree.Edge (self, other)) ptree
+                    (convert_node None ptree) join_2_nodes (Tree.Edge (self, other)) ptree
                     (AssList.empty, [])
+                and a' = 
+                    let new_ptree = 
+                        let self_data = Ptree.get_node_data self ptree 
+                        and other_data = Ptree.get_node_data other ptree in
+                        let single = 
+                            Node.to_single (Some self) other_data (Some other) self_data 
+                        in
+                        (*
+                        Status.user_message Status.Information
+                        ("The assigned root in the implied alignment is " ^
+                        Node.to_string single);
+                        *)
+                        Ptree.add_node_data self single ptree
+                    in
+                    convert_node (Some other) new_ptree () self ([], [])
                 in
+                let a = join_2_nodes () () a a' in
                 let x, y = join_2_nodes () () a b in
                 Status.finished st;
-                AssList.elements x, y
+                (if Tree.is_leaf self ptree.Ptree.tree then
+                    AssList.elements x
+                else List.remove_assoc self (AssList.elements x)), y
 
     (** t is a final ias for a character set   
         =>
         (number columns, (com_hom_code -> column) map, (code -> com_hom_code) map) map (a character set) *)
     let invert_codes t = 
-
         let seqs = t.sequences in
         Codes.fold 
             (fun char_code iat_ls acc ->
@@ -737,11 +639,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                  in                    
                  Codes.add char_code res acc  
             ) seqs Codes.empty  
-
  (**  (number columns, (com_hom_code -> column) map, (code -> com_hom_code) map
   *  return arrays of aligned bases and aligned positions
   *) 
-            
     let convert_a_taxon (len, remap, recode) ias =
         let column code = 
             let fin_code =  
@@ -758,32 +658,22 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
         let results = Array.make (len + 1) 0 in
         let pos_results = Array.make (len + 1) (-1) in
-(*
-        fprintf stdout "Length: %i\n" len;
-        UtlPoy.printDNA ias.seq;
-*)
         let add_result ias =
 
             Hashtbl.iter (fun pos code -> 
                 let base = Sequence.get ias.seq pos in
                 let col = column code in
                 let col = len - col in
-(*                fprintf stdout "pos: %i, base: %i, code: %i, col: %i\n" pos
-                  base code col; *)
                 results.(col) <- base;
                 pos_results.(col) <- pos;
                          ) ias.codes
         in
         add_result ias;
-(*        Array.iter (fun code -> fprintf stdout "%i " code) pos_results; print_newline ();*)
         results, pos_results
-
-
    (** (taxon_id * list of alignments for each character 
        in the character set) list (of characters) ) list (of taxa) *)
     let of_tree (all_but_gap, tree) = 
         let cg = code_generator () in
-
     (** return ( (taxon_id, character_ls) list (of taxa) * (final ias for each character)
         list (of characters) ) list (of handles) *)
         let res = 
@@ -791,7 +681,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                               (of_tree_handle all_but_gap cg x tree) :: acc
                          ) (Tree.get_handles tree.Ptree.tree) []
         in
-
    (** ((taxon_id * (aligned_code arrays for each character
       set) list (of characters) ) list (of taxa) ) of list (of handles)*)
         let ali = List.map 
@@ -805,16 +694,14 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                  let inv_codes_b = List.map invert_codes b in
                       (** (taxon_id * (aligned_code arrays for each character
                           set) list (of characters) ) list (of taxa) *)
-
                  let char_codes = ref IntSet.empty  in 
-
                  let new_a = List.map  
                       (fun ((tc : int), (tit : t list)) ->
                            let rec builder a b = 
                                match a, b with 
                                | ha :: ta, hb :: tb -> 
                                      let result =  Codes.fold 
-                                         (fun char_code fi_hom                                              
+                                         (fun char_code fi_hom
                                               (acc_bases, acc_pos) ->  
                                                   char_codes := IntSet.add char_code !char_codes;
                                                   let tmp = Codes.find char_code hb.sequences in 
@@ -832,9 +719,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                            tc, builder inv_codes_b tit 
                       ) a 
                  in 
-
-
-                 
                  let get_ali_pos looking_char_code = 
                      List.fold_left 
                          (fun alied_seq_ls (tx_code, ali) ->
@@ -913,6 +797,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     type matrix_class = 
         | AllOne of int
         | AllOneGapSame of (int * int)
+        | AffinePartition of (int * int * int)
         | AllSankoff
 
     (* A function that analyzes a cost matrix and an alphabet and
@@ -922,9 +807,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     let analyze_tcm tcm alph =
         let gap = Alphabet.get_gap alph 
         and all = Alphabet.get_all alph in
-        (* TODO Fix this, I have to check if the alphabet is all combinations and
-        * what elements conform it to make it general for any alphabet *)
-        let alph = Alphabet.dna in
+        let alph = Alphabet.simplified_alphabet alph in
         let single_compare (_, a) res (_, b) =
             match res with
             | None -> 
@@ -964,15 +847,35 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     | Some v -> v
                     | None -> failwith "No costs?"
         in
+        let get_gap_opening tcm =
+            match Cost_matrix.Two_D.affine tcm with
+            | Cost_matrix.No_Alignment 
+            | Cost_matrix.Linnear -> failwith "not affine"
+            | Cost_matrix.Affine go -> go
+        in
+        let all_same_affine () =
+            try let _ = get_gap_opening tcm in true with
+            | _ -> false
+        in
         let get_case =
             try
                 let all_excepting_gap = get_cost_of_all_subs ()
                 and all_and_gap = get_cost_of_gap () in
-                if all_excepting_gap = all_and_gap then 
-                    AllOne all_excepting_gap
-                else if all_excepting_gap = 1 then
-                    AllOneGapSame (all_excepting_gap, all_and_gap)
-                else AllSankoff
+                match Alphabet.kind alph with
+                | Alphabet.Simple_Bit_Flags ->
+                        if 32 > Alphabet.distinct_size alph then
+                            if all_same_affine () then
+                                AffinePartition 
+                                (all_excepting_gap, all_and_gap, 
+                                get_gap_opening tcm)
+                            else if all_excepting_gap = all_and_gap then 
+                                AllOne all_excepting_gap
+                            else if all_excepting_gap = 1 then
+                                AllOneGapSame 
+                                (all_excepting_gap, all_and_gap)
+                            else AllSankoff
+                        else AllSankoff
+                | _ -> AllSankoff
             with
             | IsSankoff -> AllSankoff
         in
@@ -989,7 +892,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     | `Exists, 0 -> Parser.Unordered_Character (gap, false) :: acc
                     | `Exists, x -> Parser.Unordered_Character (x, false) :: acc
                 and to_encoding _ acc = encoding :: acc in
-                to_parser, to_encoding
+                get_case, to_parser, to_encoding
         | AllOneGapSame (subsc, gapcost) ->
                 let present_absent = 
                     Parser.Hennig.Encoding.gap_encoding gapcost
@@ -1020,52 +923,152 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 and to_encoding _ acc = 
                     subs :: present_absent :: acc
                 in
-                to_parser, to_encoding
+                get_case, to_parser, to_encoding
+        | AffinePartition (subsc, gapcost, gapopening) ->
+                (* We have to partition the column in three columns, each
+                * corresponding to gap opening, gap extension, and substitution.
+                * We will have to filter out columns that are not gap opening
+                * but only extension.
+                * *)
+                let gap_opening = Parser.Hennig.Encoding.gap_encoding gapopening
+                and gap_extension = Parser.Hennig.Encoding.gap_encoding gapcost
+                and subs = 
+                    Parser.Hennig.Encoding.set_weight
+                    Parser.Hennig.Encoding.dna_encoding
+                    subsc
+                in
+                let notgap = lnot gap in
+                let all = notgap land all in
+                let to_parser is_missing states acc =
+                    match is_missing, states with
+                    | `Missing, _ ->
+                            Parser.Unordered_Character (1 lor 2, false) ::
+                                Parser.Unordered_Character (1 lor 2, false) :: 
+                                    Parser.Unordered_Character (all, false) ::
+                                        acc
+                    | `Exists, 0 -> 
+                            (* We have a gap, so we assign both gap opening and
+                            * gap extension, we will later cleaunup when gap
+                            * opening is not needed *)
+                            Parser.Unordered_Character (1, false) ::
+                                Parser.Unordered_Character (1, false) ::
+                                    Parser.Unordered_Character (all, false) ::
+                                        acc
+                    | `Exists, x ->
+                            let prev = 
+                                (if x = all then
+                                    Parser.Unordered_Character (1 lor 2, false)
+                                else Parser.Unordered_Character (2, false))
+                            in
+                            prev :: prev :: 
+                                Parser.Unordered_Character ((x land notgap), 
+                                false) :: 
+                                    acc
+                and to_encoding _ acc =
+                    gap_opening :: gap_extension :: subs :: acc
+                in
+                get_case, to_parser, to_encoding
         | AllSankoff ->
+                let size = 
+                    (* We remove one from the all elements representation *)
+                    (Alphabet.distinct_size alph) - 1 
+                in
                 let make_tcm () =
-                    Array.init 5 (fun x -> Array.init 5 
-                        (fun y -> 
+
+                    match Alphabet.kind alph with
+                    | Alphabet.Simple_Bit_Flags ->
+                            Array.init size (fun x -> Array.init size 
+                            (fun y -> 
                                 Cost_matrix.Two_D.cost (1 lsl x) (1 lsl y) tcm)) 
+                    | Alphabet.Sequential ->
+                            Array.init size (fun x -> 
+                                Array.init size (fun y ->
+                                    Cost_matrix.Two_D.cost (x + 1) (y  + 1) tcm))
+                    | Alphabet.Extended_Bit_Flags -> 
+                            failwith "Impliedalignment.make_tcm"
                 in
                 let enc = 
                     let res = Parser.Hennig.Encoding.default () in
-                    let res = Parser.Hennig.Encoding.set_min res 1 in
-                    let res = Parser.Hennig.Encoding.set_max res 5 in
+                    let res = Parser.Hennig.Encoding.set_min res 0 in
+                    let res = Parser.Hennig.Encoding.set_max res (size - 1) in
                     let set = 
-                        List.fold_right All_sets.Integers.add
-                        [0;1;2;3;4] All_sets.Integers.empty 
+                        let rec add_consecutive_integers cur max acc = 
+                            if cur = max then acc
+                            else 
+                                add_consecutive_integers (cur + 1) max 
+                                (All_sets.Integers.add cur acc)
+                        in
+                        add_consecutive_integers 0 size All_sets.Integers.empty
                     in
                     let res = Parser.Hennig.Encoding.set_set res set in
                     Parser.Hennig.Encoding.set_sankoff res (make_tcm ())
                 in
-                let convert_to_list x = 
-                    let rec match_bit v pos mask acc = 
-                        if pos = 6 then acc
-                        else if 0 <> (v land mask) then
-                            match_bit v (pos + 1) (mask lsl 1) ((pos - 1) :: acc)
-                        else match_bit v (pos + 1) (mask lsl 1) acc
-                    in
-                    match_bit x 1 1 []
+                let convert_to_list x =
+                    match Alphabet.kind alph with
+                    | Alphabet.Simple_Bit_Flags ->
+                            let rec match_bit v pos mask acc = 
+                                if pos = 6 then acc
+                                else if 0 <> (v land mask) then
+                                    match_bit v (pos + 1) (mask lsl 1) 
+                                    ((pos - 1) :: acc)
+                                else match_bit v (pos + 1) (mask lsl 1) acc
+                            in
+                            match_bit x 1 1 []
+                    | Alphabet.Sequential -> [x]
+                    | Alphabet.Extended_Bit_Flags -> 
+                            failwith "Impliedalignment.convert_to_list"
                 in
                 let all = convert_to_list all in
+                let gap_code =
+                    (* Always the last code is the one of a gap in Sankoff *)
+                    size - 1
+                in
                 let to_parser is_missing states acc = 
                     match is_missing, states with
                     | `Missing, _ ->
                             (Parser.Sankoff_Character (all, false)) :: acc
-                    | `Exists, 0 -> (Parser.Sankoff_Character (all, false)) :: acc
+                    | `Exists, 0 -> 
+                            (Parser.Sankoff_Character ([gap_code], false)) ::
+                                acc
                     | `Exists, x -> 
                             let tuple = ((convert_to_list x),  false) in
                             (Parser.Sankoff_Character tuple) :: acc
                 and to_encoding _ acc = 
                     enc :: acc 
                 in
-                to_parser, to_encoding
+                get_case, to_parser, to_encoding
 
+    let post_process_affine_gap_cost subs gapcost gapopening (enc, taxa) =
+        let process_position chars pos = 
+            let v_pos npos = 
+                match chars.(npos) with
+                | Parser.Unordered_Character x -> x
+                | _ -> failwith "How is this possible?"
+            in
+            let val_pos npos = let a, _ = v_pos npos in a in
+            let _, bol = v_pos (pos + 1) in
+            if (0 <> (val_pos (pos + 2) land val_pos (pos + 5))) then
+                chars.(pos + 1) <- Parser.Unordered_Character (2, bol)
+            else if 2 = val_pos (pos + 1) then
+                chars.(pos + 4) <- Parser.Unordered_Character (1, bol)
+            else ()
+        in
+        let correct_position pos =
+            List.iter (fun (chars, _) -> process_position chars pos) taxa
+        in
+        let start = Array.length enc - 7 in
+        let rec iterator pos =
+            if pos < 0 then (enc, taxa)
+            else 
+                let () = correct_position pos in
+                iterator (pos - 3)
+        in
+        iterator start
 
     let ia_to_parser_compatible data imtx =
         match imtx with
         | [all_taxa] ->
-                let process_each = fun (acc, enc) (taxcode, sequence) ->
+                let process_each = fun (acc, enc, clas) (taxcode, sequence) ->
                     let preprocess_sequence alph x =
                         let len = Array.length x in
                         let rec check it =
@@ -1103,38 +1106,52 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 s acc) 
                         ([], All_sets.IntegerMap.empty) sequence 
                     in
-                    let res, encf = 
+                    let clas, res, encf = 
                         List.fold_left 
-                        (fun (acc, acc2) (code, (is_missing, s)) -> 
-                            let to_parser, to_encoding = 
+                        (fun (_, acc, acc2) (code, (is_missing, s)) -> 
+                            let clas, to_parser, to_encoding = 
                                 All_sets.IntegerMap.find code transform_functions 
                             in
+                            clas,
                             (Array.fold_right (to_parser is_missing) s acc), 
                             (Array.fold_right to_encoding s acc2))
-                        ([], []) sequence 
+                        (AllSankoff, [], []) sequence 
                     and name = 
                         try Data.code_taxon taxcode data with
                         | Not_found -> (string_of_int taxcode) 
                     in
                     match enc with
-                    | Some _ -> (res, name) :: acc, enc
+                    | Some _ -> (res, name) :: acc, enc, clas
                     | None ->
                             (res, name) :: acc,
-                                let rec apply_map l1 l2 =
+                                (let rec apply_map l1 l2 =
                                     match l1, l2 with
                                     | f1 :: t1, it2 :: t2 ->
                                             (f1 it2) :: (apply_map t1 t2)
                                     | [], [] -> []
                                     | _, _ -> failwith "Not matching numbers?"
                                 in
-                                Some encf
+                                Some encf), clas
                 in
-                (match List.fold_left process_each ([], None) all_taxa with
-                | r, Some enc -> 
-                        Array.of_list enc, (List.map (fun (x, y) ->
-                        Array.of_list x, y) r), []
-                | [], _ -> [||], [], []
-                | _, None -> failwith "How is this possible?")
+                (match List.fold_left process_each ([], None, AllSankoff) all_taxa with
+                | r, Some enc, clas -> 
+                        let arr = 
+                            Array.of_list enc, (List.map (fun (x, y) ->
+                                Array.of_list x, y) r)
+                        in
+                        let (a, b) = 
+                            match clas with
+                            | AffinePartition (subs, gapcost, gapopening) ->
+                                    (* We have to postprocess and check by
+                                    * groups of three whether or not we have a
+                                    * gap opening indeed *)
+                                    post_process_affine_gap_cost subs gapcost
+                                    gapopening arr
+                            | _ -> arr
+                        in
+                        a, b, []
+                | [], _, _ -> [||], [], []
+                | _, None, _ -> failwith "How is this possible?")
         | _ -> failwith "ImpliedAlignment.ia_to_parser_compatible"
 
     let update_ia_encodings (encs, species, trees) =
@@ -1204,16 +1221,17 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character
        set) list (of characters) ) list (of taxa) ) of list (of trees) *)
     let aux_create_implied_alignment filter_fn codes data tree = 
-
         let operate_on_tree tree =
             let filtered_trees = 
                 List.map 
                     (fun x -> 
                          let alph = Data.get_alphabet data x in
                          let gap = Alphabet.get_gap alph
-                         and all = Alphabet.get_all alph in
-                         (lnot gap) land all, filter_fn tree [x]
-                    ) codes
+                         and all = Alphabet.get_all alph 
+                         and tcm = Data.get_sequence_tcm x data in
+                         (if 1 = Cost_matrix.Two_D.combine tcm then
+                            fun x -> x land ((lnot gap) land all)
+                         else fun x -> x), filter_fn tree [x]) codes
             in
             List.map of_tree filtered_trees
         in

@@ -131,10 +131,6 @@ type specs =
     * column number). *)
     | Static of (Parser.Hennig.Encoding.s * string)
 
-    (** A Sankoff character type. Store a list of strings and the list of
-        possible states. *)
-    | Sankoff of (string list * int list)
-
     (** A dynamic homology based character type, with three parameters, the
     * file name containing the set of sequences, the filename of the valid 
     * fixed states that can be used for that set of sequences, and the file
@@ -1529,11 +1525,6 @@ let categorize data =
               else data
         | Dynamic _ -> { data with dynamics = code :: data.dynamics }
         | Set -> data
-        | Sankoff _ -> 
-              let msg = "We still have to add the dpread file type! When \
-                added, Sankoff character types will be enabled!.\n" in
-              output_error msg;
-              raise Illegal_argument
     in
     Hashtbl.fold categorizer data.character_specs data
 
@@ -1678,9 +1669,14 @@ let character_spec_to_formatter enc : Tags.output =
                         Parser.Hennig.Encoding.get_weight enc)
                 ],
                 `Structured (`Single (states_set_to_formatter enc))
-            else Tags.Characters.sankoff, [], `Structured `Empty
-    | Sankoff (_, states) ->
-            Tags.Characters.sankoff, [], `Structured `Empty
+            else if (Parser.Hennig.Encoding.is_sankoff enc) then 
+                Tags.Characters.sankoff, 
+                [
+                    Tags.Characters.name, name;
+                    Tags.Characters.weight, string_of_int
+                        (Parser.Hennig.Encoding.get_weight enc)
+                ], `Structured (`Single (states_set_to_formatter enc))
+            else failwith "What is this?"
     | Dynamic dspec ->
             Tags.Characters.molecular, 
             [
@@ -1796,7 +1792,10 @@ let create_alpha_c2_breakinvs (data : d) chcode =
     gen_alpha := ("~*", (gen_com_code + 1))::!gen_alpha;  
 
     let max_code = gen_com_code + 1 in  
-    let gen_alpha = Alphabet.list_to_a (List.rev !gen_alpha) "_" "*" in 
+    let gen_alpha = 
+        Alphabet.list_to_a (List.rev !gen_alpha) "_" "*"
+        Alphabet.Sequential
+    in 
     (** Finish creating alphabet*)      
 
 
@@ -2345,7 +2344,6 @@ let process_ignore_characters_file report data file =
 
 let replace_name_in_spec name = function
     | Static (e, _) -> Static (e, name)
-    | (Sankoff _) as v -> v
     | Dynamic dspec -> Dynamic { dspec with filename = name }
     | Set -> Set
 
@@ -2485,6 +2483,54 @@ let assign_tcm_to_characters_from_file data chars file =
     in
     assign_tcm_to_characters data chars file tcm
 
+let ( --> ) a b = b a
+
+let classify_characters_by_alphabet_size data chars =
+    let is_dynamic_character x = 
+        (List.exists (fun y -> x = y) data.dynamics)
+    in
+    let make_tuple_of_character_and_size acc char =
+        let size = 
+            data 
+            --> get_sequence_alphabet char
+            --> Alphabet.simplified_alphabet 
+            --> Alphabet.distinct_size
+        in
+        (char, size) :: acc
+    in
+    let classify_by_size list =
+        let sets = 
+            List.fold_left ~f:(fun acc (code, size) ->
+                if All_sets.IntegerMap.mem size acc then
+                    let prev = All_sets.IntegerMap.find size acc in
+                    All_sets.IntegerMap.add size (code :: prev) acc
+                else
+                    All_sets.IntegerMap.add size [code] acc)
+            ~init:All_sets.IntegerMap.empty list
+        in
+        All_sets.IntegerMap.fold (fun a b acc -> (a, `Some (true, b)) :: acc)
+        sets []
+    in
+    chars 
+    --> get_chars_codes_comp data 
+    --> (List.filter ~f:(is_dynamic_character))
+    --> List.fold_left ~f:make_tuple_of_character_and_size ~init:[]
+    --> classify_by_size
+
+let assign_transformation_gaps data chars transformation gaps = 
+    let name = 
+        ("Substitutions:" ^ string_of_int transformation ^ 
+        ", Indels:" ^ string_of_int gaps)
+    in
+    let alphabet_sizes = classify_characters_by_alphabet_size data chars in
+    List.fold_left ~f:(fun data (size, chars) ->
+        let size = size - 1 in
+        let tcm = 
+            Cost_matrix.Two_D.of_transformations_and_gaps (size < 7) size 
+            transformation gaps
+        in
+        assign_tcm_to_characters data chars name tcm) ~init:data alphabet_sizes
+
 let get_tcm2d data c =
     match Hashtbl.find data.character_specs c with
     | Dynamic dspec -> dspec.tcm2d
@@ -2570,26 +2616,40 @@ let get_alphabet data c =
     | _ -> failwith "Data.get_alphabet"
 
 let to_faswincladfile data filename =
+    (*
     let by_name data x y = 
         let namex = Hashtbl.find data.character_codes x 
         and namey = Hashtbl.find data.character_codes y in
         String.compare namex namey 
     in
-    let fo = Status.user_message (Status.Output (filename, false, [])) in
+    *)
+    let has_sankoff =
+        match data.sankoff with
+        | [] -> false
+        | _ -> true
+    in
+    let fo = Status.user_message (Status.Output (filename, false,
+    [StatusCommon.Margin 0])) in
     let all_chars = 
         [data.non_additive_8; data.non_additive_16; data.non_additive_32; 
-        data.additive;] 
+        data.additive; (List.flatten data.sankoff)] 
     in
     let all_of_all = List.flatten all_chars in
-    let all_of_all = List.sort (by_name data) all_of_all in
+    let all_of_all = List.sort (compare) all_of_all in
     let number_of_characters = List.length all_of_all in
     let number_of_taxa = 
         Hashtbl.fold (fun _ _ x -> x + 1) data.taxon_characters 0 
     in
-    let int_list_to_set used_observed x = 
+    let int_list_to_set code data x = 
         (List.fold_left ~f:(fun acc x -> 
-            let x = Hashtbl.find used_observed x in
-            acc ^ string_of_int x) ~init:"[" x) ^
+            let x = 
+                try 
+                    let used_observed = get_used_observed code data in
+                    Hashtbl.find used_observed x 
+                with
+                | _ -> x
+            in
+            acc ^ string_of_int x ^ if has_sankoff then "." else "") ~init:"[" x) ^
         "]"
     in
     let get_bits elt =
@@ -2602,23 +2662,24 @@ let to_faswincladfile data filename =
         elt_iter [] elt 1
     in
     let state_to_string code t =
-        let used_observed = get_used_observed code data in
         match t with
         | Parser.Ordered_Character (a, b, c) ->
+                let used_observed = get_used_observed code data in
                 if c then "?" 
                 else if a = b then string_of_int (Hashtbl.find used_observed a)
-                else int_list_to_set used_observed [a; b]
+                else int_list_to_set code data [a; b]
         | Parser.Unordered_Character (a, b) ->
                 if b then "?"
                 else 
+                    let used_observed = get_used_observed code data in
                     let bits = get_bits a in
                     if 1 = List.length bits then 
                         string_of_int 
                         (Hashtbl.find used_observed (List.hd bits))
-                    else int_list_to_set used_observed bits
-(*        | Parser.Sankoff_Character (a, b) ->*)
-(*                if 1 = List.length a then string_of_int (List.hd a)*)
-(*                else int_list_to_set a*)
+                    else int_list_to_set code data bits
+        | Parser.Sankoff_Character (a, b) ->
+                if 1 = List.length a then string_of_int (List.hd a)
+                else int_list_to_set code data a
         | _ -> failwith "Fastwinclad files do not support sequences"
     in
     let produce_character fo taxon charset code =
@@ -2647,26 +2708,31 @@ let to_faswincladfile data filename =
         if All_sets.Strings.mem name data.ignore_taxa_set then
             ()
         else begin
-            fo "@[<h>";
+            fo "@[";
             fo name;
             fo " ";
             let _ =
                 let charset = get_taxon_characters data tid in
                 List.iter (produce_character fo tid charset) all_of_all
             in
-            fo "@]\n";
+            fo "@\n@]%!";
         end
     in
     let output_all_taxa () = 
         All_sets.IntegerMap.iter output_taxon data.taxon_codes;
-        fo ";\n";
+        fo ";@\n";
     in
     let output_header () = 
-        fo "xread\n";
+        fo (if has_sankoff then "dpread@\n" else "xread@\n");
         fo (string_of_int number_of_characters);
         fo " ";
         fo (string_of_int number_of_taxa);
-        fo "\n";
+        fo "@\n";
+    in
+    let get_tcm code = 
+        match Hashtbl.find data.character_specs code with
+        | Static (enc, _) -> Parser.Hennig.Encoding.get_tcm enc 
+        | _ -> failwith "Sequence characters are not supported in fastwinclad"
     in
     let output_weights (acc, pos) code = 
         match Hashtbl.find data.character_specs code with
@@ -2674,27 +2740,60 @@ let to_faswincladfile data filename =
                 let weight = Parser.Hennig.Encoding.get_weight enc in 
                 if weight = 1 then (acc, pos + 1)
                 else (acc ^ "ccode /" ^ string_of_int weight ^ " " ^ 
-                string_of_int pos ^ ";\n", pos + 1)
+                string_of_int pos ^ ";@\n", pos + 1)
         | _ -> failwith "Sequence characters are not supported in fastwinclad"
     in
     let weights, _ = 
         List.fold_left ~f:output_weights ~init:("", 0) all_of_all 
     in
     let output_character_types () =
+        (* We first output the non additive character types *)
         let unolen = 
             (List.length data.non_additive_8) + 
             (List.length data.non_additive_16) +
             (List.length data.non_additive_32) 
         and olen = List.length data.additive in
         fo ((if unolen > 0 then "cc - 0." ^ string_of_int (unolen - 1) ^ 
-        ";\n" else "") ^ (if olen > 0 then ("cc + " ^ string_of_int unolen ^ "." ^ 
-        string_of_int (unolen + olen - 1)) else "") ^ "\n");
+        ";@\n" else "") ^ (if olen > 0 then 
+            ("cc + " ^ string_of_int unolen ^ "." ^ 
+        string_of_int (unolen + olen - 1)) else "") ^ "@\n");
+        (* Now we output the saknoff character types *)
+        if has_sankoff then
+            let output_matrix m = 
+                Array.iter (fun x ->
+                    (Array.iter (fun y -> 
+                        fo (string_of_int y);
+                        fo " ") x; fo "@\n")) m;
+                        fo ";@\n"
+            in
+            let output_codes m =
+                Array.iteri (fun pos _ -> 
+                    fo (string_of_int pos);
+                    fo " ") m.(0);
+                fo "@\n"
+            in
+            let output_element position code =
+                let tcm = get_tcm code in 
+                fo ("costs [ " ^ string_of_int position ^ " $" ^
+                string_of_int (Array.length tcm) ^ "@\n");
+                output_codes tcm;
+                output_matrix tcm;
+                position + 1
+            in
+            let _ = 
+                List.fold_left ~f:output_element 
+                ~init:(unolen + olen) (List.flatten data.sankoff)
+            in
+            ()
+        else ()
     in
+    fo "@[<v 0>";
     output_header ();
     output_all_taxa ();
     output_character_types ();
     fo weights;
-    fo "@."
+    fo "@\n";
+    fo "@]"
 
 let report_taxon_file_cross_reference chars data filename =
     let files_arr, taxa = 
@@ -2891,20 +2990,95 @@ let make_fixed_states chars data =
                 Status.user_message Status.Information 
                 ("I@ will@ store@ the@ fixed@ states@ dpread@ file@ of@ " ^
                 "character@ " ^ name ^ "@ in@ " ^ file);
-                add_static_file ~report:false data (`Local file)
+                begin try
+                    let char_name = data --> code_character code in
+                    let ch, file = 
+                        FileStream.channel_n_filename (`Local file) 
+                    in
+                    let r = Parser.Hennig.of_channel ch in
+                    close_in ch;
+                    gen_add_static_parsed_file false data char_name r
+                with
+                | Sys_error err ->
+                        let msg = "Couldn't@ open@ file@ " ^ file 
+                        ^ "@ to@ load@ the@ " ^
+                        "data.@ @ The@ system@ error@ message@ is@ "
+                            ^ err ^
+                        "." in
+                        output_error msg;
+                        data
+                end
         | _ -> failwith "How could this happen?"
     in
     let codes = get_code_from_characters_restricted_comp `Dynamic data chars in
-    List.fold_left ~f:convert_and_process ~init:data codes
+    let data = List.fold_left ~f:convert_and_process ~init:data codes in
+    process_ignore_character false data (List.fold_left ~f:(fun acc x ->
+        All_sets.Integers.add x acc) ~init:All_sets.Integers.empty codes)
 
 let number_of_taxa d = 
     Hashtbl.fold  (fun _ _ num_taxa -> num_taxa + 1) d.taxon_characters 0  
-
 
 let has_dynamic d = 
     match d.dynamics with
     | [] -> false
     | _ -> true
+
+
+(** Functions to modify the taxon codes *)
+let change_taxon_codes reorder_function data =
+    let data = duplicate data in
+    (* First we produce a hash table with an randomized reassignment of codes
+    * for the taxa in data *)
+    let htbl =
+        let taxon_codes = 
+            All_sets.StringMap.fold (fun _ code acc -> 
+                code :: acc) data.taxon_names []
+        in
+        let chars = Array.of_list taxon_codes 
+        and chars_org = Array.of_list taxon_codes in
+        reorder_function chars;
+        let htbl = Hashtbl.create 1667 in
+        for i = 0 to (Array.length chars_org) - 1 do
+            Hashtbl.add htbl chars_org.(i) chars.(i);
+        done;
+        htbl
+    in
+    (* Now that we have the assignment, we proceed to modify the contents of the
+    * new data. *)
+    let taxon_names = 
+        All_sets.StringMap.fold (fun name old_code acc ->
+            All_sets.StringMap.add name (Hashtbl.find htbl old_code) acc)
+        data.taxon_names All_sets.StringMap.empty
+    and taxon_codes =
+        All_sets.IntegerMap.fold (fun old_code name acc ->
+            All_sets.IntegerMap.add (Hashtbl.find htbl old_code) name acc)
+        data.taxon_codes All_sets.IntegerMap.empty
+    and taxon_characters =
+        let res = Hashtbl.create 1667 in
+        Hashtbl.iter (fun old_code contents ->
+            Hashtbl.add res (Hashtbl.find htbl old_code) contents)
+        data.taxon_characters;
+        res
+    in
+    let root = 
+        match data.root_at with
+        | None -> None
+        | Some code -> 
+                try Some (Hashtbl.find htbl code) with
+                | _ -> None
+    in
+    { data with taxon_names = taxon_names; taxon_codes = taxon_codes;
+    taxon_characters = taxon_characters; root_at = root }, htbl
+
+let randomize_taxon_codes = change_taxon_codes Array_ops.randomize 
+
+let lexicographic_taxon_codes data = 
+    let lexicographic_sort (a : int) b =
+        let namea = code_taxon a data
+        and nameb = code_taxon b data in
+        String.compare namea nameb
+    in
+    change_taxon_codes (Array.stable_sort ~cmp:lexicographic_sort) data
 
 module Sample = struct
     let characters_to_arr chars =

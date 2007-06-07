@@ -73,6 +73,7 @@ type chromosome_args = [
 
 
 type transform_method = [
+    | `RandomizedTerminals
     | `Tcm of string
     | `Gap of (int * int)
     | `AffGap of int
@@ -129,6 +130,7 @@ type builda = [
     | `Ordered
     | keep_method
     | cost_calculation
+    | Methods.tabu_join_strategy
 ]
 
 type swap_neighborhood = [
@@ -321,6 +323,7 @@ let transform_transform acc (id, x) =
             acc
     | #Methods.characters as id ->
             match x with
+            | `RandomizedTerminals -> `RandomizedTerminals :: acc
             | `Tcm f -> (`Assign_Transformation_Cost_Matrix ((Some (`Local f)), id)) :: acc
             | `Gap (a, b) -> 
                     (`Create_Transformation_Cost_Matrix (a, b, id)) :: acc
@@ -363,7 +366,7 @@ let modify_acc acc c = function
     | files -> (`Other (files, c)) :: acc
 
 (* Building *)
-let build_default_method_args = (1, `Last, [])
+let build_default_method_args = (1, `Last, [], `UnionBased None)
 let build_default_method = `Wagner_Rnd build_default_method_args
 let build_default = (10, build_default_method, [])
 
@@ -416,11 +419,13 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             let nmeth = 
                 match meth with
                 | `Prebuilt _ -> meth
-                | `Wagner_Distances (a, _, c) -> `Wagner_Distances (a, x, c)
-                | `Wagner_Mst (a, _, c) -> `Wagner_Mst (a, x, c)
-                | `Wagner_Rnd (a, _, c) -> `Wagner_Rnd (a, x, c)
-                | `Wagner_Ordered (a, _, c) -> `Wagner_Ordered (a, x, c)
-                | `Build_Random (a, _, c) -> `Build_Random (a, x, c)
+                | `Wagner_Distances (a, _, c, d) -> 
+                        `Wagner_Distances (a, x, c, d)
+                | `Wagner_Mst (a, _, c, d) -> 
+                        `Wagner_Mst (a, x, c, d)
+                | `Wagner_Rnd (a, _, c, d) -> `Wagner_Rnd (a, x, c, d)
+                | `Wagner_Ordered (a, _, c, d) -> `Wagner_Ordered (a, x, c, d)
+                | `Build_Random (a, _, c, d) -> `Build_Random (a, x, c, d)
             in
             n, nmeth, trans
     | `Transform x ->
@@ -428,6 +433,22 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             (n, meth, (t @ trans))
     | `Exact ->
             (n, meth, (`Exact :: trans))
+    | #Methods.tabu_join_strategy as tabu ->
+            let nmeth = 
+                match meth with
+                | `Prebuilt _ -> meth
+                | `Wagner_Distances (a, b, c, _) -> 
+                        `Wagner_Distances (a, b, c, tabu)
+                | `Wagner_Mst (a, b, c, _) -> 
+                        `Wagner_Mst (a, b, c, tabu)
+                | `Wagner_Rnd (a, b, c, _) -> 
+                        `Wagner_Rnd (a, b, c, tabu)
+                | `Wagner_Ordered (a, b, c, d) -> 
+                        `Wagner_Ordered (a, b, c, tabu)
+                | `Build_Random (a, b, c, _) -> 
+                        `Build_Random (a, b, c, tabu)
+            in
+            n, nmeth, trans
 
 let transform_build_arguments x =
     let (x, y, z) = List.fold_left transform_build build_default  x in
@@ -904,6 +925,7 @@ let create_expr lexer =
             ];
         transform_method:
             [
+                [ LIDENT "randomize_terminals" -> `RandomizedTerminals ] |
                 [ LIDENT "tcm"; ":";  x = STRING -> `Tcm x ] |
                 [ LIDENT "fixedstates" -> `Fixed_States ] |
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
@@ -1335,10 +1357,21 @@ let create_expr lexer =
                 [ LIDENT "false" -> false ]    
             ];
         (* Building a tree *)
+        join_method:
+            [
+                [ LIDENT "sectorial"; x = OPT integer -> 
+                    ((`UnionBased x) : Methods.tabu_join_strategy)  ] |
+                [ LIDENT "all"; x = OPT integer -> `AllBased x ] |
+                [ LIDENT "constraint"; ":"; left_parenthesis; 
+                    x = LIST1 constraint_options SEP ","; right_parenthesis
+                    -> `Partition x ] |
+                [ LIDENT "constraint" -> `Partition [] ]
+            ];
         build_argument:
             [
                 [ x = threshold_and_trees -> (x :> builda) ] |
-                [ x = build_method -> x ] |
+                [ x = build_method -> (x :> builda) ] |
+                [ x = join_method -> (x :> builda) ] |
                 [ x = keep_method -> (x :> builda) ] |
                 [ x = cost_calculation -> (x :> builda) ]
             ];
@@ -1395,7 +1428,7 @@ let create_expr lexer =
                 [ a = trajectory_method -> a ] |
                 [ a = break_method -> a ] |
                 [ a = reroot_method -> a ] |
-                [ a = join_method -> a ] 
+                [ a = join_method -> (a :> swapa) ] 
             ];
         trajectory_method:
             [
@@ -1420,6 +1453,8 @@ let create_expr lexer =
                 [ LIDENT "timedprint"; ":"; left_parenthesis; x = integer_or_float; ","; 
                     y = STRING; right_parenthesis -> 
                         `TimedPrint (float_of_string x, Some y) ] |
+                [ LIDENT "visited"; x = OPT string_arg ->
+                    `AllVisited x ] |
                 [ LIDENT "trajectory"; x = OPT string_arg -> 
                         `PrintTrajectory x ] |
                 [ LIDENT "recover" -> `KeepBestTrees ] |
@@ -1455,15 +1490,6 @@ let create_expr lexer =
                 [ LIDENT "randomized" -> `Randomized ] |
                 [ LIDENT "distance" -> `DistanceSorted ] |
                 [ LIDENT "once" -> `OnlyOnce ]
-            ];
-        join_method:
-            [
-                [ LIDENT "sectorial"; x = OPT integer -> `UnionBased x ] |
-                [ LIDENT "all"; x = OPT integer -> `AllBased x ] |
-                [ LIDENT "constraint"; ":"; left_parenthesis; 
-                    x = LIST1 constraint_options SEP ","; right_parenthesis
-                    -> `Partition x ] |
-                [ LIDENT "constraint" -> `Partition [] ]
             ];
         constraint_options:
             [
@@ -1506,7 +1532,8 @@ let create_expr lexer =
             ];
         support_names:
             [
-                [ LIDENT "bremer" -> `Bremer ] |
+                [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some (`Local x)) ] |
+                [ LIDENT "bremer" -> `Bremer None ] |
                 [ LIDENT "jackknife" -> `Jackknife ] |
                 [ LIDENT "bootstrap" -> `Bootstrap ] 
             ];

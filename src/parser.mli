@@ -113,7 +113,23 @@ module Tree : sig
     * of error the function raises Illegal_molecular_format. *)
     val of_channel : in_channel -> string t list list 
 
+    (** [of_file] is a shortcut of [of_channel], when the channel is an opened
+    * file. *)
     val of_file : filename ->  string t list list
+
+    (** [of_string_annotated] is simmilar to [of_string] excepting that the
+    * returned list includes the associated information contained in square
+    * brackets together with each tree, instead of ignoring it as [of_string]
+    * does. *)
+    val of_string_annotated : string -> (string t * string) list list
+
+    (** [of_channel_annotated] is to [of_channel] as [of_string_annotated] is to
+    * [of_string]. *)
+    val of_channel_annotated : in_channel -> (string t * string) list list
+
+    (** [of_file_annotated] is to [of_file] as [of_string_annotated] is to
+    * [of_string]. *)
+    val of_file_annotated : filename -> (string t * string) list list
 
     val cannonic_order : string t -> string t
 
@@ -298,7 +314,6 @@ module Hennig : sig
         (((t * int) array * int) * ((t * int) array * int) *
              ((t * int) array * int) * ((t * int) array * int) *
              ((t * int) array * int))
-
 
 end
 

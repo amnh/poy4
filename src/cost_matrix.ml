@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 1819 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 1865 $"
 
 
 exception Illegal_Cm_Format;;
@@ -54,7 +54,10 @@ module Two_D = struct
     external set_worst : int -> int -> m -> int -> unit = "cm_CAML_set_worst"
     external set_median : 
         int -> int -> m -> int -> unit = "cm_CAML_set_median"
-
+    external set_metric : m -> unit = "cm_CAML_set_is_metric"
+    external c_get_is_metric : m -> int = "cm_CAML_get_is_metric"
+    let is_metric m =
+        1 = c_get_is_metric m
     external set_prepend : int -> int -> m -> unit = "cm_CAML_set_prepend"
     external set_tail : int -> int -> m -> unit = "cm_CAML_set_tail"
     external get_tail : int -> m -> int = "cm_CAML_get_tail"
@@ -494,7 +497,7 @@ module Two_D = struct
         done;
         !res
 
-    let is_metric l w = 
+    let input_is_metric l w = 
         let arr = list_to_matrix l w in
         is_positive arr && 
         is_symmetric arr && 
@@ -508,7 +511,8 @@ module Two_D = struct
         in
         store_input_list_in_cost_matrix use_comb m l a_sz;
         if use_comb then
-            if is_metric l a_sz then
+            if input_is_metric l a_sz then
+                let () = set_metric m in
                 fill_best_cost_and_median_for_all_combinations m a_sz
             else
                 let _ = 
@@ -551,16 +555,6 @@ module Two_D = struct
         let w = List.length l in
         let l = List.flatten l in 
         fill_cost_matrix ~use_comb:use_comb l w
-
-    let list_is_metric l =
-        let w = List.length l 
-        and l = List.flatten l in
-        is_metric l w
-
-    let channel_is_metric ch =
-        let l = load_file_as_list ch in
-        let w = calculate_alphabet_size l in
-        is_metric l w
 
     let of_channel_nocomb ?(orientation=false) ch =
         of_channel ~orientation:orientation ~use_comb:false ch
@@ -608,14 +602,18 @@ module Two_D = struct
             [2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 0];
         ]
 
-    let of_transformations_and_gaps trans gaps =
-        of_list [
-            [0; trans; trans; trans; gaps];
-            [trans; 0; trans; trans; gaps];
-            [trans; trans; 0; trans; gaps];
-            [trans; trans; trans; 0; gaps];
-            [gaps; gaps; gaps; gaps; 0];
-        ]
+    let of_transformations_and_gaps use_combinations alph_size trans gaps =
+        let list_with_zero_in_position pos =
+            Array.to_list
+            (Array.init alph_size (fun x ->
+                if x = pos then 0
+                else if x = alph_size - 1 then gaps
+                else if pos = alph_size - 1 then gaps
+                else trans))
+        in
+        of_list ~use_comb:use_combinations (Array.to_list 
+        (Array.init alph_size (fun x ->
+            list_with_zero_in_position x)))
 
     let perturbe cm sev prob =
         let cm = clone cm in
@@ -646,6 +644,7 @@ module Two_D = struct
             let gap = gap cm in
             let b = 
                 if a = gap || b = gap then b
+                else if (0 <> a land gap) && (0 <> b land gap) then gap
                 else b land (lnot gap)
             in
             match list_of_bits b (alphabet_size cm) with

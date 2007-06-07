@@ -94,6 +94,18 @@ val compare_uppass : node_data -> node_data -> int
 * definition. *)
 val compare_downpass : node_data -> node_data -> int
 
+val has_to_single : [ `Add | `Annchrom | `Breakinv | `Chrom | `Genome 
+            | `Nonadd | `Sank | `Seq ] list
+
+(* Like [distance] but calculates it only for the characters that match the
+* listed types. *)
+val distance_of_type :   
+    ?para:int option ->
+      ?parb:int option ->
+          [ `Add | `Annchrom | `Breakinv | `Chrom | `Genome 
+            | `Nonadd | `Sank | `Seq ] list -> 
+                    node_data -> node_data -> float
+
 (** [dist_2 delta a b c] calculates the cost of joining a vertex [n] between
 * the vertices [a] and [b]. If the function finds that the cost is greated
 * than [delta], it can return any value that is already greater than [delta]. 
@@ -168,3 +180,5 @@ val empty : unit -> node_data
 val total_cost_of_type :
   [> `Add | `Annchrom | `Breakinv | `Chrom | `Genome | `Nonadd | `Sank | `Seq ] ->
   node_data -> float
+
+val to_string : node_data -> string

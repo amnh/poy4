@@ -69,7 +69,11 @@ module Two_D : sig
     * contained in the squared matrix [a]. *)
     val of_list : ?use_comb:bool -> int list list -> m
 
-    val of_transformations_and_gaps : int -> int -> m
+    (** [of_transformations_and_gaps uc as t g] creates a fresh two dimensional
+    * transformation cost matrix for an alphabet of size [as], with
+    * transformation cost [t] and indel cost [g]. If [uc] is true, then all the
+    * combinations for the sequences are calculated, otherwise they are not. *)
+    val of_transformations_and_gaps : bool -> int -> int -> int -> m
 
     (** [default] is the default cost matrix in POY for pairwise, nucleotide
     * sequence alignments. *)
@@ -120,6 +124,10 @@ module Two_D : sig
         int -> int -> m -> int -> unit = "cm_CAML_set_median"
 
     (** {2 Getting Values} *)
+    (** [is_metric mtx] checks if the cost matrix specified by the list
+    * [lst] (which should be a valid input for [of_list]), is a metric matrix or
+    * not. *)
+    val is_metric : m -> bool
 
     (** [alphabet_size cm] gets the total alphabet size in the cost matrix cm. *)
     external alphabet_size : m -> int = "cm_CAML_get_a_sz"

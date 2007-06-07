@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1806 $"
+let () = SadmanOutput.register "Node" "$Revision: 1865 $"
 
 let debug = false
 let debug_exclude = false
@@ -795,8 +795,56 @@ let edge_distance nodea nodeb =
         | _ -> failwith "Incompatible characters (6)" in
     distance_lists nodea.characters nodeb.characters 0.
 
+let has_to_single : [ `Add | `Annchrom | `Breakinv | `Chrom | `Genome 
+            | `Nonadd | `Sank | `Seq ] list = [`Seq]
 
-let distance ?(para=None) ?(parb=None) ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =
+let distance_of_type ?(para=None) ?(parb=None) t
+    ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =
+    let has_t x = List.exists (fun z -> z = x) t
+    and filter_dynamic res x = 
+        match x with
+        | `Seq | `Breakinv | `Chrom | `Annchrom | `Genome as x -> x :: res
+        | _ -> res 
+    in
+    let has_nonadd = has_t `Nonadd
+    and has_add = has_t `Add
+    and has_sank = has_t `Sank
+    and dy_t = List.fold_left filter_dynamic [] t in
+    let rec distance_two ch1 ch2 =
+        match ch1, ch2 with
+        | Nonadd8 a, Nonadd8 b when has_nonadd ->
+              a.weight *. NonaddCS8.distance a.final b.final
+        | Nonadd16 a, Nonadd16 b when has_nonadd ->
+              a.weight *. NonaddCS16.distance a.final b.final
+        | Nonadd32 a, Nonadd32 b when has_nonadd ->
+              a.weight *. NonaddCS32.distance a.final b.final
+        | Add a, Add b when has_add ->
+              a.weight *. AddCS.distance a.final b.final
+        | Sank a, Sank b when has_sank ->
+              a.weight *. SankCS.distance a.final b.final
+        | Dynamic a, Dynamic b ->
+              a.weight *. DynamicCS.distance_of_type dy_t a.final b.final
+        | Set a, Set b ->
+              (match a.final.smethod with
+               | `Strictly_Same ->
+                     distance_lists a.final.set b.final.set 0.
+               | `Any_Of _ ->
+                     (* unf. we just take the full median and check the distance
+                     *)
+                     let m = cs_median nodea nodeb None ch1 ch2 in
+                     extract_cost m)
+        | _ -> 0.0
+    and distance_lists chs1 chs2 acc =
+        match chs1, chs2 with
+        | ch1 :: chs1, ch2 :: chs2 ->
+              distance_lists chs1 chs2 (acc +. distance_two ch1 ch2)
+        | [], [] -> acc
+        | _ -> failwith "Incompatible characters (6)" in
+    distance_lists chs1 chs2 0.
+
+
+let distance ?(para=None) ?(parb=None) 
+    ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =
     let rec distance_two ch1 ch2 =
         match ch1, ch2 with
         | Nonadd8 a, Nonadd8 b ->
@@ -1134,7 +1182,6 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 Hashtbl.find !data.Data.character_specs code in
             match specs with
             | Data.Static (encoding, _) -> encoding
-            | Data.Sankoff _
             | Data.Dynamic _
             | Data.Set -> failwith "get_static_encoding" in
 
@@ -1169,13 +1216,16 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             (* print_endline ("adding sankoff with code " ^ string_of_int code);
             * *)
             let specs = Hashtbl.find !data.Data.character_specs code in
-            let states = match specs with
-            | Data.Sankoff (_, states) -> states
-            | _ -> assert false in
+            let states = 
+                match specs with
+                | Data.Static (enc, _) ->
+                        let set = Enc.get_set enc in
+                        All_sets.Integers.elements set
+                | _ -> assert false 
+            in
             (Data.Stat (code, Parser.Sankoff_Character (states, true)),
              `Unknown)
         in
-        
         !data, 
         fun tcode acc ->
             let tcharacters = Hashtbl.find !data.Data.taxon_characters tcode in
@@ -1545,13 +1595,9 @@ let rec cs_to_single parent_cs mine : cs =
     | _ -> mine
 
 let to_single parent mine = 
-    let filter_f = List.filter (function Dynamic x -> 
-        (match x.preliminary with 
-        | DynamicCS.SeqCS _ -> true | _ -> false) | _ -> false) 
-    in
     { mine with 
-    characters = map2 cs_to_single (filter_f parent.characters) (filter_f
-    mine.characters) }
+    characters = map2 cs_to_single parent.characters
+    mine.characters }
 
 let readjust ch1 ch2 parent mine = 
     let ch1, ch2 =
@@ -1581,7 +1627,18 @@ let readjust ch1 ch2 parent mine =
         let children_cost = ch1.total_cost +. ch2.total_cost 
         and node_cost = get_characters_cost characters in
         let total_cost = node_cost +. children_cost in
-        { mine with total_cost = total_cost; node_cost = node_cost }
+        let res = 
+            { mine with characters = characters; total_cost = total_cost; 
+            node_cost = node_cost }
+        in
+        (*
+        Status.user_message Status.Information
+        ("The distance was " ^ string_of_float
+        ((distance mine ch1 +. distance mine ch2 +. distance mine parent))
+        ^ " but now it is " ^ string_of_float
+        ((distance res ch1) +. (distance res ch2) +. (distance res parent)));
+        *)
+        res
 
 let to_single_root mine = to_single mine mine
 
@@ -1763,10 +1820,10 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
     let child1_name = get_node_name child1_id in 
     let child2_name = get_node_name child2_id in 
     let node_name = get_node_name node_id in 
-    let node_name = 
+    let node_name, is_root = 
         match (node_name = child1_name) || (node_name = child2_name) with
-        | true -> "root"
-        | false -> node_name
+        | true -> "root", true
+        | false -> node_name, false
     in 
     let child1_recost = cmp_subtree_recost child1_node_data in 
     let child2_recost = cmp_subtree_recost child2_node_data in 
@@ -1776,7 +1833,9 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
         (cmp_node_recost node_data) 
     in  
     let attr = 
-        (Tags.Nodes.cost, string_of_float node_data.total_cost) :: 
+        (Tags.Nodes.cost, 
+            (if is_root then "0." else (string_of_float node_data.total_cost)))
+            :: 
         (Tags.Nodes.recost, string_of_float subtree_recost) :: 
         (Tags.Nodes.node_cost, string_of_float node_data.node_cost) ::
         (Tags.Nodes.name, node_name) ::
@@ -1789,7 +1848,6 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
         (fun (acc, idx) cs ->
              let parent_cs = 
                  match parent_node_data_opt with 
-                 | None -> None
                  | Some (parent_node_data, single_parent_node_data) -> 
                          let pn = List.nth parent_node_data.characters idx 
                          and pnsingle = 
@@ -1797,7 +1855,9 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
                              single_parent_node_data.characters 
                              idx
                          in
-                         Some (pn, pnsingle)
+                         if is_root then Some (pnsingle, pnsingle)
+                         else Some (pn, pnsingle)
+                 | None -> None
              in  
              let res = cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs 
              parent_cs in 
@@ -2534,6 +2594,7 @@ module Standard :
         module Union = Union
         let for_support = for_support
         let root_cost = root_cost
+        let to_single _ a _ b = to_single a b
 end 
 
 let merge a b =

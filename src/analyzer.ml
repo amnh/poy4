@@ -227,6 +227,7 @@ let dependency_relations (init : Methods.script) =
                 | `Assign_Prep_Cost _ ->
                         [([Data], [Data; Trees; JackBoot; Bremer], init,
                         Linnearizable)]
+                | `RandomizedTerminals 
                 | `MultiStatic_Aprox _
                 | `Chrom_to_Seq _
                 | `Static_Aprox _
@@ -325,7 +326,7 @@ let dependency_relations (init : Methods.script) =
                             | Some `Bootstrap ->
                                     [([JackBoot; Trees; Data], fn, init,
                                     Linnearizable)]
-                            | Some `Bremer ->
+                            | Some (`Bremer _)->
                                     [([Bremer; Trees; Data], fn, init,
                                     Linnearizable)]
                         in
@@ -1349,6 +1350,7 @@ let script_to_string (init : Methods.script) =
                 | `Assign_Affine_Gap_Cost _
                 | `Assign_Tail_Cost _
                 | `Assign_Prep_Cost _ 
+                | `RandomizedTerminals 
                 | `MultiStatic_Aprox _
                 | `Static_Aprox _
                 | `Search_Based _

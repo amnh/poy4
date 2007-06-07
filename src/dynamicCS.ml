@@ -226,7 +226,20 @@ let median_3 p n c1 c2 =
     | _, _, _, _ -> failwith_todo "median_3"
 
 
-
+let distance_of_type t a b =
+    let has_t x = List.exists (fun z -> z = x) t in
+    let has_seq = has_t `Seq 
+    and has_chrom = has_t `Chrom 
+    and has_gen = has_t `Genome
+    and has_break = has_t `Breakinv
+    and has_ann = has_t `Annchrom in
+    match a, b with
+    | SeqCS a, SeqCS b when has_seq -> (SeqCS.distance a b)
+    | ChromCS a, ChromCS b when has_chrom -> ChromCS.distance a b  
+    | GenomeCS a, GenomeCS b when has_gen -> GenomeCS.distance a b  
+    | BreakinvCS a, BreakinvCS b when has_break -> BreakinvCS.distance a b  
+    | AnnchromCS a, AnnchromCS b when has_ann -> AnnchromCS.distance a b  
+    | _, _ -> 0.0
 
 let distance a b = 
     match a, b with   

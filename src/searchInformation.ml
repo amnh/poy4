@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SearchInformation" "$Revision: 1805 $"
+let () = SadmanOutput.register "SearchInformation" "$Revision: 1865 $"
 
 let handle_tree_information trees acc = function
     | `Number -> 
@@ -99,10 +99,8 @@ let handle_character_information data acc = function
                 | lst ->
                         let find = fun x ->
                             match Hashtbl.find data.Data.character_specs x with
-                            | Data.Static (_, name) 
-                            | Data.Sankoff (name :: _, _) -> name
+                            | Data.Static (_, name) -> name
                             | Data.Dynamic d -> d.Data.filename
-                            | Data.Sankoff ([], _) -> ""
                             | Data.Set -> ""
                         in
                         let names = List.map find lst in

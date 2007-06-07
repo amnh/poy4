@@ -254,7 +254,7 @@ cm_get_combinations_3d (cm_3dt c) {
  */
 cmt 
 cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
-        cmt res) {
+        int is_metric, cmt res) {
     size_t size;
     if (combinations != 0) {
         cm_set_gap (res, 1 << (a_sz - 1));
@@ -268,6 +268,7 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
         cm_unset_combinations (res);
     }
     cm_set_affine (res, do_aff, gap_open);
+    res->is_metric = is_metric;
     size = (1 << (res->lcm * 2)) * sizeof(int);
     res->cost = (int *) malloc (size);
     res->median = (int *) malloc (size);
@@ -705,6 +706,7 @@ cm_CAML_deserialize (void *v) {
     n->cost_model_type = deserialize_uint_4();
     n->combinations = deserialize_uint_4();
     n->gap_open = deserialize_uint_4();
+    n->is_metric = deserialize_uint_4();
     len = 1 << (n->lcm * 2);
     n->cost = (int *) malloc (len * sizeof(int));
     n->median = (int *) malloc (len * sizeof(int));
@@ -757,6 +759,7 @@ cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->cost_model_type);
     serialize_int_4(c->combinations);
     serialize_int_4(c->gap_open);
+    serialize_int_4(c->is_metric);
     *wsize_64 = *wsize_32 = sizeof(struct cm);
     len = 1 << (c->lcm * 2);
     serialize_block_4(c->cost, len);
@@ -845,7 +848,7 @@ cm_CAML_clone (value v) {
     clone2 = Cost_matrix_struct(clone);
     c = Cost_matrix_struct(v);
     cm_set_val (c->lcm, c->combinations, c->cost_model_type, \
-            c->gap_open, clone2);
+            c->gap_open, c->is_metric, clone2);
     len = (c->a_sz + 1) * (c->a_sz + 1);
     cm_copy_contents (c->cost, clone2->cost, len);
     cm_copy_contents (c->median, clone2->median, len);
@@ -1162,7 +1165,7 @@ cm_CAML_create (value a_sz, value combine, value aff, value go) {
     tmp = alloc_custom (&cost_matrix, sizeof(struct cm), 1, 1000000);
     tmp2 = Cost_matrix_struct(tmp);
     cm_set_val (Int_val(a_sz), Bool_val(combine), Int_val(aff), Int_val(go), \
-            tmp2);
+            0, tmp2);
     CAMLreturn(tmp);
 }
 
@@ -1220,4 +1223,21 @@ cm_CAML_initialize (value unit) {
     caml_register_custom_operations (&cost_matrix);
     caml_register_custom_operations (&cost_matrix_3d);
     CAMLreturn(Val_unit);
+}
+
+value
+cm_CAML_set_is_metric (value c) {
+    CAMLparam1(c);
+    cmt init;
+    init = Cost_matrix_struct(c);
+    init->is_metric = 1;
+    CAMLreturn(Val_unit);
+}
+
+value
+cm_CAML_get_is_metric (value c) {
+    CAMLparam1(c);
+    cmt init;
+    init = Cost_matrix_struct(c);
+    CAMLreturn(Val_int(init->is_metric));
 }

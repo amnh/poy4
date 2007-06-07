@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1812 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 1865 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -2048,3 +2048,35 @@ let supports to_string maj number_of_samples tree sets =
     --> extract_counters sets
     --> make_tree maj coder tree_builder
 
+(* A function that returns the bremer support tree based on the set of (costs, 
+* tree) of sets, for the input tree *)
+let bremer to_string cost tree sets =
+    (* We first create a function that takes a map of clades and best cost found
+    * for a tree _not_ containing the set, and a set of clades belonging to a
+    * tree, with it's associated cost, and update the map according to the cost
+    * for the set of clades, only if better. *)
+    let replace_when_smaller map (new_cost, sets) =
+            Tree.CladeFPMap.fold (fun my_clade best_cost acc ->
+                if (not (Tree.CladeFP.CladeSet.mem my_clade sets)) &&
+                    ((new_cost - cost) < best_cost) then
+                    Tree.CladeFPMap.add my_clade (new_cost - cost) acc
+                else acc) map map
+    in
+    (** We create a map with all the sets of clades in the input tree *)
+    let map : int Tree.CladeFPMap.t = 
+        let map = 
+            add_tree_to_counters (fun _ _ -> false) Tree.CladeFPMap.empty
+            tree
+        in
+        Tree.CladeFPMap.map
+        (fun _ -> max_int) map 
+    in
+    (* We now update that map with the best length found for each tree not
+    * having the clade *)
+    let coder = ref 0 in
+    let tree_builder =
+        build_a_tree to_string 1. true coder
+    in
+    sets 
+    --> Sexpr.fold_status "Comparing tree for bremer" replace_when_smaller map
+    --> make_tree (-1) coder tree_builder

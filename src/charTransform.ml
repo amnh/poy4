@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1812 2007-05-10 21:50:09Z andres $ *)
+(* $Id: charTransform.ml 1865 2007-06-07 16:58:32Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1812 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1865 $"
 
 module type S = sig
     type a 
@@ -899,13 +899,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 --> Data.categorize
                 --> Node.load_data ~taxa:nc
         | `Create_Transformation_Cost_Matrix (trans, gaps, chars) ->
-                let name = 
-                    ("Substitutions:" ^ string_of_int trans ^ 
-                    ", Indels:" ^ string_of_int gaps)
-                in
                 gaps 
-                --> Cost_matrix.Two_D.of_transformations_and_gaps trans 
-                --> Data.assign_tcm_to_characters data chars name
+                --> Data.assign_transformation_gaps data chars trans 
                 --> Data.categorize 
                 --> Node.load_data ~taxa:nc
         | `Prioritize ->

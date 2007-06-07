@@ -124,7 +124,14 @@ with type b = AllDirNode.OneDirF.n = struct
             and ndb = (List.hd ((Ptree.get_node_data b
                 new_tree).AllDirNode.adjusted)).AllDirNode.lazy_node
             in
-            let dist = AllDirNode.OneDirF.distance nda ndb in
+            let dist = Node.distance_of_type Node.has_to_single
+                (Lazy.force_val nda)
+                (Lazy.force_val ndb) in
+            (*
+            Status.user_message Status.Information
+            ("Dist between " ^ string_of_int a ^ " and " ^ 
+            string_of_int b ^ " is " ^ string_of_float dist);
+            *)
             Tree.Continue, dist +. acc
         in
         let real_cost = 
@@ -139,10 +146,12 @@ with type b = AllDirNode.OneDirF.n = struct
                 | None -> failwith "No root?")
             --> (fun (x, cost) -> 
                 match x.AllDirNode.unadjusted with
-                | [x] -> 
-                        cost -.
-                        (Node.total_cost_of_type `Seq
-                        (Lazy.force_val x.AllDirNode.lazy_node))
+                | [x] ->
+                        List.fold_left (fun acc y ->
+                            acc -.
+                        (Node.total_cost_of_type y
+                        (Lazy.force_val x.AllDirNode.lazy_node))) cost 
+                        Node.has_to_single
                 | _ -> failwith "Wha?")
         in
         real_cost +. root_minus
@@ -162,6 +171,11 @@ with type b = AllDirNode.OneDirF.n = struct
                 --> Lazy.force_val 
                 --> fun x -> Node.to_single parentd x, x
             in
+            (*
+            Status.user_message Status.Information
+            ("my parent is " ^ Node.to_string parentd ^ " and I have assignment
+            " ^ Node.to_string nd);
+            *)
             let nnd = 
                 { current_d with AllDirNode.lazy_node = Lazy.lazy_from_val nd }
             in
@@ -189,8 +203,26 @@ with type b = AllDirNode.OneDirF.n = struct
                         AllDirChar.assign_single_handle 2"
             in
             let generate_root_and_assign_it rootg edge ptree =
+                let a, b =
+                    match edge with
+                    | `Edge x -> x
+                    | `Single a -> a, a
+                in
                 let root, rooth = get_root_direction rootg in
-                let root = Node.to_single root root in
+                let handle_node = 
+                    (AllDirNode.not_with b (Ptree.get_node_data a
+                    ptree).AllDirNode.unadjusted)
+                    --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
+                and other_node = 
+                    (AllDirNode.not_with a (Ptree.get_node_data b
+                    ptree).AllDirNode.unadjusted)
+                    --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
+                in
+                let root = Node.to_single other_node handle_node in
+                (*
+                Status.user_message Status.Information
+                ("My assignment for the root is " ^ Node.to_string root);
+                *)
                 let rooti = [{ rooth with AllDirNode.lazy_node =
                     lazy (root) }]
                 in
@@ -257,11 +289,12 @@ with type b = AllDirNode.OneDirF.n = struct
     (* Now we define a function that can adjust all the vertices in the tree
     * to improve the overall cost of the tree, using only the
     * [AllDirNode.adjusted] field of each. *)
-    let adjust_tree ptree =
+    let rec adjust_tree leaf_bool ptree =
         (* We start by defining a function to adjust one node *)
-        let adjust_node ch1 ch2 parent minec mine ptree =
-            match ch1.AllDirNode.adjusted, ch2.AllDirNode.adjusted, 
-            parent.AllDirNode.adjusted, mine.AllDirNode.adjusted with
+        let did_adjust = ref false in
+        let adjust_node ch1o ch2o parento minec mineo ptree =
+            match ch1o.AllDirNode.adjusted, ch2o.AllDirNode.adjusted, 
+            parento.AllDirNode.adjusted, mineo.AllDirNode.adjusted with
             | [ch1], [ch2], [parent], [mine'] ->
                     let mine = 
                         mine'
@@ -270,34 +303,44 @@ with type b = AllDirNode.OneDirF.n = struct
                             (force_node parent))
                         --> Lazy.lazy_from_val 
                         --> (fun x -> { mine' with AllDirNode.lazy_node = x })
-                        --> (fun x -> { mine with AllDirNode.adjusted = [x] })
+                        --> (fun x -> { mineo with AllDirNode.adjusted = [x] })
                     in
                     Ptree.add_node_data minec mine ptree
             | _ -> failwith "Huh? AllDirChar.aux_adjust_single"
         in
         (* Now we should be able to adjust all the vertices in the tree
         * recursively, in a post order traversal, on a given subtree. *)
-        let rec adjust_subtree parent vertex ptree =
+        let rec adjust_subtree leaf_bool parent vertex ptree =
             match Ptree.get_node vertex ptree with
             | Tree.Leaf _ 
-            | Tree.Single _ -> ptree
+            | Tree.Single _ -> ptree, leaf_bool
             | node ->
                     let a, b = Tree.other_two_nbrs parent node in
-                    let ptree = 
-                        ptree 
-                        --> (adjust_subtree vertex a)
-                        --> (adjust_subtree vertex b)
-                    in
+                    let ptree, did_a = adjust_subtree leaf_bool vertex a ptree in
+                    let ptree, did_b = adjust_subtree leaf_bool vertex b ptree in
                     let gnd x = Ptree.get_node_data x ptree in
-                    let ptree =
-                        adjust_node (gnd a) (gnd b) (gnd parent) vertex (gnd vertex)
-                        ptree
+                    let ptree, continue =
+                        if did_b || did_a then 
+                            ptree, true
+                        else 
+                            let ptree =
+                                adjust_node (gnd a) (gnd b) (gnd parent) vertex (gnd vertex)
+                                ptree
+                            in
+                            let _ = did_adjust := true in
+                            ptree, true
                     in
+                    (*
+                    let old_vertex = gnd vertex in
                     let newv = Ptree.get_node_data vertex ptree in
-                    Printf.printf "The vertex %d has cost %f\n%!" vertex 
+                    Printf.printf "The vertex %d has cost %f which used to be %f\n%!" vertex 
                     (AllDirNode.OneDirF.total_cost (Some parent) (List.hd
-                    (newv.AllDirNode.adjusted)).AllDirNode.lazy_node);
-                    ptree
+                    (newv.AllDirNode.adjusted)).AllDirNode.lazy_node)
+                    (AllDirNode.OneDirF.total_cost (Some parent)
+                    (List.hd
+                    (old_vertex.AllDirNode.adjusted)).AllDirNode.lazy_node);
+                    *)
+                    ptree, continue
         in
         (* Now we need to be able to adjust the root of the tree, and it's
         * cost, once we have finished adjusting every vertex in the tree *)
@@ -309,18 +352,24 @@ with type b = AllDirNode.OneDirF.n = struct
                     let new_root = 
                         let ad = force_node ad
                         and bd = force_node bd in
+                        (*
                         Printf.printf "The distance here is %f\n%!"
                         (Node.Standard.distance ad bd);
+                        *)
                         let node = Node.Standard.median None None None ad bd in
+                        (*
                         Printf.printf "The median cost is %f with parents of
                         cost %f and %f\n%!"
                         (Node.Standard.node_cost None node)
                         (Node.Standard.total_cost None ad)
                         (Node.Standard.total_cost None bd);
+                        *)
                         node
                     in
+                    (*
                     Printf.printf "The total cost of this will be %f\n%!"
                     (Node.Standard.total_cost None new_root);
+                    *)
                     let new_root' = 
                         { new_root with 
                          Node.characters = (Node.to_single new_root
@@ -333,31 +382,39 @@ with type b = AllDirNode.OneDirF.n = struct
                     Ptree.assign_root_to_connected_component handle 
                     (Some ((`Edge (a, b)), {root with 
                     AllDirNode.adjusted = new_root'}))
-                    (Node.Standard.root_cost new_root)
+                    (check_cost ptree handle)
                     None
                     ptree
             | _ -> failwith "AllDirChar.adjust_root_n_cost"
         in
         (* Now we are ready for a function to adjust a handle in the tree *)
-        let adjust_handle handle ptree =
+        let adjust_handle leaf_bool handle ptree =
             match (Ptree.get_component_root handle ptree).Ptree.root_median with
             | Some ((`Edge (a, b)), rootg) ->
-                    let ptree = 
-                        ptree 
-                        --> adjust_subtree a b 
-                        --> adjust_subtree b a
-                    in
+                    let ptree, _ = adjust_subtree leaf_bool a b ptree in
+                    let ptree, _ = adjust_subtree leaf_bool b a ptree in
+                    (*
+                    Status.user_message Status.Information
+                    ("The total cost is " ^ string_of_float (check_cost ptree
+                    handle));
+                    *)
                     adjust_root_n_cost handle rootg a b ptree
             | Some _ -> ptree
             | None -> failwith "Huh? AllDirChar.adjust_handle"
         in
         (* Finally, we are ready to assign to all the handles in the tree
         * and adjusted cost *)
-        All_sets.Integers.fold adjust_handle ptree.Ptree.tree.Tree.handles
-        ptree
+        let new_tree =
+            All_sets.Integers.fold (adjust_handle leaf_bool) ptree.Ptree.tree.Tree.handles
+            ptree
+        in
+        if Ptree.get_cost `Adjusted ptree > Ptree.get_cost `Adjusted new_tree 
+        then
+            adjust_tree (not leaf_bool) new_tree
+        else ptree
 
     let assign_single_and_readjust ptree = 
-        adjust_tree (assign_single ptree)
+        adjust_tree false (assign_single ptree)
 
     let refresh_all_edges ptree =
         let new_edges = 
@@ -501,7 +558,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     let comp = Some ((`Single handle), data) in
                     Ptree.set_component_cost c None comp handle ptree
         in 
-        assign_single (List.fold_left process ptree edgesnhandles)
+        (assign_single (List.fold_left process ptree edgesnhandles))
 
     let create_edge ptree a b =
         let edge1 = (Tree.Edge (a, b)) in

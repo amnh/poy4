@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 1805 $"
+let () = SadmanOutput.register "Methods" "$Revision: 1865 $"
 
 (** Data *)
 
@@ -124,6 +124,10 @@ type dynamic_char_transform = [
 ]
 
 
+type terminal_transform = [
+    `RandomizedTerminals
+]
+
 type char_transform = [
     | dynamic_char_transform
     | `MultiStatic_Aprox of (characters * bool)
@@ -142,6 +146,7 @@ type char_transform = [
 
 type transform = [
     | char_transform
+    | terminal_transform
     | `OriginCost of float
 ]
 
@@ -163,7 +168,7 @@ type diagnosis = [
     | `Implied_Alignment of (string option * characters)]
 
 type support_output = [
-    | `Bremer
+    | `Bremer of filename option
     | `Jackknife
     | `Bootstrap
 ]
@@ -274,6 +279,12 @@ type output_class = [
 
 (** Options *)
 
+type tabu_join_strategy = [
+    | `UnionBased of int option
+    | `AllBased of int option
+    | `Partition of [`MaxDepth of int | `ConstraintFile of filename ] list
+]
+
 (* New tree build_method methods.
 * 
 * [Wagner_Rnd a] creates Wagner (Minimum spanning) trees adding the taxa in
@@ -286,12 +297,14 @@ type output_class = [
 * [Random a] produces a random trees.
 * [Input_file chan] loads the trees stored in the input channel cha. *)
 (* So I will modify this set of build methods to wrap them in a nicer manner *)
+type build_strategy = 
+    int * keep_method * cost_calculation list * tabu_join_strategy
 type build_method = [
-    | `Wagner_Rnd of int * keep_method * cost_calculation list
-    | `Wagner_Mst of int * keep_method * cost_calculation list
-    | `Wagner_Distances of int * keep_method * cost_calculation list
-    | `Wagner_Ordered of int * keep_method * cost_calculation list
-    | `Build_Random of int * keep_method * cost_calculation list
+    | `Wagner_Rnd of build_strategy
+    | `Wagner_Mst of build_strategy
+    | `Wagner_Distances of build_strategy
+    | `Wagner_Ordered of build_strategy
+    | `Build_Random of build_strategy
     | `Prebuilt of filename ]
 
 type parallelizable_build = build_method
@@ -299,7 +312,7 @@ type parallelizable_build = build_method
 type build = [
     | `Prebuilt of filename
     | `Build of int * build_method * cost_calculation list
-    | `Build_Random of int * keep_method * cost_calculation list
+    | `Build_Random of build_strategy
 ]
 
 (* Optimality criterion employed. Self explanatory. *)
@@ -335,12 +348,6 @@ type tabu_break_strategy = [
     | `OnlyOnce
 ]
 
-type tabu_join_strategy = [
-    | `UnionBased of int option
-    | `AllBased of int option
-    | `Partition of [`MaxDepth of int | `ConstraintFile of filename ] list
-]
-
 type tabu_reroot_strategy = [
     | `Bfs of int option
 ]
@@ -356,6 +363,7 @@ type trajectory_method = [
 
 type samples = [
     | `KeepBestTrees 
+    | `AllVisited of string option
     | `PrintTrajectory of string option
     | `TimeOut of float
     | `TimedPrint of (float * string option)

@@ -65,25 +65,20 @@ val code_generator : unit -> cg
 * alignments of sequence [s] using the code generation function [cg]. *)
 val create_ias : Sequence.s -> int -> cg -> ias
 
-(** [ancestor a b cm m] creates a common ancestor for sequences [a] and [b]
- * using the cost matrix [cm] and the alignment matrix [m] 
- * The resulting common ancestor holds the homology
- * relationships of the codes assigned in [a] and [b]. *)
-val ancestor : int -> ias -> ias -> Cost_matrix.Two_D.m -> Matrix.m -> ias
-
 module type S = sig
     type a 
     type b
     type tree = (a, b) Ptree.p_tree
 
     (** [of_tree t] generates the implied alignment of all the sequences in the tree
-    * [t]. *)
-    val of_tree : (int * tree) -> Methods.implied_alignment
+    * [t], where the first element of the tuple [t] is a function that removes a
+    * gap from the alphabet set of the sequences contained in tree (it implies
+    * that [t] only has one sequence). *)
+    val of_tree : ((int -> int) * tree) -> Methods.implied_alignment
 
     val concat_alignment :
           (int * int array list All_sets.IntegerMap.t list) list list ->
           (int * int array All_sets.IntegerMap.t list) list list
-
 
     val create : (tree -> int list -> tree) ->
         int list -> Data.d ->
@@ -94,8 +89,6 @@ module type S = sig
         (tree -> int list -> tree) ->
             bool  -> Methods.characters -> Data.d -> tree -> Data.d
 
-
-             
 end
 
 module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : 

@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 1779 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 1865 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -50,6 +50,8 @@ module type S = sig
     (* A function that constructs a wagner edge manager for the phylogeny, that
     * uses the unions of the vertices to reduce the number of attempts. *)
     val wagner_union : phylogeny -> int -> wem
+
+    val distance_dfs_wagner : phylogeny -> int -> wem
 
     (** {2 Edge Manager Constructors} *)
 
@@ -525,8 +527,6 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                                 else false
                         else true)
     end
-
-
 
     class probabilitisic_union_dfs_wagner max_distance ptree handle 
         : wem = object 
@@ -1706,6 +1706,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
 (* This tabu is used by andres for testing purposes *)
     let wagner_tabu ptree handle = new Unions.wagner_joiner dsp ptree handle
+
+    let distance_dfs_wagner ptree handle = 
+        new distance_dfs_wagner max_int ptree handle
 
 (* The official wagner tabu *)
     let wagner_union ptree handle = new union_dfs_wagner max_int ptree handle

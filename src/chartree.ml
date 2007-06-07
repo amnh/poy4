@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 1801 2007-05-08 18:50:43Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 1801 $"
+(* $Id: chartree.ml 1865 2007-06-07 16:58:32Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 1865 $"
 
 
 (** chartree.ml *)
@@ -1242,23 +1242,25 @@ let rec subtree_to_formatter (pre_ref_code, fi_ref_codes)
 
 let handle_to_formatter (pre_ref_codes, fi_ref_codes)
         attr data tree handle_id : Tags.output =
-
     let root = Ptree.get_component_root handle_id tree in
     let data = 
         match Ptree.get_node handle_id tree with
         | Tree.Interior (_, parent, _, _)
         | Tree.Leaf (_, parent) ->
-              let handle_node_data = Ptree.get_node_data handle_id tree in
-              let parent_node_data = Ptree.get_node_data parent tree in
               let root_formatter, tree_root =
                   match root.Ptree.root_median with 
-                  | Some (_, root) -> 
-                          let root_single = Node.to_single_root root in
+                  | Some ((`Edge (handle_id, parent)), root) -> 
+                          let handle_node_data = Ptree.get_node_data handle_id tree
+                          and parent_node_data = Ptree.get_node_data parent tree in
+                          let root_single = 
+                              Node.to_single parent_node_data
+                              handle_node_data
+                          in
                           Node.to_formatter_subtree (pre_ref_codes, fi_ref_codes) 
-                          [] data root handle_id (handle_id,  handle_node_data) 
-                          (parent, parent_node_data) (Some (root, root_single)), 
-                          Some (root, root_single)
-                  | None -> 
+                          [] data root_single handle_id (handle_id,  handle_node_data) 
+                          (parent, parent_node_data) (Some (root_single,
+                          root_single)), Some (root_single, root_single)
+                  | _ -> 
                           failwith "How is it possible we have no root?"
                           (*(Tags.Nodes.node, [], `Structured `Empty)*)
               in               

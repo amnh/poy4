@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 1801 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 1865 $"
 
 let has_exact (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (function `Exact -> true | _ -> false) cost_calculation
@@ -449,7 +449,8 @@ module MakeNormal
         let ob = 
             match item with
             | `PrintTrajectory filename -> 
-                  (new SamplerApp.print_next_tree (simplified_report_trees filename data))
+                  (new SamplerApp.print_next_tree 
+                  (simplified_report_trees filename data))
             | `KeepBestTrees ->
                     (new SamplerApp.local_optimum_holder queue)
             | `TimeOut time ->
@@ -475,6 +476,13 @@ module MakeNormal
                     new SamplerRes.break_n_join_distances 
                     TreeOps.join_fn 
                     (Status.user_message (Status.Output (filename, false, [])))
+            | `AllVisited filename ->
+                    let join_fn a b c = 
+                        let a, _ = TreeOps.join_fn [] a b c in
+                        a
+                    in
+                    (new SamplerApp.visited join_fn 
+                    (simplified_report_trees filename data))
         in
         new Sampler.composer previous ob
 
