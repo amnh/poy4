@@ -17,13 +17,15 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 1771 $"
+let () = SadmanOutput.register "" "$Revision: 1875 $"
 
-let () = SadmanOutput.register "Status_ncurses" "$Revision: 1771 $"
+let () = SadmanOutput.register "Status_ncurses" "$Revision: 1875 $"
+
+    type tab_state = Begin | First | Continue
 
 (** [ndebug_keycode]: if true, then the values of unknown keycodes are printed
     to the input window. *)
-let ndebug_keycode = false
+let ndebug_keycode = true
 
 let get_next_code =
     let cnt = ref (-1) in
@@ -702,6 +704,7 @@ let error_location f t =
 
 let keyup = NcursesML.keyup ()
 let keydown = NcursesML.keydown ()
+let keytab = 9
 let keybackspace = NcursesML.keybackspace ()
 let keyppage = NcursesML.keyppage ()
 let keynpage = NcursesML.keynpage ()
@@ -867,9 +870,80 @@ let main_loop f =
         | [] -> bc, ac
     in
 
+    let did_tab = ref Begin in
+
+    let update_tab s =
+        did_tab := 
+            if s then
+                match !did_tab with
+                | Begin -> First
+                | First -> Continue
+                | Continue -> Continue
+            else begin Begin end
+    in
+
+    let last_string_to_try_in_tab = ref "" in
+
+    let rec grab_filename_prefix before accac = 
+        match before with
+        | "\"" :: rest -> "", before
+        | h :: t ->
+                backspace ();
+                let (y, x) = NcursesML.getyx !console in
+                List.iter (NcursesML.waddstr !console) accac;
+                NcursesML.waddstr !console " ";
+                NcursesML.wmove !console y x;
+                NcursesML.refresh ~w:!console ();
+                let a, b = grab_filename_prefix t accac in
+                a ^ h, b
+        | [] -> "", []
+
+    in
+    let prepend_string list to_add accac = 
+        let list = ref list in
+        String.iter (fun x ->
+            let c = String.make 1 x in
+            NcursesML.waddstr !console c;
+            let (y, x) = NcursesML.getyx !console in
+            List.iter (NcursesML.waddstr !console) accac;
+            NcursesML.wmove !console y x;
+            NcursesML.refresh ~w:!console ();
+            list :=  c :: !list) to_add;
+        NcursesML.refresh ~w:!console ();
+        !list 
+    in
+
+    let prepend_to_before new_before completed_name to_complete accac =
+        let _, pre = grab_filename_prefix new_before accac in
+        let to_add = 
+            if completed_name = "" then to_complete else completed_name
+        in
+        prepend_string pre to_add accac
+    in
+
+    let do_keytab before after =
+        let str, new_before = grab_filename_prefix before after in
+        let _ =
+            match !did_tab with
+            | Begin -> failwith "How is this possible?"
+            | First -> last_string_to_try_in_tab := str
+            | Continue -> ()
+        in
+        let str = 
+            StatusCommon.Files.complete_filename
+            !last_string_to_try_in_tab 
+        in
+        prepend_to_before new_before str !last_string_to_try_in_tab after, after
+    in
+
     let rec read_line accbc accac =
         NcursesML.halfdelay 1;
         let res = NcursesML.wgetch !console in
+        let _ =
+            if res = keytab then
+                update_tab true
+            else if res <> err then update_tab false
+        in
         (* Enter key *)
         if res = err then begin
             NcursesML.do_update ();
@@ -878,6 +952,9 @@ let main_loop f =
                 let _ = print_prompt () in
                 ()
             end;
+            read_line accbc accac
+        end else if res = keytab then begin
+            let accbc, accac = do_keytab accbc accac in
             read_line accbc accac
         end else if res = 10 then begin
             sb_reset info_scrollback;

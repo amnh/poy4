@@ -138,27 +138,33 @@ val to_formatter_single :
 
 
 (**
-* [to_formatter_subtree (final, prel) b c d e f g h] creates Tags.output of the contents 
+ * [to_formatter_subtree is_root (final, prel) b c d e f g h] creates Tags.output of the contents 
 * of the node [d] with code [e], using as attributed [b], eliminating the
 * chromosomal characters [final] and [prel], with children of code and node
 * content [f] and [g], and with [(parent node * parent single assignment node)]
 * [h]. The single assignment is a unique assignment per character, as opposed to
 * the multiple valid assignments that are possible in a tree *)
 val to_formatter_subtree :
-    ChromCS.IntSet.t * ChromCS.IntSet.t -> Tags.attributes ->
+    ?is_root:bool -> ChromCS.IntSet.t * ChromCS.IntSet.t -> Tags.attributes ->
   Data.d ->
   node_data ->
   int ->
     int *  node_data -> int *  node_data -> 
         (node_data * node_data) option -> Tags.output
 
-(** [to_single p n] returns a node that contains per character a single state
-* which is closest to [p] among those available in [n]. Useful for tree length
-* verification. *)
-val to_single : node_data -> node_data -> node_data
+
+(** [to_single ?is_root (pre_ref_code, fi_ref_code) alied_map p n] returns a node that contains per character a single state
+ * which is closest to [p] among those available in [n]. Useful for tree length
+ * verification. is_root optional paramter indicates that if n is root. The
+ * default is false. Pre_ref_code and fi_ref_code contain active codes for chromosome characters. 
+ * Inactive codes are eliminated from diagnosis. 
+ * If p is the handle, alied_map is the root containing the aligned map between p
+ * and n needed for chromosome stuff, else alied_map is assigned by p *)
+val to_single : ?is_root:bool -> ChromCS.IntSet.t * ChromCS.IntSet.t -> node_data -> node_data -> node_data -> node_data
 
 (** [to_single_root n] is equivalent to [to_single n n]. *)
-val to_single_root : node_data -> node_data
+val to_single_root : ChromCS.IntSet.t * ChromCS.IntSet.t -> node_data -> node_data
+
 
 (** [readjust ch1 ch2 par mine] returns a heuristically selected new node which
 * is located somewhere in between [ch1], [ch2], and [par], which are the two

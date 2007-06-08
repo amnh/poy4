@@ -45,6 +45,13 @@ let failwith_todo f_name =
     failwith 
         ("Todo: " ^ f_name ^ " dynamicCS")
 
+let alpha (a : t) = 
+    match a with 
+    | SeqCS a -> a.SeqCS.alph
+    | ChromCS a -> a.ChromCS.alph
+    | GenomeCS a -> a.GenomeCS.alph
+    | BreakinvCS a -> a.BreakinvCS.alph
+    | AnnchromCS a -> a.AnnchromCS.alph
 
 let total_cost (a : t) = 
     match a with 
@@ -398,24 +405,37 @@ let readjust ch1 ch2 parent mine =
             let prev_cost = total_cost mine in
             prev_cost, prev_cost, mine
 
-let to_single parent mine = 
-    match parent, mine with
-    | SeqCS parent, SeqCS mine -> 
+
+let to_single ?(is_root=false) ref_codes alied_map parent mine = 
+    match parent, mine, alied_map with
+    | SeqCS parent, SeqCS mine, _ -> 
             let prev_cost, new_cost, median = SeqCS.to_single parent mine in
             prev_cost, new_cost, SeqCS median
-    | _, mine -> 
+
+    | ChromCS parent, ChromCS mine, ChromCS alied_map ->
+            let prev_cost, new_cost, median =
+                ChromCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+            in
+            prev_cost, new_cost, ChromCS median          
+
+
+    | BreakinvCS parent, BreakinvCS mine, BreakinvCS alied_map ->
+            let prev_cost, new_cost, median = 
+                BreakinvCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+            in
+            prev_cost, new_cost, BreakinvCS median          
+
+
+    | AnnchromCS parent, AnnchromCS mine, AnnchromCS alied_map ->
+          let prev_cost, new_cost, median = 
+              AnnchromCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+          in
+          prev_cost, new_cost, AnnchromCS median          
+
+
+    | _, mine, _ -> 
+
             let cst = total_cost mine in
             cst, cst, mine
-            (*
-    | BreakinvCS parent, BreakinvCS mine -> 
-            BreakinvCS (BreakinvCS.to_single parent mine)
-    | ChromCS parent, ChromCS mine -> 
-            ChromCS (ChromCS.to_single parent mine)
-    | AnnchromCS parent, AnnchromCS mine -> 
-            AnnchromCS (AnnchromCS.to_single parent mine)
-    | GenomeCS parent, GenomeCS mine -> 
-            GenomeCS (GenomeCS.to_single parent mine)
-            *)
 
-let to_single_root mine = to_single mine mine
-
+let to_single_root ref_codes mine = to_single ref_codes mine mine mine

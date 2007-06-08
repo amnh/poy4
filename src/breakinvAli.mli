@@ -22,11 +22,11 @@ val cmp_cost :
   breakinv_t ->
   breakinv_t ->
   Cost_matrix.Two_D.m ->
-  int array array -> Alphabet.a -> Data.dyna_pam_t -> int * int
+  int array array -> Alphabet.a -> Data.dyna_pam_t -> int * (int * int)
 val find_med2_ls :
   breakinv_t ->
   breakinv_t ->
   Cost_matrix.Two_D.m ->
   int array array ->
-  Alphabet.a -> Data.dyna_pam_t -> int * int * breakinv_t list
+  Alphabet.a -> Data.dyna_pam_t -> int * (int * int) * breakinv_t list
 val get_costs : breakinv_t -> int -> int * int

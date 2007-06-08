@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 1865 $"
+let () = SadmanOutput.register "Methods" "$Revision: 1875 $"
 
 (** Data *)
 
@@ -106,6 +106,7 @@ type chromosome_pam_t = [
     | `Locus_Indel_Cost of (int * int)
     | `Chrom_Indel_Cost of (int * int)
     | `Sig_Block_Len of int 
+    | `Rearranged_Len of int 
     | `Chrom_Hom of int
     | `Seed_Len of int
     | `Keep_Median of int

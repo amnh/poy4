@@ -79,13 +79,17 @@ val of_list :
             int -> int -> int -> t
 val median : t -> t -> t
 
-(** [to_single p m] assigns a single character in [m] that is closest to [p].
-* The function returns a triple [(a, b, c)], where [c] is the new single closest
-* to [m]. *)
-val to_single : t -> t -> float * float * t
+(** [to_single ?is_root pre_ref_code alied_map p n] returns a node that contains per character a single state
+ * which is closest to [p] among those available in [n]. Useful for tree length
+ * verification. is_root optional paramter indicates that if n is root. The
+ * default is false. pre_ref_code contains active codes for chromosome characters. 
+ * Inactive codes are eliminated from diagnosis. 
+ * If p is the handle, alied_map is the root containing the aligned map between p
+ * and n for chromosome stuff, else alied_map is assigned by p *)
+val to_single : ?is_root:bool -> ChromCS.IntSet.t -> t -> t -> t -> float * float * t
 
 (** [to_single_root n] is the same as [to_single n n]. *)
-val to_single_root : t -> float * float * t
+val to_single_root : ChromCS.IntSet.t -> t -> float * float * t
 
 (** [readjust ch1 ch2 par mine] attempts to (heuristically) readjust the character 
 * set [mine] to somewhere in between [ch1], [ch2], and [par] (the children and

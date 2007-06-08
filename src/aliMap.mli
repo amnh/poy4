@@ -42,12 +42,15 @@ val create_general_ali :
   Block.pairChromPam_t ->
   Block.subseq_t list * Block.subseq_t list * Block.block_t list *
   (Sequence.s * Sequence.s) array array * int array * int array * int
+
 val create_fast_general_ali :
+  [> `Breakinv ] ->
   Block.block_t list ->
   Sequence.s ->
   Sequence.s ->
   Cost_matrix.Two_D.m ->
   Block.pairChromPam_t ->
   Block.subseq_t list * Block.subseq_t list * Block.block_t list *
-  (Sequence.s * Sequence.s) array array * int array * int array * int * 
+  (Sequence.s * Sequence.s) array array * int array * int array * int *
   int
+

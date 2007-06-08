@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Seed" "$Revision: 1644 $"
+let () = SadmanOutput.register "Seed" "$Revision: 1875 $"
 type pairChromPam_t = ChromPam.chromPairAliPam_t
 
 (** The seed module contains data and funtions to determine all seeds between
@@ -151,7 +151,7 @@ let create_local_connection (seed_ls : seed_t list) (ali_pam : pairChromPam_t) =
     let back_arr = Array.make num_seed (-1) in 
     
     
-    let unbreaked_len = ali_pam.ChromPam.unbreaked_len in 
+    let rearranged_len = ali_pam.ChromPam.rearranged_len in 
     for seed_no = 0 to num_seed - 2 do
             
         let donor_seed = sorted_end_seed_arr.(seed_no) in
@@ -161,11 +161,11 @@ let create_local_connection (seed_ls : seed_t list) (ali_pam : pairChromPam_t) =
 
         let rec move (rec_seed_no : int) =
             let rec_seed = sorted_end_seed_arr.(rec_seed_no) in                 
-            if rec_seed.sta1 - donor_end_pos1 - 1 <= unbreaked_len then 
+            if rec_seed.sta1 - donor_end_pos1 - 1 <= rearranged_len then 
             begin               
                 if (donor_end_pos1 < rec_seed.sta1) 
                     && (donor_end_pos2 < rec_seed.sta2) 
-                    && (rec_seed.sta2 - donor_end_pos2 - 1 <= unbreaked_len) then
+                    && (rec_seed.sta2 - donor_end_pos2 - 1 <= rearranged_len) then
                 begin
                     let connecting_cost = 
                         cmp_connecting_cost donor_seed rec_seed ali_pam in                

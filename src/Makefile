@@ -1,4 +1,4 @@
-# $Id: Makefile 1865 2007-06-07 16:58:32Z andres $
+# $Id: Makefile 1875 2007-06-08 20:45:42Z andres $
 
 # Instructions:
 # You can compile a debug bytecode app by specifying DEBUG=-g
@@ -45,6 +45,13 @@ endif
 ifeq ($(USEINTERFACE), html)
 	INTERFACE = status_html.cma
 endif
+
+READLINE:=
+ifeq ($(USEINTERFACE), flat)
+	READLINE := readlineml.o
+	CCOPT := -ccopt -lreadline $(CCOPT)
+endif
+
 
 
 ifeq ($(USEGRAPHICS), tk)
@@ -143,7 +150,7 @@ ANNCHROM_OBJS = grappa/grappa.cma utl.cmo utlPoy.cmo \
 	utlGrappa.cmo genAli.cmo annchromAli.cmo annchrom.cmo annchromCS.cmo
 
 
-CHARACTER = sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
+CHARACTER = $(READLINE) sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
 	sankCS.cmo seqCS.cmo chromCS.cmo genomeCS.cmo  breakinvCS.cmo annchromCS.cmo \
 	dynamicCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
 	characterScripting.cmo  metric.cmo
@@ -180,7 +187,7 @@ ifeq ($(USEWIN32), false)
 	GETRUSAGE := getrusage.o
 endif
 
-BASE_OBJS := sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
+BASE_OBJS :=  $(READLINE) sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
 	array_ops.cmo $(PARSER) distances.cma \
@@ -233,7 +240,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \" 1865 \"" > $@
+	echo "let build = \" 1875 \"" > $@
 
 compileFlags.ml: ../config
 	echo "(** automatically generated description of compile-time flags *)" \
@@ -308,7 +315,7 @@ status_html.cmxa: status.cmi statusCommon.cmx status_html.ml
 
 status_flat.cmxa: status.cmi statusCommon.cmx status_flat.ml
 	cp status_flat.ml status.ml
-	$(OCAMLOPT) -a -o $@ statusCommon.cmx status.ml $(MKLIBOPT) \
+	$(OCAMLOPT) -a -o $@ -ccopt -lreadline statusCommon.cmx status.ml $(MKLIBOPT) \
 	$(CCOPT) $(PROFILE)
 
 status_gtk2.cmxa: status.cmi statusCommon.cmx status_gtk2.ml
@@ -418,10 +425,11 @@ help.txt: compileFlags.cmx sadmanOutput.cmx statusCommon.cmx \
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper -cclib \
 	-L$(OCAMLMPI) -cclib -l$(MPILNAME) \
-	mpi.cmxa unix.cmxa compileFlags.cmx \
+	mpi.cmxa unix.cmxa str.cmxa compileFlags.cmx \
 	sadmanOutput.cmx statusCommon.cmx fileStream.cmx latex.ml
 else 
-	$(OCAMLOPT) -o latex_helper unix.cmxa compileFlags.cmx \
+	$(OCAMLOPT) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper \
+	unix.cmxa str.cmxa compileFlags.cmx \
 	sadmanOutput.cmx statusCommon.cmx fileStream.cmx latex.ml
 endif
 	./latex_helper > help.txt 

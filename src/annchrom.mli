@@ -7,14 +7,11 @@ type meds_t = {
   total_recost : int;
   annchrom_pam : Data.dyna_pam_t;
   cost_mat : Cost_matrix.Two_D.m;
-  pure_gen_cost_mat : int array array;
-  gen_gap_code : int;
   alpha : Alphabet.a;
 }
 val init_med :
   Sequence.s Data.seq_t array ->
-  Cost_matrix.Two_D.m ->
-  int array array * int -> Alphabet.a -> Data.dyna_pam_t -> meds_t
+  Cost_matrix.Two_D.m -> Alphabet.a -> Data.dyna_pam_t -> meds_t
 val keep : Data.dyna_pam_t -> 'a list -> 'a list
 val find_meds2 : ?keep_all_meds:bool -> meds_t -> meds_t -> meds_t
 val find_meds3 : meds_t -> meds_t -> meds_t -> meds_t

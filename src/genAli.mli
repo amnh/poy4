@@ -18,23 +18,30 @@
 (* USA                                                                        *)
 
 val fprintf : out_channel -> ('a, out_channel, unit) format -> 'a
-val cmp_re_cost :
+type dyna_state_t = Data.dyna_state_t
+val cmp_recost :
+  [> `Breakinv ] ->
   int array ->
-  int array -> [< `Breakpoint of int | `Inversion of int ] -> int -> int
+  int array ->
+  int array ->
+  [< `Breakpoint of int | `Inversion of int ] -> int -> int * int
 val cmp_cost :
+  [> `Breakinv ] ->
   int array ->
   int array ->
   int array ->
   int array array ->
   int ->
   [< `Breakpoint of int | `Inversion of int ] ->
-  int -> int * int * int array * int array
+  int -> int * (int * int) * int array * int array
 val find_wagner_ali :
+  [> `Breakinv ] ->
   int array ->
   int array ->
   int array array ->
   int -> [< `Breakpoint of int | `Inversion of int ] -> int -> int array
 val multi_swap_locus :
+  [> `Breakinv ] ->
   int array ->
   int array ->
   int array ->
@@ -44,17 +51,20 @@ val multi_swap_locus :
   [< `Breakpoint of int | `Inversion of int ] ->
   int -> int -> int -> int * int array
 val create_gen_ali :
+  [> `Breakinv ] ->
   Sequence.s ->
   Sequence.s ->
   Cost_matrix.Two_D.m ->
   int array array ->
   Alphabet.a ->
   [< `Breakpoint of int | `Inversion of int ] ->
-  int -> int -> int * int * Sequence.s * Sequence.s
+  int -> int -> int * (int * int) * Sequence.s * Sequence.s
 val create_gen_ali_code :
+  [> `Breakinv ] ->
   int array ->
   int array ->
   int array array ->
   int ->
   [< `Breakpoint of int | `Inversion of int ] ->
-  int -> int -> int * int * int array * int array
+  int -> int -> int * (int * int) * int array * int array
+

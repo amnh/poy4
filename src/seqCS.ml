@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 1805 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 1875 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -295,7 +295,7 @@ let to_single parent mine =
             let new_costs = Codes.add code no_cost res_costs 
             and new_single = Codes.add code parent_seq res_medians in
             new_single, new_costs, total
-        else 
+        else begin 
             let seqm, tmpcost = 
                 Sequence.Align.closest parent_seq my_sequence c2 m 
             in
@@ -307,6 +307,7 @@ let to_single parent mine =
             and new_costs = Codes.add code rescost res_costs 
             and new_total = total + tmpcost in
             new_single, new_costs, new_total
+        end 
     in
     let sequences, costs, total_cost = 
         Codes.fold median parent.sequences (empty, empty, 0)

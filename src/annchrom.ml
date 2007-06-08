@@ -36,24 +36,15 @@ type meds_t = {
     total_recost : int;
     annchrom_pam : Data.dyna_pam_t;    
     cost_mat : Cost_matrix.Two_D.m;
-    pure_gen_cost_mat : int array array;
-    gen_gap_code : int;
     alpha : Alphabet.a
 }
 
 
 let init_med (seq_arr : (Sequence.s Data.seq_t) array) 
-        cost_mat (pure_gen_cost_mat, gen_gap_code) alpha annchrom_pam = 
+        cost_mat alpha annchrom_pam = 
 
-    let seq_arr = 
-        Array.map (fun seq ->
-                       {AnnchromAli.seq = seq.Data.seq; 
-                        AnnchromAli.seq_ref_code = seq.Data.code;
-                        AnnchromAli.seq_ord1 = -1;
-                        AnnchromAli.seq_ord2 = -1}                        
-                  ) seq_arr 
-    in 
-    let med = AnnchromAli.init seq_arr in 
+    let med = AnnchromAli.init 
+        (Array.map (fun s -> s.Data.seq, s.Data.code) seq_arr) in 
 
     {
         med_ls = [med];
@@ -62,8 +53,7 @@ let init_med (seq_arr : (Sequence.s Data.seq_t) array)
         total_recost = 0;
         annchrom_pam = annchrom_pam;
         cost_mat = cost_mat;
-        pure_gen_cost_mat = pure_gen_cost_mat;
-        gen_gap_code = gen_gap_code;
+
         alpha = alpha;
     }
 
@@ -87,7 +77,6 @@ let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
     let update (med1: annchrom_t) (med2 : annchrom_t) (best_meds : meds_t) =
         let cost, recost, med_ls =   
             AnnchromAli.find_med2_ls med1 med2 meds1.cost_mat  
-                (meds1.pure_gen_cost_mat, meds1.gen_gap_code)
                 meds1.alpha meds1.annchrom_pam   
         in   
 
@@ -107,8 +96,8 @@ let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
         total_recost = 0;
         annchrom_pam = meds1.annchrom_pam; 
         cost_mat = meds1.cost_mat; 
-        pure_gen_cost_mat = meds1.pure_gen_cost_mat; 
-        gen_gap_code = meds1.gen_gap_code; 
+
+
         alpha = meds1.alpha}  
     in 
 
@@ -153,7 +142,6 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
                     (fun (min_cost2, min_recost2) med2 -> 
                          let cost, recost = AnnchromAli.cmp_cost med1 med2
                                 meds1.cost_mat 
-                                (meds1.pure_gen_cost_mat, meds1.gen_gap_code)
                                 meds1.alpha meds1.annchrom_pam 
                          in  
                          if min_cost2 >cost then cost, recost
@@ -175,7 +163,6 @@ let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
                     (fun (max_cost2, max_recost2) med2 -> 
                          let cost, recost = AnnchromAli.cmp_cost med1 med2
                                 meds1.cost_mat 
-                                (meds1.pure_gen_cost_mat, meds1.gen_gap_code)
                                 meds1.alpha meds1.annchrom_pam 
                          in  
                          if max_cost2 <cost then cost, recost

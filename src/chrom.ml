@@ -203,5 +203,10 @@ let compare (meds1 : meds_t) (meds2 : meds_t) =
 
 (** ============================================================== **)
 let get_active_ref_code meds = 
+(*
+    List.iter (fun med -> fprintf stdout "%i -> %i %i\n " med.ChromAli.ref_code
+                   med.ChromAli.ref_code1 med.ChromAli.ref_code2) meds.med_ls;
+    flush stdout;
+*)  
     let med = List.hd meds.med_ls in
     med.ChromAli.ref_code, med.ChromAli.ref_code1, med.ChromAli.ref_code2

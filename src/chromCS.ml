@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 1746 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 1875 $"
 
 let fprintf = Printf.fprintf
 
@@ -211,12 +211,13 @@ let compare_data a b =
 
 
 let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list = 
-    let _, pre_fi = List.hd attr in   
+    let _, state = List.hd attr in   
+
     let output_chrom code med acc =
 
         let med = 
             try
-                List.find (fun med -> 
+                List.find (fun med ->                     
                                IntSet.mem med.ChromAli.ref_code  ref_codes
                           ) med.Chrom.med_ls
             with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
@@ -232,11 +233,17 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                       ) parent_med.Chrom.med_ls
                   in                                                                  
                   let cost, recost, map = 
-                      match pre_fi = Tags.Nodes.preliminary with   
-                      | true ->  
+                      match state with
+                      | "Preliminary" ->
                             ChromAli.create_map parent_med med.ChromAli.ref_code  
-                      | false ->
+                      | "Final" ->
                             ChromAli.create_map med parent_med.ChromAli.ref_code   
+                      | _ ->
+                            let _, _, map = ChromAli.create_map parent_med med.ChromAli.ref_code in 
+                            let cost = IntMap.find code t.costs in 
+                            let recost = IntMap.find code t.recosts in 
+                            (int_of_float cost), (int_of_float recost), map
+
                   in 
                   cost, recost, Some map
               end 
@@ -244,10 +251,17 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
 
         let seq = Sequence.to_formater med.ChromAli.seq t.alph in                   
         let name = Data.code_character code d in  
+        
+
+        let cost_str = 
+            match state with
+            | "Single" -> (string_of_int cost) ^ " - " ^ (string_of_int cost)
+            | _ -> "0 - " ^ (string_of_int cost)
+        in 
 
         let attributes =  
             (Tags.Characters.name, name) ::                     
-                (Tags.Characters.cost, "0 - " ^(string_of_int cost) ) :: 
+                (Tags.Characters.cost, cost_str) :: 
                 (Tags.Characters.recost, string_of_int recost) :: 
                 (Tags.Characters.ref_code, string_of_int med.ChromAli.ref_code):: 
                 attr 
@@ -266,6 +280,73 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
     IntMap.fold output_chrom t.meds []
 
 
+let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+
+    let single_parent, mine = 
+        match is_root with 
+        | true ->  alied_map, alied_map
+        | false -> single_parent, mine
+    in 
+
+
+    let previous_total_cost = mine.total_cost in 
+    let c2 = mine.c2 in 
+
+    let median code med (acc_meds, acc_costs, acc_recosts, acc_total_cost) =        
+
+        let amed = 
+            try
+                List.find (fun med -> 
+                               IntSet.mem med.ChromAli.ref_code ref_codes
+                          ) med.Chrom.med_ls
+            with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
+        in         
+
+
+        let cost,  recost, single_seq = 
+            let parent_med = IntMap.find code single_parent.meds in  
+            let aparent_med = List.find 
+                (fun med -> 
+                     IntSet.mem med.ChromAli.ref_code ref_codes 
+                ) parent_med.Chrom.med_ls
+            in            
+
+
+
+            match is_root with
+            | false -> 
+                  ChromAli.to_single aparent_med amed.ChromAli.ref_code c2  med.Chrom.chrom_pam
+            | true ->
+                  let single_root = 
+                      Sequence.map (fun code -> 
+                                        Cost_matrix.Two_D.get_closest c2 code code
+                                   ) amed.ChromAli.seq
+                  in 
+                  0, 0, single_root
+        in 
+
+        let single_med = ChromAli.change_to_single amed single_seq in 
+
+        let single_med = {med with Chrom.med_ls = [single_med]} in 
+
+
+        let new_single = IntMap.add code single_med acc_meds in
+        let new_costs = IntMap.add code (float_of_int cost) acc_costs in 
+        let new_recosts = IntMap.add code (float_of_int recost) acc_recosts in 
+        new_single, new_costs, new_recosts, (acc_total_cost + cost)
+    in
+    let meds, costs,  recosts, total_cost = 
+        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+    in 
+
+
+    previous_total_cost, float_of_int total_cost, 
+    {mine with meds = meds; 
+         costs = costs;
+         recosts = recosts;
+         total_cost = float_of_int total_cost}
+         
+
 let get_active_ref_code t = 
     IntMap.fold 
         (fun _ meds (acc_ref_code, acc_child_ref_code) ->
@@ -275,4 +356,8 @@ let get_active_ref_code t =
              IntSet.add ref_code acc_ref_code,
              IntSet.add child2_ref_code (IntSet.add child1_ref_code acc_child_ref_code)  
         ) t.meds (IntSet.empty, IntSet.empty)
+
+
+
+
 

@@ -391,8 +391,8 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
 *)
 
     let swap_med = ali_pam.ChromPam.swap_med in 
-    let total_cost, recost, alied_free_id1, alied_free_id2 = GenAli.create_gen_ali_code         
-        free_id1_arr free_id2_arr gen_c2 gen_gap_code 
+    let total_cost, (recost1, recost2), alied_free_id1, alied_free_id2 = GenAli.create_gen_ali_code         
+        `Genome free_id1_arr free_id2_arr gen_c2 gen_gap_code 
         ali_pam.ChromPam.re_meth swap_med ali_pam.ChromPam.circular
     in   
 
@@ -555,10 +555,8 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
     let seg_ls = List.rev seg_ls in 
     let med = UtlPoy.concat med_ls in 
 
-    (if debug then 
-         print_endline "End create_fast_general_ali");    
 
-    med, seg_ls, (chrom_cost - recost + total_bp_cost), total_bp_cost
+    med, seg_ls, (chrom_cost - (recost1 + recost2) + total_bp_cost), total_bp_cost
 
 
 
@@ -742,25 +740,6 @@ let create_med med1 med2 cost_mat user_chrom_pams =
 
               g_cost := !g_cost + chrom_cost;
               g_recost := !g_recost + recost;
-
-(*
-              if Sequence.length chrom_med.seq = 0 then begin
-                  let len1 = Sequence.length chrom1.seq in 
-                  let len2 = Sequence.length chrom2.seq in 
-                  fprintf stdout "Chrom lens %i %i: " len1 len2;
-                  flush stdout;
-
-                  let seqfile = open_out "empty_chrom" in 
-                  fprintf seqfile ">chrom1\n";  
-                  Sequence.print seqfile chrom1.seq Alphabet.nucleotides;  
-                  fprintf seqfile "\n";  
-
-                  fprintf seqfile ">chrom2\n";  
-                  Sequence.print seqfile chrom2.seq Alphabet.nucleotides;  
-                  close_out seqfile;  
-                  failwith "Create a fucking empty chromosome"
-              end 
-*)
         | Some chrom1, None -> 
 
               let med_seq = UtlPoy.create_median_gap chrom1.seq cost_mat in 

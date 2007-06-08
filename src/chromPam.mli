@@ -25,7 +25,7 @@ type chromPairAliPam_t = {
   sig_k : int;
   sig_block_len : int;
   max_gap : int;
-  unbreaked_len : int;
+  rearranged_len : int;
   min_pos1 : int;
   max_pos1 : int;
   min_pos2 : int;

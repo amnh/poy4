@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 1803 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 1875 $"
 
 open StdLabels
 
@@ -558,6 +558,8 @@ let explode_filenames files =
         let ch = 
             let file = 
                 if Sys.os_type = "Win32" then Filename.quote file
+                else if Sys.os_type = "Unix" then
+                    Str.global_replace (Str.regexp "\\\\ ") "\\ " file
                 else file
             in
             let line = 

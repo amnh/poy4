@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1865 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1875 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -26,7 +26,66 @@ external string_to_format : string -> ('a, 'b, 'c) format = "%identity"
 type formatter_output = | Margin of int
 
 module Files = struct
-    (* The set of all the files that are currently available for the output pool *)
+
+    (* A module to handle filenames *)
+    let hd_previous_results = ref []
+    let tl_previous_results = ref []
+    let prefix = ref ""
+
+    let is_prefix x y =
+        (String.length x <= String.length y) &&
+        (x = (String.sub y 0 (String.length x)))
+
+    let dirname str = 
+        let _ =
+            match Sys.os_type with
+            | "Win32" ->
+                    begin match Str.split (Str.regexp ":\\\\") str with
+                    | h :: t -> prefix := h ^ ":\\\\"
+                    | [] -> prefix := ""
+                    end
+            | _ -> ()
+        in
+        Filename.dirname str
+
+    let update_hd_tl_for_prefix str =
+        let dir = dirname str in
+        let filename = Filename.basename str in
+        let prefixes = List.filter (is_prefix filename) (Array.to_list
+        (Sys.readdir dir)) in
+        let lst = List.sort String.compare prefixes in
+        tl_previous_results := lst
+
+    let rec find_next_match str = 
+        match !tl_previous_results with
+        | h :: t -> 
+                hd_previous_results := h :: !hd_previous_results;
+                tl_previous_results := t;
+                h
+        | [] -> 
+                tl_previous_results := List.rev !hd_previous_results;
+                hd_previous_results := [];
+                ""
+
+    (* An implementation of complete_filename in OCaml that matches the behavior
+    * of readline's function. In this way we simplify possible interoperability
+    * between interfaces. *)
+    let complete_filename str state =
+        if state = 0 then update_hd_tl_for_prefix str;
+        find_next_match str
+        let counter = ref 0
+        let last_filename = ref ""
+
+    (* If the [str] is the same as the previous request, the state remains 1
+    * otherwise 0 *)
+    let complete_filename str = 
+        if str = !last_filename then 
+            counter := 1
+        else counter := 0;
+        last_filename := str;
+        !prefix ^ complete_filename str !counter
+
+
     let opened_files = Hashtbl.create 7
 
     let close_all_opened_files () =

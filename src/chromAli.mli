@@ -33,8 +33,11 @@ type med_t = {
   chrom_map : seg_t list;
 }
 val create_med : Sequence.s -> med_t
+val to_single : med_t -> int -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s
+
 val init_med : Sequence.s -> med_t
 val get_dir : [> `Negative | `Positive ] -> string
+val print_map : seg_t list -> unit
 val print_median : med_t list -> string -> unit
 val convert_map : med_t -> (int * int * int * int * int * int) list
 val create_map : med_t -> int -> int * int * Tags.output
@@ -61,3 +64,4 @@ val find_med2_ls :
   med_t ->
   med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * med_t list
 val test : unit -> 'a
+val change_to_single : med_t -> Sequence.s -> med_t

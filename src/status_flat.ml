@@ -17,10 +17,10 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 1822 $"
+let () = SadmanOutput.register "" "$Revision: 1875 $"
 
 exception Illegal_update
-let () = SadmanOutput.register "Status_flat" "$Revision: 1822 $"
+let () = SadmanOutput.register "Status_flat" "$Revision: 1875 $"
 
 let _ = Format.pp_set_margin Format.std_formatter 78
 
@@ -71,11 +71,13 @@ let using_interface = ref false
 
 let is_interactive () = !using_interface
 
+external get_line : unit -> string = "rl_CAML_gets"
+
 let main_loop f = 
     using_interface := true;
     let _  = f "" in
     while true do
-        let str = input_line stdin in
+        let str = get_line () in
         f str
     done
 

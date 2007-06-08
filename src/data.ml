@@ -66,6 +66,7 @@ type dyna_pam_t = {
     chrom_hom : int option;
     chrom_breakpoint : int option;
     sig_block_len : int option;
+    rearranged_len : int option;
     keep_median : int option;
     swap_med : int option; 
     (** number iterations are applied 
@@ -73,7 +74,7 @@ type dyna_pam_t = {
     approx : bool option
 }
 
-let dyna_pam_default = {
+let dyna_pam_default ={ 
     seed_len = None;
     re_meth = None;
     circular = None;
@@ -82,6 +83,7 @@ let dyna_pam_default = {
     chrom_hom = None;
     chrom_breakpoint = None;
     sig_block_len = None;
+    rearranged_len = None;
     keep_median = None;
     swap_med = None;
     approx = None;
@@ -1726,6 +1728,7 @@ let set_dyna_pam dyna_pam_ls =
         | `Chrom_Indel_Cost c -> {dyna_pam with chrom_indel_cost = Some c}
         | `Chrom_Hom c -> {dyna_pam with chrom_hom = Some c}
         | `Sig_Block_Len c -> {dyna_pam with sig_block_len = Some c}
+        | `Rearranged_Len c -> {dyna_pam with rearranged_len = Some c}
         | `Seed_Len c -> {dyna_pam with seed_len = Some c}
         | `Keep_Median c -> 
                 {dyna_pam with keep_median = Some c}

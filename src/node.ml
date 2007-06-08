@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1865 $"
+let () = SadmanOutput.register "Node" "$Revision: 1875 $"
 
 let debug = false
 let debug_exclude = false
@@ -1581,23 +1581,27 @@ let pre = [ (Tags.Characters.cclass, Tags.Nodes.preliminary) ]
 let fin = [ (Tags.Characters.cclass, Tags.Nodes.final) ]
 let sing = [ (Tags.Characters.cclass, Tags.Nodes.single) ]
 
-let rec cs_to_single parent_cs mine : cs =
-    match parent_cs, mine with
-    | Dynamic parent, Dynamic mine -> 
+let rec cs_to_single ?(is_root=false) (pre_ref_code, fi_ref_code) alied_map parent_cs mine : cs =
+    match parent_cs, mine, alied_map with
+    | Dynamic parent, Dynamic mine, Dynamic alied_map -> 
             (* Do we need this only for dynamic characters? I will first get it
             * going here only *)
             let prev_cost, cost, res = 
-                DynamicCS.to_single parent.preliminary mine.preliminary 
+                DynamicCS.to_single ~is_root:is_root pre_ref_code 
+                    alied_map.preliminary parent.preliminary mine.preliminary 
             in
-            Dynamic { mine with preliminary = res; final = res; 
+            Dynamic {preliminary = res; final = res; 
             cost = (mine.weight *.  cost);
-            sum_cost = (mine.weight *. cost) }
+            sum_cost = (mine.weight *. cost);
+            weight = mine.weight}
+
     | _ -> mine
 
-let to_single parent mine = 
+
+let to_single ?(is_root=false) (pre_ref_codes, fi_ref_codes) alied_map parent mine = 
     { mine with 
-    characters = map2 cs_to_single parent.characters
-    mine.characters }
+          characters = map3 (cs_to_single ~is_root:is_root (pre_ref_codes, fi_ref_codes) ) 
+            alied_map.characters parent.characters mine.characters }
 
 let readjust ch1 ch2 parent mine = 
     let ch1, ch2 =
@@ -1640,7 +1644,8 @@ let readjust ch1 ch2 parent mine =
         *)
         res
 
-let to_single_root mine = to_single mine mine
+let to_single_root (pre_ref_codes, fi_ref_codes) mine = 
+    to_single ~is_root:true (pre_ref_codes, fi_ref_codes) mine mine mine
 
 let get_active_ref_code node_data = 
     List.fold_left 
@@ -1663,7 +1668,7 @@ let get_active_ref_code node_data =
         ) (IntSet.empty, IntSet.empty, IntSet.empty, IntSet.empty) node_data.characters 
 
 
-let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs 
+let rec cs_to_formatter ?(is_root=false) (pre_ref_codes, fi_ref_codes) d cs 
     (parent_cs : (cs * cs) option) : Tags.output list = 
     match cs,  parent_cs with
     | Nonadd8 cs, _ -> begin
@@ -1714,7 +1719,7 @@ let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs
           | Some ((Sank parent_cs), _) ->
                 SankCS.to_formatter pre cs.preliminary (Some parent_cs.preliminary) d
                 @ SankCS.to_formatter fin cs.final (Some parent_cs.final) d  
-          | _ -> failwith "Fucking up with Add at cs_to_formatter in node.ml" 
+          | _ -> failwith "Fucking up with Sank at cs_to_formatter in node.ml" 
       end  
     | Dynamic cs, _ -> begin
           match parent_cs with 
@@ -1724,12 +1729,13 @@ let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs
           | Some ((Dynamic parent_cs), (Dynamic parent_cs_single)) ->
                 let cs_single = 
                     let prev_cost, new_cost, res = 
-                        DynamicCS.to_single parent_cs_single.preliminary
-                        cs.preliminary
+                        DynamicCS.to_single ~is_root:is_root pre_ref_codes
+                            parent_cs_single.preliminary
+                            parent_cs_single.preliminary
+                            cs.preliminary
                     in
                     { cs with preliminary = res; final = res;
-                    cost = cs.cost -. (cs.weight *. prev_cost) +. (cs.weight *.
-                    new_cost);
+                    cost = cs.cost -. (cs.weight *. prev_cost) +. (cs.weight *. new_cost);
                     sum_cost = cs.sum_cost -. (cs.weight *. prev_cost) +.
                     (cs.weight *. new_cost) }
                 in
@@ -1809,21 +1815,21 @@ let to_formatter_single (pre_ref_codes, fi_ref_codes)
     in
     (Tags.Nodes.node, attr, `Structured (`Set children))
 
-let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
+let to_formatter_subtree ?(is_root=false) (pre_ref_codes, fi_ref_codes)
         acc d node_data node_id (child1_id,  child1_node_data)
-        (child2_id,  child2_node_data) (parent_node_data_opt : (node_data *
-        node_data) option) : Tags.output =
+        (child2_id,  child2_node_data) (parent_node_data_opt : (node_data * node_data) option) : Tags.output =
+
     let get_node_name id =  
         try Data.code_taxon id d with 
         | Not_found -> string_of_int id 
     in
     let child1_name = get_node_name child1_id in 
     let child2_name = get_node_name child2_id in 
-    let node_name = get_node_name node_id in 
-    let node_name, is_root = 
-        match (node_name = child1_name) || (node_name = child2_name) with
-        | true -> "root", true
-        | false -> node_name, false
+
+    let node_name =
+        match is_root with  
+        | true -> "root"
+        | false -> get_node_name node_id
     in 
     let child1_recost = cmp_subtree_recost child1_node_data in 
     let child2_recost = cmp_subtree_recost child2_node_data in 
@@ -1834,8 +1840,8 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
     in  
     let attr = 
         (Tags.Nodes.cost, 
-            (if is_root then "0." else (string_of_float node_data.total_cost)))
-            :: 
+         (if is_root then "0." 
+          else (string_of_float node_data.total_cost))):: 
         (Tags.Nodes.recost, string_of_float subtree_recost) :: 
         (Tags.Nodes.node_cost, string_of_float node_data.node_cost) ::
         (Tags.Nodes.name, node_name) ::
@@ -1850,17 +1856,13 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
                  match parent_node_data_opt with 
                  | Some (parent_node_data, single_parent_node_data) -> 
                          let pn = List.nth parent_node_data.characters idx 
-                         and pnsingle = 
-                             List.nth
-                             single_parent_node_data.characters 
-                             idx
+                         and pnsingle = List.nth single_parent_node_data.characters idx
                          in
                          if is_root then Some (pnsingle, pnsingle)
                          else Some (pn, pnsingle)
                  | None -> None
              in  
-             let res = cs_to_formatter (pre_ref_codes, fi_ref_codes) d cs 
-             parent_cs in 
+             let res = cs_to_formatter ~is_root:is_root (pre_ref_codes, fi_ref_codes) d cs parent_cs in 
              let res = List.map (fun ch -> `Single ch) res in 
              (res @ acc), (idx + 1)) ([], 0) node_data.characters 
     in
@@ -2023,9 +2025,7 @@ let add_exclude set n =
 
 
 let print_node_data (data : node_data) = 
-    Printf.fprintf stdout "Taxon code: %i, number characters: %i\n"
-        data.taxon_code (List.length data.characters);
-
+    Printf.fprintf stdout "Taxon code: %i, number characters: %i\n" data.taxon_code (List.length data.characters);
     let dynamic_ls = List.filter (fun ch -> 
                                   match ch with 
                                   | Dynamic _ -> true
@@ -2594,7 +2594,7 @@ module Standard :
         module Union = Union
         let for_support = for_support
         let root_cost = root_cost
-        let to_single _ a _ b = to_single a b
+        let to_single _ a _ b = to_single (IntSet.empty, IntSet.empty) a a b
 end 
 
 let merge a b =

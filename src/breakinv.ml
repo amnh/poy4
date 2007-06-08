@@ -71,7 +71,7 @@ let rec keep chrom_pam med_ls =
 let find_meds2 (meds1 : meds_t) (meds2 : meds_t) = 
     let update med1 med2 (best_meds : meds_t) :
             meds_t = 
-        let cost, recost, med_ls =   
+        let cost, (recost1, recost2), med_ls =   
             BreakinvAli.find_med2_ls med1 med2 meds1.gen_cost_mat  
                 meds1.pure_gen_cost_mat  
                 meds1.alpha meds1.breakinv_pam   
@@ -80,7 +80,7 @@ let find_meds2 (meds1 : meds_t) (meds2 : meds_t) =
         if cost < best_meds.total_cost then   
             {best_meds with  
                  total_cost = cost;  
-                 total_recost = recost;
+                 total_recost = recost1 + recost2;
                  med_ls = med_ls;   
                  num_med = List.length med_ls} 
         else best_meds
@@ -129,18 +129,16 @@ let find_meds3 (medsp: meds_t) (meds1: meds_t) (meds2: meds_t) =
  * a list of medians z_ij with the same cost c_ij. 
  * Find c*_ij = min (c_ij) *)
 let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
-
-
     let min_cost, min_recost = List.fold_left 
         (fun (min_cost, min_recost) med1 -> 
                 List.fold_left 
                     (fun (min_cost2, min_recost2) med2 -> 
-                         let cost, recost = BreakinvAli.cmp_cost med1 med2
+                         let cost, (recost1, recost2) = BreakinvAli.cmp_cost med1 med2
                                 meds1.gen_cost_mat 
                                 meds1.pure_gen_cost_mat 
                                 meds1.alpha meds1.breakinv_pam 
                          in  
-                         if  min_cost2 > cost then cost, recost
+                         if  min_cost2 > cost then cost, (recost1 + recost2)
                          else min_cost2, min_recost2
                     ) (min_cost, min_recost) meds2.med_ls
         ) (Utl.infinity, 0) meds1.med_ls 
@@ -153,16 +151,15 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
  * a list of medians z_ij with the same cost c_ij. 
  * Find c*_ij = max (c_ij) *)
 let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
-
     let max_cost, max_recost = List.fold_left 
         (fun (max_cost, max_recost) med1 -> 
                 List.fold_left 
                     (fun (max_cost2, max_recost2)  med2 -> 
-                         let cost, recost = BreakinvAli.cmp_cost med1 med2
+                         let cost, (recost1, recost2) = BreakinvAli.cmp_cost med1 med2
                              meds1.gen_cost_mat  meds1.pure_gen_cost_mat  
                              meds1.alpha meds1.breakinv_pam                                
                          in  
-                         if max_cost2 < cost then cost, recost
+                         if max_cost2 < cost then cost, (recost1 + recost2)
                          else max_cost2, max_recost2
 
                     ) (max_cost, max_recost) meds2.med_ls 

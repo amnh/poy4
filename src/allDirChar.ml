@@ -156,21 +156,129 @@ with type b = AllDirNode.OneDirF.n = struct
         in
         real_cost +. root_minus
 
+
+    let convert_three_to_one_dir tree = 
+        (* We will convert the tree in a one direction tree, then we will use
+        * the standard Chartree.to_formatter function. *)
+
+        let tree = 
+            (* We convert the tree to a one direction one *)
+            let simple_conversion prev curr acc = 
+                let node =
+                    let data = Ptree.get_node_data curr tree in
+                    AllDirNode.not_with prev data.AllDirNode.unadjusted
+                in
+                Ptree.add_node_data curr (Lazy.force_val
+                node.AllDirNode.lazy_node) acc
+            in
+            All_sets.IntegerMap.fold (fun _ root acc ->
+                match root.Ptree.root_median with
+                | Some ((`Edge (a, b)), r) ->
+                        let r = 
+                            match r.AllDirNode.unadjusted with
+                            | [r] -> r
+                            | _ -> failwith "No root?1"
+                        in
+                        let acc = 
+                            let t = Tree.reroot (a, b) acc.Ptree.tree in
+                            { acc with Ptree.tree = t } 
+                        in
+                        let acc = 
+                            Tree.post_order_node_with_edge_visit_simple
+                            simple_conversion (Tree.Edge (a, b))
+                            acc.Ptree.tree acc
+                        in
+                        Ptree.assign_root_to_connected_component
+                        a (Some ((`Edge (a, b)), 
+                        Lazy.force_val r.AllDirNode.lazy_node))
+                        root.Ptree.component_cost 
+                        (Some root.Ptree.adjusted_component_cost)
+                        acc
+                | _ -> failwith "No root?")
+            tree.Ptree.component_root 
+            { Ptree.empty with Ptree.tree = tree.Ptree.tree }
+        in 
+
+        let tree = tree --> Chartree.uppass in
+        tree
+
+
+    let get_pre_active_ref_code ptree = 
+        let rec get_subtree parent current acc_pre_codes = 
+            let pre_codes = 
+                try                      
+                    let a, b = 
+                        let currentn = Ptree.get_node current ptree in 
+                        Tree.other_two_nbrs parent currentn
+                    in
+                    let current_d = 
+                        let current_3d = Ptree.get_node_data current ptree in
+                        AllDirNode.not_with parent current_3d.AllDirNode.unadjusted
+                    in
+
+                    let _, pre_codes, _, _ = Node.get_active_ref_code 
+                        (Lazy.force_val current_d.AllDirNode.lazy_node)                        
+                    in 
+
+                    let pre_child1 = get_subtree current a IntSet.empty in 
+                    let pre_child2 = get_subtree current b IntSet.empty in
+                    IntSet.union pre_codes (IntSet.union pre_child1 pre_child2)
+                with
+                | Invalid_argument _ -> IntSet.empty
+            in 
+            IntSet.union pre_codes acc_pre_codes
+        in
+
+        (* Now we define a function that can assign single sequences to the
+        * connected component of a handle *)
+        let get_handle handle pre_codes =
+            let get_root_direction root = 
+                match root.AllDirNode.unadjusted with
+                | [x] -> Lazy.force_val (x.AllDirNode.lazy_node), x
+                | _ -> failwith "get_handle at allDirChar"
+            in
+            let comp = Ptree.get_component_root handle ptree in
+            match comp.Ptree.root_median with
+            | Some ((`Edge (a, b)), rootg) ->
+                  let root, rooth = get_root_direction rootg in
+                  let r_pre, r_pre_child, _, __ = Node.get_active_ref_code root in
+                  let prea_codes = get_subtree a b IntSet.empty in 
+                  let preb_codes = get_subtree b a IntSet.empty in 
+                  IntSet.union (IntSet.union prea_codes preb_codes)
+                      (IntSet.union r_pre r_pre_child)
+
+            | _ -> failwith "Get_active_ref_code in allDirChar.ml"
+        in 
+        let pre_codes = 
+            All_sets.Integers.fold get_handle
+                ptree.Ptree.tree.Tree.handles IntSet.empty
+        in
+        pre_codes
+
+
+
     (* A function to assign a unique sequence on each vertex of the ptree in the
     * [AllDirNode.adjusted] field of the node. *)
     let assign_single ptree = 
         (* We first define a function that can traverse the tree and assign
         * a single sequence to each vertex on it. *)
+
+        let pre_ref_codes = get_pre_active_ref_code ptree in  
+        let fi_ref_codes = pre_ref_codes in 
+
         let rec assign_single_subtree parentd parent current ptree = 
             let current_d, initial_d =
                 let tmp = Ptree.get_node_data current ptree in
-                AllDirNode.not_with parent tmp.AllDirNode.unadjusted, tmp
+                AllDirNode.not_with parent  tmp.AllDirNode.unadjusted, tmp
             in
+
             let nd, original = 
                 current_d.AllDirNode.lazy_node
                 --> Lazy.force_val 
-                --> fun x -> Node.to_single parentd x, x
+                    --> fun x -> Node.to_single (pre_ref_codes, fi_ref_codes)
+                        parentd parentd x, x
             in
+
             (*
             Status.user_message Status.Information
             ("my parent is " ^ Node.to_string parentd ^ " and I have assignment
@@ -218,7 +326,8 @@ with type b = AllDirNode.OneDirF.n = struct
                     ptree).AllDirNode.unadjusted)
                     --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
                 in
-                let root = Node.to_single other_node handle_node in
+
+                let root = Node.to_single ~is_root:true (pre_ref_codes, fi_ref_codes) root other_node handle_node in
                 (*
                 Status.user_message Status.Information
                 ("My assignment for the root is " ^ Node.to_string root);
@@ -345,6 +454,9 @@ with type b = AllDirNode.OneDirF.n = struct
         (* Now we need to be able to adjust the root of the tree, and it's
         * cost, once we have finished adjusting every vertex in the tree *)
         let adjust_root_n_cost handle root a b ptree =
+            let tree = convert_three_to_one_dir ptree in 
+            let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in  
+
             let ad = Ptree.get_node_data a ptree
             and bd = Ptree.get_node_data b ptree in
             match ad.AllDirNode.adjusted, bd.AllDirNode.adjusted with
@@ -370,10 +482,11 @@ with type b = AllDirNode.OneDirF.n = struct
                     Printf.printf "The total cost of this will be %f\n%!"
                     (Node.Standard.total_cost None new_root);
                     *)
-                    let new_root' = 
+
+                    let new_root_p = 
                         { new_root with 
-                         Node.characters = (Node.to_single new_root
-                         new_root).Node.characters }
+                              Node.characters = (Node.to_single (pre_ref_codes, fi_ref_codes) 
+                                                     new_root new_root new_root).Node.characters }
                         --> fun x -> [{ 
                             AllDirNode.lazy_node = lazy x;
                             dir = Some (a, b);
@@ -381,7 +494,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     in
                     Ptree.assign_root_to_connected_component handle 
                     (Some ((`Edge (a, b)), {root with 
-                    AllDirNode.adjusted = new_root'}))
+                    AllDirNode.adjusted = new_root_p}))
                     (check_cost ptree handle)
                     None
                     ptree
@@ -892,56 +1005,12 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let incremental_uppass tree _ = tree
 
-    let convert_three_to_one_dir tree = 
-        (* We will convert the tree in a one direction tree, then we will use
-        * the standard Chartree.to_formatter function. *)
-        let tree = 
-            (* We convert the tree to a one direction one *)
-            let simple_conversion prev curr acc = 
-                let node =
-                    let data = Ptree.get_node_data curr tree in
-                    AllDirNode.not_with prev data.AllDirNode.unadjusted
-                in
-                Ptree.add_node_data curr (Lazy.force_val
-                node.AllDirNode.lazy_node) acc
-            in
-            All_sets.IntegerMap.fold (fun _ root acc ->
-                match root.Ptree.root_median with
-                | Some ((`Edge (a, b)), r) ->
-                        let r = 
-                            match r.AllDirNode.unadjusted with
-                            | [r] -> r
-                            | _ -> failwith "No root?1"
-                        in
-                        let acc = 
-                            let t = Tree.reroot (a, b) acc.Ptree.tree in
-                            { acc with Ptree.tree = t } 
-                        in
-                        let acc = 
-                            Tree.post_order_node_with_edge_visit_simple
-                            simple_conversion (Tree.Edge (a, b))
-                            acc.Ptree.tree acc
-                        in
-                        Ptree.assign_root_to_connected_component
-                        a (Some ((`Edge (a, b)), 
-                        Lazy.force_val r.AllDirNode.lazy_node))
-                        root.Ptree.component_cost 
-                        (Some root.Ptree.adjusted_component_cost)
-                        acc
-                | _ -> failwith "No root?")
-            tree.Ptree.component_root 
-            { Ptree.empty with Ptree.tree = tree.Ptree.tree }
-        in 
-        (*
-        let tree = tree --> Chartree.downpass --> Chartree.uppass in
-        *)
-        tree
 
 
-    let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) 
-    atr data tree = 
+    let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty)  atr data tree = 
         let tree = convert_three_to_one_dir tree in
         let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in  
+
         Chartree.to_formatter ~pre_ref_codes:pre_ref_codes
           ~fi_ref_codes:fi_ref_codes atr data tree 
 

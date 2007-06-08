@@ -64,6 +64,9 @@ type chromosome_args = [
     | `Chrom_Hom of int (* if cost > threshold * min_cost,  then not homologous *)
     | `Chrom_Breakpoint of int (* Breakpoint cost between loci of two different chromosomes *)
     | `Sig_Block_Len of int (* A conserved block length must be greater than Sig_Block_Len *)
+    | `Rearranged_Len of int (* t's believed that no rearrangments or
+                                    reversions happened within a segment whose length < rearranged_len *)
+
 
     | `Seed_Len of int
     | `Keep_Median of int 
@@ -1006,6 +1009,8 @@ let create_expr lexer =
                       `Chrom_Hom (int_of_float ((float_of_string c) *. 100.)) ] | 
                 [ LIDENT "sig_block_len"; ":"; c = INT -> 
                       `Sig_Block_Len (int_of_string c) ] | 
+                [ LIDENT "rearranged_len"; ":"; c = INT -> 
+                      `Rearranged_Len (int_of_string c) ] | 
                 [ LIDENT "seed_length"; ":"; c = INT -> 
                       `Seed_Len (int_of_string c) ] | 
                 [ LIDENT "median"; ":"; c = INT ->
@@ -1302,12 +1307,11 @@ let create_expr lexer =
                 [ LIDENT "aminoacids"; ":"; left_parenthesis; a = LIST1 STRING SEP ","; 
                     right_parenthesis -> `Aminoacids (to_local a) ] |
              
-                [ LIDENT "custom_alphabet"; ":"; left_parenthesis; seq = STRING;","; cost_mat = STRING; ",";
+                [ LIDENT "custom_alphabet"; ":"; left_parenthesis; seq = STRING;","; cost_mat = STRING; OPT ",";
                   read_options = LIST0 read_optiona SEP ","; right_parenthesis 
-                            -> `GeneralAlphabetSeq (`Local seq, `Local cost_mat, read_options)  ] |
+                      -> `GeneralAlphabetSeq (`Local seq, `Local cost_mat, read_options)  ] |
 
-
-                [ LIDENT "breakinv"; ":"; left_parenthesis; seq = STRING; ","; cost_mat = STRING; ",";
+                [ LIDENT "breakinv"; ":"; left_parenthesis; seq = STRING; ","; cost_mat = STRING; OPT ",";
                   read_options = LIST0 read_optiona SEP ","; right_parenthesis 
                       -> `Breakinv (`Local seq, `Local cost_mat, read_options)  ] |
 
@@ -1603,7 +1607,7 @@ let ( --> ) a b = b a
 
 let rec process_commands optimize command = 
     match command with
-    | `ChangeWDir dir -> Sys.chdir dir; [command]
+    | `ChangeWDir dir -> let dir = simplify_directory dir in Sys.chdir dir; [command]
     | `ReadScript files -> read_script_files false files
     | x -> [x]
 
@@ -1641,6 +1645,9 @@ and do_analysis optimize res =
     if optimize then Analyzer.analyze res
     else res
 
+and simplify_directory dir = 
+    Str.global_replace (Str.regexp "\\\\ ") " " dir 
+
 and of_stream optimize str =
     let cur_directory = Sys.getcwd () in
     let lexer = Plexer.gmake () in
@@ -1653,6 +1660,7 @@ and of_stream optimize str =
         --> List.flatten
         --> do_analysis optimize
     in
+    let cur_directory = simplify_directory cur_directory in
     Sys.chdir cur_directory;
     res
 

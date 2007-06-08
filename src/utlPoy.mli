@@ -35,9 +35,16 @@ val create_median :
   Sequence.s ->
   Sequence.s ->
   ?s1:int ->
-  ?e1:int -> ?s2:int -> ?e2:int -> Cost_matrix.Two_D.m -> Sequence.s * int
+  ?e1:int -> ?s2:int -> ?e2:int -> Cost_matrix.Two_D.m -> Sequence.s * Sequence.s * Sequence.s * int
 val check_repeated_char : Sequence.s -> Alphabet.a -> unit
 val create_general_ali :
   int array ->
   int array -> int -> Cost_matrix.Two_D.m -> int array * int array * int
 val test_general_ali : unit -> unit
+
+val closest_alied_seq :
+  Sequence.s -> Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s * int
+
+val of_array : int array -> Sequence.s
+
+val map : (int -> int) -> Sequence.s -> Sequence.s

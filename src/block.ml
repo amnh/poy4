@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 1644 $"
+let () = SadmanOutput.register "Block" "$Revision: 1875 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -30,7 +30,7 @@ type subseq_t = Subseq.subseq_t
 
 let deref = Utl.deref
 let fprintf = Printf.fprintf
-module IntSet = Utl.IntSet
+module IntSet = All_sets.Integers
 
 
 (** Parameters are used to create blocks between two chromosomes*)

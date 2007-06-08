@@ -69,6 +69,7 @@ type dyna_pam_t = {
     chrom_hom : int option;
     chrom_breakpoint : int option;
     sig_block_len : int option;
+    rearranged_len : int option;
 
     keep_median : int option; 
                     (* The number of medians to be kept in an internal node *)
@@ -417,6 +418,7 @@ val transform_dynamic :
         | `Locus_Indel_Cost of int * int
         | `Seed_Len of int
         | `Sig_Block_Len of int
+        | `Rearranged_Len of int
         | `SwapMed of int ]
        list
    | `Change_Dyn_Pam of
@@ -432,6 +434,7 @@ val transform_dynamic :
          | `Locus_Indel_Cost of int * int
          | `Seed_Len of int
          | `Sig_Block_Len of int
+        | `Rearranged_Len of int
          | `SwapMed of int ]
         as 'b)
        list
@@ -466,6 +469,7 @@ val transform_chrom_to_rearranged_seq :
         | `Locus_Indel_Cost of int * int
         | `Seed_Len of int
         | `Sig_Block_Len of int
+        | `Rearranged_Len of int
         | `SwapMed of int ]
        list
    | `Breakinv_to_Seq of
@@ -481,6 +485,7 @@ val transform_chrom_to_rearranged_seq :
          | `Locus_Indel_Cost of int * int
          | `Seed_Len of int
          | `Sig_Block_Len of int
+         | `Rearranged_Len of int
          | `SwapMed of int ]
         as 'b)
        list

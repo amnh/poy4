@@ -26,8 +26,8 @@ val deref : 'a option -> 'a
 val fprintf : out_channel -> ('a, out_channel, unit) format -> 'a
 module IntSet :
   sig
-    type elt = Utl.IntType.t
-    type t = Set.Make(Utl.IntType).t
+    type elt = int
+    type t = All_sets.Integers.t
     val empty : t
     val is_empty : t -> bool
     val mem : elt -> t -> bool

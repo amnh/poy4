@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 1865 2007-06-07 16:58:32Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 1865 $"
+(* $Id: chartree.ml 1875 2007-06-08 20:45:42Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 1875 $"
 
 
 (** chartree.ml *)
@@ -1176,7 +1176,7 @@ let get_active_ref_code tree =
 
 (** Note that parent_data = root_data in case the 
     anaylzing node is the handle or handle's ancestor *)
-let rec subtree_to_formatter (pre_ref_code, fi_ref_codes) 
+let rec subtree_to_formatter (pre_ref_codes, fi_ref_codes) 
         attr data tree node_id 
         (parent_data : (Node.node_data * Node.node_data) option) : Tags.output =
     match Ptree.get_node node_id tree with
@@ -1189,13 +1189,15 @@ let rec subtree_to_formatter (pre_ref_code, fi_ref_codes)
                 | Some root_data -> root_data
                 | None -> failwith "How can we have none here?"
             in                     
-            let my_single_assignment = Node.to_single single_parent node_data in
+            let my_single_assignment = Node.to_single (pre_ref_codes, fi_ref_codes) 
+                single_parent single_parent node_data 
+            in
             (* We recursively call for the current vertex, then the two children
             * *)
             let nodest =
                 try
                     let node_formatter = 
-                        Node.to_formatter_subtree (pre_ref_code, fi_ref_codes) [] 
+                        Node.to_formatter_subtree (pre_ref_codes, fi_ref_codes) [] 
                         data node_data
                         node_id (c1, child1_node_data) (c2, child2_node_data)
                         (Some (parent_node_data, single_parent))
@@ -1204,11 +1206,11 @@ let rec subtree_to_formatter (pre_ref_code, fi_ref_codes)
                 with Not_found -> `Empty
             in 
             let child1_formatter = 
-                subtree_to_formatter (pre_ref_code, fi_ref_codes) 
+                subtree_to_formatter (pre_ref_codes, fi_ref_codes) 
                 [] data tree c1 (Some (node_data, my_single_assignment))
             in
             let child2_formatter = 
-                subtree_to_formatter (pre_ref_code, fi_ref_codes)
+                subtree_to_formatter (pre_ref_codes, fi_ref_codes)
                 [] data tree c2 (Some (node_data, my_single_assignment))
             in
             let c1st = `Single child1_formatter and c2st = `Single child2_formatter in
@@ -1222,7 +1224,7 @@ let rec subtree_to_formatter (pre_ref_code, fi_ref_codes)
                 try
                     let node_formatter = 
                         Node.to_formatter_single
-                        (pre_ref_code, fi_ref_codes) []  
+                        (pre_ref_codes, fi_ref_codes) []  
                         data node_data node_id parent_data
                     in
                     `Single node_formatter
@@ -1233,7 +1235,7 @@ let rec subtree_to_formatter (pre_ref_code, fi_ref_codes)
           let nodest = 
               let node_data = Ptree.get_node_data node_id tree in 
               let node_formatter = 
-                  Node.to_formatter_single (pre_ref_code, fi_ref_codes) 
+                  Node.to_formatter_single (pre_ref_codes, fi_ref_codes) 
                   [] data node_data node_id None 
               in
               `Single node_formatter
@@ -1252,14 +1254,20 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
                   | Some ((`Edge (handle_id, parent)), root) -> 
                           let handle_node_data = Ptree.get_node_data handle_id tree
                           and parent_node_data = Ptree.get_node_data parent tree in
+
                           let root_single = 
-                              Node.to_single parent_node_data
-                              handle_node_data
+                              Node.to_single ~is_root:true (pre_ref_codes, fi_ref_codes) 
+                                  root parent_node_data handle_node_data
                           in
-                          Node.to_formatter_subtree (pre_ref_codes, fi_ref_codes) 
-                          [] data root_single handle_id (handle_id,  handle_node_data) 
-                          (parent, parent_node_data) (Some (root_single,
-                          root_single)), Some (root_single, root_single)
+
+                          let root_f = 
+                              Node.to_formatter_subtree ~is_root:true (pre_ref_codes, fi_ref_codes) 
+                                  [] data  root  handle_id (handle_id,  handle_node_data) 
+                                  (parent, parent_node_data) 
+                                  (Some (root_single, root_single))
+                          in 
+
+                          root_f, Some (root_single, root_single)
                   | _ -> 
                           failwith "How is it possible we have no root?"
                           (*(Tags.Nodes.node, [], `Structured `Empty)*)
@@ -1279,7 +1287,7 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
         | Tree.Single _ ->
                 let node_single = 
                     let nd = Ptree.get_node_data handle_id tree in
-                    Some (nd, Node.to_single nd nd)
+                    Some (nd, Node.to_single (pre_ref_codes, fi_ref_codes) nd nd nd)
                 in
                 let c1 = 
                     subtree_to_formatter (pre_ref_codes, fi_ref_codes) 

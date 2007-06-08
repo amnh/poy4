@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1865 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1875 $"
 
 module IntSet = All_sets.Integers
 
@@ -617,6 +617,7 @@ let rec process_application run item =
             Status.user_message Status.Information Version.string;
             run
     | `ChangeWDir dir ->
+            let dir = Str.global_replace (Str.regexp "\\\\ ") " " dir in
             Sys.chdir dir;
             run
     | `PrintWDir ->

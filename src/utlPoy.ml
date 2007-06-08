@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 1732 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 1875 $"
 
 let fprintf = Printf.fprintf
 
@@ -39,14 +39,12 @@ let create_gap_seq ?(gap=Alphabet.gap) len =
 
 
 
-
-
 let cmp_num_DNA seq = 
     let len = Sequence.length seq in 
     let gap = Alphabet.gap in 
     let num_nu = ref 0 in
     for p = 0 to len - 1 do 
-        if (Sequence.get seq p) != gap then num_nu := !num_nu + 1;
+        if (Sequence.get seq p) land gap != gap then num_nu := !num_nu + 1;
     done;
     !num_nu
 
@@ -54,8 +52,11 @@ let cmp_num_DNA seq =
 
 let cmp_gap_cost indel seq = 
     let num_char = cmp_num_DNA seq in 
-    let o, e = indel in 
-    o + (num_char - 1) * e 
+    match num_char with 
+    | 0 -> 0
+    | _ ->
+          let o, e = indel in 
+          o + (num_char - 1) * e / 100
 
 
 let cmp_ali_cost (alied_seq1 : Sequence.s) (alied_seq2 : Sequence.s) 
@@ -181,6 +182,24 @@ let align3 (seq1 : Sequence.s) (seq2 : Sequence.s) (seq3 : Sequence.s)
 	alied_seq1, alied_seq2, alied_seq3, cost, ali_len
 	
 	
+
+let closest_alied_seq alied_parent alied_child c2 = 
+    let len = Sequence.length alied_parent in 
+    let single_seq = Sequence.init 
+        (fun p -> 
+             let p_code = Sequence.get alied_parent p in 
+             let c_code = Sequence.get alied_child p in 
+             Cost_matrix.Two_D.get_closest c2 p_code c_code
+        ) len 
+    in 
+    let cost = Sequence.foldi  
+        (fun cost p single_code ->
+             let p_code = Sequence.get alied_parent p in 
+             cost + (Cost_matrix.Two_D.cost single_code p_code c2)
+        ) 0 single_seq 
+    in 
+    single_seq, cost
+
 	
 	
 (*==================================*)			
@@ -326,7 +345,8 @@ let create_median seq1 seq2
     let alied_seq1, alied_seq2, _ = 
         create_subalign2 seq1 seq2 cost_mat s1 e1 s2 e2 
     in
-    create_median_seq alied_seq1 alied_seq2 cost_mat
+    let alied_med, cost = create_median_seq alied_seq1 alied_seq2 cost_mat in 
+    alied_med, alied_seq1, alied_seq2, cost
 
 
 
@@ -379,6 +399,19 @@ let create_general_ali code1_arr code2_arr gap_code cost_mat =
     alied_seq1, alied_seq2, cost
 
 
+(** do not use map of sequences, because it i is running up-down*)
+let map f s =
+    let len = Sequence.length s in 
+    let m_s = Sequence.init (fun _ -> 0) len in
+    for p = 0 to len - 1 do
+        Sequence.set m_s p (f (Sequence.get s p));
+    done; 
+    m_s
+
+
+let of_array code_arr = 
+    let len = Array.length code_arr in 
+    Sequence.init (fun idx -> code_arr.(idx)) len    
 
 let test_general_ali  () = 
     print_endline "Testing general alignmnet";
@@ -426,4 +459,6 @@ let test_general_ali  () =
     fprintf stdout "General ali cost: %i" cost; print_newline (); 
     Utl.printIntArr alied_seq1;
     Utl.printIntArr alied_seq2
+
+
 

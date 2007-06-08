@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 1758 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 1875 $"
 
 (** Chromosome parameters
  *
@@ -47,7 +47,7 @@ type chromPairAliPam_t = {
 
     (** It's believed that no rearrangments or reversions happened 
         within a segment whose length < unbreaked_len *)
-    unbreaked_len           : int;
+    rearranged_len           : int;
 
     (** Align the subsequence (min_pos1->max_pos1) of chromosome 1 to the
         subsequence (min_pos2->max_pos2) of chromosome 2. This information is
@@ -93,14 +93,14 @@ let chromPairAliPam_default = {
     k = 9; max_gap = 10; 
     sig_k = 12;
     sig_block_len = 100;
-    unbreaked_len = 1000;
+    rearranged_len = 1000;
     
     gap_opening_cost = 200;
     gap_ext_cost = 10;
     mat_cost = -100;    
     mismat_cost = 50;
 
-    re_meth  = `Breakpoint 50;
+    re_meth  = `Breakpoint 10;
     chrom_breakpoint = 100;
 
     keep_median = 1;
@@ -162,6 +162,13 @@ let get_chrom_pam user_chrom_pam =
 
 
     let chrom_pam = 
+        match user_chrom_pam.Data.rearranged_len with
+        | None -> chrom_pam
+        | Some rearranged_len -> {chrom_pam with rearranged_len = rearranged_len}
+    in 
+
+
+    let chrom_pam = 
         match user_chrom_pam.Data.approx with
         | None -> chrom_pam
         | Some _ -> {chrom_pam with approx = true}
@@ -188,7 +195,8 @@ let cloneChromPairPam (donor : chromPairAliPam_t) = {
     max_gap = donor.max_gap;
     sig_block_len = donor.sig_block_len;
     sig_k = donor.sig_k;
-    unbreaked_len = donor.unbreaked_len;
+    rearranged_len = donor.rearranged_len;
+
     
     min_pos1 = donor.min_pos1;
     min_pos2 = donor.min_pos2;

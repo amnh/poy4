@@ -21,11 +21,10 @@ val swap_item : int -> int -> 'a array -> 'a array
 val printIntArr : int array -> unit
 val printIntMat : int array array -> unit
 val create_ls : int -> 'a -> 'a list
-module IntType : sig type t = int val compare : 'a -> 'a -> int end
 module IntSet :
   sig
-    type elt = IntType.t
-    type t = Set.Make(IntType).t
+    type elt = int
+    type t = All_sets.Integers.t
     val empty : t
     val is_empty : t -> bool
     val mem : elt -> t -> bool
@@ -62,3 +61,4 @@ val get_k_random_elem : 'a list -> int -> 'a list
 val equalArr : 'a array -> 'b array -> ('a -> 'b -> int) -> bool
 val filterArray : ('a -> bool) -> 'a array -> 'a array
 val break_array : 'a array -> (int * int) list -> 'a array list
+val printIntSet : IntSet.t -> unit

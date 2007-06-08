@@ -104,13 +104,13 @@ let cmp_cost med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
 
     let len1 = Sequence.length med1.seq in 
     let len2 = Sequence.length med2.seq in 
-    if (len1 < 1) || (len2 < 1) then 0, 0
+    if (len1 < 1) || (len2 < 1) then 0, (0, 0)
     else begin
-        let total_cost, recost, alied_seq1, alied_seq2 =         
-            GenAli.create_gen_ali med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
+        let total_cost, (recost1, recost2), alied_seq1, alied_seq2 =         
+            GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
                 alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
         in  
-        total_cost , recost
+        total_cost , (recost1, recost2)
     end 
         
 
@@ -121,28 +121,22 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
     let len1 = Sequence.length med1.seq in 
     let len2 = Sequence.length med2.seq in 
 
-    if len1 < 1 then 0, 0, [med2]
-    else if len2 < 1 then 0, 0, [med1] 
+    if len1 < 1 then 0, (0, 0), [med2]
+    else if len2 < 1 then 0, (0, 0), [med1] 
     else begin        
         let ali_pam = get_breakinv_pam breakinv_pam in         
-        let total_cost, recost, alied_gen_seq1, alied_gen_seq2 = 
-            GenAli.create_gen_ali med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
+        let total_cost, (recost1, recost2), alied_gen_seq1, alied_gen_seq2 = 
+            GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
                 alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
         in 
     
-    
-        let seq2_arr = Sequence.to_array med2.seq in 
         let alied_gen_seq2 = Sequence.to_array alied_gen_seq2 in     
         let re_seq2 =
             Utl.filterArr alied_gen_seq2 (fun code2 -> code2 != Alphabet.get_gap alpha)
         in    
     
-    
-        let all_order_ls =  
-            if (Utl.equalArr seq2_arr re_seq2 compare) 
-                || (ali_pam.keep_median = 1) then [(seq2_arr, 0, recost)]
-            else [(seq2_arr, 0, recost); (re_seq2, recost, 0)]  
-        in 
+        
+        let all_order_ls =  [(re_seq2, recost1, recost2)]  in 
     
         
         let med_ls = List.fold_left 
@@ -160,8 +154,8 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
                       ref_code = Utl.get_new_chrom_ref_code ();
                       ref_code1 = med1.ref_code;
                       ref_code2 = med2.ref_code;
-                      cost1 = total_cost;
-                      cost2 = total_cost;
+                      cost1 = total_cost - recost2;
+                      cost2 = total_cost - recost1;
                       recost1 = recost1;
                       recost2 = recost2}
                  in    
@@ -169,7 +163,7 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
             ) [] all_order_ls 
         in
     
-        total_cost, recost, med_ls
+        total_cost, (recost1, recost2), med_ls
     end
 
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Utl" "$Revision: 1737 $"
+let () = SadmanOutput.register "Utl" "$Revision: 1875 $"
 
 (** This module implements basic utilities *)
 
@@ -186,13 +186,7 @@ let create_ls len value =
     Array.to_list (Array.init len (fun _ -> value))
 
 
-module IntType =
-struct
-    type t = int
-    let compare = compare
-end
-
-module IntSet = Set.Make (IntType)
+module IntSet = All_sets.Integers
 
 
 
@@ -386,3 +380,6 @@ let break_array arr break_ls =
 
     
 
+let printIntSet s = 
+    IntSet.iter (fun v -> fprintf stdout "%i " v) s;
+    print_newline (); flush stdout

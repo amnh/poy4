@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AliMap" "$Revision: 1644 $"
+let () = SadmanOutput.register "AliMap" "$Revision: 1875 $"
 (** The implementation of functions to find the map between two chromosomes *)
 
 type chromPairAliPam_t = ChromPam.chromPairAliPam_t
@@ -75,12 +75,11 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
 
     let pair_gap subseq seq = 
        let id = subseq.Subseq.id in 
-       let del_cost = 
-           let o, e = ali_pam.ChromPam.locus_indel_cost in
-           let len = Subseq.get_len subseq in  
-           o + (e * (len - 1)) / 100 
+       let del_cost = UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost
+           (Subseq.get_subseq seq subseq)
        in
-                    
+
+       
        set_cost id gen_gap_code  del_cost;
        set_cost gen_gap_code id  del_cost;
     in
@@ -246,7 +245,7 @@ let create_general_ali global_map seq1 seq2 cost_mat ali_pam =
 
 (** Given a global map between two chromosomes. 
     Create globally general alignment between two *)
-let create_fast_general_ali global_map seq1 seq2 cost_mat ali_pam =
+let create_fast_general_ali state global_map seq1 seq2 cost_mat ali_pam =
 
     let global_map, subseq1_ls, subseq2_ls = 
         Block.create_subseq_id `Both global_map ali_pam 
@@ -261,6 +260,8 @@ let create_fast_general_ali global_map seq1 seq2 cost_mat ali_pam =
     let gen_cost_mat, ali_mat = create_gen_cost_mat subseq1_ls subseq2_ls 
         global_map gen_gap_code seq1 seq2 cost_mat ali_pam 
     in 
+
+
 
     let rem_seq1 = List.fold_right 
         (fun ss rem_seq1 -> 
@@ -281,7 +282,7 @@ let create_fast_general_ali global_map seq1 seq2 cost_mat ali_pam =
 
     let swap_med = ali_pam.ChromPam.swap_med in 
     let edit_cost, _, alied_rem_seq1, alied_rem_seq2 = GenAli.create_gen_ali_code         
-        rem_seq1 rem_seq2 gen_cost_mat gen_gap_code 
+        state rem_seq1 rem_seq2 gen_cost_mat gen_gap_code 
         ali_pam.ChromPam.re_meth swap_med ali_pam.ChromPam.circular
     in   
 
@@ -332,7 +333,6 @@ let create_fast_general_ali global_map seq1 seq2 cost_mat ali_pam =
     | `Breakpoint cost ->  
           (UtlGrappa.cmp_self_oriented_breakpoint_dis re_seq2 circular) * cost 
     in  
-
 
     subseq1_ls, subseq2_ls, global_map, ali_mat, 
     alied_seq1, alied_seq2, (edit_cost + recost), recost

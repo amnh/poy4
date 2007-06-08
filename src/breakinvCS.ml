@@ -217,14 +217,14 @@ let compare_data a b =
 
 
 let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list = 
-    let _, pre_fi = List.hd attr in 
+    let _, state = List.hd attr in 
     let output_breakinv code med acc =
         let med = 
             try
                 List.find (fun med -> 
                                IntSet.mem med.BreakinvAli.ref_code  ref_codes
                           ) med.Breakinv.med_ls
-            with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
+            with Not_found -> failwith "Not found med -> to_formatter -> BreakinvCS"
         in         
 
 
@@ -238,18 +238,24 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                            IntSet.mem med.BreakinvAli.ref_code ref_codes 
                       ) parent_med_ls.Breakinv.med_ls
                   in                                                                  
-                  let cost, recost = 
-                      match pre_fi = Tags.Nodes.preliminary with   
-                      | true ->  
+
+                  let cost, recost =
+                      match state with
+                      | "Preliminary" ->
                             BreakinvAli.get_costs parent_med med.BreakinvAli.ref_code  
-                      | false ->
-                            BreakinvAli.get_costs med parent_med.BreakinvAli.ref_code   
+                      | "Final" ->
+                            BreakinvAli.get_costs med parent_med.BreakinvAli.ref_code                               
+                      | _ ->
+                            let cost = IntMap.find code t.costs in 
+                            let recost = IntMap.find code t.recosts in 
+                            (int_of_float cost), (int_of_float recost)
+
                   in 
                   cost, recost
               end 
 
         in  
- 
+
         let seq = Sequence.to_formater med.BreakinvAli.seq t.alph in
         let name = Data.code_character code d in 
         let attributes = 
@@ -262,6 +268,65 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
         (Tags.Characters.breakinv, attributes, contents) :: acc
     in
     IntMap.fold output_breakinv t.meds []
+
+
+
+
+let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+
+    let single_parent, mine = 
+        match is_root with 
+        | true ->  alied_map, alied_map
+        | false -> single_parent, mine
+    in 
+
+    let previous_total_cost = mine.total_cost in 
+
+    let median code med (acc_meds, acc_costs, acc_recosts, acc_total_cost) =        
+            let amed = 
+                try
+                    List.find (fun med -> 
+                                   IntSet.mem med.BreakinvAli.ref_code ref_codes
+                              ) med.Breakinv.med_ls
+                with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
+            in         
+
+
+
+            let parent_med = IntMap.find code single_parent.meds in  
+            let aparent_med = List.find 
+                (fun med -> 
+                     IntSet.mem med.BreakinvAli.ref_code ref_codes 
+                ) parent_med.Breakinv.med_ls
+            in            
+                
+            let cost, (recost1, recost2) = 
+                if is_root then 0,(0, 0) 
+                else BreakinvAli.cmp_cost amed aparent_med 
+                    med.Breakinv.gen_cost_mat med.Breakinv.pure_gen_cost_mat med.Breakinv.alpha
+                    med.Breakinv.breakinv_pam
+            in 
+
+            let single_med = {med with Breakinv.med_ls = [amed]} in 
+            
+                
+            let new_single = IntMap.add code single_med acc_meds in
+            let new_costs = IntMap.add code (float_of_int cost) acc_costs in 
+            let new_recosts = IntMap.add code (float_of_int (recost1 + recost2) ) acc_recosts in 
+            new_single, new_costs, new_recosts, (acc_total_cost + cost)
+    in  
+    
+    let meds, costs,  recosts, total_cost = 
+        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+    in 
+        
+    previous_total_cost, float_of_int total_cost, 
+    {mine with meds = meds; 
+         costs = costs;
+         recosts = recosts;
+         total_cost = float_of_int total_cost}
+   
+
 
 
 

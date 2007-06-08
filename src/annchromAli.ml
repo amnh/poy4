@@ -27,8 +27,12 @@ let fprintf = Printf.fprintf
 type seq_t = {
     seq : Sequence.s;
     seq_ref_code : int;
+    alied_med : Sequence.s;
     seq_ord1 : int;
+    alied_seq1 : Sequence.s;
+
     seq_ord2 : int;
+    alied_seq2 : Sequence.s;
 
 }
 
@@ -60,18 +64,101 @@ let annchromPam_default = {
     locus_indel_cost = (10, 100);
 }
 
+let init_seq_t (seq, code) = {
+    seq = seq;
+    seq_ref_code = code;
+    alied_med = seq;
+    seq_ord1 = -1;
+    alied_seq1 = seq;
+    seq_ord2 = -1;
+    alied_seq2 = seq;
+    
+}
 
-let init seq_arr = 
-    {
-        seq_arr = seq_arr;
-        ref_code = Utl.get_new_chrom_ref_code ();
-        ref_code1 = -1;
-        ref_code2 = -1;
-        cost1 = 0;
-        cost2 = 0;
-        recost1 = 0;
-        recost2 = 0;
-    }
+let init seq_arr = {
+    seq_arr = Array.map init_seq_t seq_arr;
+    ref_code = Utl.get_new_chrom_ref_code ();
+    ref_code1 = -1;
+    ref_code2 = -1;
+    cost1 = 0;
+    cost2 = 0;
+    recost1 = 0;
+    recost2 = 0;
+}
+
+let printMap seq_arr =
+    print_endline "Start printing alied_annchrom ";
+    Array.iter (fun m -> 
+                    fprintf stdout "Order1: %i, Order2: %i\n"  m.seq_ord1 m.seq_ord2;
+                    UtlPoy.printDNA m.alied_seq1;
+                    UtlPoy.printDNA m.alied_seq2;
+                    UtlPoy.printDNA m.alied_med;
+               ) seq_arr;
+    print_endline "End printing alied_annchrom ";
+    print_newline ()
+
+
+let get_seq_arr t =
+    Array.map (fun seq -> seq.seq) t.seq_arr
+
+(** for implied alignments *)
+let convert_map med = 
+    let gap = Alphabet.gap in 
+    let num_frag = Array.length med.seq_arr in
+
+    let alied_med_arr = Array.map (fun seg -> seg.alied_med) med.seq_arr in
+    let alied_seq1_arr = Array.init num_frag 
+        (fun idx1 ->
+             let seg = List.find (fun seg -> seg.seq_ord1 = idx1)
+                 (Array.to_list med.seq_arr) 
+             in
+             seg.alied_seq1)
+    in 
+
+    let alied_seq2_arr = Array.init num_frag 
+        (fun idx2 ->
+             let seg = List.find (fun seg -> seg.seq_ord2 = idx2)
+                 (Array.to_list med.seq_arr) 
+             in
+             seg.alied_seq2)
+    in 
+
+    let create_pos seq_arr = 
+        let pos = ref (-1) in
+        Array.map
+            (fun s ->         
+                 Array.init (Sequence.length s) 
+                     (fun idx -> 
+                          let code = Sequence.get s idx in
+                          match code = gap with
+                          | true -> -1
+                          | false ->                                
+                              incr pos; !pos)
+
+            ) seq_arr 
+    in 
+    let pos_mat = create_pos alied_med_arr in
+    let pos1_mat = create_pos alied_seq1_arr in 
+    let pos2_mat = create_pos alied_seq2_arr in 
+
+
+    let rev_map = ref [] in 
+    for seg_id = 0 to num_frag - 1 do
+        let seg = med.seq_arr.(seg_id) in 
+        let len = Array.length pos_mat.(seg_id) in
+        for idx = 0 to len - 1 do
+            let p = pos_mat.(seg_id).(idx) in 
+            let code = Sequence.get seg.alied_med idx in 
+            let p1 = pos1_mat.(seg.seq_ord1).(idx) in 
+            let code1 = Sequence.get seg.alied_seq1 idx in 
+            let p2 = pos2_mat.(seg.seq_ord2).(idx) in 
+            let code2 = Sequence.get seg.alied_seq2 idx in 
+            rev_map := (p, code, p1, code1, p2, code2)::!rev_map
+        done
+    done; 
+
+    List.rev !rev_map  
+
 
 let get_annchrom_pam user_annchrom_pam = 
     let chrom_pam = annchromPam_default in  
@@ -120,10 +207,10 @@ let split chrom =
 
 
 
+
 (** Given two arrays of sequences [seq1_arr] and [seq2_arr], 
  *  create the general cost matrix and corresponding code arrays  *)
-let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
-
+let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =        
     let seq1_arr = Array.mapi (fun ith seq -> seq, (ith * 2 + 1) ) seq1_arr in 
 
     let len1 = Array.length seq1_arr in 
@@ -156,8 +243,7 @@ let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
 
 
     let update_gap (seq, code) = 
-        let o,e = ali_pam.locus_indel_cost  in
-        pure_gen_cost_mat.(gen_gap_code).(code) <- o + e * (Sequence.length seq) / 100;
+        pure_gen_cost_mat.(gen_gap_code).(code) <- UtlPoy.cmp_gap_cost ali_pam.locus_indel_cost seq;
         pure_gen_cost_mat.(code).(gen_gap_code) <- pure_gen_cost_mat.(gen_gap_code).(code);
     in 
     Array.iter update_gap seq1_arr;
@@ -167,7 +253,6 @@ let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
     let code1_arr = Array.map (fun (seq, code) -> code) seq1_arr in 
     let code2_arr = Array.map (fun (seq, code) -> code) seq2_arr in 
 
-
     pure_gen_cost_mat, code1_arr, code2_arr, gen_gap_code
 
 
@@ -176,7 +261,7 @@ let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
  * the total cost between them which is comprised of editing cost and 
  * rearrangement cost *)
 let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t) 
-        cost_mat (pure_gen_cost_mat, gen_gap_code) alpha annchrom_pam = 
+        cost_mat alpha annchrom_pam = 
 
 
     let chrom_len1 = Array.fold_left (fun len s -> len + Sequence.length s.seq) 0 chrom1.seq_arr in     
@@ -194,19 +279,14 @@ let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t)
             create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam  
         in 
     
-        let total_cost, recost, _, _ = 
-            GenAli.create_gen_ali_code  code1_arr code2_arr 
+        let total_cost, (recost1, recost2), _, _ = 
+            GenAli.create_gen_ali_code  `Annchrom code1_arr code2_arr 
                 pure_gen_cost_mat gen_gap_code  
                 ali_pam.re_meth ali_pam.swap_med 
                 ali_pam.circular  
         in 
-    (*
-        print chrom1 alpha;
-        print chrom2 alpha;
-        fprintf stdout "Cost: %i\n" total_cost;
-        print_newline ();
-    *)
-        total_cost, recost
+
+        total_cost, (recost1 + recost2)
     end 
 
 
@@ -216,8 +296,7 @@ let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t)
  * find all median chromoromes between [chrom1] and [chrom2]. 
  * Rearrangements are allowed *) 
 let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t) 
-        (cost_mat : Cost_matrix.Two_D.m) 
-        (pure_gen_cost_mat, gen_gap_code) alpha annchrom_pam = 
+        (cost_mat : Cost_matrix.Two_D.m) alpha annchrom_pam = 
     
 
     let chrom_len1 = Array.fold_left (fun len s -> len + Sequence.length s.seq) 0 chrom1.seq_arr in     
@@ -236,42 +315,48 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
     
 
     
-        let total_cost, recost, alied_code1_arr, alied_code2_arr = 
-            GenAli.create_gen_ali_code  code1_arr code2_arr 
+        let total_cost, (recost1, recost2), alied_code1_arr, alied_code2_arr = 
+            GenAli.create_gen_ali_code  `Annchrom code1_arr code2_arr 
                 pure_gen_cost_mat gen_gap_code  
                 ali_pam.re_meth ali_pam.swap_med 
                 ali_pam.circular  
         in 
-   
-    
+
+
         let ali_len = Array.length alied_code1_arr in 
     
         let ali_chrom = Array.init ali_len   
             (fun idx ->   
                  let idx1 = Utl.find_index code1_arr alied_code1_arr.(idx) compare in   
-                 let seq1, code1 =  
+                 let seq1 =  
                      match idx1 with  
-                     | -1 -> None, -1    
-                     | _ -> Some chrom1.seq_arr.(idx1).seq, chrom1.seq_arr.(idx1).seq_ref_code       
+                     | -1 -> None
+                     | _ -> Some chrom1.seq_arr.(idx1).seq
                  in                             
     
                  let idx2 = Utl.find_index code2_arr alied_code2_arr.(idx) compare in  
-                 let seq2, code2 = 
+                 let seq2 =
                      match idx2 with 
-                     | -1 -> None, -1   
-                     | _ -> Some chrom2.seq_arr.(idx2).seq, chrom2.seq_arr.(idx2).seq_ref_code   
+                     | -1 -> None
+                     | _ -> Some chrom2.seq_arr.(idx2).seq
                  in                            
                      
-                 let med_seq =
+                 let alied_med_seq, alied_seq1, alied_seq2 =
                      match seq1, seq2 with   
                      | Some seq1, Some seq2 -> 
-                           let med, _ = UtlPoy.create_median seq1 seq2 cost_mat  in
-                           med
-                     | Some seq1, None -> UtlPoy.create_median_gap seq1 cost_mat
-                     | None, Some seq2 -> UtlPoy.create_median_gap seq2 cost_mat
-                     | _, _ -> UtlPoy.get_empty_seq ()
+                           let med, alied_seq1, alied_seq2, _  = UtlPoy.create_median seq1 seq2 cost_mat  in
+                           med, alied_seq1, alied_seq2
+                     | Some seq1, None -> 
+                           let med = UtlPoy.create_median_gap seq1 cost_mat in 
+                           let ali_len = Sequence.length med in 
+                           med, seq1, UtlPoy.create_gap_seq ali_len 
+                     | None, Some seq2 -> 
+                           let med = UtlPoy.create_median_gap seq2 cost_mat in
+                           let ali_len = Sequence.length med in 
+                           med, (UtlPoy.create_gap_seq ali_len), seq2
+                     | _, _ -> UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq ()
                  in 
-                 (med_seq, idx1, idx2)
+                 (alied_med_seq, idx1, alied_seq1, idx2, alied_seq2)
             )
         in 
     
@@ -304,24 +389,26 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
             let med = 
                 List.fold_right  
                     (fun index med ->                     
-                         let seq, seq_ord1, seq_ord2 =  ali_chrom.(index) in
-                         let seq = UtlPoy.delete_gap seq in 
-                         match Sequence.length seq with  
-                         | 0 -> med
-                         | _ -> 
-                               {seq=seq; 
-                                seq_ref_code = Utl.get_new_seq_ref_code(); 
-                                seq_ord1 = seq_ord1;
-                                seq_ord2 = seq_ord2}::med
+                         let alied_med, seq_ord1, alied_seq1, seq_ord2, alied_seq2 =  ali_chrom.(index) in
+                         {seq= UtlPoy.delete_gap alied_med;  
+                          seq_ref_code = Utl.get_new_seq_ref_code();  
+                          alied_med = alied_med;
+                          seq_ord1 = seq_ord1; 
+                          alied_seq1 = alied_seq1;
+                          seq_ord2 = seq_ord2;
+                          alied_seq2 = alied_seq2;
+                         }::med 
                     ) index_ls []
             in   
+
+
             {seq_arr = Array.of_list med; 
              ref_code = Utl.get_new_chrom_ref_code ();
              ref_code1 = chrom1.ref_code;
              ref_code2 = chrom2.ref_code;
-             cost1 = total_cost;
-             cost2 = total_cost;
-             recost1 = recost2;
+             cost1 = total_cost - recost2;
+             cost2 = total_cost - recost1;
+             recost1 = recost1;
              recost2 = recost2;
             }
         in  
@@ -333,8 +420,8 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
              
         let all_order_ls =   
             if (Utl.equalArr code2_arr re_code2_arr compare) ||  
-                (ali_pam.keep_median = 1) then [code2_arr, 0, recost]   
-            else [(code2_arr, 0, recost); (re_code2_arr, recost, 0)]   
+                (ali_pam.keep_median = 1) then [code2_arr, recost2, recost1]   
+            else [(code2_arr, recost2, recost1); (re_code2_arr, recost1, recost2)]   
         in   
     
 
@@ -344,8 +431,7 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
                  med::med_ls  
             ) [] all_order_ls     
         in 
-    
-        total_cost, recost, med_ls           
+        total_cost, (recost1 + recost2), med_ls           
     end
 
 (** Given two annotated chromosomes [chrom1] and [chrom2], 
@@ -418,11 +504,128 @@ let create_map med child_ref =
     let chrom_map : Tags.output = 
         (Tags.GenomeMap.chrom, [], `Structured (`Set  (Array.to_list seq_arr))) 
     in 
-
     match child_ref = med.ref_code1 with
     | true -> med.cost1, med.recost1, chrom_map
     | false -> med.cost2, med.recost2, chrom_map
     
+
+
+let to_single single_parent child_ref c2 pam =
+    let gap = Cost_matrix.Two_D.gap c2 in 
+    let ali_pam = get_annchrom_pam pam in 
+(*    printMap single_parent.seq_arr;*)
+
+    let is_gap_seq seq = 
+        Sequence.fold (fun is_gap code -> if code = gap then is_gap else false)
+            true seq
+    in 
+
+    let map = 
+        Array.map (fun m ->
+                       let alied_single_seq, cost, alied_child_seq  =
+                          match child_ref = single_parent.ref_code1 with
+                          | true ->
+                                let single, cost = UtlPoy.closest_alied_seq
+                                    m.alied_med m.alied_seq1 c2
+                                in 
+                                let cost = 
+                                    if m.seq_ord1 = -1 then 
+                                        UtlPoy.cmp_gap_cost ali_pam.locus_indel_cost m.alied_med
+                                    else if is_gap_seq m.alied_med then 
+                                        UtlPoy.cmp_gap_cost ali_pam.locus_indel_cost m.alied_seq1
+                                    else cost
+                                in 
+                                single, cost, m.alied_seq1
+                          | false ->
+                                let single, cost = UtlPoy.closest_alied_seq
+                                    m.alied_med m.alied_seq2 c2
+                                in 
+
+                                let cost = 
+                                    if m.seq_ord2 = -1 then 
+                                        UtlPoy.cmp_gap_cost ali_pam.locus_indel_cost m.alied_med
+                                    else if is_gap_seq m.alied_med then 
+                                        UtlPoy.cmp_gap_cost ali_pam.locus_indel_cost m.alied_seq2
+                                    else cost
+                                in 
+
+                                single, cost, m.alied_seq2
+                      in 
+                      let order = 
+                          match child_ref = single_parent.ref_code1 with
+                          | true -> m.seq_ord1
+                          | false -> m.seq_ord2
+                      in 
+ 
+                      let ungap_alied_med = Sequence.fold_righti 
+                          (fun ungap_alied_med p code ->
+                               match code = gap with
+                               | false -> code::ungap_alied_med
+                               | true ->
+                                     if Sequence.get alied_child_seq p = gap then ungap_alied_med
+                                     else code::ungap_alied_med
+                          ) [] alied_single_seq
+                      in                       
+  
+                      let ungap_alied_med = UtlPoy.of_array (Array.of_list  ungap_alied_med) in
+                      
+                      ungap_alied_med, cost, order
+                 ) single_parent.seq_arr
+    in 
+
+    Array.sort (fun seg1 seg2 ->
+                    let _, _, ord1 = seg1 in 
+                    let _, _, ord2 = seg2 in
+                    ord1 - ord2
+               ) map;
+
+    
+    let seq_ls, total_cost = Array.fold_right 
+        (fun seg (seq_ls, total_cost) -> 
+             let seq, cost, ord = seg in 
+             if ord < 0 then seq_ls, total_cost + cost
+             else seq::seq_ls, total_cost + cost             
+        ) map ([], 0)        
+    in 
+
+
+    let recost = 
+        match child_ref = single_parent.ref_code1 with
+        | true -> single_parent.recost1
+        | false -> single_parent.recost2
+    in 
+
+    (total_cost + recost), recost, Array.of_list seq_ls
+
+    
+
+
+
+let change_to_single med single_seq_arr = 
+    let gap = Alphabet.gap in 
+
+    let new_seq_arr = Array.mapi 
+        (fun idx m ->
+             let single_seq = single_seq_arr.(idx) in
+             let num_dna = ref 0 in 
+             let single_alied_med = UtlPoy.map
+                 (fun code ->
+                      if code = gap then gap
+                      else begin
+                          let single_code = Sequence.get single_seq !num_dna in 
+                          incr num_dna;
+                          single_code
+                      end 
+                 ) m.alied_med
+             in 
+             {m with alied_med = single_alied_med;
+                  seq = (UtlPoy.delete_gap single_alied_med) }
+        ) med.seq_arr
+    in 
+    {med with seq_arr = new_seq_arr}
+
+
+
 
 let to_formater med alph = 
     let seq_str_arr = 

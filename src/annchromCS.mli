@@ -1,3 +1,23 @@
+(* POY 4.0 Beta. A phylogenetic analysis program using Dynamic Homologies.    *)
+(* Copyright (C) 2007  Andrés Varón, Le Sy Vinh, Illya Bomash, Ward Wheeler,  *)
+(* and the American Museum of Natural History.                                *)
+(*                                                                            *)
+(* This program is free software; you can redistribute it and/or modify       *)
+(* it under the terms of the GNU General Public License as published by       *)
+(* the Free Software Foundation; either version 2 of the License, or          *)
+(* (at your option) any later version.                                        *)
+(*                                                                            *)
+(* This program is distributed in the hope that it will be useful,            *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of             *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *)
+(* GNU General Public License for more details.                               *)
+(*                                                                            *)
+(* You should have received a copy of the GNU General Public License          *)
+(* along with this program; if not, write to the Free Software                *)
+(* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
+(* USA                                                                        *)
+
+
 val fprintf : out_channel -> ('a, out_channel, unit) format -> 'a
 module IntMap :
   sig
@@ -60,9 +80,11 @@ type t = {
 }
 val cardinal : t -> int
 val of_array :
-    Data.dynamic_hom_spec -> (Sequence.s Data.dyna_data * IntMap.key) array -> int -> t
+  Data.dynamic_hom_spec ->
+  (Sequence.s Data.dyna_data * IntMap.key) array -> int -> t
 val of_list :
-    Data.dynamic_hom_spec -> (Sequence.s Data.dyna_data * IntMap.key) list -> int -> t
+  Data.dynamic_hom_spec ->
+  (Sequence.s Data.dyna_data * IntMap.key) list -> int -> t
 val to_list : t -> (meds_t * IntMap.key) list
 val same_codes : 'a IntMap.t -> 'b IntMap.t -> bool
 val median2 : t -> t -> t
@@ -78,3 +100,5 @@ val to_formatter :
   IntSet.t ->
   Tags.attribute list -> t -> t option -> Data.d -> Tags.output list
 val get_active_ref_code : t -> IntSet.t * IntSet.t
+val to_single :
+    ?is_root:bool -> IntSet.t -> t -> t -> t -> float * float * t
