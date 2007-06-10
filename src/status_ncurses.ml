@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 1875 $"
+let () = SadmanOutput.register "" "$Revision: 1881 $"
 
-let () = SadmanOutput.register "Status_ncurses" "$Revision: 1875 $"
+let () = SadmanOutput.register "Status_ncurses" "$Revision: 1881 $"
 
     type tab_state = Begin | First | Continue
 
@@ -1059,6 +1059,7 @@ let init () =
     if not !are_we_parallel || 0 = !my_rank then begin
         at_exit NcursesML.finalize;
         draw_screen_items ();
+        redraw_screen ();
     end else ()
 
 let resize_sbbuffer len sbb = 

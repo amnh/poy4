@@ -48,6 +48,7 @@ type old_identifiers = [
     | `AllDynamic
     | `AllStatic
     | `Missing of bool * int
+    | `Random of int
 ]
 type identifiers = [
     | old_identifiers
@@ -721,7 +722,7 @@ let transform_report_arguments x =
 let transform_select (choose, (acc : Methods.script list)) = function
     | `Characters 
     | `Taxa as x -> (x, acc)
-    | (`Missing _) | (`Names _) as meth ->
+    | (`Random _) | (`Missing _) | (`Names _) as meth ->
             begin match choose with
             | `Taxa -> (choose, ((`AnalyzeOnly meth) :: acc))
             | `Characters ->  
@@ -1578,7 +1579,8 @@ let create_expr lexer =
                 [ LIDENT "missing"; ":"; x = INT -> 
                     `Missing (true, 100 - int_of_string x) ] |
                 [ LIDENT "not"; LIDENT "missing"; ":"; x = INT -> `Missing
-                (false, 100 - int_of_string x) ]
+                (false, 100 - int_of_string x) ] |
+                [ LIDENT "_random"; ":"; x = INT -> `Random (int_of_string x) ]
             ];
         optional_integer_or_float: 
             [

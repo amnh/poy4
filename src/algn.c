@@ -1073,16 +1073,16 @@ algn_fill_first_row_aff (int *mm, unsigned char *dm, int len, int const *gap_row
         if ((!NDEBUG) && (!NPRINT_CM))
             printf ("%d\t", mm[i]);
     }
-    mm[0] = 0;
     return;
 }
 
 void
 algn_fill_first_cell_aff (int *mm, int pm, unsigned char *dm, int gap, int *dnmm, \
-        int *htmm) {
+        int *pdnmm, int *htmm) {
+    htmm[0] = HIGH_NUM;
     mm[0] += gap;
-    dnmm[0] = htmm[0] = HIGH_NUM;
     *dm = DELETE | DELETE_V;
+    dnmm[0] = gap + pdnmm[0];
     if ((!NDEBUG) && (!NPRINT_DM))
         printf ("D\t");
     if ((!NDEBUG) && (!NPRINT_CM))
@@ -1131,7 +1131,7 @@ algn_fill_extending_right_aff (const seqt s1, int *prec, int s1_len, \
         */
         alg_row = prec + (cur_s1 * s2_len);
         /* Align! */
-        algn_fill_first_cell_aff (mm, pm[0], dm, alg_row[0], dnmm, htmm);
+        algn_fill_first_cell_aff (mm, pm[0], dm, alg_row[0], dnmm, pdnmm, htmm);
         algn_fill_row_aff (mm, pm, gap_row, alg_row, dm, const_val, \
                 prev_const_val, 1, len - 2, dnmm, pdnmm, htmm, open_gap);
         algn_fill_ukk_right_cell_aff (mm, pm, gap_row, alg_row, dm, \
@@ -1146,6 +1146,7 @@ algn_fill_extending_right_aff (const seqt s1, int *prec, int s1_len, \
         i++;
         dm += s2_len;
         len++;
+        mm[0] = pm[0];
     }
     return (mm);
 }
@@ -1291,7 +1292,7 @@ algn_fill_no_extending_aff (const seqt s1, int *prec, int s1_len, \
         */
         alg_row = prec + (cur_s1 * s2_len);
         /* Align! */
-        algn_fill_first_cell_aff (mm, pm[0], dm, alg_row[0], dnmm, htmm);
+        algn_fill_first_cell_aff (mm, pm[0], dm, open_gap, dnmm, pdnmm, htmm);
         algn_fill_row_aff (mm, pm, gap_row, alg_row, dm, const_val, \
                 prev_const_val, 1, s2_len - 1, dnmm, pdnmm, htmm, open_gap);
         algn_fill_last_column_aff (mm, pm, const_val_tail, \
@@ -1438,6 +1439,8 @@ algn_fill_plane_2_aff (const seqt s1, int *prec, int s1_len, int s2_len, int *mm
      * procedure in three different subsets */
     else if ((2 * height) < s1_len) {
         algn_fill_first_row_aff (a, dm, width, gap_row, d, htmm, open_gap);
+        b[0] = a[0];
+        a[0] = 0;
         start_row = 1;
         final_row = height;
         start_column = 0; 
@@ -1484,6 +1487,8 @@ algn_fill_plane_2_aff (const seqt s1, int *prec, int s1_len, int s2_len, int *mm
                         d, htmm, open_gap));
         else {
             algn_fill_first_row_aff (mm, dm, width, gap_row, dnmm, htmm, open_gap);
+            b[0] = mm[0];
+            mm[0] = 0;
             start_row = 1;
             final_row = (s2_len - width) + 1;
             start_column = 0;

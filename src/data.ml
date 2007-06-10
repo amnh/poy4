@@ -298,6 +298,7 @@ type bool_characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
+    | `Random of int
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -307,6 +308,7 @@ type characters = [
     | `All
     | `Some of int list 
     | `Names of string list
+    | `Random of int
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -1257,8 +1259,22 @@ let report included excluded =
     Status.user_message Status.Information 
     ("@[Total@ excluded:@ " ^ string_of_int (total_excluded - 1) ^ "@]@,")
 
+let get_all_taxon_active_codes data = 
+    Hashtbl.fold (fun code _ acc -> code :: acc) data.taxon_characters [] 
+
 let rec process_analyze_only_taxa meth data = 
     match meth with
+    | `Random fraction ->
+            let all_codes = Array.of_list (get_all_taxon_active_codes data) in
+            Array_ops.randomize all_codes;
+            if (fraction > 100 || fraction < 0) then
+                failwith "Illegal fraction";
+            let n = (fraction * (Array.length all_codes)) / 100 in
+            let taxa = 
+                Array.to_list (Array.map (fun x -> code_taxon x data) 
+                (Array.sub all_codes 0 n)) 
+            in
+            List.fold_left ~f:process_ignore_taxon ~init:data taxa
     | `Names (dont_complement, taxa) ->
             let taxa = 
                 warn_if_repeated_and_choose_uniquely taxa 
@@ -1967,6 +1983,16 @@ let convert_dyna_spec data chcode spec transform_meth =
                 get_state dspec.state transform_meth })
     | _ -> failwith "Convert_dyna_spec: Not a dynamic character" 
 
+let check_fraction fraction =
+    if (100 < fraction || fraction < 0) then
+        failwith "Illegal fraction"
+    else ()
+
+let select_random_sublist fraction lst =
+    let n = (fraction * (List.length lst)) / 100 in
+    let arr = Array.of_list lst in
+    Array_ops.randomize arr;
+    Array.to_list (Array.sub arr 0 n )
 
 let rec get_code_from_name data name_ls = 
   let code_ls = List.fold_right 
@@ -2056,6 +2082,9 @@ and get_code_from_characters_restricted kind (data : d) (chs : characters) =
         match chs with
         | `Some code_ls -> code_ls 
         | `Names name_ls -> get_code_from_name data name_ls
+        | `Random fraction ->
+                check_fraction fraction;
+                select_random_sublist fraction kind_lst
         | `All -> kind_lst
         | `AllDynamic | `AllStatic as m -> 
                 get_code_from_characters_restricted m data `All
@@ -2067,6 +2096,9 @@ and get_all_codes data =
     Hashtbl.fold (fun c _ acc -> c :: acc) data.character_codes  []
 and get_chars_codes data = function
     | `All -> get_all_codes data 
+    | `Random fraction ->
+            check_fraction fraction;
+            select_random_sublist fraction (get_all_codes data)
     | `Some codes -> codes
     | `Names names ->
             let names = 
@@ -2129,6 +2161,9 @@ let rec get_code_from_characters_restricted kind (data : d) (chs : characters) =
         match chs with
         | `Some code_ls -> code_ls 
         | `Names name_ls -> get_code_from_name data name_ls
+        | `Random fraction ->
+                check_fraction fraction;
+                select_random_sublist fraction kind_lst
         | `All -> kind_lst
         | `AllDynamic | `AllStatic as m -> 
                 get_code_from_characters_restricted m data `All
@@ -2145,7 +2180,7 @@ let get_code_from_characters_restricted_comp kind d ch =
         match ch with
         | `Some (dont_complement, x) -> dont_complement, `Some x
         | `Names (dont_complement, x) -> dont_complement, `Names x
-        | `Missing _ | `All | `AllDynamic | `AllStatic as x -> true, x
+        | `Random _ | `Missing _ | `All | `AllDynamic | `AllStatic as x -> true, x
     in
     let chars = get_code_from_characters_restricted kind d chars in
     if dont_complement then chars
@@ -2160,7 +2195,7 @@ let get_chars_codes_comp data ch =
         match ch with
         | `Some (x, y) -> x, `Some y
         | `Names (x, y) -> x, `Names y 
-        | `Missing _ | `All | `AllStatic | `AllDynamic as x -> true, x
+        | `Random _ | `Missing _ | `All | `AllStatic | `AllDynamic as x -> true, x
     in
     let codes = get_chars_codes data ch in
     if dont_complement then codes 
@@ -2192,7 +2227,7 @@ let get_tran_code_meth data meth =
                     dont_complement, `Some codes
             | `Names (dont_complement, names) ->
                     dont_complement, `Names names
-            | `Missing _ | `All | `AllDynamic | `AllStatic as x -> true, x
+            | `Random _ | `Missing _ | `All | `AllDynamic | `AllStatic as x -> true, x
         in
         let codes = get_code_from_characters_restricted `AllDynamic data codes in
         let codes = 

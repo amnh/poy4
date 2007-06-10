@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 1875 $"
+let () = SadmanOutput.register "Methods" "$Revision: 1881 $"
 
 (** Data *)
 
@@ -72,6 +72,7 @@ type information_contained =
     `Collapse of bool ]
 
 type taxon_and_characters = [
+    | `Random of int
     | `Names of (bool * string list)
     | `Missing of bool * int ]
 

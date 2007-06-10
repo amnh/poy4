@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1865 2007-06-07 16:58:32Z andres $ *)
+(* $Id: charTransform.ml 1881 2007-06-10 14:46:27Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1865 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1881 $"
 
 module type S = sig
     type a 
@@ -761,6 +761,16 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         else Data.complement_characters data (`Some codes)
                 | `Missing _ | `All | `AllStatic | `AllDynamic as x ->
                         `Some (Data.get_chars_codes data x)
+                | `Random fraction ->
+                        let lst = Data.get_chars_codes data `All in
+                        let arr = Array.of_list lst in
+                        Array_ops.randomize arr;
+                        let n = (fraction * (Array.length arr)) / 100 in
+                        let rec collect n acc =
+                            if n = 0 then `Some acc
+                            else collect (n - 1) (arr.(n) :: acc)
+                        in
+                        collect n []
             in
             let codes = 
                 match codes with
@@ -924,25 +934,20 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
              
         | #Methods.dynamic_char_transform as meth -> begin
               let status = 
-                  Status.create "Tranform" None "Transforming chromosome to rearranged sequences." 
+                  Status.create "Tranform" None 
+                  "Transforming chromosome to rearranged sequences." 
               in
-
               let new_data = 
                   match meth with  
                   | `Chrom_to_Seq (chars, _ ) ->
                         let tree = select_shortest trees in               
                         let tree = reroot_in_component tree in
-                        
                         let char_codes = get_char_codes chars data in 
                         let ia_ls = IA.create filter_characters char_codes data tree in
-(*                        let ia = List.map IA.concat_alignment ia_ls in *)
-
-
                         let new_data = 
                             Data.transform_chrom_to_rearranged_seq data meth
                                 char_codes ia_ls 
                         in                  
-
                         new_data                           
                   | _ -> 
                         Data.transform_dynamic meth data 

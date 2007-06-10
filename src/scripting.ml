@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1875 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1881 $"
 
 module IntSet = All_sets.Integers
 
@@ -751,38 +751,34 @@ let process_characters_handling (run : r) meth =
         { run with nodes = nodes; data = data }
     else  { run with data = data }
 
+let ( --> ) a b = b a 
+
 let process_taxon_filter (run : r) meth = 
-    match meth with
-    | `IgnoreTaxaFiles files ->
-            let data = List.fold_left Data.process_ignore_file run.data files in
-            let data = Data.remove_taxa_to_ignore data in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
-    | `IgnoreTaxa taxa ->
-            let data = List.fold_left Data.process_ignore_taxon run.data taxa in
-            let data = Data.remove_taxa_to_ignore data in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
-    | `SynonymsFile files ->
-            let data = List.fold_left Data.add_synonyms_file run.data files in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
-    | `Synonyms taxa ->
-            let data = List.fold_left Data.add_synonym run.data taxa in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
-    | `AnalyzeOnlyFiles (dont_complement, files) ->
-            let data = 
-                Data.process_analyze_only_file dont_complement run.data files
-            in
-            let data = Data.remove_taxa_to_ignore data in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
-    | `AnalyzeOnly c ->
-            let data = Data.process_analyze_only_taxa c run.data in
-            let data = Data.remove_taxa_to_ignore data in
-            let data, nodes = Node.load_data data in
-            { run with nodes = nodes; data = data }
+    let data = 
+        match meth with
+        | `IgnoreTaxaFiles files ->
+                files --> List.fold_left Data.process_ignore_file run.data 
+                --> Data.remove_taxa_to_ignore 
+        | `IgnoreTaxa taxa ->
+                taxa --> List.fold_left Data.process_ignore_taxon run.data 
+                --> Data.remove_taxa_to_ignore
+        | `SynonymsFile files ->
+                List.fold_left Data.add_synonyms_file run.data files
+        | `Synonyms taxa ->
+                List.fold_left Data.add_synonym run.data taxa
+        | `AnalyzeOnlyFiles (dont_complement, files) ->
+                files 
+                --> Data.process_analyze_only_file dont_complement run.data 
+                --> Data.remove_taxa_to_ignore
+        | `AnalyzeOnly c ->
+                run.data --> Data.process_analyze_only_taxa c 
+                --> Data.remove_taxa_to_ignore
+        | `Random _ as c ->
+                run.data --> Data.process_analyze_only_taxa c 
+                --> Data.remove_taxa_to_ignore
+    in
+    let data, nodes = Node.load_data data in
+    { run with nodes = nodes; data = data }
 
 let rec process_tree_handling run meth =
     let rec get_first_n n lst = 
@@ -1933,11 +1929,20 @@ module DNA = struct
             let median = Sequence.Align.median_2 s1' s2' cm in
             s1', s2', c, median
 
-        let algn_all seqs cm =
-            List.map (fun (t1, s1) -> 
+        let gen_algn_all f seqs cm =
+            List.map (fun (t1, s1) ->
                 List.map (fun (t2, s2) -> 
-                    let s1', s2', c, al = algn s1 s2 cm in
+                    let s1', s2', c, al = f s1 s2 cm in
                     (t1, s1'), (t2, s2'), c, al) seqs) seqs
+
+        let algn_and_print s1 s2 cm =
+            let s1', s2', c, m = algn s1 s2 cm in
+            (Seq.to_string s1'), (Seq.to_string s2'), c, (Seq.to_string m)
+
+        let algn_all = gen_algn_all algn 
+
+        let algn_all_and_print = gen_algn_all algn_and_print
+
     end
 
 end

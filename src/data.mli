@@ -141,6 +141,7 @@ type bool_characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
+    | `Random of int
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -152,6 +153,7 @@ type characters = [
     | `All
     | `Some of int list 
     | `Names of string list
+    | `Random of int
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -348,7 +350,7 @@ val process_analyze_only_file : bool -> d -> Parser.filename list -> d
 val number_of_taxa : d -> int
 
 val process_analyze_only_taxa : 
-    [`Names of (bool * string list) | `Missing of (bool * int) ] -> d -> d
+    [`Random of int | `Names of (bool * string list) | `Missing of (bool * int) ] -> d -> d
 
 val categorize : d -> d
 
@@ -399,100 +401,12 @@ val get_code_from_characters_restricted_comp :
              d -> bool_characters -> int list
 
 val transform_dynamic :
-  [< `Annchrom_to_Breakinv of
-       ([< `All
-         | `AllDynamic
-         | `AllStatic
-         | `Missing of bool * int
-         | `Names of bool * string list
-         | `Some of bool * int list ]
-        as 'a) *
-       [< `Approx of bool
-        | `Breakpoint of int
-        | `Chrom_Breakpoint of int
-        | `Chrom_Hom of int
-        | `Chrom_Indel_Cost of int * int
-        | `Circular of bool
-        | `Inversion of int
-        | `Keep_Median of int
-        | `Locus_Indel_Cost of int * int
-        | `Seed_Len of int
-        | `Sig_Block_Len of int
-        | `Rearranged_Len of int
-        | `SwapMed of int ]
-       list
-   | `Change_Dyn_Pam of
-       'a *
-       ([< `Approx of bool
-         | `Breakpoint of int
-         | `Chrom_Breakpoint of int
-         | `Chrom_Hom of int
-         | `Chrom_Indel_Cost of int * int
-         | `Circular of bool
-         | `Inversion of int
-         | `Keep_Median of int
-         | `Locus_Indel_Cost of int * int
-         | `Seed_Len of int
-         | `Sig_Block_Len of int
-        | `Rearranged_Len of int
-         | `SwapMed of int ]
-        as 'b)
-       list
-   | `Chrom_to_Seq of 'a * 'b list
-   | `Breakinv_to_Seq of 'a * 'b list
-   | `Seq_to_Breakinv of 'a * 'b list
-   | `Seq_to_Chrom of 'a * 'b list ] ->
+  Methods.dynamic_char_transform ->
   d -> d
-
-
-
-
 
 val transform_chrom_to_rearranged_seq :
   d ->
-  [< `Annchrom_to_Breakinv of
-       ([< `All
-         | `AllDynamic
-         | `AllStatic
-         | `Missing of bool * int
-         | `Names of bool * string list
-         | `Some of bool * int list ]
-        as 'a) *
-       [< `Approx of bool
-        | `Breakpoint of int
-        | `Chrom_Breakpoint of int
-        | `Chrom_Hom of int
-        | `Chrom_Indel_Cost of int * int
-        | `Circular of bool
-        | `Inversion of int
-        | `Keep_Median of int
-        | `Locus_Indel_Cost of int * int
-        | `Seed_Len of int
-        | `Sig_Block_Len of int
-        | `Rearranged_Len of int
-        | `SwapMed of int ]
-       list
-   | `Breakinv_to_Seq of
-       'a *
-       ([< `Approx of bool
-         | `Breakpoint of int
-         | `Chrom_Breakpoint of int
-         | `Chrom_Hom of int
-         | `Chrom_Indel_Cost of int * int
-         | `Circular of bool
-         | `Inversion of int
-         | `Keep_Median of int
-         | `Locus_Indel_Cost of int * int
-         | `Seed_Len of int
-         | `Sig_Block_Len of int
-         | `Rearranged_Len of int
-         | `SwapMed of int ]
-        as 'b)
-       list
-   | `Change_Dyn_Pam of 'a * 'b list
-   | `Chrom_to_Seq of 'a * 'b list
-   | `Seq_to_Breakinv of 'a * 'b list
-   | `Seq_to_Chrom of 'a * 'b list ] ->
+  Methods.dynamic_char_transform ->
     'c -> (int * int array list All_sets.IntegerMap.t list) list list list -> d
 
 val print : d -> unit

@@ -21,6 +21,7 @@ type characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
+    | `Random of int
     | `AllDynamic
     | `AllStatic
     | `Missing of (bool * int)

@@ -17,12 +17,13 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "CharacterScripting" "$Revision: 1708 $"
+let () = SadmanOutput.register "CharacterScripting" "$Revision: 1881 $"
 
 type characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
+    | `Random of int
     | `AllDynamic
     | `AllStatic
     | `Missing of (bool * int)
