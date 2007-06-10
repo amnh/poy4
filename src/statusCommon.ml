@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1875 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1887 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -37,19 +37,13 @@ module Files = struct
         (x = (String.sub y 0 (String.length x)))
 
     let dirname str = 
-        let _ =
-            match Sys.os_type with
-            | "Win32" ->
-                    begin match Str.split (Str.regexp ":\\\\") str with
-                    | h :: t -> prefix := h ^ ":\\\\"
-                    | [] -> prefix := ""
-                    end
-            | _ -> ()
-        in
         Filename.dirname str
+
+    let last_basedir = ref ""
 
     let update_hd_tl_for_prefix str =
         let dir = dirname str in
+        last_basedir := dir;
         let filename = Filename.basename str in
         let prefixes = List.filter (is_prefix filename) (Array.to_list
         (Sys.readdir dir)) in
@@ -73,17 +67,28 @@ module Files = struct
     let complete_filename str state =
         if state = 0 then update_hd_tl_for_prefix str;
         find_next_match str
-        let counter = ref 0
-        let last_filename = ref ""
+
+    let counter = ref 0
+    let last_filename = ref ""
 
     (* If the [str] is the same as the previous request, the state remains 1
     * otherwise 0 *)
     let complete_filename str = 
         if str = !last_filename then 
             counter := 1
-        else counter := 0;
+        else begin 
+            counter := 0;
+            last_basedir := "";
+            hd_previous_results := [];
+            tl_previous_results := [];
+        end;
         last_filename := str;
-        !prefix ^ complete_filename str !counter
+        let complete_filename = complete_filename str !counter in
+        if complete_filename = "" then complete_filename
+        else if !last_basedir.[(String.length !last_basedir) - 1] <> '/' then
+            !prefix ^ !last_basedir ^ "/" ^ complete_filename 
+        else 
+            !prefix ^ !last_basedir ^ complete_filename 
 
 
     let opened_files = Hashtbl.create 7

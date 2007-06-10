@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1881 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1887 $"
 
 module IntSet = All_sets.Integers
 
@@ -1168,24 +1168,44 @@ let rec folder (run : r) meth =
     (* The following methods are only used by the parallel execution *)
 #ifdef USEPARALLEL
     | `Barrier -> (* Wait for synchronization with every other process *)
-            let rec test () = 
-                if 0 = Mpi.comm_rank Mpi.comm_world then
-                    let gotit, rank, tag = 
-                        Mpi.iprobe Mpi.any_source Methods.io Mpi.comm_world
-                    in
-                    if not gotit then ()
-                    else
-                        let _ = 
-                            let (t : Status.c), (msg : string) = 
-                                Mpi.receive rank tag Mpi.comm_world in
-                            Status.user_message t msg 
+            let my_rank = Mpi.comm_rank Mpi.comm_world in
+            if my_rank <> 0 then
+                let _ = Mpi.isend () 0 Methods.barrier Mpi.comm_world in
+                let _ = Mpi.barrier Mpi.comm_world in
+                run
+            else
+                let counter_of_barriers = ref (Mpi.comm_size Mpi.comm_world) in
+                let rec test () = 
+                    if 1 < !counter_of_barriers then
+                        (* We first attempt to receive any messages *)
+                        let gotit, rank, tag = 
+                            Mpi.iprobe Mpi.any_source Methods.io Mpi.comm_world
                         in
-                        test ()
-                else ()
-            in 
-            Mpi.barrier Mpi.comm_world;
-            test ();
-            run
+                        if not gotit then 
+                            let gotbar, rank, tag = 
+                                Mpi.iprobe Mpi.any_source Methods.barrier
+                                Mpi.comm_world 
+                            in
+                            if not gotbar then 
+                                let _ = Timer.nanosleep 0 250000. in
+                                test ()
+                            else begin
+                                let _ = Mpi.receive rank tag Mpi.comm_world in
+                                decr counter_of_barriers;
+                                test ()
+                            end
+                        else
+                            let _ = 
+                                let (t : Status.c), (msg : string) = 
+                                    Mpi.receive rank tag Mpi.comm_world in
+                                Status.user_message t msg 
+                            in
+                            test ()
+                    else 
+                        let _ = Mpi.barrier Mpi.comm_world in
+                        run
+                in
+                test ()
     | `GatherTrees (joiner, continue) ->
             print_msg "Entering Gather Trees";
             let res = Mpi.allgather (encode_trees run) Mpi.comm_world in

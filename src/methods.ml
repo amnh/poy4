@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 1881 $"
+let () = SadmanOutput.register "Methods" "$Revision: 1887 $"
 
 (** Data *)
 
@@ -25,6 +25,7 @@ let do_job = 1
 let process_management = 2
 let io = 3
 let debugging = 4
+let barrier = 5
 
 type filename = [ `Local of string | `Remote of string ]
 
