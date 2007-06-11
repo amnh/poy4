@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 1893 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 1902 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -294,23 +294,6 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
     class type tabu_mgr = [Node.n, Edge.e] Ptree.tabu_mgr
     class type wem = [Node.n, Edge.e] Ptree.wagner_edges_mgr
 
-    let check_if_edge_is_to_ignore edge delta =
-        match delta with
-        | None -> false
-        | Some (a, b) ->
-                match edge with
-                | None -> false
-                | Some (Tree.Edge edge) ->
-                        let compare_pair (c, d) (e, f) =
-                            ((c = e) && (d = f)) || ((c = f) && (d = e))
-                        in
-                        let compare_with_delta delta = 
-                            match delta with
-                            | `Edge (_, g, h, _) -> compare_pair (g, h) edge
-                            | `Single _ -> false
-                        in
-                        (compare_with_delta a) || (compare_with_delta b)
-
     class tabu_join_once left right : [Node.n, Edge.e] Ptree.tabu_mgr =
         let get_list l =
             match l with
@@ -328,7 +311,6 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         val mutable left = left
         val mutable right = right
-        val mutable ignore_edges : Tree.break_delta option = None
 
         method clone = ({<>} :> (Node.n, Edge.e) Ptree.tabu_mgr)
 
@@ -347,8 +329,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         method features l = ("tabu", "join-once") :: l
 
-        method update_break _ x _ _ _ =
-            ignore_edges <- Some x;
+        method update_break _ _ _ _ _ =
             self#clear;
             ()
 
@@ -358,15 +339,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         method break_edge = None
 
-        method join_edge side = 
-            let edge =
-                match side with
-                | `Left -> self#get_left
-                | `Right -> self#get_right
-            in
-            if check_if_edge_is_to_ignore edge ignore_edges then
-                self#join_edge side
-            else edge
+        method join_edge = function
+            | `Left -> self#get_left
+            | `Right -> self#get_right
 
         method break_edges = []
 
@@ -688,7 +663,6 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         (ptree : (Node.n, Edge.e) Ptree.p_tree) = object (self)
             inherit exclude_edges as super
 
-        val mutable ignore_edges : Tree.break_delta option = None
         val to_compare = Stack.create ()
         val to_calculate_for_compare = Stack.create ()
         val to_do_later = Stack.create ()
@@ -722,7 +696,6 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         method update_break (ptree : (Node.n, Edge.e) Ptree.p_tree) 
             (delta : Tree.break_delta) (_ : int) (clade : Node.n)=
-                ignore_edges <- Some delta;
                 let delta = get_side side delta in
                 current_broken_ptree <- ptree;
                 current_clade <- Some clade;
@@ -784,9 +757,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                         current_depth <- 0;
                     end
                 end else ();
-                if check_if_edge_is_to_ignore edge ignore_edges then
-                    self#next_edge
-                else edge
+                edge
             end
 
         method break_distance (x : float) =
@@ -818,8 +789,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
     end
 
-    class union_dfs side max_distance edges ptree : 
-        [Node.n, Edge.e] edges_manager = object 
+    class union_dfs side max_distance edges ptree : [Node.n, Edge.e] edges_manager = object 
         inherit dfs_distance_based side max_distance ptree
 
         val do_not_cross = 

@@ -17,12 +17,12 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: sadmanOutput.ml 1800 2007-05-08 01:02:29Z andres $ *)
+(* $Id: sadmanOutput.ml 1902 2007-06-11 19:00:11Z andres $ *)
 (* Created Mon Jan 23 11:47:07 2006 (Illya Bomash) *)
 
 (** sadmanOutput.ml *)
 
-let do_sadman = ref true
+let do_sadman = ref false
 
 let my_name = Unix.gethostname ()
 
@@ -112,5 +112,5 @@ let runtime_properties =
     ]
 
 
-let () = register "SadmanOutput" "$Revision: 1800 $"
+let () = register "SadmanOutput" "$Revision: 1902 $"
 
