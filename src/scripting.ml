@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1887 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1899 $"
 
 module IntSet = All_sets.Integers
 
@@ -602,8 +602,12 @@ let do_recovery run =
     let rec adder res = 
         if Queue.is_empty run.queue.Sampler.queue then Sexpr.of_list res
         else adder (let trees = List.map (fun (a, _, _) -> 
-            CT.replace_nodes run.nodes { Ptree.empty with Ptree.tree = a }) (Queue.pop
-        run.queue.Sampler.queue) in trees @ res)
+            let nt = { Ptree.empty with Ptree.tree = a } in
+            let nt = List.fold_left (fun acc x ->
+                Ptree.add_node_data (Node.taxon_code x) x acc) nt run.nodes
+            in
+            CT.replace_nodes run.nodes nt)
+            (Queue.pop run.queue.Sampler.queue) in trees @ res)
     in
     stackadder ();
     { run with trees = adder trees }

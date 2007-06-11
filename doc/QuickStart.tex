@@ -186,14 +186,16 @@ The (most relevant) options available in the config file are:
                 interactive experimentation with \poy. This is the most desirable
                 environment when \poy is running as a standalone program in a
                 personal computer, or remotely in a server but with the user
-                issuing commands interactively. This interface is particularly
+                issuing commands interactively. Users can use the tab to auto-complete both 
+                commands and filenames This interface is particularly
                 useful while learning \poy's commands. Requires an
                 ncurses-compatible library.
             \item[flat] provides an environment with minimal requirements and
                 functionality. This is the most desirable interface for parallel
                 runs, as there is no terminal requirements and a process output
                 can easily be redirected from the standard error and standard
-                output to files using regular shell facilities.
+                output to files using regular shell facilities. The tab and arrow keys are readline
+                 functional to allow the user to autocomplete filenames and navigate the interface.
             \item[gtk2] provides a pre-alpha, extremely bad looking graphical
                 user interface that \emph{mimics} the ncurses interface. It is
                 intended for use in Windows and Linux environments in the near

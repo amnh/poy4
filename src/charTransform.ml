@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1881 2007-06-10 14:46:27Z andres $ *)
+(* $Id: charTransform.ml 1899 2007-06-11 17:30:03Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1881 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1899 $"
 
 module type S = sig
     type a 
@@ -904,7 +904,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 --> Data.categorize 
                 --> Node.load_data ~taxa:nc 
         | `Assign_Affine_Gap_Cost (cost, chars) ->
-                (Cost_matrix.Affine cost)
+                (if cost = 0 then (Cost_matrix.Linnear) 
+                else (Cost_matrix.Affine cost))
                 --> Data.assign_affine_gap_cost data chars
                 --> Data.categorize
                 --> Node.load_data ~taxa:nc

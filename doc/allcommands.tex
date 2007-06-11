@@ -2723,11 +2723,11 @@
             of locus-level events (\poyargument{inversion}, \poyargument{breakpoint},
             \poyargument{locus\_indel}), take into
             account whether the chromosome is linear or circular
-            (\poycommand{circular}), and implement a number of heuristic
+            (\poyargument{circular}), and implement a number of heuristic
             procedures to accelerate computations when working with chromosome
-            data type (\poycommand{seed\_length}, \poycommand{median},
-            \poycommand{swap\_med}, \poycommand{approx}). Under default
-            settings, the distance between two chromosomes is calculated using
+            data type (\poyargument{seed\_length}, \poyargument{median},
+           \poyargument{swap\_med}, \poyargument{arranged\_len}, \poyargument{approx}).
+            Under default settings, the distance between two chromosomes is calculated using
             \poyargument{breakpoint} and the rest of the arguments are executed
             under their default settings.}
             {dynamicpam}
@@ -2854,6 +2854,15 @@
                         fragments. Increasing the value of \poyargument{sig\_block\_len} decreases
                         the chance of inferring small-size rearrangements. The default value is \texttt{100}.} 
                         {sigblocklen}
+
+  		    \argumentdefinition{arranged\_len}{\obligatory{\poyint}}
+            {Two seeds are said to be \emph{non-rearranged}, 
+              if their distance is not greater than  a predefined 
+              threshold $arranged\_len$. In other words, it is unlikely that rearrangement 
+              operations can occur between seeds if they are connected.
+              The default value is \texttt{1000}}{arrangedlen} 
+
+
 
                     \argumentdefinition{swap\_med}{\obligatory{\poyint}}
                         {Specifies the maximum number of swapping iterations

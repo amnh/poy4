@@ -1618,6 +1618,7 @@ and read_script_files optimize files =
         List.map
         (fun f -> 
             try
+                let f = simplify_directory f in
                 let comm = of_file false f in
                 `Echo ("Running file " ^ f, `Information) :: comm
             with
