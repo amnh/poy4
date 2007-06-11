@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 1881 $"
+let () = SadmanOutput.register "" "$Revision: 1893 $"
 
-let () = SadmanOutput.register "Status_ncurses" "$Revision: 1881 $"
+let () = SadmanOutput.register "Status_ncurses" "$Revision: 1893 $"
 
     type tab_state = Begin | First | Continue
 
@@ -884,9 +884,27 @@ let main_loop f =
 
     let last_string_to_try_in_tab = ref "" in
 
-    let rec grab_filename_prefix before accac = 
+    let check_limit_of_command_autocompletion before =
+        let cnt = 
+            List.fold_left (fun acc ch ->
+                if ch = "\"" then acc + 1
+                else acc) 0 before 
+        in
+        (* If we have an even number, it's a command *)
+        if 1 land cnt = 0 then 
+            ((fun x -> 
+                match x.[0] with
+                | 'a' .. 'z' | '_' -> false
+                | _ -> true), StatusCommon.Files.Command)
+        else 
+            ((fun x ->
+                match x.[0] with
+                | '"' -> true
+                | _ -> false), StatusCommon.Files.Filename)
+    in
+    let rec grab_filename_prefix find_limit before accac = 
         match before with
-        | "\"" :: rest -> "", before
+        | h :: rest when find_limit h -> "", before
         | h :: t ->
                 backspace ();
                 let (y, x) = NcursesML.getyx !console in
@@ -894,7 +912,7 @@ let main_loop f =
                 NcursesML.waddstr !console " ";
                 NcursesML.wmove !console y x;
                 NcursesML.refresh ~w:!console ();
-                let a, b = grab_filename_prefix t accac in
+                let a, b = grab_filename_prefix find_limit t accac in
                 a ^ h, b
         | [] -> "", []
 
@@ -913,8 +931,8 @@ let main_loop f =
         !list 
     in
 
-    let prepend_to_before new_before completed_name to_complete accac =
-        let _, pre = grab_filename_prefix new_before accac in
+    let prepend_to_before find_limit new_before completed_name to_complete accac =
+        let _, pre = grab_filename_prefix find_limit new_before accac in
         let to_add = 
             if completed_name = "" then to_complete else completed_name
         in
@@ -922,7 +940,8 @@ let main_loop f =
     in
 
     let do_keytab before after =
-        let str, new_before = grab_filename_prefix before after in
+        let find_limit, t = check_limit_of_command_autocompletion before in
+        let str, new_before = grab_filename_prefix find_limit before after in
         let _ =
             match !did_tab with
             | Begin -> failwith "How is this possible?"
@@ -931,9 +950,9 @@ let main_loop f =
         in
         let str = 
             StatusCommon.Files.complete_filename
-            !last_string_to_try_in_tab 
+            t !last_string_to_try_in_tab 
         in
-        prepend_to_before new_before str !last_string_to_try_in_tab after, after
+        prepend_to_before find_limit new_before str !last_string_to_try_in_tab after, after
     in
 
     let rec read_line accbc accac =

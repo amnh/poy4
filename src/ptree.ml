@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1865 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 1893 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1280,8 +1280,14 @@ let alternate_spr_tbr search =
 (*               "TBR swapping" *)
 (*               (fun search (tree, cost, tabu) -> *)
 (*                    tbr_step tree tabu search) search (Sexpr.of_list results) in *)
-            let  new_cost = find_best_cost search#results in
-            if new_cost < best_cost then try_spr search
+            let new_cost = find_best_cost search#results in
+            if new_cost < best_cost then 
+                let search = search#clone in
+                let () = search#init
+                    (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
+                    results) 
+                in
+                try_spr search
             else search
               
     in

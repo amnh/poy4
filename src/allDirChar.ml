@@ -1005,12 +1005,14 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let incremental_uppass tree _ = tree
 
-
-
-    let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty)  atr data tree = 
+    let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) atr data tree = 
+        (* We have to include the cost of the tree in the attributed and not get
+        * it from the Chartree.to_formatter function. If the cost is adjusted,
+        * it might not be the same in the one directional tree. *)
+        let cost = Ptree.get_cost `Adjusted tree in
+        let atr = (Tags.Trees.cost, string_of_float cost) :: atr in
         let tree = convert_three_to_one_dir tree in
-        let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in  
-
+        let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in
         Chartree.to_formatter ~pre_ref_codes:pre_ref_codes
           ~fi_ref_codes:fi_ref_codes atr data tree 
 

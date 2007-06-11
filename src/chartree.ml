@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 1875 2007-06-08 20:45:42Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 1875 $"
+(* $Id: chartree.ml 1893 2007-06-11 15:24:51Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 1893 $"
 
 
 (** chartree.ml *)
@@ -1300,7 +1300,10 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
     in
     (Tags.Trees.tree, attr, data)
 
-let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) atr data tree : Tags.output =
+let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) 
+    atr data tree : Tags.output =
+        (* We don't include the cost of the tree because it comes from the three
+        * directional tree attributes. *)
     let tag = Tags.Trees.forest in
     let handles = All_sets.Integers.elements tree.Ptree.tree.Tree.handles in
     let root_recost = ref 0. in 
@@ -1318,8 +1321,6 @@ let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) atr 
                    root_recost := !root_recost +. recost);
              `Single handle_formatter) handles 
     in
-    let cost = Ptree.get_cost `Adjusted tree in
-    let atr = (Tags.Trees.cost, string_of_float cost) :: atr in
     let atr = (Tags.Trees.recost, string_of_float !root_recost) :: atr in
     (tag, atr, `Structured (`Set data))
 

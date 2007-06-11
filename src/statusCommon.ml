@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1887 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1893 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -25,7 +25,196 @@ external string_to_format : string -> ('a, 'b, 'c) format = "%identity"
 
 type formatter_output = | Margin of int
 
+module CommandCompletion = struct
+    let commands = [
+        "_attemptsdistr";
+        "_breakvsjoin";
+        "_cost";
+        "_distances";
+        "_mst";
+        "_random";
+        "_rootuniondistr";
+        "_unionstats";
+        "all";
+        "all_roots";
+        "alternate";
+        "aminoacids";
+        "annchrom_to_breakinv";
+        "annealing";
+        "annotated";
+        "approx";
+        "around";
+        "as_is";
+        "asciitrees" ;
+        "at_random";
+        "auto_sequence_partition";
+        "auto_static_approx";
+        "best";
+        "better";
+        "bfs";
+        "bootstrap";
+        "breakinv";
+        "breakinv_to_seq";
+        "breakpoint";
+        "bremer";
+        "build";
+        "calculate_support";
+        "cd";
+        "characters";
+        "chrom_breakpoint";
+        "chrom_hom";
+        "chrom_indel";
+        "chrom_to_seq";
+        "chromosome";
+        "circular";
+        "clades";
+        "clear_memory";
+        "clear_recovered";
+        "codes";
+        "collapse";
+        "complex";
+        "consensus";
+        "constraint";
+        "cross_references";
+        "current_neighborhood";
+        "custom_alphabet";
+        "data";
+        "depth";
+        "diagnosis";
+        "distance";
+        "drifting";
+        "dynamic";
+        "dynamic_pam";
+        "echo";
+        "end";
+        "error";
+        "exact";
+        "exit";
+        "false";
+        "file";
+        "files";
+        "first";
+        "fixedstates";
+        "forest";
+        "fuse";
+        "gap_opening";
+        "genome";
+        "graphconsensus";
+        "graphsupports";
+        "graphtrees";
+        "help";
+        "hennig";
+        "history";
+        "ia";
+        "implied_alignments";
+        "info";
+        "init3D";
+        "inspect";
+        "inversion";
+        "iterations";
+        "jackknife";
+        "keep";
+        "last";
+        "load";
+        "locus_indel";
+        "log";
+        "m";
+        "margin";
+        "median";
+        "memory";
+        "missing";
+        "multi_static_approx";
+        "names";
+        "new";
+        "newick";
+        "nodes";
+        "nolog";
+        "nomargin";
+        "not";
+        "not" ;
+        "nucleotides";
+        "of_file";
+        "once";
+        "optimal";
+        "orientation";
+        "origin_cost";
+        "output";
+        "perturb";
+        "phastwinclad";
+        "prioritize";
+        "pwd";
+        "quit" ;
+        "random";
+        "randomize_terminals";
+        "randomized";
+        "ratchet";
+        "read";
+        "rearranged_len";
+        "recover";
+        "rediagnose";
+        "redraw";
+        "remove";
+        "rename";
+        "repeat";
+        "replace";
+        "report";
+        "resample";
+        "root";
+        "run";
+        "s";
+        "save";
+        "script_analysis";
+        "search";
+        "search_based";
+        "sectorial";
+        "seed";
+        "seed_length";
+        "select";
+        "seq_to_breakinv";
+        "seq_to_chrom";
+        "set";
+        "sig_block_len";
+        "spr";
+        "static";
+        "static_approx";
+        "store";
+        "supports";
+        "swap";
+        "swap_med";
+        "synonymize";
+        "tbr";
+        "tcm";
+        "td";
+        "terminals";
+        "threshold";
+        "ti";
+        "timedprint";
+        "timeout";
+        "timer";
+        "total";
+        "trailing_deletion";
+        "trailing_insertion";
+        "trajectory";
+        "transform";
+        "trees";
+        "treestats";
+        "true";
+        "uniform";
+        "unique";
+        "use";
+        "version";
+        "visited";
+        "weight";
+        "weightfactor";
+        "weighting";
+        "wipe";
+        "within"
+    ]
+end
+
 module Files = struct
+    
+    type auto_complete = Command | Filename
 
     (* A module to handle filenames *)
     let hd_previous_results = ref []
@@ -40,6 +229,13 @@ module Files = struct
         Filename.dirname str
 
     let last_basedir = ref ""
+
+    let update_hd_tl_for_prefix_command str =
+        last_basedir := "";
+        let prefixes = List.filter (is_prefix str) (
+        CommandCompletion.commands) in
+        let lst = List.sort String.compare prefixes in
+        tl_previous_results := lst 
 
     let update_hd_tl_for_prefix str =
         let dir = dirname str in
@@ -64,8 +260,13 @@ module Files = struct
     (* An implementation of complete_filename in OCaml that matches the behavior
     * of readline's function. In this way we simplify possible interoperability
     * between interfaces. *)
-    let complete_filename str state =
-        if state = 0 then update_hd_tl_for_prefix str;
+    let complete_filename kind str state =
+        let f = 
+            match kind with
+            | Command -> update_hd_tl_for_prefix_command
+            | Filename -> update_hd_tl_for_prefix
+        in
+        if state = 0 then f str;
         find_next_match str
 
     let counter = ref 0
@@ -73,7 +274,7 @@ module Files = struct
 
     (* If the [str] is the same as the previous request, the state remains 1
     * otherwise 0 *)
-    let complete_filename str = 
+    let complete_filename kind str = 
         if str = !last_filename then 
             counter := 1
         else begin 
@@ -82,13 +283,18 @@ module Files = struct
             hd_previous_results := [];
             tl_previous_results := [];
         end;
-        last_filename := str;
-        let complete_filename = complete_filename str !counter in
-        if complete_filename = "" then complete_filename
-        else if !last_basedir.[(String.length !last_basedir) - 1] <> '/' then
-            !prefix ^ !last_basedir ^ "/" ^ complete_filename 
-        else 
-            !prefix ^ !last_basedir ^ complete_filename 
+        match kind with
+        | Filename ->
+                last_filename := str;
+                let complete_filename = complete_filename kind str !counter in
+                if complete_filename = "" then complete_filename
+                else if !last_basedir.[(String.length !last_basedir) - 1] <> '/' then
+                    !prefix ^ !last_basedir ^ "/" ^ complete_filename 
+                else 
+                    !prefix ^ !last_basedir ^ complete_filename 
+        | Command ->
+                last_filename := str;
+                complete_filename kind str !counter
 
 
     let opened_files = Hashtbl.create 7
