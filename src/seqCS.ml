@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 1875 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 1908 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -412,6 +412,7 @@ let median_3 p n c1 c2 =
     { n with sequences = seqs; costs = costs }
 
 let distance a b = 
+    let gap = Cost_matrix.Two_D.gap a.c2 in
     let single_distance code seqa acc =
         let seqb = Codes.find code b.sequences in
         let deltaw = 
@@ -420,29 +421,35 @@ let distance a b =
             if tmp > 8 then tmp 
             else 8
         in
+        if Sequence.is_empty seqa gap || Sequence.is_empty seqb gap then
+            acc
+        else
         acc + (Sequence.Align.cost_2 ~deltaw:deltaw seqa seqb a.c2 Matrix.default)
     in
     float_of_int (Codes.fold single_distance a.sequences 0)
 
 let distance_union a b = 
-(*    let gap = Cost_matrix.Two_D.gap a.u_c2 in*)
     match a, b with
     | Some a, Some b ->
+            let gap = Cost_matrix.Two_D.gap a.u_c2 in
             let single_distance code seqa acc =
                 let seqa = seqa.Sequence.Unions.seq in
                 let seqb =
                     let seqb = Codes.find code b.unions in
                     seqb.Sequence.Unions.seq 
                 in
-                let deltaw = 
-                    let tmp = 
-                        (max (Sequence.length seqa) (Sequence.length seqb)) -
-                        (min (Sequence.length seqa) (Sequence.length seqb)) 
+                if Sequence.is_empty seqa gap || Sequence.is_empty seqb gap then
+                    acc
+                else
+                    let deltaw = 
+                        let tmp = 
+                            (max (Sequence.length seqa) (Sequence.length seqb)) -
+                            (min (Sequence.length seqa) (Sequence.length seqb)) 
+                        in
+                        if tmp > 8 then tmp 
+                        else 8
                     in
-                    if tmp > 8 then tmp 
-                    else 8
-                in
-                acc + 
+                    acc + 
                     (Sequence.Align.cost_2 ~deltaw:deltaw seqa seqb a.u_c2 Matrix.default)
             in
             float_of_int (Codes.fold single_distance a.unions 0)

@@ -1017,7 +1017,7 @@ let create_expr lexer =
                 [ LIDENT "median"; ":"; c = INT ->
                       `Keep_Median (int_of_string c) ] |
                 [ LIDENT "swap_med"; ":"; iters = INT -> `SwapMed (int_of_string iters) ] | 
-                [ LIDENT "approx"; ":"; ans = boolean -> `Approx ans] 
+                [ LIDENT "approx"; ":"; ans = boolean -> `Approx false] 
             ];
 
         (* Applications *)
