@@ -34,14 +34,23 @@ type meds_t = {
 (** total_cost = editing cost + rearrangement cost *)
     total_cost : int;   
     total_recost : int;
-    annchrom_pam : Data.dyna_pam_t;    
     cost_mat : Cost_matrix.Two_D.m;
-    alpha : Alphabet.a
+    alpha : Alphabet.a;
+    
+
+    annchrom_pam : Data.dyna_pam_t;    
+    approx_med_arr : annchrom_t array;
+    approx_cost_arr : int array;
+    approx_recost_arr : int array;
+    
+    code : int;
+    
+
 }
 
 
 let init_med (seq_arr : (Sequence.s Data.seq_t) array) 
-        cost_mat alpha annchrom_pam = 
+        cost_mat alpha annchrom_pam tcode num_taxa = 
 
     let med = AnnchromAli.init 
         (Array.map (fun s -> s.Data.seq, s.Data.code) seq_arr) in 
@@ -53,69 +62,75 @@ let init_med (seq_arr : (Sequence.s Data.seq_t) array)
         total_recost = 0;
         annchrom_pam = annchrom_pam;
         cost_mat = cost_mat;
-
         alpha = alpha;
+
+        approx_med_arr = (Array.make num_taxa med);
+        approx_cost_arr = (Array.make num_taxa max_int);
+        approx_recost_arr = (Array.make num_taxa max_int);
+        code = tcode;
     }
 
 
-
-let rec keep chrom_pam med_ls = 
-    match chrom_pam.Data.keep_median with 
-    | None -> med_ls 
-    | Some keep_median ->
-          if  keep_median >= List.length med_ls then med_ls
-          else Utl.get_k_random_elem med_ls keep_median
-
-
+let update_approx_mat meds1 meds2 =     
+    let med1 = List.hd meds1.med_ls in  
+    let med2 = List.hd meds2.med_ls in  
+    let code2 = meds2.code in
+    (if meds1.approx_cost_arr.(code2) = max_int then begin 
+         let cost, recost, med2_ls = AnnchromAli.find_med2_ls med1 med2
+             meds1.cost_mat meds1.alpha meds1.annchrom_pam 
+         in  
+        meds1.approx_med_arr.(code2) <- List.hd med2_ls;
+        meds1.approx_cost_arr.(code2) <- cost; 
+        meds1.approx_recost_arr.(code2) <- recost; 
+     end) 
 
 (** Given two lists of medians [meds1=(x1,...,xk)] and [meds2=(y1,...,yt)]
  * where xi and yj are medians. For each pair (xi, yj) we have 
  * a list of medians z_ij with the same cost c_ij. 
  * Find z*_ij = minargv(z_ij )(c_ij) *)
-let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) = 
-
-    let update (med1: annchrom_t) (med2 : annchrom_t) (best_meds : meds_t) =
-        let cost, recost, med_ls =   
-            AnnchromAli.find_med2_ls med1 med2 meds1.cost_mat  
-                meds1.alpha meds1.annchrom_pam   
-        in   
-
-        if cost < best_meds.total_cost then   
-            {best_meds with  
-                 total_cost = cost;  
-                 total_recost = recost;
-                 med_ls = med_ls;   
-                 num_med = List.length med_ls} 
-        else best_meds
-    in 
-                            
-        
-    let init_meds : meds_t = {
-        med_ls = []; num_med = 0;  
-        total_cost = max_int;
-        total_recost = 0;
-        annchrom_pam = meds1.annchrom_pam; 
-        cost_mat = meds1.cost_mat; 
-
-
-        alpha = meds1.alpha}  
-    in 
-
-    let best_meds = 
-        List.fold_left (fun best_meds1 med1 ->                                
-                            List.fold_left (fun best_meds2 med2 ->
-                                 update med1 med2 best_meds2 
-                            ) best_meds1 meds2.med_ls 
-                   ) init_meds meds1.med_ls
-    in 
+let find_meds2 (meds1 : meds_t) (meds2 : meds_t) =
+    let find_exact () = 
+        let best_meds = List.fold_left  
+            (fun best_meds med1 -> 
+                 List.fold_left  
+                     (fun best_meds med2 -> 
+                          let cost, recost, med_ls =
+                              AnnchromAli.find_med2_ls med1 med2 meds1.cost_mat
+                                  meds1.alpha meds1.annchrom_pam 
+                          in  
     
-    match keep_all_meds with
-    | true -> best_meds
-    | false ->             
-          let kept_med_ls = keep meds1.annchrom_pam best_meds.med_ls in 
-          {best_meds with   
-               med_ls = kept_med_ls;          
-               num_med = List.length kept_med_ls}  
+                        if cost < best_meds.total_cost then 
+                            { best_meds with med_ls = med_ls; total_cost = cost;
+                                  total_recost = recost}
+                        else best_meds                      
+                     ) best_meds meds2.med_ls
+            ) {meds1 with med_ls = []; total_cost = max_int} meds1.med_ls
+        in 
+                                
+        best_meds
+    in 
+
+
+    match meds1.annchrom_pam.Data.approx with 
+    | Some approx ->
+          if approx then begin 
+              update_approx_mat meds1 meds2;
+
+              let med1 = List.hd meds1.med_ls in  
+              let med2 = List.hd meds2.med_ls in  
+              let code2 = meds2.code in
+
+              let med12 = AnnchromAli.find_approx_med2 med1 med2
+                  meds1.approx_med_arr.(code2) 
+              in 
+              {meds1 with med_ls = [med12]; 
+                   total_cost = meds1.approx_cost_arr.(code2);
+                   total_recost = meds1.approx_recost_arr.(code2)}
+                   
+          end else find_exact ()
+
+    | None -> find_exact ()
+
 
     
 

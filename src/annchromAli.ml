@@ -47,12 +47,37 @@ type annchrom_t = {
     recost2 : int;
 }
 
+
+let clone_seq s = {
+    seq = Sequence.clone s.seq;
+    seq_ref_code = s.seq_ref_code;
+    alied_med = Sequence.clone s.alied_med;
+    seq_ord1 = s.seq_ord1;
+    alied_seq1 = Sequence.clone s.alied_seq1;
+    seq_ord2 = s.seq_ord2;
+    alied_seq2 = Sequence.clone s.alied_seq2;
+}
+
+
+let clone_med m = {
+    seq_arr = Array.map clone_seq m.seq_arr;
+    ref_code = m.ref_code;
+    ref_code1 = m.ref_code1;
+    ref_code2 = m.ref_code2;
+    cost1 = m.cost1;
+    cost2 = m.cost2;
+    recost1 = m.recost1;
+    recost2 = m.recost2;
+}
+
+
 (** Parameters used to align two general character sequences *)
 type annchromPam_t = {
     re_meth : Data.re_meth_t;
     keep_median : int;
     circular : int;
     swap_med : int;
+    approx : bool;
     locus_indel_cost : (int * int);
 }
 
@@ -61,6 +86,7 @@ let annchromPam_default = {
     keep_median = 1;
     circular = 0;
     swap_med = 1;
+    approx = false;
     locus_indel_cost = (10, 100);
 }
 
@@ -186,6 +212,11 @@ let get_annchrom_pam user_annchrom_pam =
         | Some swap_med -> {chrom_pam with swap_med = swap_med}
     in 
 
+    let chrom_pam = 
+        match user_annchrom_pam.Data.approx with
+        | None -> chrom_pam
+        | Some approx -> {chrom_pam with approx = approx}
+    in 
 
     let chrom_pam = 
         match user_annchrom_pam.Data.locus_indel_cost with
@@ -306,6 +337,8 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
     else if chrom_len2 < 2 then 0,0, [chrom1]
     else begin    
         let ali_pam = get_annchrom_pam annchrom_pam in         
+        let approx = ali_pam.approx in 
+
         let seq1_arr, _ = split chrom1 in  
         let seq2_arr, _ = split chrom2 in    
         
@@ -344,16 +377,20 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
                  let alied_med_seq, alied_seq1, alied_seq2 =
                      match seq1, seq2 with   
                      | Some seq1, Some seq2 -> 
-                           let med, alied_seq1, alied_seq2, _  = UtlPoy.create_median seq1 seq2 cost_mat  in
+                           let med, alied_seq1, alied_seq2, _  =
+                               UtlPoy.create_median  ~approx:approx seq1 seq2 cost_mat  
+                           in
                            med, alied_seq1, alied_seq2
                      | Some seq1, None -> 
-                           let med = UtlPoy.create_median_gap seq1 cost_mat in 
-                           let ali_len = Sequence.length med in 
-                           med, seq1, UtlPoy.create_gap_seq ali_len 
+                           let len1 = Sequence.length seq1 in 
+                           let seq2 = UtlPoy.create_gap_seq len1 in 
+                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in 
+                           med, seq1, seq2
                      | None, Some seq2 -> 
-                           let med = UtlPoy.create_median_gap seq2 cost_mat in
-                           let ali_len = Sequence.length med in 
-                           med, (UtlPoy.create_gap_seq ali_len), seq2
+                           let len2 = Sequence.length seq2 in 
+                           let seq1 = UtlPoy.create_gap_seq len2 in 
+                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in
+                           med, seq1, seq2
                      | _, _ -> UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq ()
                  in 
                  (alied_med_seq, idx1, alied_seq1, idx2, alied_seq2)
@@ -420,8 +457,9 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
              
         let all_order_ls =   
             if (Utl.equalArr code2_arr re_code2_arr compare) ||  
-                (ali_pam.keep_median = 1) then [code2_arr, recost2, recost1]   
-            else [(code2_arr, recost2, recost1); (re_code2_arr, recost1, recost2)]   
+                (ali_pam.keep_median = 1) ||
+                ali_pam.approx then [re_code2_arr, recost1, recost2]   
+            else [(re_code2_arr, recost1, recost2); (code2_arr, recost2, recost1)]   
         in   
     
 
@@ -455,6 +493,20 @@ let compare annchrom1 annchrom2 =
               end 
           in 
           compare_seq 0
+
+
+let find_approx_med2 med1 med2 med12 = 
+    let new_med12 = clone_med med12 in 
+    let new_seq_arr = Array.map (fun seq -> 
+                                     {seq with seq_ref_code = Utl.get_new_seq_ref_code ()}
+                                ) new_med12.seq_arr
+    in 
+    let ref_code1 = med1.ref_code in 
+    let ref_code2 = med2.ref_code in 
+    let ref_code = Utl.get_new_chrom_ref_code () in 
+    {new_med12 with 
+         seq_arr = new_seq_arr;
+         ref_code = ref_code; ref_code1 = ref_code1; ref_code2 = ref_code2}
 
 
 

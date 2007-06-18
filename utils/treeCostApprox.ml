@@ -2,6 +2,44 @@
 
 type 'a tree = Tree of ('a option * 'a tree * 'a tree) | Leaf of 'a
 
+
+let balance_and_complete tree =
+    let rec tree_depth tree =
+        match tree with
+        | Leaf _ -> 1
+        | Tree (_, a, b) ->
+                1 + (max (tree_depth a) (tree_depth b))
+    in
+    let rec extend_to_at_least depth height tree =
+        if depth = height then tree
+        else 
+            match tree with
+            | Leaf x -> 
+                    let nt = extend_to_at_least depth (height + 1) tree in
+                    Tree (None, nt, nt)
+            | Tree (x, y, z) ->
+                    Tree (None, extend_to_at_least depth (height + 1) y,
+                    extend_to_at_least depth (height + 1) z)
+    in
+    extend_to_at_least (tree_depth tree) 1 tree
+
+let rec parser_to_tree name_to_sequence parser_tree =
+    match parser_tree with
+    | Parser.Tree.Leaf x -> Leaf (name_to_sequence x)
+    | Parser.Tree.Node ([a; b], _) ->
+            Tree (None, parser_to_tree name_to_sequence a, parser_to_tree
+            name_to_sequence b)
+    | _ -> failwith "What happened with this tree?"
+
+let make_array_of_tree tree = 
+    let rec aux_make_array_of_tree acc tree =
+        match tree with
+        | Leaf x -> x :: acc
+        | Tree (_, a, b) ->
+                aux_make_array_of_tree (aux_make_array_of_tree acc b) a
+    in
+    Array.of_list (aux_make_array_of_tree [] tree)
+
 let rec log2 acc v =
     if v = 1 then acc
     else log2 (acc + 1) (v lsr 1)
@@ -143,12 +181,15 @@ let rec randomize_tree tree =
 
 let gap_opening = ref 0
 
-let sample_for_worst_average to_single pairwise_distance find_sequence do_f lifted 
-samples arr =
+let sample_for_worst_average to_single pairwise_distance find_sequence do_f 
+lifted samples randomize arr =
     let rec find_worst (approx, bestapprox, current_lifted, prev_tree) samples =
         if samples = 0 then (approx, bestapprox, current_lifted, prev_tree)
         else 
-            let _ = Array_ops.randomize arr in
+            let () = 
+                if randomize then Array_ops.randomize arr 
+                else ()
+            in
             let tree = generate_balanced_tree find_sequence arr in
             let new_current_lifted = calculate_average_assignment lifted arr in
             let new_approx = 
@@ -194,6 +235,7 @@ let rec dig_with_do to_single pairwise_distance df times best_cost tree =
         dig_with_do to_single pairwise_distance df (times - 1) (min (float_of_int new_cost) best_cost) new_tree
 
 (* We have all the functions we need, time to create the actual program *)
+let input_trees = ref None
 let indel = ref 1
 let subst = ref 1
 let samples = ref 100
@@ -202,6 +244,15 @@ let digs = ref 100
 let print_all_results = ref false
 let num_seqs = ref 0
 let cost_function = ref "do"
+
+let not_using_input_trees () = 
+    match !input_trees with
+    | None -> true
+    | Some _ -> false
+
+let process_input_trees filename = 
+    let trees = Parser.Tree.of_file (`Local filename) in
+    input_trees := Some (List.flatten trees)
 
 let define_cost_function f =
     match f with
@@ -214,7 +265,7 @@ let () =
     (* Upon initialization, we parse the command line *)
     Random.self_init ();
     let parse_list = [
-        ("-cost_function", Arg.String define_cost_function, 
+        ("-cost-function", Arg.String define_cost_function, 
         "The kind of cost function to be used: do, single");
         ("-seqs", Arg.Int (assign num_seqs), 
         "The number of sequences to be selected uniformly at random from the \
@@ -234,7 +285,10 @@ let () =
         ("-do-distr", Arg.Int (assign print_do_distr), 
         "Ouptut the do estimation for each random tree for as many times as \
         requested in the argument value, by randomly shuffling the left-right \
-        assignment of the vertices in the tree.")
+        assignment of the vertices in the tree.");
+        ("-use-trees", Arg.String process_input_trees,
+        "Do not produce random trees, but evaluate the goodness of our \
+        estimations using those trees found in the input file.");
     ] in
     let annon_fun (str : string) = 
         input := str :: !input
@@ -242,28 +296,80 @@ let () =
     Arg.parse parse_list annon_fun "test_do [OPTIONS]* filename [filename]*" 
 
 let () =
-    (* Now we are ready to proceed accoring to the parameters, we create the
-    * necessary distance functions, but let us first parse the input files *)
-    let seqs = 
-        Array.of_list 
-        (List.flatten 
-        (List.map 
-        (fun x -> 
-            let res = Scripting.DNA.Generic.molecular x in
-            List.map (fun (_, seq) -> seq) res) !input))
-    in
-    Array_ops.randomize seqs;
-    let seqs = 
-        if 0 >= !num_seqs || !num_seqs >= Array.length seqs then seqs
-        else Array.init !num_seqs (fun x -> seqs.(x)) 
-    in
-    (* Now we generate the required cost matrices and the pair of distance
-    * functions for do and sampling the worst average *)
+    (* First a function that generates a pair of functions that use
+    * precalculated matrices to calculate distances *)
     let cm = 
         if 0 = !gap_opening then
             Scripting.DNA.CM.of_sub_indel !subst !indel
         else Scripting.DNA.CM.of_sub_indel_affine !subst !indel !gap_opening
     in
+    let generate_functions seqs =
+        let initial_array = Array.copy seqs in
+        let len = Array.length initial_array in
+        let mtx = 
+            Array.init len (fun a ->
+                let a = seqs.(a) in
+                Array.init len (fun b ->
+                    let b = seqs.(b) in
+                    let deltaw = 
+                        let tmp =
+                            (max (Sequence.length a) (Sequence.length b)) - (min
+                            (Sequence.length a) (Sequence.length b)) 
+                        in
+                        if tmp > 8 then tmp 
+                        else 8
+                    in
+                    Lazy.lazy_from_fun (fun () -> Sequence.Align.cost_2
+                    ~deltaw:deltaw a b cm Matrix.default)))
+        in
+        (fun a b -> Lazy.force_val mtx.(a).(b)),
+        (fun x -> initial_array.(x)),
+        (Array.mapi (fun pos _ -> pos) seqs)
+    in
+    (* Now we are ready to proceed accoring to the parameters, we create the
+    * necessary distance functions, but let us first parse the input files *)
+    let seqs_n_functions = 
+        if not_using_input_trees () then begin
+            let seqs = 
+                Array.of_list 
+                (List.flatten 
+                (List.map 
+                (fun x -> 
+                    let res = Scripting.DNA.Generic.molecular x in
+                    List.map (fun (_, seq) -> seq) res) !input))
+            in
+            Array_ops.randomize seqs;
+            let seqs = 
+                if 0 >= !num_seqs || !num_seqs >= Array.length seqs then seqs
+                else Array.init !num_seqs (fun x -> seqs.(x)) 
+            in
+            [generate_functions seqs]
+        end else begin
+            match !input_trees with
+            | Some trees ->
+                    let table = 
+                        let res = Hashtbl.create 1667 in
+                        List.iter 
+                        (fun x -> 
+                            List.iter (fun (name, seq) ->
+                            Hashtbl.add res name seq)
+                            (Scripting.DNA.Generic.molecular x))
+                        !input;
+                        res
+                    in
+                    let seqs = 
+                        List.rev_map (fun tree ->
+                            make_array_of_tree
+                            (balance_and_complete
+                            (parser_to_tree (Hashtbl.find table) tree)))
+                        trees
+                    in
+                    List.map generate_functions seqs
+            | None -> assert false
+        end
+    in
+    (* Now we generate the required cost matrices and the pair of distance
+    * functions for do and sampling the worst average *)
     let do_function a b ca cb =
         let tmpa, tmpb, tmpcost = 
             Sequence.Align.align_2 a b cm Matrix.default
@@ -283,43 +389,32 @@ let () =
         let s, _ = Sequence.Align.closest seq seq cm Matrix.default in
         s, cost
     in
-    let lifted_function, find =
-        let initial_array = Array.copy seqs in
-        let len = Array.length initial_array in
-        let mtx = 
-            Array.init len (fun a ->
-                let a = seqs.(a) in
-                Array.init len (fun b ->
-                    let b = seqs.(b) in
-                    let deltaw = 
-                        let tmp = (max (Sequence.length a) (Sequence.length b)) - (min
-                        (Sequence.length a) (Sequence.length b)) in
-                        if tmp > 8 then tmp 
-                        else 8
-                    in
-                    Lazy.lazy_from_fun (fun () -> Sequence.Align.cost_2
-                    ~deltaw:deltaw a b cm Matrix.default)))
+    let do_tree_messaging = 1 < List.length seqs_n_functions in
+    let process (lifted_function, find, seqs) =
+        let approx, best, worst_case_cost, tree =
+            let dof =
+                if "do" = !cost_function then do_function else single_function
+            in
+            sample_for_worst_average to_single distance_function find dof 
+            lifted_function !samples (not_using_input_trees ()) seqs 
         in
-        (fun a b -> Lazy.force_val mtx.(a).(b)),
-        (fun x -> initial_array.(x))
-    in
-    let seqs = Array.mapi (fun pos _ -> pos) seqs in
-    let approx, best, worst_case_cost, tree = 
-        let dof =
-            if "do" = !cost_function then do_function else single_function
+        let tree = 
+            match tree with
+            | Some t -> t
+            | None -> assert false
         in
-        sample_for_worst_average to_single distance_function find dof 
-        lifted_function !samples seqs 
+        let new_cost = 
+            dig_with_do to_single distance_function do_function !digs max_float tree 
+        in
+        let best_attempt = approximation (int_of_float new_cost) worst_case_cost in
+        if !print_all_results then
+            Printf.printf "%f\t%f\t%f\n" approx best best_attempt
+        else ()
     in
-    let tree = 
-        match tree with
-        | Some t -> t
-        | None -> assert false
-    in
-    let new_cost = 
-        dig_with_do to_single distance_function do_function !digs max_float tree 
-    in
-    let best_attempt = approximation (int_of_float new_cost) worst_case_cost in
-    if !print_all_results then
-        Printf.printf "%f\t%f\t%f\n" approx best best_attempt
-    else ()
+    let tree_counter = ref 0 in
+    List.iter (fun x ->
+        if do_tree_messaging then
+            Printf.printf "Processing tree %d\n%!" !tree_counter
+        else ();
+        incr tree_counter;
+        process x) seqs_n_functions

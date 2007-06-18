@@ -46,11 +46,11 @@ type t = {
 
 let cardinal x = IntMap.fold (fun _ _ x -> x + 1) x.meds 0
 
-let of_array spec arr code = 
+let of_array spec arr chcode tcode num_taxa = 
     let adder (meds, costs, recosts) (chrom, chrom_code) = 
 
         let med = Annchrom.init_med chrom.Data.seq_arr 
-            spec.Data.tcm2d spec.Data.alph spec.Data.pam
+            spec.Data.tcm2d spec.Data.alph spec.Data.pam tcode num_taxa
         in 
         (IntMap.add chrom_code med meds), 
         (IntMap.add chrom_code 0.0 costs),
@@ -70,12 +70,12 @@ let of_array spec arr code =
         c2 = spec.Data.tcm2d;
         c3 = spec.Data.tcm3d;
         alph = spec.Data.alph;
-        code = code;
+        code = chcode;
     }
 
-let of_list spec lst code = 
+let of_list spec lst chcode tcode num_taxa = 
     let arr = Array.of_list lst in
-    of_array spec arr code
+    of_array spec arr chcode tcode num_taxa
 
 let to_list t =
     IntMap.fold (fun code med acc -> (med, code) :: acc) t.meds []

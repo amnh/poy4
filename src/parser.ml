@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 1865 $"
+let () = SadmanOutput.register "Parser" "$Revision: 1915 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -929,7 +929,7 @@ module Tree = struct
         | Node (list, d) ->
               Node (List.map (map fn) list, fn d)
 
-    let gen_aux_of_stream stream =
+    let gen_aux_of_stream_gen do_stream stream =
         let taxon_name = function 
             | 'a' .. 'z'
             | 'A' .. 'Z'
@@ -1029,10 +1029,65 @@ module Tree = struct
                     | [] -> acc1
                     | _ -> acc2 :: acc1
         in
-        read_tree [] []
+        let read_tree_str =
+            let acc2 = ref None in
+            let rec tree_generator () =
+                stream#skip_ws_nl;
+                match stream#getch with
+                | '(' -> 
+                        let res = 
+                            try read_branch [] with
+                            | End_of_file -> 
+                                    let msg = "Unexpected end of file" in
+                                    raise (Illegal_tree_format msg)
+                        in
+                        (match !acc2 with
+                        | None -> 
+                                acc2 := Some (res, "");
+                                tree_generator ()
+                        | Some _ -> raise (Illegal_tree_format "Tree ignored!"))
+                | '*'
+                | ';' -> 
+                        (match !acc2 with
+                        | None -> raise (Illegal_tree_format "No trees to
+                        read?")
+                        | Some tree ->
+                                acc2 := None;
+                                tree)
+                | '[' -> 
+                        let contents = 
+                            try get_cost_bracket () with
+                            | End_of_file ->
+                                    let msg = "Unexpected end of file" in
+                                    raise (Illegal_tree_format msg)
+                        in
+                        (match !acc2 with
+                        | Some (h, _) -> 
+                                acc2 := None;
+                                (h, contents) 
+                        | None -> 
+                                let msg = "Unexpected cost spec" in
+                                raise (Illegal_tree_format msg))
+                | v -> 
+                        let character = stream#get_position in
+                        let ch = Char.escaped v in
+                        let message = "Unexpected character " ^ ch ^ 
+                        " in position " ^ string_of_int character in
+                        failwith message
+            in
+            tree_generator
+        in
+        if not do_stream then `Trees (read_tree [] [])
+        else `Stream (read_tree_str)
+
+    let gen_aux_of_stream str = 
+        match gen_aux_of_stream_gen false str with
+        | `Trees t -> t
+        | `Stream _ -> assert false
 
     let aux_of_stream stream =
-        List.map (List.map (fun (a, _) -> a)) (gen_aux_of_stream stream)
+        let trees = gen_aux_of_stream stream in
+        List.map (List.map (fun (a, _) -> a)) trees
 
     let aux_of_string str =
         let str = Str.global_replace (Str.regexp "\\[[^]]*\\]") "" str in
@@ -1092,13 +1147,20 @@ module Tree = struct
                 Status.user_message Status.Error msg;
                 raise e
 
+    let stream_of_file file =
+        let ch = new FileStream.stream_reader (FileStream.open_in file) in
+        match gen_aux_of_stream_gen true ch with
+        | `Stream s -> s
+        | `Trees _ -> assert false
+
     let of_file file = gen_of_file of_channel file
 
-    let of_file_annotated = gen_of_file (gen_of_channel gen_aux_of_stream)
+    let of_file_annotated = gen_of_file (gen_of_channel gen_aux_of_stream) 
 
-    let of_channel_annotated = gen_of_channel gen_aux_of_stream
+    let of_channel_annotated = gen_of_channel gen_aux_of_stream 
 
-    let of_string_annotated = gen_of_string gen_aux_of_stream
+    let of_string_annotated = 
+        gen_of_string gen_aux_of_stream 
 
     let cannonic_order tree =
         let rec build_cannonic_order = function

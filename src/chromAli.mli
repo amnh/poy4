@@ -65,3 +65,4 @@ val find_med2_ls :
   med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * med_t list
 val test : unit -> 'a
 val change_to_single : med_t -> Sequence.s -> med_t
+val find_approx_med2 : med_t -> med_t -> med_t -> med_t 

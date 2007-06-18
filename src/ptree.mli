@@ -530,16 +530,21 @@ val supports :
     (int -> string) -> int -> float -> Tree.u_tree -> int Tree.CladeFPMap.t ->
     string Parser.Tree.t
 
-(** [bremer to_string cost t sets] calculates a bremer support tree (for
+(** [bremer to_string cost t conversion file] calculates a bremer support tree (for
 * printing purposes) of the tree [t] (which must be properly rooted) which has
 * cost [cost] (the cost must be an integer, as bremer is only used in parsimony
 * and this improves function reusage inside the library), using the
 * function [to_string] to convert leaves in the tree to strings (taxon names),
-* and the sexpr of clades and costs [sets], that is, an sexpr of tuples [(a,
-* b)], where [a] is the cost of the tree containing the sets [b]. 
+* and the sexpr of clades and costs contained in the file [file], that is, a
+* file containing trees and cost of those trees [(a, * b)], where [b] is the cost of the tree [a]. The function [conversion] takes
+* care of converting each touple in [sets] to a cost and the corresponding set
+* of clades for the actual bremer calculations. This is done to reduce memory
+* consumption.
 *
 * The resulting tree assigns to each branch the minimum cost found for a tree
 * not containing the child clade of the branch within [sets]. *)
 val bremer :
     (int -> string) -> int -> Tree.u_tree -> 
-        (int * Tree.CladeFP.CladeSet.t) Sexpr.t -> string Parser.Tree.t
+              ((string Parser.Tree.t * string) -> (int * Tree.CladeFP.CladeSet.t)) ->
+          Parser.filename -> 
+              string Parser.Tree.t

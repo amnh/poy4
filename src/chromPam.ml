@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 1875 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 1915 $"
 
 (** Chromosome parameters
  *
@@ -171,7 +171,7 @@ let get_chrom_pam user_chrom_pam =
     let chrom_pam = 
         match user_chrom_pam.Data.approx with
         | None -> chrom_pam
-        | Some _ -> {chrom_pam with approx = true}
+        | Some approx -> {chrom_pam with approx = approx}
     in 
 
     let chrom_pam =

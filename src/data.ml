@@ -298,7 +298,7 @@ type bool_characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
-    | `Random of int
+    | `Random of float
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -308,7 +308,7 @@ type characters = [
     | `All
     | `Some of int list 
     | `Names of string list
-    | `Random of int
+    | `Random of float
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -1262,14 +1262,17 @@ let report included excluded =
 let get_all_taxon_active_codes data = 
     Hashtbl.fold (fun code _ acc -> code :: acc) data.taxon_characters [] 
 
+let absolute_of_percentage n precentage =
+    truncate ((precentage *. (float_of_int n)) /. 100.)
+
 let rec process_analyze_only_taxa meth data = 
     match meth with
     | `Random fraction ->
             let all_codes = Array.of_list (get_all_taxon_active_codes data) in
             Array_ops.randomize all_codes;
-            if (fraction > 100 || fraction < 0) then
+            if (fraction > 100. || fraction < 0.) then
                 failwith "Illegal fraction";
-            let n = (fraction * (Array.length all_codes)) / 100 in
+            let n = absolute_of_percentage (Array.length all_codes) fraction in
             let taxa = 
                 Array.to_list (Array.map (fun x -> code_taxon x data) 
                 (Array.sub all_codes 0 n)) 
@@ -1984,12 +1987,12 @@ let convert_dyna_spec data chcode spec transform_meth =
     | _ -> failwith "Convert_dyna_spec: Not a dynamic character" 
 
 let check_fraction fraction =
-    if (100 < fraction || fraction < 0) then
+    if (100. < fraction || fraction < 0.) then
         failwith "Illegal fraction"
     else ()
 
 let select_random_sublist fraction lst =
-    let n = (fraction * (List.length lst)) / 100 in
+    let n = absolute_of_percentage (List.length lst) fraction in
     let arr = Array.of_list lst in
     Array_ops.randomize arr;
     Array.to_list (Array.sub arr 0 n )

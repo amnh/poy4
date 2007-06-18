@@ -48,7 +48,7 @@ type old_identifiers = [
     | `AllDynamic
     | `AllStatic
     | `Missing of bool * int
-    | `Random of int
+    | `Random of float
 ]
 type identifiers = [
     | old_identifiers
@@ -1017,7 +1017,7 @@ let create_expr lexer =
                 [ LIDENT "median"; ":"; c = INT ->
                       `Keep_Median (int_of_string c) ] |
                 [ LIDENT "swap_med"; ":"; iters = INT -> `SwapMed (int_of_string iters) ] | 
-                [ LIDENT "approx"; ":"; ans = boolean -> `Approx false] 
+                [ LIDENT "approx"; ":"; ans = boolean -> `Approx ans] 
             ];
 
         (* Applications *)
@@ -1580,7 +1580,8 @@ let create_expr lexer =
                     `Missing (true, 100 - int_of_string x) ] |
                 [ LIDENT "not"; LIDENT "missing"; ":"; x = INT -> `Missing
                 (false, 100 - int_of_string x) ] |
-                [ LIDENT "_random"; ":"; x = INT -> `Random (int_of_string x) ]
+                [ LIDENT "_random"; ":"; x = integer_or_float -> 
+                    `Random (100. -. (float_of_string x)) ]
             ];
         optional_integer_or_float: 
             [

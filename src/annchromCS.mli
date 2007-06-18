@@ -81,10 +81,10 @@ type t = {
 val cardinal : t -> int
 val of_array :
   Data.dynamic_hom_spec ->
-  (Sequence.s Data.dyna_data * IntMap.key) array -> int -> t
+    (Sequence.s Data.dyna_data * IntMap.key) array -> int -> int -> int -> t
 val of_list :
   Data.dynamic_hom_spec ->
-  (Sequence.s Data.dyna_data * IntMap.key) list -> int -> t
+    (Sequence.s Data.dyna_data * IntMap.key) list -> int -> int -> int -> t
 val to_list : t -> (meds_t * IntMap.key) list
 val same_codes : 'a IntMap.t -> 'b IntMap.t -> bool
 val median2 : t -> t -> t

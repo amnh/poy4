@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 1865 2007-06-07 16:58:32Z andres $ *)
+(* $Id: supports.ml 1915 2007-06-18 15:12:13Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 1865 $"
+let () = SadmanOutput.register "Support" "$Revision: 1915 $"
 
 module type S = sig
         type a 
@@ -676,33 +676,35 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
               let (iter, tree) = List.fold_left join2 tree trees in
               tree
 
-    let generate_sets_for_bremer process_cost root data file =
+    let generate_sets process_cost data root (tree, expected_cost) =
         let pair tree = 
             match Tree.get_node root tree with
             | Tree.Leaf (a, b) 
             | Tree.Interior (a, b, _, _) -> (a, b)
             | Tree.Single _ -> failwith "Not a tree?"
         in
-        let generate_sets (tree, expected_cost) =
-            let tree = Tree.convert_to [tree] data in
-            let tree = Tree.reroot (pair tree) tree in
-            process_cost tree expected_cost, Tree.CladeFP.sets tree
-        in
+        let tree = Tree.convert_to [tree] data in
+        let tree = Tree.reroot (pair tree) tree in
+        process_cost tree expected_cost, Tree.CladeFP.sets tree
+
+    let generate_sets_for_bremer process_cost root data file =
         let trees = Parser.Tree.of_file_annotated file in
-        let for_brem = List.flatten (List.map (List.map generate_sets) trees) in
+        let for_brem = List.flatten (List.map (List.map (generate_sets
+        process_cost data root)) trees) in
         Sexpr.of_list for_brem
 
     let bremer_of_input_file process_cost root to_string data file 
     (trees : (a, b) Ptree.p_tree Sexpr.t) = 
-        let sets = generate_sets_for_bremer process_cost root data file in
         let process_one_tree tree =
-            Ptree.bremer to_string (int_of_float (Ptree.get_cost `Adjusted tree)) 
-            tree.Ptree.tree sets
+            Ptree.bremer to_string 
+            (int_of_float (Ptree.get_cost `Adjusted tree)) 
+            tree.Ptree.tree (generate_sets process_cost data root) file
         in
-        Sexpr.map process_one_tree trees
+        Sexpr.map_status "Bremer of input tree" ~eta:true process_one_tree trees
 
     let bremer_of_input_file_but_trust_input_cost =
-        bremer_of_input_file (fun _ b -> int_of_float (float_of_string b))
+        bremer_of_input_file (fun _ b -> try int_of_float (float_of_string b)
+        with _ -> max_int)
 
 end
 

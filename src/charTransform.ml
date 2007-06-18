@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1899 2007-06-11 17:30:03Z andres $ *)
+(* $Id: charTransform.ml 1915 2007-06-18 15:12:13Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1899 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1915 $"
 
 module type S = sig
     type a 
@@ -765,7 +765,10 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         let lst = Data.get_chars_codes data `All in
                         let arr = Array.of_list lst in
                         Array_ops.randomize arr;
-                        let n = (fraction * (Array.length arr)) / 100 in
+                        let n =
+                            let len = float_of_int (Array.length arr) in
+                            truncate ((fraction *. len) /. 100.)
+                        in
                         let rec collect n acc =
                             if n = 0 then `Some acc
                             else collect (n - 1) (arr.(n) :: acc)

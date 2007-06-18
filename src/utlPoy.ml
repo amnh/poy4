@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 1875 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 1915 $"
 
 let fprintf = Printf.fprintf
 
@@ -311,13 +311,17 @@ let create_median_gap seq ?(start_pos=(-1)) ?(end_pos=(-1)) cost_mat =
     med
 
 
-let create_median_seq alied_seq1 alied_seq2 cost_mat =
+let create_median_seq ?(approx=false) alied_seq1 alied_seq2 cost_mat =
     let len = Sequence.length alied_seq1 in 
     let get_median_code pos = 
         let code1 = Sequence.get alied_seq1 pos in 
-        let code2 = Sequence.get alied_seq2 pos in         
-        Cost_matrix.Two_D.median code1 code2 cost_mat
+        match approx with 
+        | true -> code1
+        | false ->              
+              let code2 = Sequence.get alied_seq2 pos in         
+              Cost_matrix.Two_D.median code1 code2 cost_mat
     in
+
     let median = Sequence.init (fun pos -> get_median_code pos) len in
 
 
@@ -330,7 +334,7 @@ let create_median_seq alied_seq1 alied_seq2 cost_mat =
     median, !cost
 
 
-let create_median seq1 seq2 
+let create_median ?(approx=false) seq1 seq2 
         ?(s1=(-1)) ?(e1=(-1)) ?(s2=(-1)) ?(e2=(-1)) cost_mat = 
 
     let s1, e1, s2, e2 =
@@ -345,7 +349,7 @@ let create_median seq1 seq2
     let alied_seq1, alied_seq2, _ = 
         create_subalign2 seq1 seq2 cost_mat s1 e1 s2 e2 
     in
-    let alied_med, cost = create_median_seq alied_seq1 alied_seq2 cost_mat in 
+    let alied_med, cost = create_median_seq ~approx:approx alied_seq1 alied_seq2 cost_mat in 
     alied_med, alied_seq1, alied_seq2, cost
 
 

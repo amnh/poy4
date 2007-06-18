@@ -196,8 +196,8 @@ let of_array spec genome_arr code taxon num_taxa =
                     ChromCS t
             end
     | `Annotated -> 
-            let t = AnnchromCS.of_array spec genome_arr code in
-            AnnchromCS t
+          let t = AnnchromCS.of_array spec genome_arr code  taxon num_taxa in
+          AnnchromCS t 
     | `Genome  ->
             let t = 
                 GenomeCS.of_array spec genome_arr code taxon num_taxa 

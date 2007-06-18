@@ -33,6 +33,7 @@ type meds_t = {
     c2 : Cost_matrix.Two_D.m; 
 
     approx_cost_arr : int array;
+    approx_med_arr : med_t array;
     approx_recost_arr : int array;
     code : int;
 
@@ -56,7 +57,7 @@ let init_med (seq : Sequence.s) chrom_pam tcode num_taxa =
         total_cost = 0; 
         total_recost = 0;
         c2 = Cost_matrix.Two_D.default; 
-
+        approx_med_arr = (Array.make num_taxa med);
         approx_cost_arr = (Array.make num_taxa max_int);
         approx_recost_arr = (Array.make num_taxa max_int);
         code = tcode;
@@ -65,34 +66,21 @@ let init_med (seq : Sequence.s) chrom_pam tcode num_taxa =
     } 
 
 
-(** Given a list of medians, determine a subset of medians to be kept to process
-    further based on the customs's defined paramaters *)
-let rec keep chrom_pam med_ls = 
-    match chrom_pam.Data.keep_median with 
-    | None -> med_ls 
-    | Some keep_median ->
-          if  keep_median >= List.length med_ls then med_ls
-          else Utl.get_k_random_elem med_ls keep_median
-
-
-let update_cost_mat meds1 meds2 =     
-    let code1 = meds1.code and code2 = meds2.code in  
-
-    if meds1.approx_cost_arr.(code2) = max_int then begin 
-
-        let med1 = List.hd meds1.med_ls in  
-        let med2 = List.hd meds2.med_ls in  
-        let cost, recost = ChromAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in  
+let update_approx_mat meds1 meds2 =     
+    let med1 = List.hd meds1.med_ls in  
+    let med2 = List.hd meds2.med_ls in  
+    let code2 = meds2.code in
+    (if meds1.approx_cost_arr.(code2) = max_int then begin 
+        let cost, recost, med2_ls = ChromAli.find_med2_ls med1 med2 meds1.c2 meds1.chrom_pam in  
+        meds1.approx_med_arr.(code2) <- List.hd med2_ls;
         meds1.approx_cost_arr.(code2) <- cost; 
-        meds2.approx_cost_arr.(code1) <- cost; 
-
         meds1.approx_recost_arr.(code2) <- recost; 
-        meds2.approx_recost_arr.(code1) <- recost; 
-    end
+     end) 
+
 
 
 (** Find the best median list between two lists of medians *)
-let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
+let find_meds2 (meds1 : meds_t) (meds2 : meds_t) =
     let find_exact () = 
         let best_meds = List.fold_left  
             (fun best_meds med1 -> 
@@ -109,19 +97,26 @@ let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
             ) {meds1 with med_ls = []; total_cost = max_int} meds1.med_ls
         in 
                                 
-        match keep_all_meds with 
-        | true -> best_meds 
-        | false ->             
-              let kept_med_ls = keep meds1.chrom_pam best_meds.med_ls in  
-              {best_meds with med_ls = kept_med_ls} 
+        best_meds
     in 
+
 
     match meds1.chrom_pam.Data.approx with 
     | Some approx ->
           if approx then begin 
-              update_cost_mat meds1 meds2;
-              {meds1 with total_cost = meds1.approx_cost_arr.(meds2.code);
-                      total_recost = meds1.approx_recost_arr.(meds2.code)}
+              update_approx_mat meds1 meds2;
+
+              let med1 = List.hd meds1.med_ls in  
+              let med2 = List.hd meds2.med_ls in  
+              let code2 = meds2.code in
+
+              let med12 = ChromAli.find_approx_med2 med1 med2
+                  meds1.approx_med_arr.(code2) 
+              in 
+              {meds1 with med_ls = [med12]; 
+                   total_cost = meds1.approx_cost_arr.(code2);
+                   total_recost = meds1.approx_recost_arr.(code2)}
+                   
           end else find_exact ()
 
     | None -> find_exact ()
@@ -152,7 +147,7 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
     match meds1.chrom_pam.Data.approx with 
     | Some approx ->
           if approx then begin 
-              update_cost_mat meds1 meds2;
+              update_approx_mat meds1 meds2;
               meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
           end else cmp_exact ()
 
@@ -175,7 +170,7 @@ let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
     match meds1.chrom_pam.Data.approx with 
     | Some approx ->
           if approx then begin 
-              update_cost_mat meds1 meds2;
+              update_approx_mat meds1 meds2;
               meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
           end else cmp_exact ()
 

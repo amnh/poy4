@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 1875 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 1915 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -89,6 +89,37 @@ let init_med seq =
               } 
     in  
     med
+
+
+let clone_seg s = {
+    sta = s.sta;
+    en = s.en;
+    cost = s.cost;
+    alied_med = Sequence.clone s.alied_med;
+    
+    sta1 = s.sta1;
+    en1 = s.en1;
+    alied_seq1 = Sequence.clone s.alied_seq1;
+    dir1 = s.dir1;
+
+    sta2 = s.sta2;
+    en2 = s.en2;
+    alied_seq2 = Sequence.clone s.alied_seq2;
+    dir2 = s.dir2;    
+}
+
+
+let clone_med m = {
+    seq = Sequence.clone m.seq;
+    ref_code = m.ref_code;
+    ref_code1 = m.ref_code1;
+    ref_code2 = m.ref_code2;
+    cost1 = m.cost1;
+    cost2 =m.cost2;
+    recost1 = m.recost1;
+    recost2 = m.recost2;
+    chrom_map = List.map clone_seg m.chrom_map
+}
 
 let get_dir dir =  
     match dir with 
@@ -465,6 +496,8 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
         ali_mat alied_gen_seq1 alied_gen_seq2 
         (order2_arr, total_cost, recost1, recost2) cost_mat ali_pam = 
         
+    let approx = ali_pam.ChromPam.approx in
+
 
     let locus_indel_cost = ali_pam.ChromPam.locus_indel_cost in 
     
@@ -483,7 +516,9 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               let len2 = en2 - sta2 + 1 in
               let subseq1 = UtlPoy.create_gap_seq len2 in 
               let subseq2 = Sequence.sub seq2 sta2 len2 in
-              let submed = UtlPoy.create_median_gap subseq2 cost_mat in
+              let submed, _ = UtlPoy.create_median_seq
+                  ~approx:approx subseq1 subseq2 cost_mat 
+              in
 
               let med_len = UtlPoy.cmp_num_DNA submed in
               let sta, en, nascent_len = match med_len with
@@ -510,7 +545,9 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               let subseq1 = Sequence.sub seq1 sta1 len1 in
               let subseq2 = UtlPoy.create_gap_seq len1 in 
 
-              let submed = UtlPoy.create_median_gap subseq1 cost_mat in
+              let submed, _ = UtlPoy.create_median_seq
+                  ~approx:approx subseq1 subseq2 cost_mat 
+              in
 
               let med_len = UtlPoy.cmp_num_DNA submed in 
 
@@ -526,14 +563,14 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
                         }
               in 
               List.append submed_ls [submed], nascent_len, List.append chrom_map [map]
-
+                  
 
 
         | _, _ -> 
               let block_opt = Block.find_block global_map gen_code1 gen_code2 in 
               match block_opt with
               | Some b -> 
-                    let submed, cost = Block.create_median b cost_mat in
+                    let submed, cost = Block.create_median ~approx:approx b cost_mat in
                     let med_len = UtlPoy.cmp_num_DNA submed in 
 
                     let sta, en, nascent_len = match med_len with
@@ -563,7 +600,9 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
                         (fun sq -> sq.Subseq.id = gen_code2) subseq2_ls 
                     in
 
-                    let submed, cost = UtlPoy.create_median_seq alied_seq1 alied_seq2 cost_mat in 
+                    let submed, cost = UtlPoy.create_median_seq 
+                        ~approx:approx alied_seq1 alied_seq2 cost_mat 
+                    in 
 
 
                     let med_len = UtlPoy.cmp_num_DNA submed in 
@@ -694,6 +733,7 @@ let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam =
         fprintf seqfile "\n";
 
         fprintf seqfile ">seq2\n";
+
         Sequence.print seqfile med2.seq Alphabet.nucleotides;
         close_out seqfile;
     end;
@@ -757,8 +797,9 @@ let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam =
         let gen_seq2 = UtlGrappa.get_ordered_permutation re_gen_seq2 in 
         let all_order_ls = 
             if (Utl.equalArr gen_seq2 re_gen_seq2 compare) ||
-                (ali_pam.ChromPam.keep_median = 1) then [(gen_seq2, recost, 0)]
-            else [(gen_seq2, recost, 0); (re_gen_seq2, 0, recost)]
+                (ali_pam.ChromPam.keep_median = 1) || 
+                ali_pam.ChromPam.approx then [(re_gen_seq2, 0, recost)]
+            else [(re_gen_seq2, 0, recost); (gen_seq2, recost, 0)]
         in 
 
 
@@ -777,6 +818,13 @@ let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam =
     end 
 
 
+
+let find_approx_med2 (med1 : med_t) (med2 : med_t) (med12 : med_t) =
+    let new_med12 = clone_med med12 in 
+    let ref_code1 = med1.ref_code in 
+    let ref_code2 = med2.ref_code in 
+    let ref_code = Utl.get_new_chrom_ref_code () in 
+    {new_med12 with ref_code = ref_code; ref_code1 = ref_code1; ref_code2 = ref_code2}
 
 
 

@@ -141,7 +141,7 @@ type bool_characters = [
     | `All
     | `Some of (bool * int list)
     | `Names of (bool * string list)
-    | `Random of int
+    | `Random of float
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -153,7 +153,7 @@ type characters = [
     | `All
     | `Some of int list 
     | `Names of string list
-    | `Random of int
+    | `Random of float
     | `AllStatic
     | `AllDynamic
     | `Missing of (bool * int)
@@ -350,7 +350,7 @@ val process_analyze_only_file : bool -> d -> Parser.filename list -> d
 val number_of_taxa : d -> int
 
 val process_analyze_only_taxa : 
-    [`Random of int | `Names of (bool * string list) | `Missing of (bool * int) ] -> d -> d
+    [`Random of float | `Names of (bool * string list) | `Missing of (bool * int) ] -> d -> d
 
 val categorize : d -> d
 

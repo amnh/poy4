@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 1875 $"
+let () = SadmanOutput.register "Block" "$Revision: 1915 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -727,15 +727,16 @@ let create_subseq_id subseq_type (sep_block_ls : block_t list)
 
 
 
-let create_median (block : block_t) cost_mat = 
+let create_median ?(approx=false) (block : block_t) cost_mat = 
     let alied_seq1 = Utl.deref block.alied_seq1 in 
     let alied_seq2 = Utl.deref block.alied_seq2 in 
 
+
     match block.direction = `Positive with
-    | true -> UtlPoy.create_median_seq alied_seq1 alied_seq2 cost_mat 
+    | true -> UtlPoy.create_median_seq ~approx:approx alied_seq1 alied_seq2 cost_mat 
     | false ->  
           Sequence.reverse_ip alied_seq2;  
-          let med, cost = UtlPoy.create_median_seq alied_seq1 alied_seq2 cost_mat in  
+          let med, cost = UtlPoy.create_median_seq ~approx:approx alied_seq1 alied_seq2 cost_mat in  
           Sequence.reverse_ip alied_seq2; 
           med, cost 
 
