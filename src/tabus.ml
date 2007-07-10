@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 1902 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 1952 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -699,8 +699,8 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                 let delta = get_side side delta in
                 current_broken_ptree <- ptree;
                 current_clade <- Some clade;
-                current_delta <- (Ptree.get_cost `Unadjusted current_joined_ptree) -. 
-                    (Ptree.get_cost `Unadjusted current_broken_ptree);
+                current_delta <- (Ptree.get_cost `Adjusted current_joined_ptree) -. 
+                    (Ptree.get_cost `Adjusted current_broken_ptree);
                 self#clear_all_joins;
                 match delta with
                 | `Edge (_, s1, s2, _) ->
@@ -1451,7 +1451,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             in
             object (self)
             val queue = Queue.create ()
-            val mutable current_tree_cost = Ptree.get_cost `Unadjusted ptree
+            val mutable current_tree_cost = Ptree.get_cost `Adjusted ptree
             val mutable matrix = initial_matrix
             val mutable union_tree = initial_union_tree
             val mutable clusters = initial_clusters
@@ -1576,7 +1576,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                 cluster_set <- 
                     All_sets.Integers.union (All_sets.Integers.diff cluster_set
                     removed) added;
-                current_tree_cost <- Ptree.get_cost `Unadjusted tree;
+                current_tree_cost <- Ptree.get_cost `Adjusted tree;
                 Queue.clear queue
 
             method clone = ({<>} :> wem)
@@ -1610,7 +1610,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             in
             object (self)
             val queue = Queue.create ()
-            val mutable current_tree_cost = Ptree.get_cost `Unadjusted ptree
+            val mutable current_tree_cost = Ptree.get_cost `Adjusted ptree
             val mutable matrix = initial_matrix
             val mutable union_tree = initial_union_tree
             val mutable clusters = initial_clusters
@@ -1691,7 +1691,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                 matrix <- mtx;
                 union_tree <- nt;
                 clusters <- cls;
-                current_tree_cost <- Ptree.get_cost `Unadjusted tree;
+                current_tree_cost <- Ptree.get_cost `Adjusted tree;
                 to_update_down <- None;
                 Queue.clear queue
 

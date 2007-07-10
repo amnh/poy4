@@ -1,4 +1,4 @@
-# $Id: Makefile 1915 2007-06-18 15:12:13Z andres $
+# $Id: Makefile 1952 2007-07-10 18:28:23Z andres $
 
 # Instructions:
 # You can compile a debug bytecode app by specifying DEBUG=-g
@@ -177,7 +177,8 @@ DISTANCE_LIBS = character.cmo addCS.cmo memstack.o add.o nonaddCS8.cmo \
 	nonaddCSc8.o nonaddCS16.cmo nonaddCSc16.o nonaddCS32.cmo nonaddCSc32.o
 
 SEQUENCE = all_sets.cmo alphabet.cmo cost_matrix.cmo matrix.cmo \
-	primes.cmo fingerPrint.cmo sequence.cmo zarr.o avl.o algn.o
+	primes.cmo fingerPrint.cmo sequence.cmo zarr.o avl.o \
+	ukk.checkp.o ukkCommon.o algn.o
 
 # Some personal tests that can be useful for everyone 
 CAMLP4PROCESSED = poyParser.ml poyCommand.ml 
@@ -191,8 +192,8 @@ BASE_OBJS :=  $(READLINE) sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildN
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
 	array_ops.cmo $(PARSER) distances.cma \
-	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) trees.cma \
-	diagnosis.cmo supports.cmo help.cmo helpIndex.cmo methods.cmo \
+	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) methods.cmo trees.cma \
+	diagnosis.cmo supports.cmo help.cmo helpIndex.cmo \
 	analyzer.cmo poyCommand.cmo poyFile.cmo scripting.cmo 
 
 MAIN_OBJS = $(BASE_OBJS) arguments.cmo compileFlags.cmo main.cmo
@@ -467,7 +468,7 @@ sadmanOutput.cmx: sadmanOutput.cmi sadmanOutput.ml
 scripting.cmo: scripting.cmi scripting.ml
 	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
 scripting.cmx: scripting.cmi scripting.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c scripting.ml
+	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c scripting.ml
 timer.cmo: timer.cmi timer.ml
 	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) timer.ml
 timer.cmx: timer.cmi timer.ml

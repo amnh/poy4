@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1875 $"
+let () = SadmanOutput.register "Node" "$Revision: 1952 $"
 
 let debug = false
 let debug_exclude = false
@@ -1597,24 +1597,25 @@ let rec cs_to_single ?(is_root=false) (pre_ref_code, fi_ref_code) alied_map pare
 
     | _ -> mine
 
-
 let to_single ?(is_root=false) (pre_ref_codes, fi_ref_codes) alied_map parent mine = 
     { mine with 
           characters = map3 (cs_to_single ~is_root:is_root (pre_ref_codes, fi_ref_codes) ) 
             alied_map.characters parent.characters mine.characters }
 
-let readjust ch1 ch2 parent mine = 
+let readjust to_adjust ch1 ch2 parent mine = 
     let ch1, ch2 =
         if ch1.min_child_code < ch2.min_child_code then ch1, ch2
         else ch2, ch1
     in
+    let modified = ref All_sets.Integers.empty in
     let cs_readjust c1 c2 parent mine =
         match c1, c2, parent, mine with
         | Dynamic c1, Dynamic c2, Dynamic parent, Dynamic mine ->
-                let prev_cost, cost, res =
-                    DynamicCS.readjust c1.preliminary c2.preliminary
+                let m, prev_cost, cost, res =
+                    DynamicCS.readjust to_adjust !modified c1.preliminary c2.preliminary
                     parent.preliminary mine.preliminary
                 in
+                modified := m;
                 let cost = mine.weight *. cost in
                 Dynamic { preliminary = res; final = res; 
                 cost = cost;
@@ -1622,7 +1623,7 @@ let readjust ch1 ch2 parent mine =
                 weight = mine.weight }
         | _ -> mine
     in
-    if mine.total_cost = infinity then mine
+    if mine.total_cost = infinity then mine, !modified
     else
         let characters = 
             map4 cs_readjust ch1.characters ch2.characters
@@ -1642,7 +1643,7 @@ let readjust ch1 ch2 parent mine =
         ^ " but now it is " ^ string_of_float
         ((distance res ch1) +. (distance res ch2) +. (distance res parent)));
         *)
-        res
+        res, !modified
 
 let to_single_root (pre_ref_codes, fi_ref_codes) mine = 
     to_single ~is_root:true (pre_ref_codes, fi_ref_codes) mine mine mine
@@ -2036,7 +2037,7 @@ let print_node_data (data : node_data) =
     print_newline ()
 
 
-let get_sequences node =
+let get_sequences _ node =
     let all_seq = 
         List.fold_left 
         (fun acc x -> 
@@ -2459,6 +2460,7 @@ let get_dynamic_preliminary data =
     let data =
         List.filter (function Dynamic _ -> true | _ -> false) data
     in
+
     List.map 
         (function 
             | Dynamic d -> d.preliminary 
@@ -2586,7 +2588,7 @@ module Standard :
         let assign_leaf_ref = assign_leaf_ref 
         let assign_internal_ref = assign_internal_ref 
 
-(*        let clean_median = clean_median*)
+
 
         let assign_root_ref = assign_root_ref
 
@@ -2594,7 +2596,7 @@ module Standard :
         module Union = Union
         let for_support = for_support
         let root_cost = root_cost
-        let to_single _ a _ b = to_single (IntSet.empty, IntSet.empty) a a b
+        let to_single ?(is_root=false)_ a _ b = to_single ~is_root:is_root (IntSet.empty, IntSet.empty) a a b
 end 
 
 let merge a b =

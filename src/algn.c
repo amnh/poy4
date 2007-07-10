@@ -84,6 +84,289 @@ unsigned char *_algn_max_direction = NULL;
  * used in the first plane of the alignment. It didn't use this function because
  * the direction codes are different for three dimensional alignments.
  */
+#if ( __GNUC__ && __MMX__ )
+#ifdef _WIN32
+__inline void 
+#else
+inline void 
+#endif
+algn_fill_row (int *mm, const int *pm, const int *gap_row, \
+
+        const int *alg_row, unsigned char *dm, int c, int i, int end) {
+
+
+    register int aa, bb, cc;
+    register const int TWO = 0x200; 
+    register const int ZERO = 0;
+
+    bb = mm[i - 1];
+
+    for (; i <= end - 7; i+=8) {
+
+
+        aa = pm[i - 1] + alg_row[i]; // aka tmp3
+        bb += gap_row[i]; // aka tmp2
+        cc = pm[i] + c; // aka tmp1
+        /*
+            The algorithm has not changed. Only have the conditional branches been eliminated for better performance.
+            Since gcc (4.0.3 atleast) didn't generate cmov's, we changed the code manually.
+            Things that have been done for optimizing this function:
+                - assembly code for determining min(aa, bb, cc) and getting the bit pattern
+                - loop unrolling with a factor of 8, to still keep this function inlined
+                - rearrangement of expressions => better register usage and (probably) less cache misses
+
+            Restrictions:
+            ALIGN is bound to the value 4, INSERT to 2 and DELETE to 1
+            If these constants changes, there are problems with the assembler code,
+            since they are really optimized for this purpose
+
+            Furthermore, this code does only work with the gnu compiler (but shouldn't be hard to switch to icc), so add
+            #ifdef __GNUC__ as a macro for this section. I also suppose that cmov's can be handled by most
+            of the computers used today (of those using this program at least).
+
+            I have also removed the debug sections. These can of course be added if a debug is needed.
+            I recommend that debugging is only used with the original function, since this one generates exactly same results.
+        */
+
+
+        __asm__(
+            "cmp %0, %1\n\t"    // compare aa with bb (the needed cmp flag remains even if registers are switched)
+            "cmovg %0, %1\n\t"  // if bb > aa was flagged, put aa into bb's register. Now we know that bb is always the smallest value
+            "mov $0x0, %0\n\t"  // aa is now trash and will not be used anymore. Clean the register (set it to 0x0)
+            "cmovle %4, %0\n\t" // if bb <= aa was flagged in the first instruction, then put TWO (0x200) into register 0 (aa)
+            "setge %b0\n\t"     // if bb >= aa was flagged in the first instruction, then set the lowest byte in register 0 to 1 (0x01)
+            "cmp %1, %2\n\t"    // compare reg.1 (the lowest of aa and bb) with cc.
+            "cmovl %2, %1\n\t"  // if cc < bb was flagged in the 2nd comparison, then move cc into bb. min(aa, bb, cc) is now stored in bb.
+            "mov $0x4, %2\n\t"  // put a 4 (ALIGN) in register 2 (cc) since cc is trash.
+            "cmovl %3, %0\n\t"  // if cc < bb was flagged in the 2nd comparison, then clear register 0.
+            "cmovg %3, %2\n\t"  // if cc > bb was flagged, then clean the register. (Note that you can only move register->register with a cmov.) 
+            "add %b0, %h0\n\t"  // finally, add low byte and high byte of register 0 into register 0's low byte.
+            "add %h0, %b2\n\t"  // add high byte from reg.0 to low byte in reg.2 (cc) and we are done. cc contains now the bitpattern.
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)   // registers: aa = %0, bb = %1, cc = %2
+            : "r" (ZERO), "r" (TWO)         // ZERO = %3, TWO = %4
+        );
+
+        mm[i] = bb; // bb is min(aa, bb, cc)
+        dm[i] = cc; // cc is the bitpattern
+
+
+        aa = pm[i] + alg_row[i + 1];
+        bb += gap_row[i + 1]; // bb is already assigned the minimum value of the three to be compared, so loading bb from memory would be waste.
+        cc = pm[i + 1] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t" 
+            "mov $0x4, %2\n\t" 
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t" 
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t" 
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 1] = bb;
+        dm[i + 1] = cc;
+
+        aa = pm[i + 1] + alg_row[i + 2];
+        bb += gap_row[i + 2];
+        cc = pm[i + 2] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t" 
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 2] = bb;
+        dm[i + 2] = cc;
+
+        aa = pm[i + 2] + alg_row[i + 3];
+        bb += gap_row[i + 3];
+        cc = pm[i + 3] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 3] = bb;
+        dm[i + 3] = cc;
+
+
+
+        aa = pm[i + 3] + alg_row[i + 4];
+        bb += gap_row[i + 4];
+        cc = pm[i + 4] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t" 
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 4] = bb;
+        dm[i + 4] = cc;
+
+
+        aa = pm[i + 4] + alg_row[i + 5];
+        bb += gap_row[i + 5];
+        cc = pm[i + 5] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 5] = bb;
+        dm[i + 5] = cc;
+
+        aa = pm[i + 5] + alg_row[i + 6];
+        bb += gap_row[i + 6];
+        cc = pm[i + 6] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 6] = bb;
+        dm[i + 6] = cc;
+
+        aa = pm[i + 6] + alg_row[i + 7];
+        bb += gap_row[i + 7];
+        cc = pm[i + 7] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i + 7] = bb;
+        dm[i + 7] = cc;
+
+
+    }
+
+
+
+    for (; i <= end; i++) {
+
+        aa = pm[i - 1] + alg_row[i];
+        bb += gap_row[i - 1];
+        cc = pm[i] + c;
+
+
+        __asm__(
+            "cmp %0, %1\n\t"
+            "cmovg %0, %1\n\t"
+            "mov $0x0, %0\n\t"
+            "cmovle %4, %0\n\t"
+            "setge %b0\n\t"
+            "cmp %1, %2\n\t"
+            "cmovl %2, %1\n\t"
+            "mov $0x4, %2\n\t"
+            "cmovl %3, %0\n\t" 
+            "cmovg %3, %2\n\t"
+            "add %b0, %h0\n\t" 
+            "add %h0, %b2\n\t"
+            : "+Q" (aa), "+r" (bb), "+Q" (cc)
+            : "r" (ZERO), "r" (TWO)
+        );
+
+        mm[i] = bb;
+        dm[i] = cc;
+
+
+    }
+    return;
+
+}
+#else /* __GNUC__ */
+
 #ifdef _WIN32
 __inline void 
 #else
@@ -168,6 +451,7 @@ algn_fill_row (int *mm, const int *pm, const int *gap_row, \
     }
     return;
 }
+#endif /* __GNUC__ */
 
 #ifdef _WIN32
 __inline void 

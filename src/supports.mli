@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.mli 1865 2007-06-07 16:58:32Z andres $ *)
+(* $Id: supports.mli 1952 2007-07-10 18:28:23Z andres $ *)
 (* Created Thu Feb  2 16:04:01 2006 (Illya Bomash) *)
 
 (** This module implements computing a support diagnosis of a tree. *)
@@ -68,7 +68,7 @@ val bremer_of_input_file_but_trust_input_cost : int ->
 end
 
 module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations 
         with type a = Node.n with type b = Edge.e) : S 
     with type a = Node.n

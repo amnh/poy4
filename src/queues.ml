@@ -20,8 +20,8 @@
 (** queues.ml - contains the serach managers that manage the queue of trees to
  * be searched. *)
 
-(* $Id: queues.ml 1814 2007-05-11 15:02:58Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 1814 $"
+(* $Id: queues.ml 1952 2007-07-10 18:28:23Z andres $ *)
+let () = SadmanOutput.register "Queues" "$Revision: 1952 $"
 
 (** {1 Types} *)
 
@@ -353,10 +353,10 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         let tabu_mgr = tabu_mgr#clone in
                         (Lazy.lazy_from_fun (fun () ->
                         let nt, dlt = join_fn [] j1 j2 pt in
-                        let cst = Ptree.get_cost `Unadjusted nt in
+                        let cst = Ptree.get_cost `Adjusted nt in
                         tabu_mgr#update_join nt dlt;
                         (nt, cst, c_delta, tabu_mgr)), 
-                        (Ptree.get_cost `Unadjusted pt +. cc), c_delta)
+                        (Ptree.get_cost `Adjusted pt +. cc), c_delta)
                     in
                     tabu_mgr#break_distance cc;
                     if ( cc <= cld_cst +. m_thr ) then begin
@@ -472,7 +472,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                           let newtree, tree_delta =
                               join_fn incremental j1 j2 pt in
                           let actual_new_cost = 
-                              Ptree.get_cost `Unadjusted newtree 
+                              Ptree.get_cost `Adjusted newtree 
                           in
                           if expected_new_cost <> actual_new_cost
                           then begin
@@ -502,7 +502,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                   if ( cc < b_delta ) then begin
                       c_delta <- (Ptree.Cost(cc)) ;
                       let nt, j_delta = (join_fn incremental j1 j2 pt) in
-                      let cst = Ptree.get_cost `Unadjusted nt in
+                      let cst = Ptree.get_cost `Adjusted nt in
                       if cst < cur_best_cost then begin
                           let new_tabu = tabu_mgr#clone in
                           sampler#process j1 j2 cd_nd pt (Some nt) 
@@ -763,7 +763,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             | Ptree.Cost(cc) ->
                     tabu_mgr#break_distance cc;
                     let new_tabu = tabu_mgr#clone in
-                    let cost = Ptree.get_cost `Unadjusted pt +. cc in
+                    let cost = Ptree.get_cost `Adjusted pt +. cc in
                     let ljoin = lazy (join_fn incremental j1 j2 pt) in
                     let ltree = lazy (let (t, _) = Lazy.force ljoin in t) in
                     let ltabu =
@@ -774,7 +774,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     if self#filter ltree cost then 
                         let cost = 
                             let nt = Lazy.force ltree in
-                            Ptree.get_cost `Unadjusted nt 
+                            Ptree.get_cost `Adjusted nt 
                         in
                         if self#filter ltree cost then
                             self#insert (ltree, cost, ltabu)
@@ -789,7 +789,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         method private trajectory cc cd_nd b_delta j1 j2 pt ljoin ltabu cost =
             if ( cc < b_delta ) then begin
                 let nt, j_delta = Lazy.force ljoin in
-                let cst = Ptree.get_cost `Unadjusted nt in
+                let cst = Ptree.get_cost `Adjusted nt in
                 sampler#process j1 j2 cd_nd pt (Some nt) b_delta 
                 cc (Some cst);
                 (*
@@ -829,7 +829,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 List.map
                 (fun (t, c, tabu) ->
                      let t = Lazy.force t in
-                     (t, Ptree.get_cost `Unadjusted t, Lazy.force tabu))
+                     (t, Ptree.get_cost `Adjusted t, Lazy.force tabu))
                 res
             in
             sampler#results (List.map (fun (a, b, _) -> (a, b)) res);
@@ -885,14 +885,14 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     string_of_int b2 ^ " to join " ^ Tree.string_of_jxn
                     r1 ^ " and " ^ Tree.string_of_jxn r2 
                 in
-                let icost = Ptree.get_cost `Unadjusted tree
+                let icost = Ptree.get_cost `Adjusted tree
                 and itree = tree in
                 try
                     let Tree.Edge break = Tree.normalize_edge break
                     tree.Ptree.tree in
                     let tree, a, b, c, d, il = break_fn break tree in
                     let tree, treed = join_fn il r1 r2 tree in
-                    let cost = Ptree.get_cost `Unadjusted tree in
+                    let cost = Ptree.get_cost `Adjusted tree in
                     Status.user_message Status.Information 
                     ("Successful: " ^ breaknjoin);
                     if cost < icost then 
@@ -915,7 +915,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     in
                     do_repeat <- do_again;
                     all_places_to_join <- [];
-                    let cost = Ptree.get_cost `Unadjusted tree in
+                    let cost = Ptree.get_cost `Adjusted tree in
                     results <- [(tree, cost, tabu)]
             | None -> ()
 
@@ -945,7 +945,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     sampler#process j1 j2 cd_nd pt None b_delta cc None; 
                     if cc < b_delta then 
                       let nt, j_delta = (join_fn incremental j1 j2 pt) in
-                      let cst = Ptree.get_cost `Unadjusted nt in
+                      let cst = Ptree.get_cost `Adjusted nt in
                       if cst < cur_best_cost then 
                         let _ =
                             (* If the gain is better, store it *)
@@ -993,7 +993,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             tree_count <- succ tree_count;
             if self#is_better cc b_delta then begin
                     let nt, j_delta = Lazy.force ljoin in
-                    let cst = Ptree.get_cost `Unadjusted nt in
+                    let cst = Ptree.get_cost `Adjusted nt in
                     if self#is_better cst cur_best_cost then begin
                         cur_best_cost <- cst;
                         sampler#process j1 j2 cd_nd pt (Some nt) b_delta cc 

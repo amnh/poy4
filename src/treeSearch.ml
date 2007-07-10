@@ -18,10 +18,10 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 1865 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 1952 $"
 
-let has_exact (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
-    List.exists (function `Exact -> true | _ -> false) cost_calculation
+let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
+    List.exists (fun x -> x = something) cost_calculation
 
     (* This needs to be moved out, so that the module is constructed accoding to
     * this decition 
@@ -79,7 +79,6 @@ module type S = sig
 let get_transformations (`LocalOptimum (_, _, _, _, list, _, _, _, _, _, _)) = 
     let remover meth acc =
         match meth with
-        | `Exact -> acc
         | #Methods.transform as x -> x :: acc
     in
     List.fold_right remover list []
@@ -158,26 +157,18 @@ let search_time_and_trees_considered a b =
     [ ("search-time", string_of_float a) ; 
     ("trees-considered", string_of_int b)]
 
-module Exact = struct let exact = true end
-module Inexact = struct let exact = false end
-
 module MakeNormal
     (Node : NodeSig.S) 
     (Edge : Edge.EdgeSig with type n = Node.n) 
-    (TreeOps : functor 
-        (Exact : Ptree.Exact) ->
+    (TreeOps : 
             Ptree.Tree_Operations with 
             type a = Node.n with type b = Edge.e) = struct
 
-    module ExactPtreeSearch = Ptree.Search (Node) (Edge) (TreeOps (Exact))
-    module InexactPtreeSearch = Ptree.Search (Node) (Edge) (TreeOps (Inexact))
+    module PtreeSearch = Ptree.Search (Node) (Edge) (TreeOps)
     module SamplerApp = Sampler.MakeApp (Node) (Edge)
     module SamplerRes = Sampler.MakeRes (Node) (Edge)
     module PhyloQueues = Queues.Make (Node) (Edge)
     module PhyloTabus = Tabus.Make (Node) (Edge)
-
-    (* We don't need exact calculations here *)
-    module TreeOps = TreeOps (struct let exact = false end)
 
     type a = Node.n
     type b = Edge.e
@@ -194,7 +185,7 @@ module MakeNormal
         let output tree = 
             let cost = string_of_float cost in
             let tree = 
-                InexactPtreeSearch.build_trees 
+                PtreeSearch.build_trees 
                 tree
                 (fun x -> Data.code_taxon x data) 
                 (fun _ _ -> false)
@@ -244,7 +235,7 @@ module MakeNormal
             let cost = Ptree.get_cost `Adjusted tree in
             let cost = string_of_float cost in
             let tree = 
-                InexactPtreeSearch.build_forest_with_names_n_costs 
+                PtreeSearch.build_forest_with_names_n_costs 
                 collapse tree data cost 
             in
             let output tree =
@@ -269,34 +260,20 @@ module MakeNormal
         StatusCommon.Files.set_margin filename ori_margin 
               
 
-    let get_search_function tabu_creator trajectory meth has_exact =
+    let get_search_function tabu_creator trajectory meth =
         let stepfn = function
-            | `Spr -> 
-                    (if has_exact then
-                        ExactPtreeSearch.spr_step
-                    else InexactPtreeSearch.spr_step), "SPR"
-            | `Tbr -> 
-                    (if has_exact then 
-                        ExactPtreeSearch.tbr_step
-                    else InexactPtreeSearch.tbr_step), "TBR" in
+            | `Spr ->  PtreeSearch.spr_step, "SPR"
+            | `Tbr -> PtreeSearch.tbr_step, "TBR"
+        in
         let res = 
             match meth with
-            | `Alternate _ -> 
-                    if has_exact then ExactPtreeSearch.alternate_spr_tbr
-                    else InexactPtreeSearch.alternate_spr_tbr
-            | `SingleNeighborhood x -> 
-                    if has_exact then 
-                        ExactPtreeSearch.search_local_next_best (stepfn x)
-                    else InexactPtreeSearch.search_local_next_best (stepfn x)
-            | `ChainNeighborhoods x -> 
-                    if has_exact then 
-                        ExactPtreeSearch.search (stepfn x)
-                    else
-                        InexactPtreeSearch.search (stepfn x)
+            | `Alternate _ -> PtreeSearch.alternate_spr_tbr
+            | `SingleNeighborhood x -> PtreeSearch.search_local_next_best (stepfn x)
+            | `ChainNeighborhoods x -> PtreeSearch.search (stepfn x)
             | `None -> (fun a -> a)
         in
         match trajectory with
-        | `AllThenChoose -> InexactPtreeSearch.repeat_until_no_more tabu_creator res
+        | `AllThenChoose -> PtreeSearch.repeat_until_no_more tabu_creator res
         | _ -> res
 
     (** [forest_break_search_tree origin_cost tree] attempts to break all edges
@@ -410,7 +387,7 @@ module MakeNormal
                 | Some (_, clade_node) -> clade_node in
 
             let status =
-                ExactPtreeSearch.tbr_join mgr tabu forest j2 clade_node
+                PtreeSearch.tbr_join mgr tabu forest j2 clade_node
                     forest.Ptree.origin_cost in
 
             match status with
@@ -437,7 +414,7 @@ module MakeNormal
         | Some forest -> forest_joins forest
 
     let diagnose tree =
-        InexactPtreeSearch.uppass (InexactPtreeSearch.downpass tree)
+        PtreeSearch.uppass (PtreeSearch.downpass tree)
 
     let queue_manager max th keep sampler =
         fun () ->
@@ -518,7 +495,6 @@ let rec find_local_optimum ?queue data emergency_queue
             (search_space, th, max, keep, cost_calculation, origin, 
             trajectory, break_tabu, join_tabu, reroot_tabu, samples)
             = meth in
-    let has_exact = has_exact meth in
     let samplerf = sampler data emergency_queue samples in
 
     let queue_manager =
@@ -584,9 +560,9 @@ let rec find_local_optimum ?queue data emergency_queue
         in
         new PhyloTabus.standard_tabu ptree joinfn rerootfn breakfn 
     in
-    let search_fn = get_search_function tabu_manager trajectory search_space has_exact in
+    let search_fn = get_search_function tabu_manager trajectory search_space in
     let search_features =
-            InexactPtreeSearch.features meth ((queue_manager ())#features
+            PtreeSearch.features meth ((queue_manager ())#features
             (* TODO: tabu features *)
             (([])))
     in
@@ -602,7 +578,7 @@ let rec find_local_optimum ?queue data emergency_queue
                 try
                     let res = (search_fn queue_manager)#results in
                     List.map (fun (a, _, _) ->
-                        let a = InexactPtreeSearch.uppass a in
+                        let a = PtreeSearch.uppass a in
                         let a = TreeOps.clear_internals a in
                         (a, Ptree.get_cost `Unadjusted a)) res
                 with
@@ -676,7 +652,7 @@ let forest_search data queue origin_cost search trees =
         let process t = Sexpr.to_list (find_local_optimum data queue
         (Sexpr.singleton t) (sets_of_consensus trees) local_optimum) in
         let trees = 
-            InexactPtreeSearch.fuse_generations
+            PtreeSearch.fuse_generations
             (Sexpr.to_list trees)
             max_trees
             weighting
@@ -731,7 +707,7 @@ let forest_search data queue origin_cost search trees =
                     | hd :: _ -> Ptree.choose_leaf hd, hd
                     | _ -> failwith "No trees in memory"
         in
-        let res = Ptree.consensus InexactPtreeSearch.collapse_as_needed (fun code ->
+        let res = Ptree.consensus PtreeSearch.collapse_as_needed (fun code ->
             Data.code_taxon code data) majority 
             (Sexpr.to_list trees) rooting_leaf
         in
@@ -759,8 +735,7 @@ end
 module Make
     (NodeH : NodeSig.S) 
     (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
-    (TreeOpsH : functor 
-        (Exact : Ptree.Exact) ->
+    (TreeOpsH : 
             Ptree.Tree_Operations with 
             type a = NodeH.n with type b = EdgeH.e)
      = struct
@@ -775,8 +750,8 @@ module Make
     module SH = MakeNormal (NodeS) (EdgeS) (TreeOpsS)
     module DH = MakeNormal (NodeH) (EdgeH) (TreeOpsH)
 
-    module TOS = TreeOpsS (Inexact)
-    module TOH = TreeOpsH (Inexact)
+    module TOS = TreeOpsS 
+    module TOH = TreeOpsH 
 
     let report_trees = DH.report_trees
     let forest_break_search_tree = DH.forest_break_search_tree

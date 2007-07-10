@@ -33,6 +33,7 @@ type otherfiles = [
     | `GeneralAlphabetSeq of (string * string * read_option_t list) 
     | `Breakinv of (string * string * read_option_t list)
     | `Chromosome of string list
+    | `Prealigned of (otherfiles * Methods.prealigned_costs)
     | `Genome of string list
     | `ComplexTerminals of string list
 ]
@@ -78,6 +79,8 @@ type chromosome_args = [
 
 type transform_method = [
     | `RandomizedTerminals
+    | `AlphabeticTerminals
+    | `Prealigned_Transform
     | `Tcm of string
     | `Gap of (int * int)
     | `AffGap of int
@@ -111,7 +114,8 @@ type transform = [
 
 type cost_calculation = [
     | `Exact 
-    | transform
+    | `Iterative
+    | `Normal
 ]
 
 type keep_method = [
@@ -133,7 +137,7 @@ type builda = [
     | `Random
     | `Ordered
     | keep_method
-    | cost_calculation
+    | transform
     | Methods.tabu_join_strategy
 ]
 
@@ -160,7 +164,7 @@ type swapa = [
     | thresh_trees
     | keep_method
     | swap_strategy
-    | cost_calculation
+    | transform
     | swap_trajectory
     | Methods.tabu_break_strategy
     | Methods.tabu_join_strategy
@@ -197,6 +201,7 @@ type internal_memory = [
 type settings = [
     | `HistorySize of int
     | `Logfile of string option
+    | cost_calculation
     | `SetSeed of int
     | `Root of int option
     | `RootName of string
@@ -249,6 +254,8 @@ type reporta = [
     | `MstR
     | `TreesStats
     | `TimeDelta of string
+    | `SequenceStats of old_identifiers
+    | `CompareSequences of (bool * old_identifiers * old_identifiers)
     | `FasWinClad
     | `ExplainScript of string
     | `Consensus of float option
@@ -328,6 +335,8 @@ let transform_transform acc (id, x) =
     | #Methods.characters as id ->
             match x with
             | `RandomizedTerminals -> `RandomizedTerminals :: acc
+            | `AlphabeticTerminals -> `AlphabeticTerminals :: acc
+            | `Prealigned_Transform -> (`Prealigned_Transform id) :: acc
             | `Tcm f -> (`Assign_Transformation_Cost_Matrix ((Some (`Local f)), id)) :: acc
             | `Gap (a, b) -> 
                     (`Create_Transformation_Cost_Matrix (a, b, id)) :: acc
@@ -375,7 +384,7 @@ let build_default_method = `Wagner_Rnd build_default_method_args
 let build_default = (10, build_default_method, [])
 
 let transform_build ((n, (meth : Methods.build_method), (trans :
-    Methods.cost_calculation list)) as acc) = function
+    Methods.transform list)) as acc) = function
     | `Prebuilt fn -> (n, (`Prebuilt fn), trans)
     | `DistancesRnd ->
             begin match meth with
@@ -435,8 +444,6 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
     | `Transform x ->
             let t = transform_transform_arguments x in
             (n, meth, (t @ trans))
-    | `Exact ->
-            (n, meth, (`Exact :: trans))
     | #Methods.tabu_join_strategy as tabu ->
             let nmeth = 
                 match meth with
@@ -502,9 +509,6 @@ join_tabu, reroot_tabu, samples)
           let cclist = t @ cclist in
           (space, thres, keep, keepm, cclist, origin, traj, break_tabu,
           join_tabu, reroot_tabu, samples)
-    | `Exact as x ->
-            (space, thres, keep, keepm, (x :: cclist), origin, traj, break_tabu,
-            join_tabu, reroot_tabu, samples)
     | `Forest cost ->
           let origin = Some cost in
           print_endline ("Forest: "^string_of_float cost);
@@ -677,6 +681,10 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
             (`Consensus (file, v)) :: acc, file
     | `GraphicConsensus v ->
             (`GraphicConsensus (file, v)) :: acc, file
+    | `SequenceStats c ->
+            (`SequenceStats (file, c)) :: acc, file
+    | `CompareSequences (a, b, c) ->
+            (`CompareSequences (file, a, b, c)) :: acc, file
     | `FasWinClad ->
             (`FasWinClad (file)) :: acc, file
     | `ExplainScript script ->
@@ -929,7 +937,9 @@ let create_expr lexer =
             ];
         transform_method:
             [
+                [ LIDENT "prealigned" -> `Prealigned_Transform ] |
                 [ LIDENT "randomize_terminals" -> `RandomizedTerminals ] |
+                [ LIDENT "alphabetic_terminals" -> `AlphabeticTerminals ] |
                 [ LIDENT "tcm"; ":";  x = STRING -> `Tcm x ] |
                 [ LIDENT "fixedstates" -> `Fixed_States ] |
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
@@ -1086,7 +1096,11 @@ let create_expr lexer =
                 [ LIDENT "nolog" -> `Logfile None ] |
                 [ LIDENT "seed"; ":"; x = INT -> `SetSeed (int_of_string x) ] |
                 [ LIDENT "root"; ":"; x = STRING -> `RootName x ] |
-                [ LIDENT "root"; ":"; x = INT -> `Root (Some (int_of_string x)) ]
+                [ LIDENT "root"; ":"; x = INT -> `Root (Some (int_of_string x))
+                ] |
+                [ LIDENT "exhaustive_do" -> `Exact ] |
+                [ LIDENT "iterative" -> `Iterative ] |
+                [ LIDENT "normal_do" -> `Normal ]
             ];
         (* Reporting *)
         report:
@@ -1129,6 +1143,11 @@ let create_expr lexer =
                     | Some x -> Some (float_of_string x)) ] | 
                 [ LIDENT "clades" -> `Clades ] |
                 [ LIDENT "phastwinclad" -> `FasWinClad ] | 
+                [ LIDENT "seq_stats"; ":"; ch = old_identifiers ->
+                    `SequenceStats ch ] |
+                [ LIDENT "compare"; ":"; left_parenthesis; complement = boolean;
+                ","; ch1 = old_identifiers; ","; ch2 = old_identifiers; right_parenthesis ->
+                    `CompareSequences (complement, ch1, ch2) ] |
                 [ LIDENT "script_analysis"; ":"; x = STRING -> `ExplainScript x ] |
                 [ LIDENT "supports"; y = OPT opt_support_names -> `Supports y ] |
                 [ LIDENT "graphsupports"; y = OPT opt_support_names -> 
@@ -1287,10 +1306,22 @@ let create_expr lexer =
                 right_parenthesis -> `Support a ]
             ];
         (* Reading a file *)
+
+        prealigned_costs:
+            [
+                [ LIDENT "tcm"; ":";  x = STRING ->
+                    (`Assign_Transformation_Cost_Matrix (`Local x)) ] |
+                [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
+                    right_parenthesis -> 
+                        `Create_Transformation_Cost_Matrix (int_of_string x, int_of_string y) ]
+            ];
         read_argument:
             [ 
                 [ LIDENT "annotated"; ":"; left_parenthesis; a = LIST1 otherfiles SEP ","; 
                     right_parenthesis -> ((`AnnotatedFiles a) :> Methods.input) ] |
+                [ LIDENT "prealigned"; ":"; left_parenthesis; a = otherfiles;
+                ","; b = prealigned_costs; right_parenthesis -> `Prealigned (a,
+                b) ] |
                 [ x = otherfiles -> (x :> Methods.input) ]
             ];
         otherfiles:
@@ -1404,8 +1435,7 @@ let create_expr lexer =
             ];
         cost_calculation:
             [
-                [ x = transform -> (x :> cost_calculation) ] |
-                [ LIDENT "exact" -> `Exact ]
+                [ x = transform -> (x :> transform) ]
             ];
         (* Swaping *)
         search_argument:

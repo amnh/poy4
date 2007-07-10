@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 1865 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 1952 $"
 
-(* $Id: alphabet.ml 1865 2007-06-07 16:58:32Z andres $ *)
+(* $Id: alphabet.ml 1952 2007-07-10 18:28:23Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -32,11 +32,24 @@ type kind =
 type a = {
     string_to_code : int All_sets.StringMap.t;
     code_to_string : string All_sets.IntegerMap.t;
+    complement : int option All_sets.IntegerMap.t;
     gap : int;
     all : int;
     size : int;
     kind : kind;
 }
+
+let to_formatter alph : Tags.output =
+    let element_to_tags string code acc =
+        let code = string_of_int code in
+        (`Single (Tags.Alphabet.element, [(Tags.Alphabet.value, string);
+        (Tags.Alphabet.code, code)], `Structured `Empty)) :: acc
+    in
+    let res = 
+        `Set (All_sets.StringMap.fold element_to_tags alph.string_to_code [])
+    in
+    Tags.Characters.alphabet, [], `Structured res
+
 
 (* The alphabet type *)
 
@@ -77,141 +90,153 @@ let aa_gap = 21
 let unspecified = 22
 let all_aminoacids = 22
 
-
-
 let list_to_a lst gap all kind = 
-    let add (s2c, c2s, cnt) (a, b) =
+    let add (s2c, c2s, cmp, cnt) (a, b, c) =
         All_sets.StringMap.add a b s2c,
         (if All_sets.IntegerMap.mem b c2s then c2s
         else All_sets.IntegerMap.add b a c2s),
+        (All_sets.IntegerMap.add b c cmp),
         cnt + 1
     in
-    let empty = All_sets.StringMap.empty, All_sets.IntegerMap.empty, 0 in
-    let s2c, c2s, cnt = List.fold_left add empty lst in
+    let empty = All_sets.StringMap.empty, All_sets.IntegerMap.empty,
+    All_sets.IntegerMap.empty, 0 in
+    let s2c, c2s, cmp, cnt = List.fold_left add empty lst in
     let gap_code = All_sets.StringMap.find gap s2c    
     and all_code = All_sets.StringMap.find all s2c in
     { string_to_code = s2c; code_to_string = c2s; gap = gap_code; all = all_code;
-      size = cnt; kind = kind }
+      size = cnt; kind = kind; complement = cmp }
 
 (* The alphabet limited to the four bases *)
 let dna =
+    let all = adenine lor citosine lor guanine lor timine lor gap in
     list_to_a 
     [
-        ("A", adenine);
-        ("C", citosine);
-        ("G", guanine);
-        ("T", timine);
-        ("_", gap);
-        ("X", (adenine lor citosine lor guanine lor timine lor gap))
+        ("A", adenine, Some timine);
+        ("C", citosine, Some guanine);
+        ("G", guanine, Some citosine);
+        ("T", timine, Some adenine);
+        ("_", gap, Some all);
+        ("X", all, Some all)
     ] "_" "X" Simple_Bit_Flags
 
 (* The alphabet of accepted IUPAC codes (up to N), and other codes used in the
 * POY file format (_ up to |). *)
 let nucleotides = 
+    let all = gap lor timine lor guanine lor adenine lor citosine in
     list_to_a
     [ 
-        ("A", adenine); 
-        ("C", citosine); 
-        ("G", guanine);
-        ("T", timine); 
-        ("U", uracile);
-        ("M", adenine lor citosine); 
-        ("R", adenine lor guanine); 
-        ("W", adenine lor timine); 
-        ("S", citosine lor guanine); 
-        ("Y", citosine lor timine); 
-        ("K", guanine lor timine); 
-        ("V", adenine lor citosine lor guanine); 
-        ("H", adenine lor citosine lor timine); 
-        ("D", adenine lor guanine lor timine); 
-        ("B", citosine lor guanine lor timine); 
-        ("N", adenine lor citosine lor timine lor guanine); 
-        ("X", adenine lor citosine lor timine lor guanine); 
-        ("-", gap); 
-        ("_", gap); 
-        ("1", 17);
-        ("2", 18);
-        ("3", 19);
-        ("4", 20);
-        ("5", 21);
-        ("6", 22);
-        ("7", 23);
-        ("8", 24);
-        ("9", 25);
-        ("0", 26);
-        ("!", 27);
-        ("@", 28);
-        ("$", 29);
-        ("%", 30);
-        ("*", 31);
-        ("?", 31);
-        ("a", adenine); 
-        ("c", citosine); 
-        ("g", guanine);
-        ("t", timine); 
-        ("u", uracile);
-        ("m", adenine lor citosine); 
-        ("r", adenine lor guanine); 
-        ("w", adenine lor timine); 
-        ("s", citosine lor guanine); 
-        ("y", citosine lor timine); 
-        ("k", guanine lor timine); 
-        ("v", adenine lor citosine lor guanine); 
-        ("h", adenine lor citosine lor timine); 
-        ("d", adenine lor guanine lor timine); 
-        ("b", citosine lor guanine lor timine); 
-        ("x", adenine lor citosine lor timine lor guanine); 
-        ("n", adenine lor citosine lor timine lor guanine); 
+        ("A", adenine, Some timine); 
+        ("C", citosine, Some guanine); 
+        ("G", guanine, Some citosine);
+        ("T", timine, Some adenine); 
+        ("U", uracile, Some adenine);
+        ("M", adenine lor citosine, Some (timine lor guanine)); 
+        ("R", adenine lor guanine, Some (timine lor citosine)); 
+        ("W", adenine lor timine, Some (timine lor adenine)); 
+        ("S", citosine lor guanine, Some (guanine lor citosine)); 
+        ("Y", citosine lor timine, Some (guanine lor adenine)); 
+        ("K", guanine lor timine, Some (citosine lor adenine)); 
+        ("V", adenine lor citosine lor guanine, 
+        Some (timine lor guanine lor citosine)); 
+        ("H", adenine lor citosine lor timine, 
+        Some (timine lor guanine lor adenine)); 
+        ("D", adenine lor guanine lor timine,
+        Some (timine lor citosine lor adenine)); 
+        ("B", citosine lor guanine lor timine,
+        Some (guanine lor citosine lor adenine)); 
+        ("N", adenine lor citosine lor timine lor guanine,
+        Some (timine lor guanine lor adenine lor citosine)); 
+        ("X", adenine lor citosine lor timine lor guanine, 
+        Some (timine lor guanine lor adenine lor citosine)); 
+        ("-", gap, Some all); 
+        ("_", gap, Some all); 
+        ("1", 17, Some (all land (lnot 17)));
+        ("2", 18, Some (all land (lnot 18)));
+        ("3", 19, Some (all land (lnot 19)));
+        ("4", 20, Some (all land (lnot 20)));
+        ("5", 21, Some (all land (lnot 21)));
+        ("6", 22, Some (all land (lnot 22)));
+        ("7", 23, Some (all land (lnot 23)));
+        ("8", 24, Some (all land (lnot 24)));
+        ("9", 25, Some (all land (lnot 25)));
+        ("0", 26, Some (all land (lnot 26)));
+        ("!", 27, Some (all land (lnot 27)));
+        ("^", 28, Some (all land (lnot 28)));
+        ("$", 29, Some (all land (lnot 29)));
+        ("#", 30, Some (all land (lnot 30)));
+        ("*", 31, Some (all land (lnot 31)));
+        ("?", 31, Some (all land (lnot 31)));
+        ("a", adenine, Some timine); 
+        ("c", citosine, Some guanine); 
+        ("g", guanine, Some citosine);
+        ("t", timine, Some adenine); 
+        ("u", uracile, Some adenine);
+        ("m", adenine lor citosine, Some (timine lor guanine)); 
+        ("r", adenine lor guanine, Some (timine lor citosine)); 
+        ("w", adenine lor timine, Some (timine lor adenine)); 
+        ("s", citosine lor guanine, Some (guanine lor citosine)); 
+        ("y", citosine lor timine, Some (guanine lor adenine)); 
+        ("k", guanine lor timine, Some (citosine lor adenine)); 
+        ("v", adenine lor citosine lor guanine, 
+        Some (timine lor guanine lor citosine)); 
+        ("h", adenine lor citosine lor timine, 
+        Some (timine lor guanine lor adenine)); 
+        ("d", adenine lor guanine lor timine,
+        Some (timine lor citosine lor adenine)); 
+        ("b", citosine lor guanine lor timine,
+        Some (guanine lor citosine lor adenine)); 
+        ("n", adenine lor citosine lor timine lor guanine,
+        Some (timine lor guanine lor adenine lor citosine)); 
     ] "_" "*" Extended_Bit_Flags
 
 (* The list of aminoacids *)
 let aminoacids =
     list_to_a
     [
-        ("A", alanine); 
-        ("R", arginine); 
-        ("N", asparagine); 
-        ("D", aspartic); 
-        ("C", cysteine); 
-        ("Q", glutamine); 
-        ("E", glutamic); 
-        ("G", glycine); 
-        ("H", histidine); 
-        ("I", isoleucine); 
-        ("L", leucine); 
-        ("K", lysine); 
-        ("M", methionine); 
-        ("F", phenylalanine); 
-        ("P", proline); 
-        ("S", serine); 
-        ("T", threonine); 
-        ("W", tryptophan); 
-        ("Y", tyrosine); 
-        ("V", valine); 
-        ("X", all_aminoacids); 
-        ("_", aa_gap);
-        ("-", aa_gap);
-        ("a", alanine); 
-        ("r", arginine); 
-        ("n", asparagine); 
-        ("d", aspartic); 
-        ("c", cysteine); 
-        ("q", glutamine); 
-        ("e", glutamic); 
-        ("g", glycine); 
-        ("h", histidine); 
-        ("i", isoleucine); 
-        ("l", leucine); 
-        ("k", lysine); 
-        ("m", methionine); 
-        ("f", phenylalanine); 
-        ("p", proline); 
-        ("s", serine); 
-        ("t", threonine); 
-        ("w", tryptophan); 
-        ("y", tyrosine); 
-        ("v", valine); 
-        ("x", all_aminoacids); 
+        ("A", alanine, None); 
+        ("R", arginine, None); 
+        ("N", asparagine, None); 
+        ("D", aspartic, None); 
+        ("C", cysteine, None); 
+        ("Q", glutamine, None); 
+        ("E", glutamic, None); 
+        ("G", glycine, None); 
+        ("H", histidine, None); 
+        ("I", isoleucine, None); 
+        ("L", leucine, None); 
+        ("K", lysine, None); 
+        ("M", methionine, None); 
+        ("F", phenylalanine, None); 
+        ("P", proline, None); 
+        ("S", serine, None); 
+        ("T", threonine, None); 
+        ("W", tryptophan, None); 
+        ("Y", tyrosine, None); 
+        ("V", valine, None); 
+        ("X", all_aminoacids, None); 
+        ("_", aa_gap, None);
+        ("-", aa_gap, None);
+        ("a", alanine, None); 
+        ("r", arginine, None); 
+        ("n", asparagine, None); 
+        ("d", aspartic, None); 
+        ("c", cysteine, None); 
+        ("q", glutamine, None); 
+        ("e", glutamic, None); 
+        ("g", glycine, None); 
+        ("h", histidine, None); 
+        ("i", isoleucine, None); 
+        ("l", leucine, None); 
+        ("k", lysine, None); 
+        ("m", methionine, None); 
+        ("f", phenylalanine, None); 
+        ("p", proline, None); 
+        ("s", serine, None); 
+        ("t", threonine, None); 
+        ("w", tryptophan, None); 
+        ("y", tyrosine, None); 
+        ("v", valine, None); 
+        ("x", all_aminoacids, None); 
     ] "_" "X" Sequential
 
 let match_base x alph =
@@ -235,10 +260,10 @@ let of_string ?(orientation = false) x gap all =
     let rec builder alph counter = function
         | h :: t -> 
               if orientation then 
-                  builder ((h, counter) :: ("~" ^ h, counter + 1) :: alph)
+                  builder ((h, counter, None) :: ("~" ^ h, counter + 1, None) :: alph)
                       (counter + 2) t
               else 
-                  builder ((h, counter):: alph) (counter + 1)  t
+                  builder ((h, counter, None):: alph) (counter + 1)  t
 
         | [] -> List.rev alph
     in
@@ -370,7 +395,7 @@ let simplified_alphabet alph =
                     has_only_one_bit_on v
             in
             let add_those_who_have_it v name acc =
-                if has_one_bit_or_all v then (name, v) :: acc
+                if has_one_bit_or_all v then (name, v, None) :: acc
                 else acc
             in
             let list = 
@@ -383,5 +408,7 @@ let simplified_alphabet alph =
 let distinct_size alph =
     All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1) alph.code_to_string 0
 
+let complement c alph = 
+    All_sets.IntegerMap.find c alph.complement
 (*    code_to_string : string All_sets.IntegerMap.t;    *)
 (* vim: set et sw=4 tw=80: *)

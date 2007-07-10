@@ -6,6 +6,8 @@
 #include <caml/custom.h>
 #include <caml/intext.h>
 #include <caml/alloc.h>
+#include "config.h"
+#ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
 
 static char *line_read = (char *) NULL;
@@ -30,3 +32,4 @@ rl_CAML_gets (value u) {
     res = rl_gets ();
     CAMLreturn (caml_copy_string(res));
 }
+#endif

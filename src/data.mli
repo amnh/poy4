@@ -325,7 +325,7 @@ val process_parsed_sequences :
     (Sequence.s list list list * Parser.taxon) list -> d
             
 
-val process_molecular_file : dyna_state_t -> d -> Parser.filename -> d
+val process_molecular_file : bool -> dyna_state_t -> d -> Parser.filename -> d
 
 val add_static_file : ?report:bool -> d -> Parser.filename -> d
 
@@ -480,8 +480,39 @@ val make_fixed_states : bool_characters -> d -> d
 
 val has_dynamic : d -> bool 
 
-val randomize_taxon_codes : d -> d * (int, int) Hashtbl.t
+val randomize_taxon_codes : Methods.terminal_transform -> d -> d * (int, int) Hashtbl.t
 
 module Sample : sig
     val generate : d -> [ `Bootstrap | `Jackknife of int ] -> d
 end
+
+val prealigned_characters :   
+    (Cost_matrix.Two_D.m -> Alphabet.a ->
+              'a * ([> `Exists ] -> int -> Parser.t list -> Parser.t list) *
+                 (int -> Parser.Hennig.Encoding.s list ->
+                     Parser.Hennig.Encoding.s list)) ->
+                           d -> bool_characters -> d
+
+(** [compare_all_pairs a b c d] compare for each taxon the characters with code
+* [a] and [b], making the reverse complement of [b] if [c] is true, as stored in
+* the data structure [d], returning for each character an optional tuple holding
+* the number of taxa with comparable characters, and their overal comparison
+* index. If none of the taxa hold the required characters, [None] is returned. *)
+val compare_all_pairs : int -> int -> bool -> d -> (int * float) option
+
+(** [compare_pairs a b c d] calculates the compare_all_pairs for every pair of
+* characters in [a] and [b], calculating the reverse complement of [b] if [c] is
+* true, as stored in the structure [d]. The output is a list holding for each
+* pair of character names, the comparison index (see [compare_all_pairs]). *)
+val compare_pairs : bool_characters -> bool_characters -> bool -> d -> 
+    (string * string * float) list
+
+(** [sequence_statistics ch d] returns a list containing pairs consisting 
+* of [(n, (w, x, y, z, d, e, f))], where [n] is the name of each character included in
+* [ch], [w] is the maximum sequence length, [x] is the minimum sequence length,
+* [y] is the sum of the length of all taxa for the character [n], [z] is the
+* total number of characters included (taxa containing it), [d] is the maximum
+* ammong the all pairs distances, [e] is the minimum ammong the all pairs
+* distances, and [f] is the sum of all the distances. In total (z ^ 2 / 2 - z)
+* distances are computed. *)
+val sequence_statistics : bool_characters -> d -> (string * (int * int * int * int * int * int * int)) list

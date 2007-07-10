@@ -395,15 +395,16 @@ let encoding enc x =
     | SeqCS x -> SeqCS.encoding enc x
     | _ -> failwith "Unsupported DynamicCS.encoding"
 
-let readjust ch1 ch2 parent mine =
+let readjust to_adjust modified ch1 ch2 parent mine =
     match ch1, ch2, parent, mine with
     | SeqCS ch1, SeqCS ch2, SeqCS parent, SeqCS mine -> 
-            let new_cost, nc = SeqCS.readjust ch1 ch2 parent mine in
+            let modified, new_cost, nc = 
+                SeqCS.readjust to_adjust modified ch1 ch2 parent mine in
             let prev_cost = SeqCS.distance ch1 mine +. SeqCS.distance ch2 mine in
-            prev_cost, new_cost, (SeqCS nc)
+            modified, prev_cost, new_cost, (SeqCS nc)
     | _, _, _, mine ->  
             let prev_cost = total_cost mine in
-            prev_cost, prev_cost, mine
+            modified, prev_cost, prev_cost, mine
 
 
 let to_single ?(is_root=false) ref_codes alied_map parent mine = 

@@ -1178,12 +1178,14 @@ let aux_process_molecular_file processor builder dyna_state data file =
             data
     end
 
-let process_molecular_file dyna_state data file = 
+let process_molecular_file is_prealigned dyna_state data file = 
     aux_process_molecular_file 
     (fun alph parsed -> 
         process_parsed_sequences alph (FileStream.filename file) dyna_state data
         parsed)
-    (fun x -> Parser.AlphSeq x) 
+    (fun x -> 
+        if not is_prealigned then Parser.AlphSeq x
+        else Parser.Prealigned_Alphabet x) 
     dyna_state 
     data 
     file
@@ -1205,7 +1207,7 @@ let process_dna_sequences data (file_list, options) =
         | None -> data 
         | Some a -> List.fold_left ~f:process_options ~init:data a
     in
-    let f a b = process_molecular_file `Seq a b  in
+    let f a b = process_molecular_file false `Seq a b  in
     List.fold_left ~f ~init:data file_list
 
 let process_ignore_taxon data taxon =
@@ -1705,7 +1707,7 @@ let character_spec_to_formatter enc : Tags.output =
                 Tags.Characters.fixed_states, dspec.fs;
                 Tags.Characters.tcm, dspec.tcm;
             ],
-            `Structured `Empty
+            `Structured (`Single (Alphabet.to_formatter dspec.alph))
     | Set -> failwith "TODO Set in Data.character_spec_to_formatter"
 
 let characters_to_formatter d : Tags.output =
@@ -1802,16 +1804,16 @@ let create_alpha_c2_breakinvs (data : d) chcode =
             | 0 -> "~" ^ ( string_of_int (code / 2) ) 
             | _ -> failwith "compiler is error" 
         in  
-        gen_alpha := (char, code)::!gen_alpha;         
+        gen_alpha := (char, code, None)::!gen_alpha;         
     done;  
 
     let gen_gap_code = max_code + 2 in  
-    gen_alpha := ("_", gen_gap_code)::!gen_alpha;  
-    gen_alpha := ("~_", (gen_gap_code + 1))::!gen_alpha;     
+    gen_alpha := ("_", gen_gap_code, None)::!gen_alpha;  
+    gen_alpha := ("~_", (gen_gap_code + 1), None)::!gen_alpha;     
 
     let gen_com_code = gen_gap_code + 2 in  
-    gen_alpha := ("*", gen_com_code)::!gen_alpha;  
-    gen_alpha := ("~*", (gen_com_code + 1))::!gen_alpha;  
+    gen_alpha := ("*", gen_com_code, None)::!gen_alpha;  
+    gen_alpha := ("~*", (gen_com_code + 1), None)::!gen_alpha;  
 
     let max_code = gen_com_code + 1 in  
     let gen_alpha = 
@@ -2575,7 +2577,7 @@ let assign_transformation_gaps data chars transformation gaps =
 let get_tcm2d data c =
     match Hashtbl.find data.character_specs c with
     | Dynamic dspec -> dspec.tcm2d
-    | _ -> failwith "Data.get_alphabet"
+    | _ -> failwith "Data.get_tcm2d"
 
 let codes_with_same_tcm codes data =
     (* This function assumes that the codes have already been filtered by class
@@ -3111,7 +3113,16 @@ let change_taxon_codes reorder_function data =
     { data with taxon_names = taxon_names; taxon_codes = taxon_codes;
     taxon_characters = taxon_characters; root_at = root }, htbl
 
-let randomize_taxon_codes = change_taxon_codes Array_ops.randomize 
+let randomize_taxon_codes meth data = 
+    let f = 
+        match meth with
+        | `RandomizedTerminals -> Array_ops.randomize 
+        | `AlphabeticTerminals ->
+                Array.stable_sort ~cmp:(fun a b ->
+                    String.compare (code_taxon a data) (code_taxon b
+                    data)) 
+    in
+    change_taxon_codes f data
 
 let lexicographic_taxon_codes data = 
     let lexicographic_sort (a : int) b =
@@ -3120,6 +3131,146 @@ let lexicographic_taxon_codes data =
         String.compare namea nameb
     in
     change_taxon_codes (Array.stable_sort ~cmp:lexicographic_sort) data
+
+(* A function to produce the alignment of prealigned data *)
+let process_prealigned analyze_tcm data code =
+    let character_name = code_character code data in
+    let _, do_states, do_encoding = 
+        let cm = get_sequence_tcm code data
+        and alph = get_sequence_alphabet code data in
+        analyze_tcm cm alph
+    in
+    let process_taxon a b ((enc, acc, _) as res)=
+        match Hashtbl.find b code with
+        | (Stat _), _
+        | _, `Unknown -> res
+        | (Dyna (_, d)), `Specified ->
+                match d.seq_arr with
+                | [|v|] -> 
+                        let name = code_taxon a data
+                        and enc =
+                            match enc with
+                            | [||] -> 
+                                    (* We have to generate the encoding *)
+                                    let res = 
+                                        Sequence.fold_right (fun acc base ->
+                                        do_encoding base acc) []
+                                        v.seq
+                                    in
+                                    Array.of_list res    
+                            | _ -> enc
+                        and seq = 
+                            Sequence.fold_right 
+                            (fun acc base ->
+                                do_states `Exists base acc) 
+                            [] v.seq
+                        in
+                        enc, (Array.of_list seq, name) :: acc, []
+                | _ -> 
+                        failwith 
+                        "Aren't sequences supposed to be just one?"
+    in
+    character_name, Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
+
+let prealigned_characters analyze_tcm data chars =
+    let codes = get_chars_codes_comp data chars in
+    let res = List.rev_map (process_prealigned analyze_tcm data) codes in
+    let d = add_multiple_static_parsed_file data res in
+    process_ignore_characters false d (`Some codes) 
+
+let sequence_statistics ch data =
+    let codes = get_chars_codes_comp data ch in
+    let process_code code =
+        let alpha = get_sequence_alphabet code data 
+        and cm = get_sequence_tcm code data in
+        let gap = Alphabet.get_gap alpha in
+        let process_taxon a b seqs = 
+            match Hashtbl.find b code with
+            | (Stat _), _ -> seqs
+            | (Dyna (_, d)), _ ->
+                    match d.seq_arr with
+                    | [|dv|] ->
+                            if Sequence.is_empty dv.seq gap then seqs
+                            else dv.seq :: seqs
+                    | _ -> seqs
+        in
+        let seqs = Hashtbl.fold process_taxon data.taxon_characters [] in
+        let d_max, d_min, d_sum = 
+            let seqs = Array.of_list seqs in
+            let cnt = Array.length seqs in
+            let d_min = ref max_int
+            and d_max = ref 0
+            and d_sum = ref 0 in
+            for x = 0 to cnt - 2 do
+                for y = x + 1 to cnt - 1 do
+                    let cost = 
+                        Sequence.Align.cost_2 seqs.(x) seqs.(y) cm 
+                        Matrix.default 
+                    in
+                    d_min := min !d_min cost;
+                    d_max := max !d_max cost;
+                    d_sum := !d_sum + cost;
+                done;
+            done;
+            !d_max, !d_min, !d_sum
+        in
+        let max, min, sum, cnt = 
+            List.fold_left ~f:(fun (s_max, s_min, s_sum, cnt) x ->
+                let len = Sequence.length x in 
+                (max len s_max, min s_min len, s_sum + len, cnt + 1)) 
+            ~init:(0, max_int, 0, 0) seqs 
+        in
+        code_character code data, (max, min, sum, cnt, d_max, d_min, d_sum)
+    in
+    List.map process_code codes
+
+let compare_all_pairs char1 char2 complement data = 
+    let alpha1 = get_sequence_alphabet char1 data
+    and alpha2 = get_sequence_alphabet char2 data 
+    and cm = get_sequence_tcm char1 data in
+    let gap = Alphabet.get_gap alpha1 in
+    if alpha1 = alpha2 then 
+        let process_taxon a b (cnt, res) =
+            match Hashtbl.find b char1, Hashtbl.find b char2 with
+            | ((Stat _), _), _
+            | ((_, `Unknown), _) | (_, (_, `Unknown)) -> (cnt, res)
+            | ((Dyna (_, d)), `Specified), ((Dyna (_, e), `Specified)) ->
+                    (match d.seq_arr, e.seq_arr with
+                    | [|dv|], [|de|] ->
+                            if Sequence.is_empty dv.seq gap || 
+                            Sequence.is_empty de.seq gap then
+                                (cnt, res)
+                            else
+                                let de = 
+                                    if complement then 
+                                        Sequence.complement alpha1 de.seq
+                                    else de.seq
+                                in
+                                (cnt + 1), res +. 
+                                ((float_of_int (Sequence.Align.cost_2 dv.seq de
+                                cm Matrix.default)) /.
+                                (float_of_int ((max (Sequence.length dv.seq) (Sequence.length
+                                de)))))
+                    | _ -> (cnt, res))
+            | _ -> assert false
+        in
+        Some (Hashtbl.fold process_taxon data.taxon_characters (0, 0.))
+    else None
+
+let compare_pairs ch1 ch2 complement data =
+    let rec process_pair acc a b =
+        let namea = code_character a data
+        and nameb = code_character b data in
+        match compare_all_pairs a b complement data with
+        | None -> acc
+        | Some (cnt, sum) ->
+                (namea, nameb, (sum) /. (float_of_int cnt)) :: acc
+    in
+    let codes1 = get_chars_codes_comp data ch1
+    and codes2 = get_chars_codes_comp data ch2 in
+    List.fold_left ~f:(fun acc x ->
+        List.fold_left ~f:(fun acc y -> process_pair acc x y) ~init:acc codes1)
+    ~init:[] codes2
 
 module Sample = struct
     let characters_to_arr chars =

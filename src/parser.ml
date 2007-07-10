@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 1915 $"
+let () = SadmanOutput.register "Parser" "$Revision: 1952 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -69,6 +69,7 @@ let is_unknown t = match t with
 
 type ft = 
     | Is_Hennig 
+    | Is_Clustal
     | Is_Fasta 
     | Is_Poy 
     | Is_Genome 
@@ -128,7 +129,8 @@ let test_file file =
         | _ -> ""
     in
     R.close_in ch;
-    if anywhere_match (Str.regexp "xread") line then Is_Hennig
+    if anywhere_match (Str.regexp "^CLUSTAL") line then Is_Clustal
+    else if anywhere_match (Str.regexp "xread") line then Is_Hennig
     (* treat dpread as a hennig file *)
     else if anywhere_match (Str.regexp "COMPLEX") line then
         Is_ComplexTerminals
@@ -216,8 +218,6 @@ let alphabet_of_t t =
     | AlphSeq a -> a
     | _ -> failwith "alphabet_of_t"
 
-
-
 (* Parser for fasta files *)
 module Fasta = struct
 
@@ -292,7 +292,7 @@ module Fasta = struct
         (* Watch it, the sequence list is in reversed order *)
         let s = Sequence.create (length + 1) in
         List.iter (fun x -> 
-            if x <> gap then
+            if x <> gap || not remove_gaps then
                 Sequence.prepend s x
             else ()) seq;
         Sequence.prepend s gap;
@@ -396,7 +396,6 @@ module Fasta = struct
     let of_channel t ch =
         of_channel_obj t (new FileStream.stream_reader ch)
 
-
     let output ch alp (seq, name) = 
         let str = Sequence.to_string seq alp in
         output_string ch (">" ^ name ^ "\n");
@@ -404,7 +403,6 @@ module Fasta = struct
 
     let to_channel ch l alp =
         List.iter (output ch alp) l
-
 
     let of_file t f =
         try 
@@ -2778,6 +2776,61 @@ module SetGroups = struct
     | _ -> assert false
 end
 
+module ClustalSeq = struct
+    let process_line filename hash taxa line_number line =
+        if 0 = String.length line || ' ' = line.[0] then 
+            taxa
+        else 
+            match Str.split (Str.regexp " +") line with
+            | [taxon; sequence] -> 
+                    Hashtbl.add hash taxon sequence;
+                    if All_sets.Strings.mem taxon taxa then taxa
+                    else All_sets.Strings.add taxon taxa 
+            | _ -> 
+                    raise (Unexpected
+                    ("Unexpected line " ^ string_of_int line_number ^ 
+                    " in Clustal file " ^ filename ^ ": " ^ line))
+
+    let merge_lines hash ch taxon = 
+        let seqs  = Hashtbl.find_all hash taxon in
+        output_string ch ">";
+        output_string ch taxon;
+        output_string ch "\n";
+        List.fold_right (fun x () ->
+            output_string ch x; ()) 
+        seqs ();
+        output_string ch "\n\n"
+
+    let convert_to_fasta file =
+        let ch, file = FileStream.channel_n_filename file in
+        let first_line = input_line ch 
+        and outName, chout = Filename.open_temp_file "fasta" ".tmp" in
+        if "CLUSTAL" = String.sub first_line 0 7 then
+            let hash = Hashtbl.create 97 
+            and line_number = ref 0 
+            and taxa = ref All_sets.Strings.empty in
+            try
+                while true do
+                    let nt = 
+                        process_line file hash !taxa !line_number
+                        (input_line ch)
+                    in
+                    taxa := nt;
+                    incr line_number;
+                done;
+                open_in outName
+            with
+            | End_of_file ->
+                    All_sets.Strings.iter (merge_lines hash chout) !taxa;
+                    close_out chout;
+                    open_in outName
+        else 
+            raise (Unexpected 
+            ("The first line of a fasta file has to begin with the word \
+            CLUSTAL"))
+
+end
+
 let print_error_message fl =
     let msg = "Unexpected@ character@ in@ file@ " ^ fl.filename ^ 
     "@ in@ taxon@ " ^ fl.taxon ^ ".@ The@ character@ '" ^ fl.character ^ "' " ^ 
@@ -2786,6 +2839,7 @@ let print_error_message fl =
 
 let molecular_to_fasta file =
     match test_file file with
+    | Is_Clustal -> ClustalSeq.convert_to_fasta file
     | Is_GBSeq -> GBSeq.convert_to_fasta file
     | Is_TinySeq -> TinySeq.convert_to_fasta file
     | Is_INSDSeq -> INSDSeq.convert_to_fasta file

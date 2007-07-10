@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 1822 $"
+let () = SadmanOutput.register "Tags" "$Revision: 1952 $"
 
 type tag = string
 type value = tag
@@ -57,6 +57,11 @@ let to_xml fo item =
     to_xml fo item;
     fo "@]%!"
 
+module Alphabet = struct
+    let element = "Element"
+    let value = "Value"
+    let code = "Code"
+end
 
 module Characters = struct
     let suffix = " Character"

@@ -47,6 +47,7 @@ exception Unsupported_file_format of string
 (** The file type as detected or according to the user suplied format. *)
 type ft = 
     | Is_Hennig     (** A Hennig86 file format *)
+    | Is_Clustal    (** A Clustal file format *)
     | Is_Fasta      (** A Fasta file format *)
     | Is_Poy        (** A Poy file format *)
     | Is_Genome     (** A Genome (Grappa) file format *)

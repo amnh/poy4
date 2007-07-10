@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 1780 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 1952 $"
 
 let debug = true
 
@@ -129,7 +129,7 @@ end
 
 module Make 
     (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations 
                         with type a = Node.n with type b = Edge.e) = struct
 
@@ -138,7 +138,7 @@ module Make
 
     module IA = ImpliedAlignment.Make (Node) (Edge)
     module CT = CharTransform.Make (Node) (Edge) (TreeOps)
-    module TO = TreeOps (struct let exact = false end) 
+    module TO = TreeOps 
 
     let report_all_roots fo tree =
         let report_root ((Tree.Edge (a, b)), cost) =

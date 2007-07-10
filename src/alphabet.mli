@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: alphabet.mli 1865 2007-06-07 16:58:32Z andres $ *)
+(* $Id: alphabet.mli 1952 2007-07-10 18:28:23Z andres $ *)
 (* Alphabet.
 *
 * Description and handling of different kinds of alphabets for the analysis of
@@ -83,6 +83,11 @@ val match_code : int -> a -> string
 (** Same as match_code *)
 val find_code : int -> a -> string
 
+
+(** Find  the specified complement of the element in the alphabet. If no
+* complement is specified, return None. *)
+val complement : int -> a -> int option
+
 (** [rnd a] creates a function that generates random elements in the alphabet
 * [a] *)
 val rnd : a -> (unit -> int)
@@ -112,11 +117,10 @@ val print : a -> unit
 (** {2 Extracting and Generating Alphabets} *)
 
 (** [list_to_a l g a k] generate an alphabet using the association
-* list of strings and codes [l], with gap code [g] and all code [a], to create
-* an alphabet of kind [k] *)
+* list of strings, codes, and optional complements [l], with gap
+code [g] and all code [a], to create * an alphabet of kind [k] *)
 val list_to_a :
-  (All_sets.StringMap.key * All_sets.IntegerMap.key) list ->
-  All_sets.StringMap.key -> All_sets.StringMap.key -> kind -> a
+  (string * int * int option) list -> string -> string -> kind -> a
 
 (** [simplified_alphabet a] return an alphabet with the following conditions:
 * If the kind of [a] is [Sequential] or [Simple_Bit_Flags], then the same 
@@ -125,6 +129,10 @@ val list_to_a :
 val simplified_alphabet : a -> a 
 
 val to_list : a -> (string * int) list
+
+(** [to_formatter a] produce a text-only representation of the alphabet [a].
+* Useful for uniform end-user reporting. *)
+val to_formatter : a -> Tags.output
 
 module Lexer : sig
     (* The returned list is in the inverse order of the stream. It is done like

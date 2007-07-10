@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include "config.h"
+#ifdef HAVE_LIBNCURSES
 #ifndef _WIN32
 #include <ncurses.h>
 #include <sys/ioctl.h>
@@ -673,3 +675,4 @@ ncurs_CAML_redrawwin (value vw) {
     CAMLreturn(Val_unit);
 }
 
+#endif

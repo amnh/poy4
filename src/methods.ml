@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 1915 $"
+let () = SadmanOutput.register "Methods" "$Revision: 1952 $"
 
 (** Data *)
 
@@ -26,6 +26,8 @@ let process_management = 2
 let io = 3
 let debugging = 4
 let barrier = 5
+
+let cost : [ `Normal | `Exact | `Iterative ] ref = ref `Normal
 
 type filename = [ `Local of string | `Remote of string ]
 
@@ -49,6 +51,10 @@ type read_option_t = [
 | `Orientation of bool
 ]
 
+type prealigned_costs = [
+    | `Assign_Transformation_Cost_Matrix of filename 
+    | `Create_Transformation_Cost_Matrix of (int * int) ]
+
 type simple_input = [
     | `Poyfile of filename list
     | `AutoDetect of filename list
@@ -64,6 +70,7 @@ type simple_input = [
 
 type input = [
     | simple_input
+    | `Prealigned of (simple_input * prealigned_costs)
     | `AnnotatedFiles of simple_input list
 ]
 
@@ -128,7 +135,8 @@ type dynamic_char_transform = [
 
 
 type terminal_transform = [
-    `RandomizedTerminals
+    | `RandomizedTerminals
+    | `AlphabeticTerminals
 ]
 
 type char_transform = [
@@ -142,6 +150,7 @@ type char_transform = [
     | `Prioritize
     | `ReWeight of (characters * float)
     | `WeightFactor of (characters * float)
+    | `Prealigned_Transform of characters
     | transform_cost_matrix
 ]
 
@@ -163,7 +172,6 @@ type transform = [
 * [Search_Based] uses a set of possible states as the values in the HTU's. *)
 type cost_calculation = [
     | transform
-    | `Exact
 ]
 
 type diagnosis = [
@@ -191,6 +199,8 @@ type report = [
     | `Consensus of (string option * float option)
     | `GraphicConsensus of (string option * float option)
     | `FasWinClad of string option
+    | `SequenceStats of (string option * characters)
+    | `CompareSequences of (string option * bool * characters * characters)
     | `ExplainScript of (string * string option)
     | diagnosis
     | `Save of (string * string option)
@@ -591,6 +601,9 @@ type application = [
     | `Memory of string option
     | `HistorySize of int
     | `Logfile of string option
+    | `Normal
+    | `Exact
+    | `Iterative
     | `ReDiagnose
     | `SetSeed of int
     | `InspectFile of string

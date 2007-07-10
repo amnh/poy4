@@ -172,6 +172,10 @@ let dependency_relations (init : Methods.script) =
                         [([Data; Trees; JackBoot; Bremer], [Data; Trees; JackBoot; Bremer], init, NonComposable)]
                 | `Wipe ->
                         [([EntryPoint], [Data; Trees; JackBoot; Bremer], init, NonComposable)]
+                | `Exact
+                | `Iterative
+                | `Normal ->
+                        [([Data; Trees], [Trees], init, Linnearizable)]
                 | `ReDiagnose ->
                         [([Data; Trees], [Trees], init, Linnearizable)]
                 | `Graph (filename, _)
@@ -185,6 +189,8 @@ let dependency_relations (init : Methods.script) =
     | #Methods.input as meth ->
             let rec processor (meth : [< Methods.input]) = 
                 match meth with
+                | `Prealigned (input, _) ->
+                        processor (input  :> Methods.input)
                 | `AnnotatedFiles files ->
                         (* TODO: Fix this analyzer step, this will be a hard
                         * stop *)
@@ -224,10 +230,12 @@ let dependency_relations (init : Methods.script) =
                 | `Create_Transformation_Cost_Matrix _
                 | `Assign_Affine_Gap_Cost _
                 | `Assign_Tail_Cost _
+                | `Prealigned_Transform _
                 | `Assign_Prep_Cost _ ->
                         [([Data], [Data; Trees; JackBoot; Bremer], init,
                         Linnearizable)]
                 | `RandomizedTerminals 
+                | `AlphabeticTerminals 
                 | `MultiStatic_Aprox _
                 | `Chrom_to_Seq _
                 | `Static_Aprox _
@@ -308,6 +316,8 @@ let dependency_relations (init : Methods.script) =
             let res, files, isload = 
                 match meth with
                 | `ExplainScript (_, filename)
+                | `SequenceStats (filename, _)
+                | `CompareSequences (filename, _, _, _)
                 | `FasWinClad filename
                 | `Dataset filename
                 | `Nodes filename
@@ -1321,6 +1331,12 @@ let script_to_string (init : Methods.script) =
                         "@[eliminate the trees I recovered in a swap@]"
                 | `Wipe ->
                         "@[get rid of all trees and data@]"
+                | `Exact -> 
+                        "@[set the cost calculation to exact DO@]"
+                | `Iterative ->
+                        "@[set the cost calculation to iterative@]"
+                | `Normal ->
+                        "@[set the cost calculation to normal DO@]"
                 | `ReDiagnose ->
                         "@[rediagnose the trees@]"
                 | `Graph (_, _)
@@ -1351,9 +1367,11 @@ let script_to_string (init : Methods.script) =
                 | `Assign_Tail_Cost _
                 | `Assign_Prep_Cost _ 
                 | `RandomizedTerminals 
+                | `AlphabeticTerminals
                 | `MultiStatic_Aprox _
                 | `Static_Aprox _
                 | `Search_Based _
+                | `Prealigned_Transform _
                 | `Automatic_Static_Aprox _
                 | `Automatic_Sequence_Partition _ ->
                         "@[transform some characters@]"
@@ -1424,6 +1442,11 @@ let script_to_string (init : Methods.script) =
                 match meth with
                 | `ExplainScript _ ->
                         "@[explain you a script@]"
+                | `SequenceStats _ ->
+                        "@[report the sequence statistics@]"
+                | `CompareSequences _ ->
+                        "@[report the average distance between pairs of \
+                        sequences@]"
                 | `FasWinClad _ -> 
                         "@[report the phastwinclad file@]"
                 | `Dataset _ ->
@@ -1620,6 +1643,9 @@ let is_master_only (init : Methods.script) =
     | `Exit 
     | `Interactive
     | `ChangeWDir _ 
+    | `Normal
+    | `Exact
+    | `Iterative
     | `ReDiagnose
     | `ClearMemory _ 
     | `Recover 
@@ -1652,6 +1678,8 @@ let is_master_only (init : Methods.script) =
     | `Graph (_, _)
     | `Ascii (_, _)
     | `InspectFile _
+    | `SequenceStats _
+    | `CompareSequences _
     | `FasWinClad _ 
     | `ExplainScript _
     | `PrintWDir 
@@ -1730,9 +1758,29 @@ let rec make_remote_files (init : Methods.script) =
     | `Breakinv (a, b, c) -> `Breakinv (mr a, mr b, c)
     | `Chromosome files -> `Chromosome (mrl files)
     | `Genome files -> `Genome (mrl files)
-    | `ComplexTerminals files -> 
-            let files = mrl files in
-            `ComplexTerminals files
+    | `Prealigned (meth, cost) ->
+            let cost = 
+                match cost with
+                | `Assign_Transformation_Cost_Matrix file -> 
+                        `Assign_Transformation_Cost_Matrix (mr file)
+                | `Create_Transformation_Cost_Matrix _ -> cost
+            in
+            let meth = 
+                match meth with
+                | `Poyfile files -> `Poyfile (mrl files)
+                | `AutoDetect files -> `AutoDetect (mrl files)
+                | `Nucleotides files -> `Nucleotides (mrl files)
+                | `Aminoacids files -> `Aminoacids (mrl files)
+                | `GeneralAlphabetSeq (a, b, c) ->
+                        `GeneralAlphabetSeq (mr a, mr b, c)
+                | `Breakinv (a, b, c) -> `Breakinv (mr a, mr b, c)
+                | `Chromosome files -> `Chromosome (mrl files)
+                | `Genome files -> `Genome (mrl files)
+                | `ComplexTerminals files -> 
+                        let files = mrl files in
+                        `ComplexTerminals files
+            in
+            `Prealigned (meth, cost)
     | `AnnotatedFiles files ->
             let files = handle_simple_input_list files in
             `AnnotatedFiles files

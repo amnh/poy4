@@ -1045,6 +1045,20 @@
             sequences in FASTA format.} 
             {}
 
+        \argumentdefinition{prealigned}{\obligatory{(read argument,
+        tcm:\poystring)}}
+            {Specifies that the input sequences are prealigned and
+            should be assigned the transformation cost matrix specified in the
+            input file. (See \poyargument{tcm}.)}
+            {}
+
+        \argumentdefinition{prealigned}{\obligatory{(read argument,
+        tcm:(\poyint, \poyint))}}
+            {Specifies that the input sequences are prealigned and should be
+            assigned substitution and indel costs as defined in the tcm
+            argument. (See \poyargument{tcm}.)}
+            {prealigned2}
+
 	\end{argumentgroup}
 		
 	\end{arguments}
@@ -1225,6 +1239,15 @@
             {This set of arguments reports the current status of terminals and
             characters from the imported data files. }
 		
+            \argumentdefinition{compare}{\obligatory{(\poybool, identifiers,
+            identifiers)}} 
+                {Given an argument value \poyargument{(a, b, c)}, report the
+                ratio between the all pairs distance and their maximum length,
+                between the characters listed in \poyargument{b} and
+                \poyargument{c}. If \poyargument{a} is true, then compute the
+                complement sequence of all the characters in \poyargument{c}
+                before reporting the distance. } {}
+
             \argumentdefinition{cross\_references}{\optional{identifiers\optional{STRING}}}
                 {Reports a table with terminals being analyzed in rows, and the
                 data files in columns. A plus sign (``+'') indicates that data for a given
@@ -1264,6 +1287,12 @@
                 transformation cost matrix (if specified), a list of excluded
                 characters, and a list of input files.} 
                 {data}
+
+            \argumentdefinition{seq\_stats}{\obligatory{identifiers}}
+                {Outputs a summary of the sequences specified in the argument
+                value, for all taxa. The summary includes the maximum, minimum,
+                and average length and distance for all terminals.}
+                {seqstats}
 
             \argumentdefinition{terminals}{}
                 {Reports a list and number of terminals included and excluded
@@ -2073,48 +2102,88 @@
 
 	\begin{arguments}
 
-        \argumentdefinition{history}{\obligatory{\poyint}}
-            {Sets the size of the \poy output history displayed in the \emph{POY
-            Output} window to the number of lines specified by the integer
-            value. The size of the history must be greater than zero. This
-            command has effect only in the ncurses interface. The default size
-            of the output history is 1000 lines.}
-             {}
+        \begin{argumentgroup}{Application settings}
+            {Some generic application settings. Have no effect in the analyses
+            themselves.}
 
-        \argumentdefinition{log}{\obligatory{\poystring}}
-            {Directs a copy of a partial output to the file specified by the
-            string  argument. The output includes the  information in the
-            \emph{POY Output}, \emph{Interactive Console},
-            and \emph{State of Stored Search} windows
-            of ncurses interface.  Timers and current state of the search are
-            not included in the log. If the file already exists, \poy will
-            append the text to it; if the file does not exist, then \poy creates
-            a new file. If the user would like to delete the contents of a
-            preexisting file, then the argument \poyargument{log:new:"logfile"}
-            creates a new initially empty file named \texttt{logfile}.}
-            {log}
+            \argumentdefinition{history}{\obligatory{\poyint}}
+                {Sets the size of the \poy output history displayed in the
+                \emph{POY Output} window to the number of lines specified by the
+                integer value. The size of the history must be greater than
+                zero. This command has effect only in the ncurses interface. The
+                default size of the output history is 1000 lines.}
+                 {}
 
-        \argumentdefinition{nolog}{}
-            {Stops outputting the log to any previously selected
-            file. See \poyargument{log}.}
+            \argumentdefinition{log}{\obligatory{\poystring}}
+                {Directs a copy of a partial output to the file specified by the
+                string  argument. The output includes the  information in the
+                \emph{POY Output}, \emph{Interactive Console}, and \emph{State
+                of Stored Search} windows of ncurses interface.  Timers and
+                current state of the search are not included in the log. If the
+                file already exists, \poy will append the text to it; if the
+                file does not exist, then \poy creates a new file. If the user
+                would like to delete the contents of a preexisting file, then
+                the argument \poyargument{log:new:"logfile"} creates a new
+                initially empty file named \texttt{logfile}.}
+                {log}
+
+            \argumentdefinition{nolog}{}
+                {Stops outputting the log to any previously selected
+                file. See \poyargument{log}.}
+                {}
+
+            \argumentdefinition{root}{\obligatory{\poylident}}
+                {Specifies the terminal with with the the output trees are
+                rooted.  The terminal can either be indicated as a taxon name (a
+                \poystring, which must appear in quotes, such as
+                \texttt{"Genus\_species"}) or the code, that is automatically
+                assigned to the taxon by \poy at the beginning of each \poy
+                session (for example, \poycommand{set(root:45)}. The codes can
+                be obtained using the command \poycommand{report(data)}).  The
+                terminal codes, however, are unique only within a current
+                session.}
+                {root}
+
+        \end{argumentgroup}
+
+        \begin{argumentgroup}{Cost Calculation}
+            {Intensity of the tree cost estimation routines. All these arguments
+            are mutually exclusive: only the last to appear in a
+            \poycommand{set} command will be used.}
+
+            \argumentdefinition{normal\_do}{}
+                {Use the standard Direct Optimization algorithm for the tree
+                cost estimation. This is the default and fastest technique.}
+                {normaldo}
+
+            \argumentdefinition{exhaustive\_do}{}
+                {Use the starndard Direct Optimization algorithm for the tree
+                cost estimation. The difference with \poyargument{normal\_do} is
+                that the calculation of the tree costs during a search are much
+                more intense, always looking for the best possible alignment 
+                for every single topology (instead of a lazy and greedy strategy
+                used by the \poyargument{normal\_do}).}
+                {exhaustivedo}
+
+            \argumentdefinition{iterative}{}
+                {Use iterative pass in the tree cost calculations. This improves
+                the tree cost estimation, but has a tremendous execution time.
+                Use at the very end to polish the final set of trees and perform
+                a final search.}
+                {}
+
+        \end{argumentgroup}
+
+        \begin{argumentgroup}{Randomized routines}
             {}
 
-        \argumentdefinition{root}{\obligatory{\poylident}}
-            {Specifies the terminal with with the the output trees are rooted.
-            The terminal can either be indicated as a taxon name (a \poystring,
-            which must appear in quotes, such as \texttt{"Genus\_species"}) or the code,
-            that is automatically  assigned to the taxon by \poy at the beginning
-            of each \poy session (for example, \poycommand{set(root:45)}. The
-            codes can be obtained using the command \poycommand{report(data)}).
-            The terminal codes, however, are unique only within a current session.}
-            {root}
+            \argumentdefinition{seed}{\obligatory{\poyint}}
+                {Sets the seed of the random number generator to the argument's
+                value. If unspecified, \poy uses the system's time as seed. It
+                is reported when the program starts.}
+                {}
 
-        \argumentdefinition{seed}{\obligatory{\poyint}}
-            {Sets the seed of the random number generator to the argument's
-            value. If unspecified, \poy uses the system's time as seed. It is
-            reported when the program starts.}
-            {}
-
+            \end{argumentgroup}
 	\end{arguments}
 
     \poydefaults{}{If no argument are given, the command does nothing.}
@@ -2577,6 +2646,13 @@
             characters generated for all the trees~\cite{wheeler1995a}. This option is intended only
             for heuristic search purposes.}
             {multistaticapprox}
+
+            \argumentdefinition{prealigned}{}
+                {Assume that the sequences are prealigned and should use the
+                cost regime specified in their assigned transformation cost
+                matrix. All other cost parameters are ignored, including affine
+                gap costs.}
+                {prealignedtransform}
             
         \argumentdefinition{static\_approx}{\optional{\poylident}}
             {Transforms the sequences to the static homology characters
@@ -2726,7 +2802,7 @@
             (\poyargument{circular}), and implement a number of heuristic
             procedures to accelerate computations when working with chromosome
             data type (\poyargument{seed\_length}, \poyargument{median},
-           \poyargument{swap\_med}, \poyargument{arranged\_len}, \poyargument{approx}).
+           \poyargument{swap\_med}, \poyargument{rearranged\_len}, \poyargument{approx}).
             Under default settings, the distance between two chromosomes is calculated using
             \poyargument{breakpoint} and the rest of the arguments are executed
             under their default settings.}
@@ -2855,12 +2931,12 @@
                         the chance of inferring small-size rearrangements. The default value is \texttt{100}.} 
                         {sigblocklen}
 
-  		    \argumentdefinition{arranged\_len}{\obligatory{\poyint}}
-            {Two seeds are said to be \emph{non-rearranged}, 
-              if their distance is not greater than  a predefined 
-              threshold $arranged\_len$. In other words, it is unlikely that rearrangement 
-              operations can occur between seeds if they are connected.
-              The default value is \texttt{1000}}{arrangedlen} 
+  		    \argumentdefinition{rearranged\_len}{\obligatory{\poyint}}
+           	 {Two seeds are said to be \emph{non-rearranged}, 
+              	if their distance is not greater than  a predefined 
+              	threshold $rearranged\_len$. In other words, it is unlikely that rearrangement 
+              	operations can occur between seeds if they are connected.
+             	 The default value is \texttt{1000}}{rearrangedlen} 
 
 
 
@@ -2944,11 +3020,12 @@
           opening cost at \texttt{50} and gap extension cost at \texttt{1.0}.}
               
           \poyexample{read (chromosome:("mito"))\\ transform((all,
-          dynamic\_pam:(breakpoint:10, median:1, \\ circular:false)))} 
+          dynamic\_pam:(breakpoint:10, rearranged\_len:60, median:1, circular:false)))} 
               {This example shows a file read (``mito'') containing
               mitochondrial chromosome sequences that is transformed to set the
-              breakpoint cost at 10, the number of median swap passes at 1, and
-              the chromosomes are linear. }
+              breakpoint cost at 10, 60 or more nucleotides are necessary to allow 
+              rearrangement between 2 identified seeds, the number of median swap passes at 1,
+               and the chromosomes are linear. }
             
 	\end{poyexamples}	    
 

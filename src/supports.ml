@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 1915 2007-06-18 15:12:13Z andres $ *)
+(* $Id: supports.ml 1952 2007-07-10 18:28:23Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 1915 $"
+let () = SadmanOutput.register "Support" "$Revision: 1952 $"
 
 module type S = sig
         type a 
@@ -63,7 +63,7 @@ end
 (** support.ml *)
 
 module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e) = struct
         type a = Node.n
         type b = Edge.e
@@ -84,9 +84,9 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     module PTS = TreeSearch.MakeNormal (Node) (Edge) (TreeOps)
     module PQueue = Queues.Make (Node) (Edge)
     module CT = CharTransform.Make (Node) (Edge) (TreeOps)
-    module B = Build.MakeNormal (Node) (Edge) (TreeOps (struct let exact = false end))
-    module TO = Ptree.Search (Node) (Edge) (TreeOps (struct let exact = false
-    end)) 
+    module B = Build.MakeNormal (Node) (Edge) (TreeOps)
+    module TO = Ptree.Search (Node) (Edge) 
+    (TreeOps) 
 
     (** [count_support iterations resampler tree outgroup root_id hash_params] will
         count the number of clades with a given fingerprint in [iterations]
@@ -708,10 +708,8 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
 end
 
-module Inexact = struct let exact = false end
-
 module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
-    (TreeOpsH : functor (Exact : Ptree.Exact) ->
+    (TreeOpsH : 
         Ptree.Tree_Operations with type a = NodeH.n with type b = EdgeH.e) = struct
 
     type a = NodeH.n
@@ -720,8 +718,8 @@ module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n)
     module SH = MakeNormal (Node.Standard) (Edge.SelfEdge) (Chartree.TreeOps)
     module DH = MakeNormal (NodeH) (EdgeH) (TreeOpsH)
 
-    module TOS = Chartree.TreeOps (Inexact)
-    module TOH = TreeOpsH (Inexact)
+    module TOS = Chartree.TreeOps 
+    module TOH = TreeOpsH 
 
     let replace_contents downpass uppass get_code nodes ptree =
         let nt = { Ptree.empty with Ptree.tree = ptree.Ptree.tree } in

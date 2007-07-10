@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1881 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1952 $"
 
 exception NotASequence of int
 
@@ -132,7 +132,7 @@ let print_anc_debug = false
  * using the cost matrix [cm] and the alignment matrix [m] 
  * The resulting common ancestor holds the homology
  * relationships of the codes assigned in [a] and [b]. *)
-let ancestor all_minus_gap a b cm m = 
+let ancestor prealigned all_minus_gap a b cm m = 
     let codea = a.cannonic_code
     and codeb = b.cannonic_code in
     if print_anc_debug then
@@ -157,8 +157,10 @@ let ancestor all_minus_gap a b cm m =
         else if bempty then
             a.seq, (create_gaps lena), 0, `B
         else 
-            let a, b, c = Sequence.Align.align_2 a.seq b.seq cm m in
-            a, b, c, `Both
+            if prealigned then a.seq, b.seq, 0, `Both
+            else
+                let a, b, c = Sequence.Align.align_2 a.seq b.seq cm m in
+                a, b, c, `Both
     in
     if print_algn_debug then print_debug a' b' a b m;
     let lena' = Sequence.length a' in
@@ -462,12 +464,258 @@ let ancestor_chrom a_ls b_ls cm chrom_pam m =
     let ias_ls = List.fold_left builder_med [] med_ls in 
     ias_ls
     
+exception IsSankoff
+
+type matrix_class = 
+    | AllOne of int
+    | AllOneGapSame of (int * int)
+    | AffinePartition of (int * int * int)
+    | AllSankoff
+
+
+(* A function that analyzes a cost matrix and an alphabet and
+* generates a pair of functions f and g, such that g converts 
+* a state into a list of character states, and g converts a state into it's
+* appropriate Parser.Hennig.Encoding.s *)
+let analyze_tcm tcm alph =
+    let gap = Alphabet.get_gap alph 
+    and all = Alphabet.get_all alph in
+    let alph = Alphabet.simplified_alphabet alph in
+    let single_compare (_, a) res (_, b) =
+        match res with
+        | None -> 
+                let cost = (Cost_matrix.Two_D.cost a b tcm) in
+                Some cost
+        | Some y ->
+                let x = Cost_matrix.Two_D.cost a b tcm in
+                if x = y then res
+                else raise IsSankoff
+    in
+    let rec compare_costs l1 l2 res =
+        match l1, l2 with
+        | _, []
+        | [], _ -> res
+        | h1 :: t1, _ :: t2 ->
+                compare_costs t1 t2 (List.fold_left (single_compare h1) res l2)
+    in
+    let get_cost_of_all_subs () =
+        match 
+            List.filter (fun (_, x) -> (x <> gap) && (x <> all))
+            (Alphabet.to_list alph) 
+        with
+        | [] -> failwith "An empty alphabet?"
+        | (_ :: t) as res ->
+                match compare_costs res t None with
+                | Some v -> v
+                | None -> failwith "No costs?"
+    in
+    let get_cost_of_gap () =
+        match 
+            List.filter (fun (_, x) -> (x <> gap) && (x <> all))
+            (Alphabet.to_list alph) 
+        with
+        | [] -> failwith "An empty alphabet?"
+        | res ->
+                match compare_costs [("", gap)] res None with
+                | Some v -> v
+                | None -> failwith "No costs?"
+    in
+    let get_gap_opening tcm =
+        match Cost_matrix.Two_D.affine tcm with
+        | Cost_matrix.No_Alignment 
+        | Cost_matrix.Linnear -> failwith "not affine"
+        | Cost_matrix.Affine go -> go
+    in
+    let all_same_affine () =
+        try let _ = get_gap_opening tcm in true with
+        | _ -> false
+    in
+    let get_case =
+        try
+            let all_excepting_gap = get_cost_of_all_subs ()
+            and all_and_gap = get_cost_of_gap () in
+            match Alphabet.kind alph with
+            | Alphabet.Simple_Bit_Flags ->
+                    if 32 > Alphabet.distinct_size alph then
+                        if all_same_affine () then
+                            AffinePartition 
+                            (all_excepting_gap, all_and_gap, 
+                            get_gap_opening tcm)
+                        else if all_excepting_gap = all_and_gap then 
+                            AllOne all_excepting_gap
+                        else if all_excepting_gap = 1 then
+                            AllOneGapSame 
+                            (all_excepting_gap, all_and_gap)
+                        else AllSankoff
+                    else AllSankoff
+            | _ -> AllSankoff
+        with
+        | IsSankoff -> AllSankoff
+    in
+    match get_case with
+    | AllOne weight ->
+            let encoding = 
+                Parser.Hennig.Encoding.set_weight
+                Parser.Hennig.Encoding.dna_encoding weight
+            in
+            let to_parser is_missing states acc = 
+                match is_missing, states with
+                | `Missing, _ -> 
+                        Parser.Unordered_Character (all, false) :: acc
+                | `Exists, 0 -> Parser.Unordered_Character (gap, false) :: acc
+                | `Exists, x -> Parser.Unordered_Character (x, false) :: acc
+            and to_encoding _ acc = encoding :: acc in
+            get_case, to_parser, to_encoding
+    | AllOneGapSame (subsc, gapcost) ->
+            let present_absent = 
+                Parser.Hennig.Encoding.gap_encoding gapcost
+            and subs = 
+                Parser.Hennig.Encoding.set_weight Parser.Hennig.Encoding.dna_encoding
+                subsc
+            in
+            let notgap = lnot gap in
+            let all = notgap land all in
+            let to_parser is_missing states acc =
+                match is_missing, states with
+                | `Missing, _ ->
+                        Parser.Unordered_Character (all, false) ::
+                            Parser.Unordered_Character (1 lor 2, false) :: acc
+                | `Exists, 0 ->
+                        (* All characters, and the gap itself, in other words,
+                        * we treat the gap as a separate character, and the
+                        * state as missing data *)
+                        Parser.Unordered_Character (all, false) ::
+                            Parser.Unordered_Character (1, false) :: acc
+                | `Exists, x ->
+                            Parser.Unordered_Character (x land notgap, false) ::
+                                (if x = all then 
+                                    Parser.Unordered_Character (3, false) 
+                                else 
+                                Parser.Unordered_Character (2, false))
+                                :: acc
+            and to_encoding _ acc = 
+                subs :: present_absent :: acc
+            in
+            get_case, to_parser, to_encoding
+    | AffinePartition (subsc, gapcost, gapopening) ->
+            (* We have to partition the column in three columns, each
+            * corresponding to gap opening, gap extension, and substitution.
+            * We will have to filter out columns that are not gap opening
+            * but only extension.
+            * *)
+            let gap_opening = Parser.Hennig.Encoding.gap_encoding gapopening
+            and gap_extension = Parser.Hennig.Encoding.gap_encoding gapcost
+            and subs = 
+                Parser.Hennig.Encoding.set_weight
+                Parser.Hennig.Encoding.dna_encoding
+                subsc
+            in
+            let notgap = lnot gap in
+            let all = notgap land all in
+            let to_parser is_missing states acc =
+                match is_missing, states with
+                | `Missing, _ ->
+                        Parser.Unordered_Character (1 lor 2, false) ::
+                            Parser.Unordered_Character (1 lor 2, false) :: 
+                                Parser.Unordered_Character (all, false) ::
+                                    acc
+                | `Exists, 0 -> 
+                        (* We have a gap, so we assign both gap opening and
+                        * gap extension, we will later cleaunup when gap
+                        * opening is not needed *)
+                        Parser.Unordered_Character (1, false) ::
+                            Parser.Unordered_Character (1, false) ::
+                                Parser.Unordered_Character (all, false) ::
+                                    acc
+                | `Exists, x ->
+                        let prev = 
+                            (if x = all then
+                                Parser.Unordered_Character (1 lor 2, false)
+                            else Parser.Unordered_Character (2, false))
+                        in
+                        prev :: prev :: 
+                            Parser.Unordered_Character ((x land notgap), 
+                            false) :: 
+                                acc
+            and to_encoding _ acc =
+                gap_opening :: gap_extension :: subs :: acc
+            in
+            get_case, to_parser, to_encoding
+    | AllSankoff ->
+            let size = 
+                (* We remove one from the all elements representation *)
+                (Alphabet.distinct_size alph) - 1 
+            in
+            let make_tcm () =
+                match Alphabet.kind alph with
+                | Alphabet.Simple_Bit_Flags ->
+                        Array.init size (fun x -> Array.init size 
+                        (fun y -> 
+                            Cost_matrix.Two_D.cost (1 lsl x) (1 lsl y) tcm)) 
+                | Alphabet.Sequential ->
+                        Array.init size (fun x -> 
+                            Array.init size (fun y ->
+                                Cost_matrix.Two_D.cost (x + 1) (y  + 1) tcm))
+                | Alphabet.Extended_Bit_Flags -> 
+                        failwith "Impliedalignment.make_tcm"
+            in
+            let enc = 
+                let res = Parser.Hennig.Encoding.default () in
+                let res = Parser.Hennig.Encoding.set_min res 0 in
+                let res = Parser.Hennig.Encoding.set_max res (size - 1) in
+                let set = 
+                    let rec add_consecutive_integers cur max acc = 
+                        if cur = max then acc
+                        else 
+                            add_consecutive_integers (cur + 1) max 
+                            (All_sets.Integers.add cur acc)
+                    in
+                    add_consecutive_integers 0 size All_sets.Integers.empty
+                in
+                let res = Parser.Hennig.Encoding.set_set res set in
+                Parser.Hennig.Encoding.set_sankoff res (make_tcm ())
+            in
+            let convert_to_list x =
+                match Alphabet.kind alph with
+                | Alphabet.Simple_Bit_Flags ->
+                        let rec match_bit v pos mask acc = 
+                            if pos = 6 then acc
+                            else if 0 <> (v land mask) then
+                                match_bit v (pos + 1) (mask lsl 1) 
+                                ((pos - 1) :: acc)
+                            else match_bit v (pos + 1) (mask lsl 1) acc
+                        in
+                        match_bit x 1 1 []
+                | Alphabet.Sequential -> [x]
+                | Alphabet.Extended_Bit_Flags -> 
+                        failwith "Impliedalignment.convert_to_list"
+            in
+            let all = convert_to_list all in
+            let gap_code =
+                (* Always the last code is the one of a gap in Sankoff *)
+                size - 1
+            in
+            let to_parser is_missing states acc = 
+                match is_missing, states with
+                | `Missing, _ ->
+                        (Parser.Sankoff_Character (all, false)) :: acc
+                | `Exists, 0 -> 
+                        (Parser.Sankoff_Character ([gap_code], false)) ::
+                            acc
+                | `Exists, x -> 
+                        let tuple = ((convert_to_list x),  false) in
+                        (Parser.Sankoff_Character tuple) :: acc
+            and to_encoding _ acc = 
+                enc :: acc 
+            in
+            get_case, to_parser, to_encoding
 
 
 module type S = sig
     type a 
     type b
     type tree = (a, b) Ptree.p_tree
+
             
     (** [of_tree t] generates the implied alignment of all the sequences in the tree
     * [t]. *)
@@ -485,6 +733,7 @@ module type S = sig
     val to_static_homologies : bool ->
         (tree -> int list -> tree) ->
             bool  -> Methods.characters -> Data.d -> tree -> Data.d
+
 end
 module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = struct
     type a = Node.n
@@ -505,20 +754,20 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             | Not_found -> None
         in
         let st = 
-            Status.create "Implied Alignments" vertices 
-            "vertices calculated"
+            Status.create "Implied Alignments" vertices "vertices calculated"
         in
         let convert_node parent ptree _ id _ =
             let data = Ptree.get_node_data id ptree in
             let taxon_id = Node.taxon_code data in
             let data = 
-                let par = 
+                let par =                     
                     match parent with
                     | Some _ -> parent
                     | None ->
                             Some (Ptree.get_parent taxon_id ptree)
                 in
-                Node.get_dynamic_preliminary par data
+                let nd = Node.get_dynamic_preliminary par data in 
+                nd 
             in
             let data = List.map 
                 (fun dyn ->
@@ -546,7 +795,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             in
             let did = Status.get_achieved st in
             Status.full_report ~adv:(did + 1) st;
-            AssList.singleton (taxon_id, data), data
+            AssList.singleton (taxon_id, data), data 
         in
         let join_2_nodes _ _ (ac, a) (bc, b) =
             let t_ancestor x y =
@@ -555,7 +804,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 let hom = Codes.find u y.sequences in
                                 let anc = match state with 
                                 | `Seq ->
-                                      let anc = ancestor all_minus_gap 
+                                      let anc = ancestor false all_minus_gap 
                                           (List.hd v) (List.hd hom) x.c2 Matrix.default
                                       in 
                                       [anc]
@@ -593,12 +842,13 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     Ptree.post_order_node_with_edge_visit 
                     (convert_node None ptree) join_2_nodes (Tree.Edge (self, other)) ptree
                     (AssList.empty, [])
-                and a' = 
+                in 
+                let a' = 
                     let new_ptree = 
                         let self_data = Ptree.get_node_data self ptree 
                         and other_data = Ptree.get_node_data other ptree in
                         let single = 
-                            Node.to_single (Some self) other_data (Some other) self_data 
+                            Node.to_single ~is_root:true (Some self) other_data (Some other) self_data 
                         in
                         (*
                         Status.user_message Status.Information
@@ -607,7 +857,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                         *)
                         Ptree.add_node_data self single ptree
                     in
-                    convert_node (Some other) new_ptree () self ([], [])
+                    convert_node (Some other) new_ptree () self ([], []) 
                 in
                 let a = join_2_nodes () () a a' in
                 let x, y = join_2_nodes () () a b in
@@ -615,6 +865,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 (if Tree.is_leaf self ptree.Ptree.tree then
                     AssList.elements x
                 else List.remove_assoc self (AssList.elements x)), y
+
+
 
     (** t is a final ias for a character set   
         =>
@@ -655,11 +907,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             with Not_found ->
                 failwith ("Not_found in fin_code -> column" ^ (string_of_int fin_code))  
         in
-
         let results = Array.make (len + 1) 0 in
         let pos_results = Array.make (len + 1) (-1) in
         let add_result ias =
-
             Hashtbl.iter (fun pos code -> 
                 let base = Sequence.get ias.seq pos in
                 let col = column code in
@@ -676,11 +926,13 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         let cg = code_generator () in
     (** return ( (taxon_id, character_ls) list (of taxa) * (final ias for each character)
         list (of characters) ) list (of handles) *)
+
         let res = 
             Handles.fold (fun (x : int) acc -> 
                               (of_tree_handle all_but_gap cg x tree) :: acc
                          ) (Tree.get_handles tree.Ptree.tree) []
         in
+
    (** ((taxon_id * (aligned_code arrays for each character
       set) list (of characters) ) list (of taxa) ) of list (of handles)*)
         let ali = List.map 
@@ -791,252 +1043,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             ) res  
         in 
         ali 
-
-    exception IsSankoff
-
-    type matrix_class = 
-        | AllOne of int
-        | AllOneGapSame of (int * int)
-        | AffinePartition of (int * int * int)
-        | AllSankoff
-
-    (* A function that analyzes a cost matrix and an alphabet and
-    * generates a pair of functions f and g, such that g converts 
-    * a state into a list of character states, and g converts a state into it's
-    * appropriate Parser.Hennig.Encoding.s *)
-    let analyze_tcm tcm alph =
-        let gap = Alphabet.get_gap alph 
-        and all = Alphabet.get_all alph in
-        let alph = Alphabet.simplified_alphabet alph in
-        let single_compare (_, a) res (_, b) =
-            match res with
-            | None -> 
-                    let cost = (Cost_matrix.Two_D.cost a b tcm) in
-                    Some cost
-            | Some y ->
-                    let x = Cost_matrix.Two_D.cost a b tcm in
-                    if x = y then res
-                    else raise IsSankoff
-        in
-        let rec compare_costs l1 l2 res =
-            match l1, l2 with
-            | _, []
-            | [], _ -> res
-            | h1 :: t1, _ :: t2 ->
-                    compare_costs t1 t2 (List.fold_left (single_compare h1) res l2)
-        in
-        let get_cost_of_all_subs () =
-            match 
-                List.filter (fun (_, x) -> (x <> gap) && (x <> all))
-                (Alphabet.to_list alph) 
-            with
-            | [] -> failwith "An empty alphabet?"
-            | (_ :: t) as res ->
-                    match compare_costs res t None with
-                    | Some v -> v
-                    | None -> failwith "No costs?"
-        in
-        let get_cost_of_gap () =
-            match 
-                List.filter (fun (_, x) -> (x <> gap) && (x <> all))
-                (Alphabet.to_list alph) 
-            with
-            | [] -> failwith "An empty alphabet?"
-            | res ->
-                    match compare_costs [("", gap)] res None with
-                    | Some v -> v
-                    | None -> failwith "No costs?"
-        in
-        let get_gap_opening tcm =
-            match Cost_matrix.Two_D.affine tcm with
-            | Cost_matrix.No_Alignment 
-            | Cost_matrix.Linnear -> failwith "not affine"
-            | Cost_matrix.Affine go -> go
-        in
-        let all_same_affine () =
-            try let _ = get_gap_opening tcm in true with
-            | _ -> false
-        in
-        let get_case =
-            try
-                let all_excepting_gap = get_cost_of_all_subs ()
-                and all_and_gap = get_cost_of_gap () in
-                match Alphabet.kind alph with
-                | Alphabet.Simple_Bit_Flags ->
-                        if 32 > Alphabet.distinct_size alph then
-                            if all_same_affine () then
-                                AffinePartition 
-                                (all_excepting_gap, all_and_gap, 
-                                get_gap_opening tcm)
-                            else if all_excepting_gap = all_and_gap then 
-                                AllOne all_excepting_gap
-                            else if all_excepting_gap = 1 then
-                                AllOneGapSame 
-                                (all_excepting_gap, all_and_gap)
-                            else AllSankoff
-                        else AllSankoff
-                | _ -> AllSankoff
-            with
-            | IsSankoff -> AllSankoff
-        in
-        match get_case with
-        | AllOne weight ->
-                let encoding = 
-                    Parser.Hennig.Encoding.set_weight
-                    Parser.Hennig.Encoding.dna_encoding weight
-                in
-                let to_parser is_missing states acc = 
-                    match is_missing, states with
-                    | `Missing, _ -> 
-                            Parser.Unordered_Character (all, false) :: acc
-                    | `Exists, 0 -> Parser.Unordered_Character (gap, false) :: acc
-                    | `Exists, x -> Parser.Unordered_Character (x, false) :: acc
-                and to_encoding _ acc = encoding :: acc in
-                get_case, to_parser, to_encoding
-        | AllOneGapSame (subsc, gapcost) ->
-                let present_absent = 
-                    Parser.Hennig.Encoding.gap_encoding gapcost
-                and subs = 
-                    Parser.Hennig.Encoding.set_weight Parser.Hennig.Encoding.dna_encoding
-                    subsc
-                in
-                let notgap = lnot gap in
-                let all = notgap land all in
-                let to_parser is_missing states acc =
-                    match is_missing, states with
-                    | `Missing, _ ->
-                            Parser.Unordered_Character (all, false) ::
-                                Parser.Unordered_Character (1 lor 2, false) :: acc
-                    | `Exists, 0 ->
-                            (* All characters, and the gap itself, in other words,
-                            * we treat the gap as a separate character, and the
-                            * state as missing data *)
-                            Parser.Unordered_Character (all, false) ::
-                                Parser.Unordered_Character (1, false) :: acc
-                    | `Exists, x ->
-                                Parser.Unordered_Character (x land notgap, false) ::
-                                    (if x = all then 
-                                        Parser.Unordered_Character (3, false) 
-                                    else 
-                                    Parser.Unordered_Character (2, false))
-                                    :: acc
-                and to_encoding _ acc = 
-                    subs :: present_absent :: acc
-                in
-                get_case, to_parser, to_encoding
-        | AffinePartition (subsc, gapcost, gapopening) ->
-                (* We have to partition the column in three columns, each
-                * corresponding to gap opening, gap extension, and substitution.
-                * We will have to filter out columns that are not gap opening
-                * but only extension.
-                * *)
-                let gap_opening = Parser.Hennig.Encoding.gap_encoding gapopening
-                and gap_extension = Parser.Hennig.Encoding.gap_encoding gapcost
-                and subs = 
-                    Parser.Hennig.Encoding.set_weight
-                    Parser.Hennig.Encoding.dna_encoding
-                    subsc
-                in
-                let notgap = lnot gap in
-                let all = notgap land all in
-                let to_parser is_missing states acc =
-                    match is_missing, states with
-                    | `Missing, _ ->
-                            Parser.Unordered_Character (1 lor 2, false) ::
-                                Parser.Unordered_Character (1 lor 2, false) :: 
-                                    Parser.Unordered_Character (all, false) ::
-                                        acc
-                    | `Exists, 0 -> 
-                            (* We have a gap, so we assign both gap opening and
-                            * gap extension, we will later cleaunup when gap
-                            * opening is not needed *)
-                            Parser.Unordered_Character (1, false) ::
-                                Parser.Unordered_Character (1, false) ::
-                                    Parser.Unordered_Character (all, false) ::
-                                        acc
-                    | `Exists, x ->
-                            let prev = 
-                                (if x = all then
-                                    Parser.Unordered_Character (1 lor 2, false)
-                                else Parser.Unordered_Character (2, false))
-                            in
-                            prev :: prev :: 
-                                Parser.Unordered_Character ((x land notgap), 
-                                false) :: 
-                                    acc
-                and to_encoding _ acc =
-                    gap_opening :: gap_extension :: subs :: acc
-                in
-                get_case, to_parser, to_encoding
-        | AllSankoff ->
-                let size = 
-                    (* We remove one from the all elements representation *)
-                    (Alphabet.distinct_size alph) - 1 
-                in
-                let make_tcm () =
-
-                    match Alphabet.kind alph with
-                    | Alphabet.Simple_Bit_Flags ->
-                            Array.init size (fun x -> Array.init size 
-                            (fun y -> 
-                                Cost_matrix.Two_D.cost (1 lsl x) (1 lsl y) tcm)) 
-                    | Alphabet.Sequential ->
-                            Array.init size (fun x -> 
-                                Array.init size (fun y ->
-                                    Cost_matrix.Two_D.cost (x + 1) (y  + 1) tcm))
-                    | Alphabet.Extended_Bit_Flags -> 
-                            failwith "Impliedalignment.make_tcm"
-                in
-                let enc = 
-                    let res = Parser.Hennig.Encoding.default () in
-                    let res = Parser.Hennig.Encoding.set_min res 0 in
-                    let res = Parser.Hennig.Encoding.set_max res (size - 1) in
-                    let set = 
-                        let rec add_consecutive_integers cur max acc = 
-                            if cur = max then acc
-                            else 
-                                add_consecutive_integers (cur + 1) max 
-                                (All_sets.Integers.add cur acc)
-                        in
-                        add_consecutive_integers 0 size All_sets.Integers.empty
-                    in
-                    let res = Parser.Hennig.Encoding.set_set res set in
-                    Parser.Hennig.Encoding.set_sankoff res (make_tcm ())
-                in
-                let convert_to_list x =
-                    match Alphabet.kind alph with
-                    | Alphabet.Simple_Bit_Flags ->
-                            let rec match_bit v pos mask acc = 
-                                if pos = 6 then acc
-                                else if 0 <> (v land mask) then
-                                    match_bit v (pos + 1) (mask lsl 1) 
-                                    ((pos - 1) :: acc)
-                                else match_bit v (pos + 1) (mask lsl 1) acc
-                            in
-                            match_bit x 1 1 []
-                    | Alphabet.Sequential -> [x]
-                    | Alphabet.Extended_Bit_Flags -> 
-                            failwith "Impliedalignment.convert_to_list"
-                in
-                let all = convert_to_list all in
-                let gap_code =
-                    (* Always the last code is the one of a gap in Sankoff *)
-                    size - 1
-                in
-                let to_parser is_missing states acc = 
-                    match is_missing, states with
-                    | `Missing, _ ->
-                            (Parser.Sankoff_Character (all, false)) :: acc
-                    | `Exists, 0 -> 
-                            (Parser.Sankoff_Character ([gap_code], false)) ::
-                                acc
-                    | `Exists, x -> 
-                            let tuple = ((convert_to_list x),  false) in
-                            (Parser.Sankoff_Character tuple) :: acc
-                and to_encoding _ acc = 
-                    enc :: acc 
-                in
-                get_case, to_parser, to_encoding
 
     let post_process_affine_gap_cost subs gapcost gapopening (enc, taxa) =
         let process_position chars pos = 
@@ -1255,7 +1261,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         in
         let _, x = aux_create_implied_alignment filter_fn codes data tree in
         x
-
 
     let get_char_codes (chars : Methods.characters)  data =
         let codes = 

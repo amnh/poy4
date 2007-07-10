@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1915 2007-06-18 15:12:13Z andres $ *)
+(* $Id: charTransform.ml 1952 2007-07-10 18:28:23Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1915 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 1952 $"
 
 module type S = sig
     type a 
@@ -77,12 +77,11 @@ let select_shortest trees =
     | None -> raise No_trees
 
 module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e)
     : S with type a = Node.n with type b = Edge.e = struct
 
     module IA = ImpliedAlignment.Make (Node) (Edge)
-    module InexactTreeOps = TreeOps (struct let exact = false end)
 
     type a = Node.n
     type b = Edge.e
@@ -103,7 +102,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             match root.Ptree.root_median with
             | Some ((`Edge (a, b)), _) ->
                     let new_tree, _ = 
-                        InexactTreeOps.reroot_fn (Tree.Edge (a, b)) new_tree 
+                        TreeOps.reroot_fn (Tree.Edge (a, b)) new_tree 
                     in
                     new_tree
             | _ -> new_tree)
@@ -170,7 +169,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
         let st = Status.create "Diagnosis"  None "Recalculating original tree" in
         Status.report st;
-        let res = InexactTreeOps.uppass (InexactTreeOps.downpass tree) in
+        let res = TreeOps.uppass (TreeOps.downpass tree) in
         Status.finished st;
         res
 
@@ -190,7 +189,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         let tree =
             { tree with
                   Ptree.node_data = node_data } in
-        InexactTreeOps.uppass (InexactTreeOps.downpass tree)
+        TreeOps.uppass (TreeOps.downpass tree)
 
     let resample_characters n data =
         let d = PoyParser.get_characters_weight data in
@@ -349,7 +348,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     let choose_best (tree, others) =
                         match
                             Sexpr.fold_left (fun ((c, _) as acc) cur_tree ->
-                                let nc = Ptree.get_cost `Unadjusted cur_tree in
+                                let nc = Ptree.get_cost `Adjusted cur_tree in
                                 if nc < c then (nc, Some cur_tree)
                                 else acc) (max_float, None) others
                         with
@@ -542,10 +541,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         (a, b, Node.Union.get_sequence parent a union_node, c, d, e)
 
     let get_sequence parent code (normal_node, union_node) = 
-        normal_node 
-        --> Node.get_sequences 
-        --> List.find (fun (c, _, _, _, _) -> code = c) 
-        --> insert_union parent union_node
+	let tmp = Node.get_sequences parent normal_node in
+let tmp = List.find (fun (c, _, _, _, _) -> (code = c)) tmp in
+insert_union parent union_node tmp
 
     let ever_increasing lst =
         let res, _ = 
@@ -558,20 +556,18 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         let (root, root_union), _ = get_roots tree in
         let produce_partitions data tree (positions, union, code) = 
             assert (ever_increasing positions);
-            let rec traverse_tree ch1 ch2 positions1 positions2 acc =
+            let rec traverse_tree parent1 parent2 ch1 ch2 positions1 positions2 acc =
                 let node1, node1u = Ptree.get_node_data ch1 tree 
-                and node2, node2u = Ptree.get_node_data ch2 tree 
-                and par1 = Some (Ptree.get_parent ch1 tree)
-                and par2 = Some (Ptree.get_parent ch2 tree) in
+                and node2, node2u = Ptree.get_node_data ch2 tree in
                 let node1, node2, ch1, ch2 =
                     if 
-                        Node.min_child_code par1 node1 < 
-                        Node.min_child_code par2 node2 
+                        Node.min_child_code parent1 node1 < 
+                        Node.min_child_code parent2 node2 
                     then
                         (node1, node1u), (node2, node2u), ch1, ch2 
                     else (node2, node2u), (node1, node1u), ch2, ch1
                 in
-                let process_one node_data ch positions acc =
+                let process_one parent node_data ch positions acc =
                     if Tree.is_leaf ch tree.Ptree.tree then
                         let _, the_sequence, the_union, _, _, alph =
                             get_sequence None code node_data in
@@ -579,11 +575,12 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         if not (Sequence.is_empty the_sequence 16) then
                             (Sequence.split positions the_sequence alph, ch) :: acc
                         else acc
-                    else 
+                    else
                         match Ptree.get_node ch tree with
-                        | Tree.Interior (a, b, c, d) ->
+                        | (Tree.Interior (a, b, c, d)) as n' ->
+                                let c, d = Tree.other_two_nbrs parent n' in
                                 let (_, ts, the_union, _, _, _) = 
-                                    get_sequence (Some b) code node_data 
+                                    get_sequence (Some parent) code node_data 
                                 in
                                 if Sequence.is_empty ts 16 then acc
                                 else 
@@ -591,7 +588,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                                         Sequence.Unions.get_positions the_union positions
                                     in
                                     if (ever_increasing p1) && (ever_increasing p2) then
-                                        traverse_tree c d p1 p2 acc
+                                        traverse_tree (Some a) (Some a) c d p1 p2 acc
                                     else begin
                                         let printer x = 
                                             List.iter (fun (x, _) -> print_int x;
@@ -619,16 +616,21 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                                     end
                         | _ -> failwith "Impossible"
                 in
-                let acc = process_one node1 ch1 positions1 acc in
-                process_one node2 ch2 positions2 acc
+                let p1, p2 = 
+                    match parent1, parent2 with
+                    | Some x, Some y -> x, y
+                    | _ -> assert false
+                in
+                let acc = process_one p1 node1 ch1 positions1 acc in
+                process_one p2 node2 ch2 positions2 acc
             in
             let handle = All_sets.Integers.choose (Ptree.get_handles tree) in
-            match Ptree.get_node handle tree with
-            | Tree.Interior (a, b, _, _)
-            | Tree.Leaf (a, b) ->
+            let root = Ptree.get_component_root handle tree in
+            match root.Ptree.root_median with
+            | Some ((`Edge (a, b)), _) ->
                     let p1, p2 = Sequence.Unions.get_positions union positions in
-                    traverse_tree a b p1 p2 [], code
-            | Tree.Single _ -> failwith "Impossible"
+                    traverse_tree (Some b) (Some a) a b p1 p2 [], code
+            | _ -> failwith "Impossible"
         in
         let get_positions (code, _, union, cm2, cm3, alph) =
             let processor (positions_list, constant_length, ungapped) pos base =
@@ -667,7 +669,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             Data.set_sequence_defaults Data.Nucleotides data 
         in
         root 
-        --> Node.get_sequences 
+        --> Node.get_sequences None
         --> List.filter (fun (c, _, _, _, _) -> All_sets.Integers.mem c codes)
         --> List.map (insert_union None root_union)
         --> List.map get_positions
@@ -677,13 +679,13 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     let analyze_sequences sensible acc ((node, node_union), leafs) =
         let leaf_sequences = 
             leafs
-            --> List.map (fun (x, un) -> (Node.get_sequences x), un) 
+            --> List.map (fun (x, un) -> (Node.get_sequences None x), un) 
             --> List.map (fun (x, un) -> List.map (fun x -> (x, un)) x) 
             --> List.flatten
             --> List.map (fun (x, un) -> insert_union None un x) 
         and sequences = 
             node 
-            --> Node.get_sequences 
+            --> Node.get_sequences None
             --> List.map (insert_union None node_union)
         in
         List.fold_left (fun acc (code, _, s, _, _, alph) ->
@@ -844,6 +846,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     Status.user_message (Status.Output (None, false, [])) "@]@]@.";
                     transform_node_characters trees (data, nodes) (`Static_Aprox (`Some
                     (true, chars), true)))
+        | `Prealigned_Transform chars ->
+                Node.load_data ~taxa:nc (Data.prealigned_characters
+                ImpliedAlignment.analyze_tcm data chars)
         | `MultiStatic_Aprox (chars, remove_non_informative) ->
                 (try
                     let len = Sexpr.length trees in
@@ -959,9 +964,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
               Status.finished status;              
               load_transformed_data new_data 
           end 
-
-
-
 
     let rec transform_tree_characters (tree : IA.tree) data nodes meth = 
         let replacer nodes nd = List.find 

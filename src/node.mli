@@ -170,7 +170,8 @@ val to_single_root : ChromCS.IntSet.t * ChromCS.IntSet.t -> node_data -> node_da
 * is located somewhere in between [ch1], [ch2], and [par], which are the two
 * children and parent of [mine]. If no better node than [mine] can be found,
 * then [mine] itself is returned. *)
-val readjust : node_data -> node_data -> node_data -> node_data -> node_data
+val readjust : All_sets.Integers.t option -> node_data -> node_data -> node_data ->
+    node_data -> node_data * All_sets.Integers.t
 
 val get_active_ref_code : node_data -> All_sets.Integers.t * All_sets.Integers.t *
     All_sets.Integers.t * All_sets.Integers.t 

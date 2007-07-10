@@ -120,10 +120,6 @@ type ('a, 'b) print_fn =
 (** type of the function used to print debugging information etc during
 * searches. *)
 
-module type Exact = sig
-    val exact : bool
-end
-
 (** The tree operations needed to parameterize the Search operations. *)
 module type Tree_Operations =
   sig
@@ -148,8 +144,6 @@ module type Tree_Operations =
     val root_costs : (a, b) p_tree -> (Tree.edge * float) list
     val unadjust : (a, b) p_tree -> (a, b) p_tree
   end
-
-module type MakeTreeOps = functor (Exact : Exact) -> Tree_Operations
 
 class type ['a, 'b] wagner_edges_mgr = object
     method break_distance : float -> unit

@@ -404,7 +404,7 @@ module MakeRes (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = s
         union_distance parent node tree (cluster_union code tree depth)
 
     let get_all_sequences_data node = 
-        let sequences = Node.get_sequences node in
+        let sequences = Node.get_sequences None node in
         List.map (fun (_, a, _, _, _) -> a) sequences
 
     let get_sequence_data node = 
@@ -562,13 +562,13 @@ module MakeRes (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = s
             method init lst =
                 match lst with
                 | [(h, _, _)] -> 
-                        cost <- string_of_float (Ptree.get_cost `Unadjusted h)
+                        cost <- string_of_float (Ptree.get_cost `Adjusted h)
                 | _ -> ()
 
             method process j1 j2 _ pt _ bd _ _ =
                 let total_cost = 
                     let joined, _ = join_fn [] j1 j2 pt in
-                    let total_cost = Ptree.get_cost `Unadjusted joined in
+                    let total_cost = Ptree.get_cost `Adjusted joined in
                     string_of_float total_cost
                 in
                 print ((string_of_float bd) ^ "\t" ^ cost ^ "\t" ^ total_cost ^ "\n")

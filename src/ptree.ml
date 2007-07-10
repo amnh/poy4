@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1915 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 1952 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -138,10 +138,6 @@ type ('a, 'b) print_fn =
     ('a, 'b) p_tree -> 
     unit
 
-module type Exact = sig
-    val exact : bool
-end
-
 module type Tree_Operations = 
     sig
         type a
@@ -169,8 +165,6 @@ module type Tree_Operations =
         val root_costs : (a, b) p_tree -> (Tree.edge * float) list
         val unadjust : (a, b) p_tree -> (a, b) p_tree
     end 
-
-module type MakeTreeOps = functor (Exact : Exact) -> Tree_Operations
 
 class type ['a, 'b] wagner_edges_mgr = object
     method break_distance : float -> unit
@@ -746,7 +740,7 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     (** Function used for debugging purposes...*)
     let verify_cost old_cost old_delta cdnd new_delta j1 j2 t_delta pt =
         let t, _ = Tree_Ops.join_fn [] j1 j2 pt in
-        let new_cost = get_cost `Unadjusted t in
+        let new_cost = get_cost `Adjusted t in
         match new_delta with
         | Cost new_delta ->
               let supposed_new_cost = old_cost -. old_delta +. new_delta in
@@ -823,7 +817,7 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 let j1 = Tree.Single_Jxn(h1) 
                 and j2 = Tree.Single_Jxn(h2) in
                 let ptree, tree_delta = (Tree_Ops.join_fn [] j1 j2 ptree) in
-                let cst = get_cost `Unadjusted ptree in
+                let cst = get_cost `Adjusted ptree in
                 (* function adds the given nd to each of the edges of pt and
                 * picks the tree/s according to some optimality criterion. *)
                 let add_node_everywhere (pt, cst, tabu_mgr) nd srch_mgr =
@@ -1368,7 +1362,7 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
     
     let remove_worst_tree trees =
         let maxcost =
-            List.fold_left (fun m tree -> max m (get_cost `Unadjusted tree)) 0. trees
+            List.fold_left (fun m tree -> max m (get_cost `Adjusted tree)) 0. trees
         in
         let rec rem lst = match lst with
         | tree :: trees -> if get_cost `Unadjusted tree = maxcost then trees

@@ -42,7 +42,7 @@ type ('a, 'b, 'c) run = {
     stored_trees : ('a, 'b) Ptree.p_tree Sexpr.t;
 }
 
-val build_has_exact : Methods.build -> bool
+val build_has : Methods.cost_calculation -> Methods.build -> bool
 
 module type S = sig
         type a 
@@ -89,7 +89,7 @@ end
 module Make 
     (Node : NodeSig.S) 
     (Edge : Edge.EdgeSig with type n = Node.n)
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e)
     (CScrp : CharacterScripting.S with type n = Node.n) : 
         S with type a = Node.n with type b = Edge.e with type c = CScrp.cs
@@ -216,10 +216,18 @@ module DNA : sig
         (** The type of lists of sequences from a FASTA file, as tuples of names
         * and sequences. *)
         type seqs = (string * Seq.s) list
+        (** The type of sequences from a file when it has been broken using
+        * pipes and pound signs (POY format). Each column of those files
+        * correspond to a list.*)
+        type multi_seqs = seqs list
 
         (** [of_channel ch] returns the sequences contained in the FASTA channel
         * [ch]. *)
         val of_channel : in_channel -> seqs
+
+        (** [multi_of_channel ch] is the same as [of_channel] but returns
+        * [multi_seqs]. *)
+        val multi_of_channel : in_channel -> multi_seqs
 
         (** [to_channel ch seqs] outputs all the sequences in [seqs] to the
         * channel [ch] in FASTA format. *)
@@ -227,16 +235,24 @@ module DNA : sig
 
         (** [of_file f] reads the file [f] containing fasta sequences. *)
         val of_file : string -> seqs
+        (** [multi_of_file ch] is the same as [of_file] but returns
+        * [multi_seqs]. *)
+        val multi_of_file : string -> multi_seqs
 
         (** [to_file f s] creates a fresh file [f] containing the sequences [s]
          * in FASTA format. *)
         val to_file : string -> seqs -> unit
+
 
         (** [random_sample seqs name number size] generates [number] random samples 
         * of the sequences [seqs], each simple of size [size] without
         * repetitions, and outputs them in the filename produced by [name ()],
         * sequentially. *)
         val random_sample : seqs -> (unit -> string) -> int -> int -> unit
+
+        (** [multi_sample seqs column name number size] is the same as
+        * [random_sample (List.nth seqs column) name number size]. *)
+        val multi_sample : multi_seqs -> int -> (unit -> string) -> int -> int -> unit
     end
 
     module Generic : sig

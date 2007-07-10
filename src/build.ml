@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 1865 $"
+let () = SadmanOutput.register "Build" "$Revision: 1952 $"
 
 let rec build_features meth =
     match meth with
@@ -53,7 +53,6 @@ let rec build_features meth =
 let remove_exact (meth : Methods.cost_calculation) (acc : Methods.transform
 list) : Methods.transform list =
     match meth with
-    | `Exact -> acc
     | #Methods.transform as meth -> meth :: acc
 
 let rec get_transformations (meth : Methods.build) : Methods.transform list =
@@ -120,7 +119,8 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
     let disjoin_tree data =
         let leafs = set_of_leafs data in
-        Ptree.make_disjoint_tree leafs
+        let tree = Ptree.make_disjoint_tree leafs in
+        PtreeSearch.downpass tree
 
     let single_wagner wmgr cg data = 
         let disjoin_tree = disjoin_tree data in
@@ -481,7 +481,7 @@ module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n)
         type b = EdgeH.e
 
         module TOH = TreeOps
-        module TOS = Chartree.TreeOps (struct let exact = false end)
+        module TOS = Chartree.TreeOps 
         module NodeS = Node.Standard
         module DH = MakeNormal (NodeH) (EdgeH) (TreeOps)
         module SH = MakeNormal (NodeS) (Edge.SelfEdge) (TOS)

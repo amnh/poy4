@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 1915 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 1952 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -287,6 +287,7 @@ let create_map med child_ref : (int * int * Tags.output) =
 
 
 let to_single single_parent child_ref c2 pam = 
+
     let gap = Cost_matrix.Two_D.gap c2 in
     let ali_pam = ChromPam.get_chrom_pam pam in 
     
@@ -402,7 +403,6 @@ let to_single single_parent child_ref c2 pam =
 let change_to_single med single_seq = 
     let gap = Alphabet.gap in 
     let num_dna = ref 0 in 
-
     let new_map = List.map 
         (fun seg ->
              let single_alied_med = UtlPoy.map 
@@ -658,11 +658,14 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
     let ali_order_ls : int list= create_ali_order order2_arr alied_gen_seq2 in 
     
     let submed_ls, med_len, chrom_map = List.fold_left adder ([], -1, [])  ali_order_ls  in
-
-
+    if (List.length chrom_map = 0) then begin
+        failwith "Chrom_map length is Zeooo";
+    end;
+    
     let seq = UtlPoy.delete_gap (UtlPoy.concat submed_ls) in 
     let ref_code = Utl.get_new_chrom_ref_code() in 
-(*    fprintf stdout "New ref_code:%i -> %i %i \n" ref_code chrom1_id chrom2_id; flush stdout;*)
+(*    fprintf stdout "New ref_code:%i -> %i %i \n" ref_code chrom1_id chrom2_id;
+      flush stdout; *)
 
     {seq = seq; ref_code = ref_code;
      ref_code1 = chrom1_id;

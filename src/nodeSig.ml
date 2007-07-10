@@ -102,10 +102,11 @@ module type S = sig
     * rooted by [n]. *)
     val num_otus : int option -> n -> int
 
-    (** [return all the sequence information contained in the node (including
-    * the unions right now). This function is used for sampling purposes, it's
-    * not a core function *)
+    (** return all the sequence information contained in the node (including
+    * the unions right now). This function is used in the auto sequence partition 
+    * functions. Watch out! *)
     val get_sequences : 
+	int option ->
         n -> 
             (int * Sequence.s * 
             Cost_matrix.Two_D.m * Cost_matrix.Three_D.m * Alphabet.a) list
@@ -239,8 +240,7 @@ module type S = sig
         int -> (int * n) list -> int list -> int list -> n list
 
     val root_cost : n -> float
-
-    val to_single : int option -> n -> int option -> n -> n
+    val to_single : ?is_root:bool -> int option -> n -> int option -> n -> n
 end
 
 

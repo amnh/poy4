@@ -65,10 +65,26 @@ val code_generator : unit -> cg
 * alignments of sequence [s] using the code generation function [cg]. *)
 val create_ias : Sequence.s -> int -> cg -> ias
 
+exception IsSankoff
+
+type matrix_class = 
+    | AllOne of int
+    | AllOneGapSame of (int * int)
+    | AffinePartition of (int * int * int)
+    | AllSankoff
+
+val analyze_tcm :
+  Cost_matrix.Two_D.m ->
+  Alphabet.a ->
+  matrix_class *
+  ([`Exists | `Missing ] -> int -> Parser.t list -> Parser.t list) *
+  (int -> Parser.Hennig.Encoding.s list -> Parser.Hennig.Encoding.s list)
+
 module type S = sig
     type a 
     type b
     type tree = (a, b) Ptree.p_tree
+
 
     (** [of_tree t] generates the implied alignment of all the sequences in the tree
     * [t], where the first element of the tuple [t] is a function that removes a

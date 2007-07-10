@@ -267,6 +267,28 @@ module Align : sig
     val closest : s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> s * int
 
     val recost : s -> s -> Cost_matrix.Two_D.m -> int
+
+    (** [align_3_powell a b c m o e] generates a quadruple [(a', b', c', ed)]
+     * where [a'], [b'], and [c'], are the edited sequences of [a], [b], and [c]
+     * in their optimal three dimensional sequence alignment, for mismatch cost
+     * [m], gap opening cost [o] and gap extension cost [e], yielding a total
+     * edition cost [ed]. *)
+    val align_3_powell : s -> s -> s -> int -> int -> int -> s * s * s * int 
+
+    (** [align_3_powell_inter a b c cm cm3] generates the median and edition
+    * cost between the three sequences [a], [b], and [c], according to the cost
+    * matrix specified by [cm] and [cm3]. *)
+    val align_3_powell_inter : s -> s -> s -> Cost_matrix.Two_D.m ->
+        Cost_matrix.Three_D.m -> s * int
+
+    (** [readjust_3d a b mine cm cm3 p] readjust [mine] as the median between
+    * the sequences [a], [b] and [p]. The result is a triple [(ed, s, ch)],
+    * where [ed] is the total edition cost of the median [s], which is in the
+    * center of [a], [b], and [p], and [ch] is true iff [ch] is different from
+    * [mine]. *)
+    val readjust_3d : s -> s -> s -> Cost_matrix.Two_D.m -> Cost_matrix.Three_D.m -> s
+    -> int * s * bool
+
 end
 
 (** [select_one s m] 
@@ -403,3 +425,8 @@ val is_empty : s -> int -> bool
 external encoding : 
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t -> 
         s -> float = "seq_CAML_encoding"
+
+(* [complement alph s] returns a sequence which is the reverse complement of the
+* input sequence [s] as specified by the alphabet [alph]. If [alph] does not
+* provide the necessary specification, an exception is raised. *)
+val complement : Alphabet.a -> s -> s

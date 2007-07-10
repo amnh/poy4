@@ -96,7 +96,8 @@ val to_single_root : ChromCS.IntSet.t -> t -> float * float * t
 * parent of [mine] respectively). The function returns a triple [(a, b, c)],
 * where [a] is the previous cost of [mine], [b] is the new cost of [c] as [ch1]
 * and [ch2] parent, and [c] is the new readjusted [mine]. *)
-val readjust : t -> t -> t -> t -> float * float * t 
+val readjust : All_sets.Integers.t option -> All_sets.Integers.t -> t -> t -> t -> t -> 
+    All_sets.Integers.t * float * float * t 
 val median_3 : t -> t -> t -> t -> t
 (* Like [distance] but calculates it only if the type of the characters match
 * one of those listed. *)

@@ -29,6 +29,6 @@ end
 
 module Make 
     (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
-    (TreeOps : functor (Exact : Ptree.Exact) ->
+    (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e) 
     : S with type a = Node.n with type b = Edge.e

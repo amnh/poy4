@@ -124,7 +124,7 @@ val reroot_fn :
 
 (** Module for performing these operations without skipping based on the
     min-cost-of-clade criterion (see above) *)
-module TreeOps : functor (Exact : Ptree.Exact) -> 
+module TreeOps : 
     Ptree.Tree_Operations with type a = Node.node_data with type b =
         Node.node_data
 

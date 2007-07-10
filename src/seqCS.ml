@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 1908 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 1952 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -238,28 +238,48 @@ let to_single_root parent =
 * of sequences generated from (heuristically) readjusting [mine] to somewhere in
 * between [ch1], [ch2], and [par] (the two children and parent of [mine]
 * respectively, and [a] is the new cost of [b] as parent of [ch1] and [ch2]. *)
-let readjust ch1 ch2 parent mine =
+let readjust to_adjust modified ch1 ch2 parent mine =
     let empty = Codes.empty 
     and no_cost = { min = 0.0; max = 0.0 }
-    and c2 = parent.c2 in
+    and c2 = parent.c2 
+    and c3 = parent.c3 in
     let gap = Cost_matrix.Two_D.gap c2 in
     let adjusted code parent_seq acc =
-        let (res_medians, res_costs, total) = acc in
+        let to_adjust =
+            match to_adjust with
+            | None -> All_sets.Integers.singleton code
+            | Some x -> x
+        in
+        let (modified, res_medians, res_costs, total) = acc in
         let my_sequence = Codes.find code mine.sequences 
         and ch1_sequence = Codes.find code ch1.sequences
         and ch2_sequence = Codes.find code ch2.sequences in
-        if Sequence.is_empty ch1_sequence gap then
+        if (not (All_sets.Integers.mem code to_adjust)) then 
             let new_costs = Codes.add code no_cost res_costs 
             and new_single = Codes.add code my_sequence res_medians in
-            new_single, new_costs, total
-        else if Sequence.is_empty ch2_sequence gap then
+            modified, new_single, new_costs, total
+        else if Sequence.is_empty ch1_sequence gap then 
             let new_costs = Codes.add code no_cost res_costs 
-            and new_single = Codes.add code my_sequence res_medians in
-            new_single, new_costs, total
+            and new_single = Codes.add code ch2_sequence res_medians in
+            let modified = 
+                if 0 <> compare my_sequence ch2_sequence then
+                    All_sets.Integers.add code modified
+                else modified
+            in
+            modified, new_single, new_costs, total
+        else if Sequence.is_empty ch2_sequence gap then 
+            let new_costs = Codes.add code no_cost res_costs 
+            and new_single = Codes.add code ch1_sequence res_medians in
+            let modified = 
+                if 0 <> compare my_sequence ch2_sequence then
+                    All_sets.Integers.add code modified
+                else modified
+            in
+            modified, new_single, new_costs, total
         else 
-            let tmpcost, seqm = 
-                Sequence.readjust ch1_sequence ch2_sequence my_sequence
-                c2 parent_seq
+            let tmpcost, seqm, changed = 
+                Sequence.Align.readjust_3d ch1_sequence ch2_sequence my_sequence
+                c2 c3 parent_seq
             in
             let rescost = 
                 let tmpcost = float_of_int tmpcost in
@@ -268,12 +288,17 @@ let readjust ch1 ch2 parent mine =
             let new_single = Codes.add code seqm res_medians
             and new_costs = Codes.add code rescost res_costs 
             and new_total = total + tmpcost in
-            new_single, new_costs, new_total
+            let modified = 
+                if changed then All_sets.Integers.add code modified
+                else modified
+            in
+            modified, new_single, new_costs, new_total
     in
-    let sequences, costs, total_cost = 
-        Codes.fold adjusted parent.sequences (empty, empty, 0)
+    let modified, sequences, costs, total_cost = 
+        Codes.fold adjusted parent.sequences (modified, empty, empty, 0)
     in
     let tc = float_of_int total_cost in
+    modified,
     tc,
     { mine with sequences = sequences; costs = costs; total_cost = tc }
 

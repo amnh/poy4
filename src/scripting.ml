@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1899 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1952 $"
 
 module IntSet = All_sets.Integers
 
@@ -48,15 +48,15 @@ type ('a, 'b, 'c) run = {
 let is_forest = function
     | `LocalOptimum (_, _, _, _, _, x, _, _, _, _, _) -> x
 
-let is_exact = function `Exact -> true | _ -> false
+let is_something y x = x = y
 
-let has_exact = List.exists is_exact
+let has_something x = List.exists (is_something x)
 
-let build_has_exact = function
+let build_has item = function
     | `Mst _ 
     | `Prebuilt _ -> false
     | `Build (_, _, l)
-    | `Build_Random (_, _, l, _) -> has_exact l
+    | `Build_Random (_, _, l, _) -> has_something item l
 
 
 module type S = sig
@@ -104,7 +104,7 @@ end
 
 module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
     (TreeOps : 
-        functor (Exact: Ptree.Exact) -> Ptree.Tree_Operations with type a =
+        Ptree.Tree_Operations with type a =
             Node.n with type b = Edge.e)
     (CScrp : CharacterScripting.S with type n = Node.n)
     = struct
@@ -113,20 +113,16 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     type c = CScrp.cs
 
 
-module BuildExact = 
-    Build.Make (Node) (Edge) (TreeOps (struct let exact = true end))
-module BuildInexact = 
-    Build.Make (Node) (Edge) (TreeOps (struct let exact = false end))
+module MainBuild = Build
+module Build = 
+    Build.Make (Node) (Edge) (TreeOps)
+
 module CT = CharTransform.Make (Node) (Edge) (TreeOps)
 (* We will use the TS module but only for inexact operations *)
-module TS = Ptree.Search (Node) (Edge) (TreeOps (struct let exact = false end))
+module TS = Ptree.Search (Node) (Edge) (TreeOps)
 module PTS = TreeSearch.Make (Node) (Edge) (TreeOps)
 module D = Diagnosis.Make (Node) (Edge) (TreeOps)
 module S = Supports.Make (Node) (Edge) (TreeOps)
-
-(* We don't need to use exact tree operations at this level *)
-module TreeOps = TreeOps (struct let exact = false end)
-
 
 type tree = (a, b) Ptree.p_tree 
 
@@ -197,124 +193,6 @@ let explode_filenames files =
 #endif
 
 
-let load_data (meth : Methods.input) data nodes =
-    let rec reader data meth = 
-        match meth with
-        | `Poyfile files ->
-                let files = PoyParser.explode_filenames files in
-                List.fold_left PoyParser.of_file data files
-        | `AutoDetect files ->
-                let files = explode_filenames files in
-                List.fold_left 
-                (PoyParser.guess_class_and_add_file) 
-                data 
-                files
-        | `Nucleotides files ->
-                List.fold_left 
-                (fun d f -> Data.process_molecular_file `Seq d f) 
-                data (explode_filenames files) 
-        | `Chromosome files ->
-                List.fold_left (fun d f ->
-                    Data.process_molecular_file `Chromosome d f) 
-                data (explode_filenames files)
-        | `Genome files ->
-                let data = List.fold_left (fun d f ->
-                    Data.process_molecular_file `Genome d f) 
-                data (explode_filenames files)
-                in 
-                data
-        | `Aminoacids files ->
-                let data = Data.set_sequence_defaults Data.Aminoacids data in
-                let data = 
-                    List.fold_left 
-                    (fun d f -> Data.process_molecular_file `Seq d f) 
-                    data (explode_filenames files)
-                in
-                Data.set_sequence_defaults Data.Nucleotides data 
-        | `GeneralAlphabetSeq (seq, alph, read_options) ->
-                let orientation = 
-                    not 
-                    (List.mem (`Orientation false) read_options) 
-                in
-                let init3D = not (List.mem (`Init3D false) read_options) in
-                let data = Data.add_file data [Data.Characters] seq in
-                (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
-                    Parser.Alphabet.of_file alph orientation init3D in
-                let data = 
-                    Data.set_sequence_defaults (Data.GeneralAlphabet 
-                    (FileStream.filename alph, twod, threed, alphabet)) data 
-                in
-                let data = Data.process_molecular_file `Seq data seq in
-                Data.set_sequence_defaults Data.Nucleotides data
-        | `Breakinv (seq, alph, read_options) ->
-                let orientation = 
-                    not 
-                    (List.mem (`Orientation false) read_options) 
-                in
-                let init3D = not (List.mem (`Init3D false) read_options) in
-                let data = Data.add_file data [Data.Characters] seq in
-                (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
-                    Parser.Alphabet.of_file alph orientation init3D in
-                let data = 
-                    Data.set_sequence_defaults 
-                    (Data.GeneralAlphabet (FileStream.filename alph, twod, 
-                    threed, alphabet)) data 
-                in
-                let data = Data.process_molecular_file `Breakinv data seq 
-                in 
-                Data.set_sequence_defaults Data.Nucleotides data
-        | `ComplexTerminals files ->
-                List.fold_left Data.process_complex_terminals data 
-                (explode_filenames files)
-        (* TODO: If we want to add prealigned seququences, here is the place 
-        | `PrealignedNucleotides files ->
-                let files = explode_filenames files in
-                List.fold_left
-                (fun d f -> Data.process_prealigned_file d f)
-                data
-                files
-        | `PrealignedAminoacids files ->
-                let files = explode_filenames files in
-                let data = Data.set_sequence_defaults Data.Aminoacids data in
-                let data =
-                    List.fold_left
-                    (fun d f -> Data.process_prealigned_file d f)
-                    data
-                    files
-                in
-                Data.set_sequence_defaults Data.Nucleotides data 
-        *)
-    and annotated_reader data (meth : Methods.input) =
-        match meth with
-        | #Methods.simple_input as meth -> reader data meth
-        | `AnnotatedFiles files ->
-                let data = Data.annotated_sequences true data in
-                let data = List.fold_left reader data files in
-                Data.annotated_sequences false data
-    in
-    let data = annotated_reader data meth in
-    let data = Data.categorize (Data.remove_taxa_to_ignore data) in
-    Node.load_data data
-
-type script = Methods.script
-
-let process_input run (meth : Methods.input) =
-    let d, nodes = load_data meth run.data run.nodes in
-    let run = { run with data = d; nodes = nodes } in
-    (* check whether this read any trees *)
-    if [] = d.Data.trees then run
-    else
-        let trees =
-            BuildInexact.prebuilt run.data.Data.trees (run.data, run.nodes)
-        in
-        let trees = Sexpr.to_list trees in
-        let total_trees = (Sexpr.to_list run.trees) @ trees in
-        let total_trees = Sexpr.of_list total_trees in
-        let d = { d with Data.trees = [] } in
-        { run with trees = total_trees; data = d }
-
 let update_trees_to_data run =
     let len = Sexpr.length run.trees in
     let st = Status.create "Diagnosis"  (Some len) "Recalculating trees" in
@@ -354,8 +232,8 @@ let process_transform (run : r) (meth : Methods.transform) =
                   [meth] 
           in
           update_trees_to_data { run with nodes = nodes; data = data }
-    | #Methods.terminal_transform ->
-            let data, htbl = Data.randomize_taxon_codes run.data in
+    | #Methods.terminal_transform as meth ->
+            let data, htbl = Data.randomize_taxon_codes meth run.data in
             let data, nodes = Node.load_data data in
             let trees = 
                 Sexpr.map 
@@ -369,6 +247,134 @@ let process_transform (run : r) (meth : Methods.transform) =
             update_trees_to_data 
             { run with nodes = nodes; data = data; trees = trees }
 
+let load_data (meth : Methods.input) data nodes =
+    let prealigned_files = ref [] in
+    let rec reader is_prealigned data (meth : Methods.simple_input) = 
+        match meth with
+        | `Poyfile files ->
+                let files = PoyParser.explode_filenames files in
+                List.fold_left PoyParser.of_file data files
+        | `AutoDetect files ->
+                let files = explode_filenames files in
+                if is_prealigned then prealigned_files := files ::
+                    !prealigned_files;
+                List.fold_left 
+                (PoyParser.guess_class_and_add_file is_prealigned) 
+                data 
+                files
+        | `Nucleotides files ->
+                let files = explode_filenames files in
+                if is_prealigned then prealigned_files := files ::
+                    !prealigned_files;
+                List.fold_left 
+                (fun d f -> Data.process_molecular_file is_prealigned `Seq d f) 
+                data files
+        | `Chromosome files ->
+                List.fold_left (fun d f ->
+                    Data.process_molecular_file false `Chromosome d f) 
+                data (explode_filenames files)
+        | `Genome files ->
+                let data = List.fold_left (fun d f ->
+                    Data.process_molecular_file false `Genome d f) 
+                data (explode_filenames files)
+                in 
+                data
+        | `Aminoacids files ->
+                let data = Data.set_sequence_defaults Data.Aminoacids data in
+                let files = explode_filenames files in
+                if is_prealigned then prealigned_files := files ::
+                    !prealigned_files;
+                let data = 
+                    List.fold_left 
+                    (fun d f -> Data.process_molecular_file is_prealigned `Seq d f) 
+                    data files
+                in
+                Data.set_sequence_defaults Data.Nucleotides data 
+        | `GeneralAlphabetSeq (seq, alph, read_options) ->
+                let orientation = 
+                    not 
+                    (List.mem (`Orientation false) read_options) 
+                in
+                let init3D = not (List.mem (`Init3D false) read_options) in
+                let data = Data.add_file data [Data.Characters] seq in
+                (* read the alphabet and tcm *)
+                let alphabet, twod, threed =
+                    Parser.Alphabet.of_file alph orientation init3D in
+                let data = 
+                    Data.set_sequence_defaults (Data.GeneralAlphabet 
+                    (FileStream.filename alph, twod, threed, alphabet)) data 
+                in
+                if is_prealigned then prealigned_files := [seq] ::
+                    !prealigned_files;
+                let data = Data.process_molecular_file is_prealigned `Seq data seq in
+                Data.set_sequence_defaults Data.Nucleotides data
+        | `Breakinv (seq, alph, read_options) ->
+                let orientation = 
+                    not 
+                    (List.mem (`Orientation false) read_options) 
+                in
+                let init3D = not (List.mem (`Init3D false) read_options) in
+                let data = Data.add_file data [Data.Characters] seq in
+                (* read the alphabet and tcm *)
+                let alphabet, twod, threed =
+                    Parser.Alphabet.of_file alph orientation init3D in
+                let data = 
+                    Data.set_sequence_defaults 
+                    (Data.GeneralAlphabet (FileStream.filename alph, twod, 
+                    threed, alphabet)) data 
+                in
+                let data = Data.process_molecular_file is_prealigned `Breakinv data seq 
+                in 
+                Data.set_sequence_defaults Data.Nucleotides data
+        | `ComplexTerminals files ->
+                List.fold_left Data.process_complex_terminals data 
+                (explode_filenames files)
+    and annotated_reader data (meth : Methods.input) =
+        match meth with
+        | #Methods.simple_input as meth -> reader false data meth
+        | `Prealigned (meth, tcm) ->
+                prealigned_files := [];
+                let data = reader true data meth in
+                let files = List.flatten !prealigned_files in
+                let chars = `Names (true, (List.rev_map (function 
+                    `Local x | `Remote x -> (x ^ ":.*")) files)) in
+                prealigned_files := [];
+                let data = 
+                    match tcm with
+                    | `Assign_Transformation_Cost_Matrix file ->
+                            Data.assign_tcm_to_characters_from_file data chars
+                            (Some file)
+                    | `Create_Transformation_Cost_Matrix (trans, gaps) ->
+                            Data.assign_transformation_gaps data chars trans
+                            gaps
+                in
+                Data.prealigned_characters ImpliedAlignment.analyze_tcm data
+                chars
+        | `AnnotatedFiles files ->
+                let data = Data.annotated_sequences true data in
+                let data = List.fold_left (reader false) data files in
+                Data.annotated_sequences false data
+    in
+    let data = annotated_reader data meth in
+    let data = Data.categorize (Data.remove_taxa_to_ignore data) in
+    Node.load_data data
+
+type script = Methods.script
+
+let process_input run (meth : Methods.input) =
+    let d, nodes = load_data meth run.data run.nodes in
+    let run = { run with data = d; nodes = nodes } in
+    (* check whether this read any trees *)
+    if [] = d.Data.trees then run
+    else
+        let trees =
+            Build.prebuilt run.data.Data.trees (run.data, run.nodes)
+        in
+        let trees = Sexpr.to_list trees in
+        let total_trees = (Sexpr.to_list run.trees) @ trees in
+        let total_trees = Sexpr.of_list total_trees in
+        let d = { d with Data.trees = [] } in
+        { run with trees = total_trees; data = d }
 let temporary_transform run meth =
     let run1 = process_transform run meth in
     match meth with
@@ -616,6 +622,11 @@ let rec process_application run item =
     let run = reroot_at_outgroup run in
     match item with
     | `Interactive -> run
+    | `Normal | `Exact | `Iterative as meth -> 
+            if !Methods.cost <> meth then
+                let _ = Methods.cost := meth in
+                process_application run `ReDiagnose
+            else run
     | `Exit -> exit 0
     | `Version ->
             Status.user_message Status.Information Version.string;
@@ -856,14 +867,7 @@ let explode_trees run =
 let is_forest = function
     | `LocalOptimum (_, _, _, _, _, x, _, _, _, _, _) -> x
 
-let is_exact = function `Exact -> true | _ -> false
-
-let has_exact = List.exists is_exact
-
-let build_has_exact = function
-    | `Prebuilt _ -> false
-    | `Build (_, _, l)
-    | `Build_Random (_, _, l) -> has_exact l
+let build_has_exact = build_has `Exact
 
 let has_static_approx meth = 
     List.exists (function 
@@ -949,9 +953,6 @@ let rec handle_support_output run meth =
             (match support_class with
             | Some support_class ->
                 let trees, title = get_trees_for_support support_class run in
-                let ch = open_out_bin "trees" in
-                Marshal.to_channel ch trees [] ;
-                close_out ch;
                 let trees = Sexpr.to_list trees in
                 let trees = Array.of_list trees in
                 if 0 = Array.length trees then ()
@@ -1306,12 +1307,13 @@ let rec folder (run : r) meth =
     | #Methods.transform as meth ->
             process_transform run meth
     | #Methods.build as meth ->
-            let build_initial = BuildInexact.build_initial_trees in
-            (match Build.get_transformations meth with
+            let build_initial = Build.build_initial_trees in
+            (match MainBuild.get_transformations meth with
             | [] ->
                 let trees = 
                     build_initial run.trees run.data run.nodes meth
                 in
+
                 { run with trees = trees }
             | trans ->
                 let runs = explode_trees run in
@@ -1486,6 +1488,40 @@ let rec folder (run : r) meth =
             (* Update the trees to reflect the rooting we want *)
             let run = reroot_at_outgroup run in
             match meth with
+            | `SequenceStats (filename, ch) ->
+                    let arr = 
+                        let all_of_them = Data.sequence_statistics ch run.data in
+                        let arr =
+                            Array.of_list 
+                            (List.map (fun (name, (max, min, sum, cnt, maxd,
+                            mind, sumd)) ->
+                                let cnt = float_of_int cnt in
+                            [|name; string_of_int max; string_of_int min;
+                            string_of_float ((float_of_int sum) /. cnt); 
+                            string_of_int maxd; string_of_int mind; 
+                            string_of_float ((float_of_int sumd) /. 
+                            (((cnt *. cnt) /. 2.) -. (cnt /. 2.)))|]) all_of_them)
+                        in
+                        Array.init (1 + Array.length arr) (function 0 ->
+                            [|"Character"; "Max Length"; "Min Length"; 
+                            "Average Length"; "Maximum Distance"; 
+                            "Minimum Distance"; "Average Distance"|] | n -> arr.(n - 1)) 
+                    and fo = Status.Output (filename, false, []) in
+                    Status.user_message fo 
+                    "@{<b>Sequence Statistics:@}@[<v 2>@,";
+                    Status.output_table fo arr;
+                    Status.user_message fo "@]\n%!";
+                    run
+            | `CompareSequences (filename, complement, ch1, ch2) ->
+                    let all_of_them = 
+                        Data.compare_pairs ch1 ch2 complement run.data
+                    in
+                    List.iter (fun (n1, n2, c) ->
+                        Status.user_message (Status.Output (filename, false,
+                        []))
+                        ("@[" ^ n1 ^ " " ^ n2 ^ " " ^ string_of_float c ^ "@]@\n")) 
+                    all_of_them;
+                    run
             | `ExplainScript (script, filename) ->
                     let script = PoyCommand.of_file false script in
                     Analyzer.explain_tree filename script;
@@ -1530,7 +1566,7 @@ let rec folder (run : r) meth =
                     ("@[" ^ title ^ " " ^ string_of_float total_time ^ "@]@,%!");
                     run
             | `MstR filename ->
-                    BuildExact.report_mst run.data run.nodes filename;
+                    Build.report_mst run.data run.nodes filename;
                     run
             | `TreesStats filename ->
               let fo = Status.Output (filename, false, []) in
@@ -1893,14 +1929,39 @@ module DNA = struct
 
     module Fasta = struct
         type seqs = (string * Sequence.s) list
+        type multi_seqs = seqs list
+
         let of_channel ch = 
-            let converter (lst, txn) =
+            let filter (lst, txn) =
+                let lst = List.flatten (List.flatten lst) in
                 match lst with
-                | [[[seq]]] -> txn, seq
+                | [] -> false
+                | _ -> true
+            in
+            let converter (lst, txn) =
+                let lst = List.flatten (List.flatten lst) in
+                match lst with
+                | [seq] -> txn, seq
                 | _ -> failwith "Illegal FASTA format"
             in
             let res = Parser.Fasta.of_channel Parser.Nucleic_Acids ch in
-            List.map converter res
+            List.map converter (List.filter filter res)
+
+        let multi_of_channel ch = 
+            let rec merger name lst1 lst2 =
+                match lst1, lst2 with
+                | h1 :: t1, h2 :: t2 -> 
+                        ((name, h2) :: h1) :: (merger name t1 t2)
+                | [], _ :: _ -> 
+                        List.map (fun x -> [name, x]) lst2
+                | [], [] -> []
+                | _ -> failwith "Illegal multi-sequence file."
+            in
+            let converter acc (lst, txn) =
+                List.fold_left (merger txn) acc (List.flatten lst)
+            in
+            let res = Parser.Fasta.of_channel Parser.Nucleic_Acids ch in
+            List.fold_left converter [] res
 
         let to_channel ch seqs =
             let converter (lst, txn) = (txn, lst) in
@@ -1908,6 +1969,9 @@ module DNA = struct
 
         let of_file str = 
             FILES.run_n_close str of_channel
+
+        let multi_of_file str =
+            FILES.run_n_close str multi_of_channel
 
         let to_file str seqs = 
             let ch = open_out str in
@@ -1932,6 +1996,11 @@ module DNA = struct
                     done;
                     to_file (name_f ()) !res;
                 done
+
+        let multi_sample seqs which name_f samples samplesize =
+            let seqs = List.nth seqs which in
+            random_sample seqs name_f samples samplesize
+
 
         let print_sequence s =
             Printf.printf "%s\n%!" (Seq.to_string s)
@@ -1966,6 +2035,7 @@ module DNA = struct
         let algn_all = gen_algn_all algn 
 
         let algn_all_and_print = gen_algn_all algn_and_print
+
 
     end
 

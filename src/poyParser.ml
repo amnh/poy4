@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 1875 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 1952 $"
 
 open StdLabels
 
@@ -481,7 +481,7 @@ let get_characters_weight data =
         | Data.Dynamic y -> (x, y.Data.weight) :: acc
         | _ -> acc) data.Data.character_specs []
 
-let guess_class_and_add_file data filename =
+let guess_class_and_add_file is_prealigned data filename =
     if Data.file_exists data filename then
         let _ =
             let filename = FileStream.filename filename in
@@ -511,13 +511,14 @@ let guess_class_and_add_file data filename =
                     (match filename with
                     | `Local filename
                     | `Remote filename -> of_file data filename)
+            | Parser.Is_Clustal
             | Parser.Is_TinySeq
             | Parser.Is_Fasta | Parser.Is_Genome | Parser.Is_ASN1
             | Parser.Is_Genbank | Parser.Is_INSDSeq | Parser.Is_GBSeq
             | Parser.Is_XML | Parser.Is_NewSeq ->
                     let data = add_file [Data.Characters] in
                     file_type_message "input@ sequences";
-                    Data.process_molecular_file  `Seq data filename
+                    Data.process_molecular_file is_prealigned `Seq data filename
             | Parser.Is_Phylip | Parser.Is_Hennig -> 
                     let data = add_file [Data.Characters; Data.Trees] in
                     file_type_message "hennig86/Nona";
@@ -544,7 +545,7 @@ let guess_class_and_add_file data filename =
                         Data.CostMatrix] 
                     in
                     file_type_message "input@ sequences@ (default)";
-                    Data.process_molecular_file  `Seq data filename
+                    Data.process_molecular_file false `Seq data filename
             | Parser.Is_ComplexTerminals ->
                     let data = add_file [Data.Characters] in
                     file_type_message "Complex@ terminals@ definition@ file";

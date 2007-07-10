@@ -148,8 +148,8 @@ module OneDirF :
     let num_otus c n =
         apply_single_f_on_lazy (Node.Standard.num_otus c) n
 
-    let get_sequences c = 
-        apply_single_f_on_lazy Node.Standard.get_sequences c
+    let get_sequences c n = 
+        apply_single_f_on_lazy (Node.Standard.get_sequences c) n
 
     let get_dynamic_preliminary code n = 
         apply_single_f_on_lazy (Node.Standard.get_dynamic_preliminary code) n
@@ -256,8 +256,8 @@ module OneDirF :
     let root_cost a = 
         Node.Standard.root_cost (Lazy.force_val a)
 
-    let to_single a b c d =
-        lazy (Node.Standard.to_single a (Lazy.force_val b) c (Lazy.force_val d))
+    let to_single ?(is_root=false) a b c d =
+        lazy (Node.Standard.to_single ~is_root:is_root a (Lazy.force_val b) c (Lazy.force_val d))
 end
 
 module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
@@ -288,7 +288,7 @@ type nad8 = Node.Standard.nad8 = struct
 
     let fix_preliminary x = x
 
-    let to_single a b c d =
+    let to_single ?(is_root=false) a b c d =
         let get_code x = 
             match x with
             | Some x -> x
@@ -298,7 +298,7 @@ type nad8 = Node.Standard.nad8 = struct
         and c' = get_code c in
         let b' = not_with a' b.unadjusted
         and d' = not_with c' d.unadjusted in
-        let lazy_node = OneDirF.to_single a b'.lazy_node c d'.lazy_node in
+        let lazy_node = OneDirF.to_single ~is_root:is_root a b'.lazy_node c d'.lazy_node in
         let node = { d' with lazy_node = lazy_node } in
         { d with unadjusted = [node] }
 
@@ -430,7 +430,8 @@ type nad8 = Node.Standard.nad8 = struct
     let num_otus code n =
         get_something OneDirF.num_otus code n.unadjusted
 
-    let get_sequences _ = []
+    let get_sequences code n = 
+        get_something OneDirF.get_sequences code n.unadjusted
 
     let get_dynamic_preliminary code n =
         get_something OneDirF.get_dynamic_preliminary code n.unadjusted

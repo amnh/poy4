@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 1865 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 1952 $"
 
 module Pool = struct
     type p
@@ -442,6 +442,17 @@ module Anchors = struct
 
 end
 
+let is_empty seq gap =
+    let length = length seq in
+    let rec check p =
+        if p = length then true
+        else 
+            if gap <> get seq p then false
+            else check (p + 1) 
+    in
+    check 0
+
+
 module Align = struct
 
     external c_max_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int = "algn_CAML_worst_2"
@@ -812,6 +823,9 @@ module Align = struct
         res
 
     let closest s1 s2 cm m =
+        if is_empty s2 (Cost_matrix.Two_D.gap cm) then
+            s2, 0
+        else
         let (s, _) as res = 
         if 0 = Cost_matrix.Two_D.combine cm then 
             (* We always have just one sequence per type s *)
@@ -889,6 +903,78 @@ module Align = struct
             in
             process_cost 0 0 false
 
+    external powell_3d : s -> s -> s -> s -> s -> s -> int -> int -> int -> int =
+        "powell_3D_align_bc" "powell_3D_align"
+
+    let align_3_powell s1 s2 s3 mm go ge =
+        let sz1 = length s1
+        and sz2 = length s2 
+        and sz3 = length s3 in
+        let sum = sz1 + sz2 + sz3 in
+        let s1p = create sum
+        and s2p = create sum  
+        and s3p = create sum in 
+        let c = powell_3d s1 s2 s3 s1p s2p s3p mm go ge in
+        s1p, s2p, s3p, c
+
+    let align_3_powell_inter s1 s2 s3 cm cm3 =
+        let gap = Cost_matrix.Two_D.gap cm in
+        let mm, go, ge =
+            match Cost_matrix.Two_D.affine cm with
+            | Cost_matrix.Linnear
+            | Cost_matrix.No_Alignment -> 
+                    Cost_matrix.Two_D.cost 1 2 cm,
+                    0,
+                    Cost_matrix.Two_D.cost 1 16 cm
+            | Cost_matrix.Affine x ->
+                    Cost_matrix.Two_D.cost 1 2 cm,
+                    x,
+                    Cost_matrix.Two_D.cost 1 16 cm
+        in
+        let a, b, c, cost = align_3_powell s1 s2 s3 mm go ge in
+        let len = length a in
+        let median = create_same_pool a (len + 1) in
+        let add a b c d = 
+            let cost a b = Cost_matrix.Two_D.cost a b cm in
+            (cost a b) + (cost a c) + (cost a d) 
+        in
+        for i = len - 1 downto 0 do
+            let a = get a i in
+            let b = get b i in
+            let c = get c i in
+            let to_prepend = 
+                if (0 <> a land b) || (0 <> a land c) then a 
+                else if (0 <> b land c) then b 
+                else 
+                    let pickb = add b a b c
+                    and pickc = add c a b c 
+                    and picka = add a a b c in
+                    if pickb <= picka then
+                        if pickb <= pickc then b
+                        else c
+                    else if picka <= pickc then a
+                    else c
+            in
+            if to_prepend <> gap then prepend median to_prepend
+            else ();
+        done;
+        prepend median gap;
+        median, cost
+
+    let readjust_3d s1 s2 m cm cm3 p =
+        if length s1 = length s2 && length m = length p && length s1 = length m then
+            0, m, false
+        else 
+            let gap = Cost_matrix.Two_D.gap cm in
+            if is_empty s1 gap && not (is_empty s2 gap) then
+                0, s2, 0 <> compare m s2
+            else if is_empty s2 gap && not (is_empty s1 gap) then 
+                0, s1, 0 <> compare m s1
+            else if is_empty p gap then 
+                0, p, 0 <> compare m p
+            else
+                let res, x = align_3_powell_inter s1 s2 p cm cm3 in
+                x, res, 0 <> compare m res
 end
 
 let select_one_generic get_one_item s cm =
@@ -916,56 +1002,33 @@ let select_one_randomized s cm =
 
 let readjust a b m cm parent =
     let matr = Matrix.default in
-    let make_center a b other =
-        let medianf a b other = 
-            let median a b = 
-                Align.closest other (Align.full_median_2 a b cm
-                Matrix.default) cm Matrix.default
-            in
-            let median2 other medianc =
-                select_one_randomized (Align.full_median_2 other medianc cm
-                Matrix.default) cm 
-            in
-            let medianc, _ = median a b in
-            let cost_calculation a b c x =
-                let cst a x = Align.cost_2 a x cm Matrix.default in
-                (cst a x) + (cst b x) + (cst c x) 
-            in
-            let medianc = median2 other medianc in
-            (*
-            let _ = 
-                Status.user_message Status.Information 
-                ("The old cost used to be " ^ 
-                (string_of_int (cost_calculation a b parent m)) ^ 
-                " but now it's " ^ 
-                (string_of_int (cost_calculation a b parent medianc))
-                ^ " for the sequences " ^ to_string m
-                Alphabet.nucleotides ^ " and now " ^ to_string medianc
-                Alphabet.nucleotides)
-            in
-            *)
-            if (cost_calculation a b parent m) > 
-                (cost_calculation a b parent medianc) then
-                    (*
-                    let _ = Status.user_message Status.Information
-                    "choosen!" in
-                    *)
-                    Some medianc
-            else None
-        in
-        match medianf a b parent with
-        | Some x -> x
-        | None ->
-                match medianf a parent b with
-                | Some x -> x
-                | None ->
-                        match medianf b parent a with
-                        | Some x -> x
-                        | None -> m
+    let algn s1 s2 =
+       let s1', s2', c = 
+           Align.align_2 ~first_gap:true s1 s2 cm
+           Matrix.default
+       in
+       let median = Align.median_2 s1' s2' cm in
+       c, median
     in
-    let center = make_center a b parent in
-    (Align.cost_2 a center cm matr) + (Align.cost_2 b center cm matr),
-    center
+    let make_center a b c =
+        let cab, ab = algn a b
+        and cbc, bc = algn b c
+        and cac, ac = algn a c in
+        let cabc, abc = algn ab c
+        and cbca, bca = algn bc a
+        and cacb, acb = algn ac b in
+        let cabc = cabc + cab
+        and cbca = cbca + cbc
+        and cacb = cacb + cac in
+        if cabc <= cbca then
+            if cabc <= cacb then false, cabc, Align.closest c ab cm matr, cabc
+            else true, cacb, Align.closest b ac cm matr, cabc
+        else if cbca < cacb then
+            true, cbca, Align.closest a bc cm matr, cabc 
+        else true, cacb, Align.closest b ac cm matr, cabc 
+    in
+    let has_to_print, c, (s, _), previous = make_center a b parent in
+    c, s
 
 
 module CamlAlign = struct
@@ -1450,17 +1513,6 @@ module Unions = struct
 
 end
 
-let is_empty seq gap =
-    let length = length seq in
-    let rec check p =
-        if p = length then true
-        else 
-            if gap <> get seq p then false
-            else check (p + 1) 
-    in
-    check 0
-
-
 let of_code_arr code_arr gap = 
     let num_nus = Array.fold_left   
         (fun num_nus dna_code ->  
@@ -1487,3 +1539,17 @@ let of_code_arr code_arr gap =
 external encoding : 
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t -> 
         s -> float = "seq_CAML_encoding"
+
+let complement a s = 
+    let gap = Alphabet.get_gap a in
+    let res =
+        let acc = (create_same_pool s (length s)) in
+        for i = 1 to (length s) - 1 do
+            match Alphabet.complement (get s i) a with
+            | Some x -> prepend acc x
+            | None -> failwith "I can't complement this alphabet"
+        done;
+        acc
+    in
+    prepend res gap;
+    res

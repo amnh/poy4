@@ -29,7 +29,7 @@ let get_graphics str =
     get_option [(".*tk", "tk"); (".*ocaml", "ocaml"); (".*", "none")] str
 
 let get_interface str =
-    get_option [(".*gtk", "gtk2"); (".*ncurses", "ncurses"); (".*", "flat")] str
+    get_option [(".*gtk", "gtk2"); (".*ncurses", "ncurses"); (".*", "readline")] str
 
 let is_true str = if Str.string_match truere str 0 then  "on" else "off"
 let rephrase str = Str.global_replace (Str.regexp " +") "@ " str
@@ -42,5 +42,5 @@ let string = "@[@[Welcome to @{<b>@{<c:blue>P@}O@{<c:red>Y@}@} 4.0 alpha,@ " ^
                       ^ "with parallel " ^ is_true CompileFlags.str_parallel
                       ^ ", interface " ^ get_interface CompileFlags.str_interface
                       ^ ", graphics " ^ get_graphics CompileFlags.str_graphics ^
-                      "@])@,@[" ^
+                      "@]@,@[" ^
                      "POY version 4.0 Beta, Copyright (C) 2007  Andres Varon, Le Sy Vinh, Illya Bomash, Ward Wheeler, and the American Museum of Natural History.  POY 4.0 comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under the GNU General Public License Version 2, June 1991.@]@]")

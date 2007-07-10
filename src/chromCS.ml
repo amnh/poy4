@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 1875 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 1952 $"
 
 let fprintf = Printf.fprintf
 
@@ -299,16 +299,25 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                 List.find (fun med -> 
                                IntSet.mem med.ChromAli.ref_code ref_codes
                           ) med.Chrom.med_ls
-            with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
+            with Not_found -> begin
+(*                failwith "Not_found: ChromCS.to_single"*)
+                List.hd med.Chrom.med_ls
+            end 
         in         
 
 
         let cost,  recost, single_seq = 
             let parent_med = IntMap.find code single_parent.meds in  
-            let aparent_med = List.find 
-                (fun med -> 
-                     IntSet.mem med.ChromAli.ref_code ref_codes 
-                ) parent_med.Chrom.med_ls
+            let aparent_med = 
+                try
+                    List.find  
+                        (fun med -> 
+                             IntSet.mem med.ChromAli.ref_code ref_codes 
+                        ) parent_med.Chrom.med_ls
+                with Not_found -> begin
+(*                    failwith "Not_found: ChromCS.to_single"; *)
+                    List.hd parent_med.Chrom.med_ls
+                end 
             in            
 
 
@@ -324,6 +333,7 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                   in 
                   0, 0, single_root
         in 
+        
 
         let single_med = ChromAli.change_to_single amed single_seq in 
 

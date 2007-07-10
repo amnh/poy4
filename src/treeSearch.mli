@@ -26,8 +26,6 @@ val search_time_and_trees_considered : float -> int -> (string * string) list
 
 val get_transformations : Methods.local_optimum -> Methods.transform list
 
-val has_exact : Methods.local_optimum -> bool
-
 module type S = sig
       type a 
       type b
@@ -80,7 +78,7 @@ module MakeNormal :
   functor (Node : NodeSig.S) ->
     functor (Edge : Edge.EdgeSig with type n = Node.n) ->
       functor
-        (TreeOps : functor (Exact : Ptree.Exact) -> 
+        (TreeOps : 
             Ptree.Tree_Operations with type a = Node.n with type b =
             Edge.e) -> S with type a = Node.n with type b = Edge.e
 
@@ -88,7 +86,7 @@ module Make :
   functor (NodeH : NodeSig.S) ->
     functor (EdgeH : Edge.EdgeSig with type n = NodeH.n) ->
       functor
-        (TreeOpsH : functor (Exact : Ptree.Exact) -> 
+        (TreeOpsH :
             Ptree.Tree_Operations with type a = NodeH.n with type b =
             EdgeH.e) -> 
                 S with type a = NodeH.n with type b = EdgeH.e

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1893 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1952 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -38,6 +38,7 @@ module CommandCompletion = struct
         "all";
         "all_roots";
         "alternate";
+        "alphabetic_terminals";
         "aminoacids";
         "annchrom_to_breakinv";
         "annealing";
@@ -88,7 +89,7 @@ module CommandCompletion = struct
         "echo";
         "end";
         "error";
-        "exact";
+        "exhaustive_do";
         "exit";
         "false";
         "file";
@@ -112,6 +113,7 @@ module CommandCompletion = struct
         "inspect";
         "inversion";
         "iterations";
+        "iterative";
         "jackknife";
         "keep";
         "last";
@@ -130,8 +132,8 @@ module CommandCompletion = struct
         "nodes";
         "nolog";
         "nomargin";
+        "normal_do";
         "not";
-        "not" ;
         "nucleotides";
         "of_file";
         "once";
@@ -141,6 +143,7 @@ module CommandCompletion = struct
         "output";
         "perturb";
         "phastwinclad";
+        "prealigned";
         "prioritize";
         "pwd";
         "quit" ;

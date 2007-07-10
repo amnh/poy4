@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 1893 2007-06-11 15:24:51Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 1893 $"
+(* $Id: chartree.ml 1952 2007-07-10 18:28:23Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 1952 $"
 
 
 (** chartree.ml *)
@@ -891,7 +891,7 @@ let break_fn (tree_node, clade_node_id) ptree =
         ptree.Ptree.tree 
     in
     let jxn = (tree_node, clade_node_id) in
-    let prev_cost = Ptree.get_cost `Unadjusted ptree in
+    let prev_cost = Ptree.get_cost `Adjusted ptree in
     (* Figure out the clade root node *)
     let clade_node = 
         (Ptree.get_node_data (Tree.int_of_id clade_node_id) ptree)
@@ -913,7 +913,7 @@ let break_fn (tree_node, clade_node_id) ptree =
     let ptree = { ptree with Ptree.tree = nbt } in
     let ptree = set_clade_root ptree clade_node clade_handle in
     let ptree, udlt = update_tree_data_break tree_delta ptree in
-    let new_cost = Ptree.get_cost `Unadjusted ptree in
+    let new_cost = Ptree.get_cost `Adjusted ptree in
     (* Compare costs *)
     let b_delta =
         if prev_cost = infinity && new_cost = infinity
@@ -924,9 +924,9 @@ let break_fn (tree_node, clade_node_id) ptree =
         odebug ("old cost " ^ string_of_float prev_cost
                  ^ " and new cost " ^ string_of_float new_cost);
     if debug_joinfn then begin
-        let tc = Ptree.get_cost `Unadjusted ptree in
+        let tc = Ptree.get_cost `Adjusted ptree in
         let nt = force_downpass ptree in
-        let nc = Ptree.get_cost `Unadjusted nt in
+        let nc = Ptree.get_cost `Adjusted nt in
         if nc <> tc then begin
             Printf.printf "The calculated cost is %f but the real cost is \
             %f.\n%!" tc nc;
@@ -972,10 +972,10 @@ let join_fn incremental jxn1 jxn2 ptree =
     let ptree = incremental_uppass ptree updt in
     if debug_joinfn then
         (Printf.printf "Processing join\n%!";
-        let current_cost = Ptree.get_cost `Unadjusted ptree in
+        let current_cost = Ptree.get_cost `Adjusted ptree in
         Printf.printf "Forcing a downpass.\n%!";
         let tmp_tree = force_downpass ptree in
-        let new_cost = Ptree.get_cost `Unadjusted tmp_tree in
+        let new_cost = Ptree.get_cost `Adjusted tmp_tree in
         if new_cost <> current_cost then 
             (Tree.print_join_1_jxn jxn1;
             Tree.print_join_2_jxn jxn2;
@@ -1036,9 +1036,9 @@ let exact_cost_fn jxn1 jxn2 delta clade_data ptree =
     match cost_fn jxn1 jxn2 delta clade_data ptree with
     | (Ptree.Cost v) as res ->
             if within_threshold v delta then
-                let previous_cost = Ptree.get_cost `Unadjusted ptree in
+                let previous_cost = Ptree.get_cost `Adjusted ptree in
                 let ptree, _, _, _ = join_topologies_and_data jxn1 jxn2 ptree in
-                Ptree.Cost ((Ptree.get_cost `Unadjusted ptree) -. previous_cost)
+                Ptree.Cost ((Ptree.get_cost `Adjusted ptree) -. previous_cost)
             else res
     | x -> x
 
@@ -1329,20 +1329,21 @@ let root_costs tree =
     All_sets.Integers.fold (fun handle acc ->
         let get_cost edge acc = 
             let ntree, _ = reroot_fn edge tree in
-            (Tree.Continue, (((edge, Ptree.get_cost `Unadjusted ntree) :: acc)))
+            (Tree.Continue, (((edge, Ptree.get_cost `Adjusted ntree) :: acc)))
         in
         Ptree.pre_order_edge_visit get_cost handle tree acc)
     (Tree.get_handles tree.Ptree.tree) []
 
-module TreeOps (Exact : Ptree.Exact) = struct
+module TreeOps = struct
     type a = Node.node_data
     type b = Node.node_data
     let clear_internals ptree = ptree
     let break_fn = break_fn
     let join_fn = join_fn
     let cost_fn = 
-        if Exact.exact then exact_cost_fn
-        else cost_fn
+        match !Methods.cost with
+        | `Normal -> cost_fn
+        | _ -> exact_cost_fn
     let reroot_fn = reroot_fn
     let string_of_node = Node.Standard.to_string
     let features meth lst = features meth (("skipping", "false") :: lst)
