@@ -17,36 +17,60 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Arguments" "$Revision: 1966 $"
+exception Illegal_update
 
-let just_exit = ref false
-let only_run_argument_script = ref false
-let dump_file = ref "ft_output.poy"
-let input : string list ref = ref []
+type formatter_output = StatusCommon.formatter_output
+type c = SearchReport | Status | Error | Information 
+         | Output of (string option * bool * formatter_output list)
 
-let change_working_directory str =
-    try Sys.chdir str with
-    | err ->
-            prerr_endline 
-            ("Attemting to change to directory " ^ str ^ 
-            " failed misserably. I am cancelling this run, check your " ^
-            "path.\n");
-            exit 1
 
-let parse_list = [
-    ("-w", Arg.String change_working_directory,
-    "Run poy in the specified working directory"); 
-    ("-e", Arg.Unit (fun () -> just_exit := true), "Exit upon error");
-    ("-d", Arg.String (fun str -> dump_file := str), "Dump filename in case of \
-    error");
-    ("-q", Arg.Unit (fun () -> only_run_argument_script := true), 
-    "Don't wait for input other than the program argument script.");
-    ("-no-output-xml", Arg.Unit (fun () -> SadmanOutput.do_sadman := false),
-    "Do not generate the output.xml file.")
+type status
+
+val main_loop : (string -> unit) -> unit
+
+val type_io : string -> int -> c -> [ 
+    | `Status of (string * int)
+    | `Error of (string * int)
+    | `Information of (string * int)
+    | `Output of (string * int)
 ]
 
-let anon_fun str =
-    input := str :: !input
+val set_verbosity : [ `Low | `Medium | `High ] -> unit
 
-let usage = 
-    "poy [OPTIONS] filename ..."
+val get_verbosity : unit -> [`Low | `Medium | `High ]
+
+val send_output : Pervasives.out_channel list -> unit
+
+val create : string -> int option -> string -> status
+
+val achieved : status -> int -> unit
+
+val get_achieved : status -> int
+
+val message : status -> string -> unit
+
+val report : status -> unit
+
+val finished : status -> unit
+
+val user_message : c -> string -> unit
+
+val full_report : ?msg:string -> ?adv:int -> status -> unit
+
+val is_parallel : (c -> string -> unit) option -> unit
+
+val rank : int -> unit
+
+val init : unit -> unit
+
+val error_location : int -> int -> unit
+
+val output_table : c -> string array array -> unit
+
+val redraw_screen : unit -> unit
+
+val resize_history : int -> unit
+
+val clear_status_subwindows : unit -> unit
+
+val is_interactive : unit -> bool

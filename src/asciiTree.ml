@@ -31,12 +31,32 @@ let print_points (x, y, code) =
     print_string (" code = " ^ code);
     print_newline ()
 
+let sort_tree tree = 
+    let rec aux_sort_tree tree =
+        match tree with
+        | Parser.Tree.Leaf _ -> tree, 0, 1
+        | Parser.Tree.Node (chld, data) ->
+                let chld = List.map aux_sort_tree chld in
+                let chld = List.sort (fun (_, x, a) (_, y, b) -> 
+                    match y - x with
+                    | 0 -> b - a
+                    | n -> n) chld in
+                let max_depth, total_children, chld =
+                    List.fold_left (fun (dep, ch, items) (x, y, z) ->
+                        (max dep y), (ch + z), (x :: items)) (0, 0, []) chld
+                in
+                Parser.Tree.Node (chld, data), max_depth, total_children
+    in
+    let tree, _, _ = aux_sort_tree tree in
+    tree
+
 (** [draw b a] outputs a (crappy) ascii tree [a] in the channel [b]. [sep]
 * establishes the number of lines separating each leaf and [bd] the number of
 * columns between vertices in the tree. *)
 let to_matrix ?(sep=4) ?(bd=4) include_interior t =
     (* Calculate the depth, number of leafs and the lenght of the longest string
     * of the leaves. *)
+    let t = sort_tree t in
     let rec depth_and_leafs t = 
         match t with
         | Parser.Tree.Leaf str -> 1, 1, String.length str
@@ -155,6 +175,7 @@ let draw ?(sep = 4) ?(bd=4) include_interior ch t =
     print_newline ()
 
 let to_string ?(sep = 4) ?(bd = 4) include_interior t = 
+    let t = sort_tree t in
     let matrix = to_matrix ~sep:sep ~bd:bd include_interior t in
     let buffer = Buffer.create (Array.length matrix.(0)) in
     Buffer.add_string buffer "@[<v>";
@@ -184,6 +205,7 @@ let to_string ?(sep = 4) ?(bd = 4) include_interior t =
 
 (** Outputs the tree [t] in channel [ch] using parenthetical notation. *)
 let draw_parenthesis ch t = 
+    let t = sort_tree t in
     let rec printer ch t = 
         match t with
         | Parser.Tree.Leaf str ->
@@ -202,6 +224,7 @@ let draw_parenthesis ch t =
     output_string ch "\n" 
 
 let for_formatter ?(separator = " ") newick leafsonly t =
+    let t = sort_tree t in
     let separator = 
         match newick with 
         | true -> ","

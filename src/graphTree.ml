@@ -114,6 +114,7 @@ module Make = functor (G : GRAPHICS_TYPE) -> struct
     *   black, red , blue, green, yellow, cyan, magenta
     *   *)    
     let draw ?(size="") ?(leafColor=G.black) t =
+        let t = AsciiTree.sort_tree t in
        let d = ref 0 and
        max_depth = ref 0 and
        num_leaves = ref 0 and

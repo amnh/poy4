@@ -45,21 +45,21 @@ libcamlmpi.a: $(COBJS)
 	ar rc $@ $(COBJS)
 
 mpi.cma: $(OBJS)
-	$(OCAMLC) -a -o mpi.cma $(CCOPT) -custom $(OBJS) -cclib -lcamlmpi 
+	$(OCAMLC) -cc $(CC) -a -o mpi.cma $(CCOPT) -custom $(OBJS) -cclib -lcamlmpi 
 
 mpi.cmxa: $(OBJS:.cmo=.cmx)
-	$(OCAMLOPT) -a -o mpi.cmxa $(CCOPT) $(OBJS:.cmo=.cmx) -cclib -lcamlmpi 
+	$(OCAMLOPT) -cc $(CC) -ccopt "$(CFLAGS)" -a -o mpi.cmxa $(CCOPT) $(OBJS:.cmo=.cmx) -cclib -lcamlmpi 
 
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
 
 .ml.cmo:
-	$(OCAMLC) $(CCOPT) -c $<
+	$(OCAMLC) -cc $(CC) -ccopt "$(CFLAGS)" $(CCOPT) -c $<
 .mli.cmi:
-	$(OCAMLC) $(CCOPT) -c $<
+	$(OCAMLC) -cc $(CC) $(CCOPT) -ccopt "$(CFLAGS)" -c $<
 .ml.cmx:
-	$(OCAMLOPT) $(CCOPT) -c $<
+	$(OCAMLOPT) -cc $(CC) $(CCOPT) -ccopt "$(CFLAGS)" -c $<
 .c.o:
-	$(OCAMLOPT) $(CCOPT) -c -I $(INCLUDE) $< $(PROFILE)
+	$(OCAMLOPT) -cc $(CC) -ccopt "$(CFLAGS)" $(CCOPT) -c -I $(INCLUDE) $< $(PROFILE)
 
 testmpi: test.ml mpi.cma libcamlmpi.a
 	ocamlc -o testmpi unix.cma mpi.cma test.ml -ccopt -L.

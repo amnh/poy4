@@ -266,7 +266,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \" 1952 \"" > $@
+	echo "let build = \" 1965 \"" > $@
 
 compileFlags.ml: ./config.log
 	echo "(** automatically generated description of compile-time flags *)" \
@@ -533,11 +533,11 @@ mpoy: $(MAIN_OBJS)
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLC) -custom $(OCAML_INCLUDES) -cc mpicc -cclib -L$(OCAMLMPI) \
 		-cclib -l$(MPILNAME) $(OCAMLMPI)/mpi.cma -cclib -l$(MPILNAME) \
-		-cclib -lcamlgrappa $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
+		-cclib -lcamlgrappa $(LIBS)  $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
 		$(GRAPHICS) camlp4.cma unix.cma str.cma bigarray.cma $^
 else
 		$(OCAMLC) -custom $(OCAML_INCLUDES) -cclib -L$(OCAMLMPI) \
-		-cclib -lcamlgrappa $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
+		-cclib -lcamlgrappa $(LIBS) $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
 		$(GRAPHICS) camlp4.cma unix.cma str.cma bigarray.cma $^
 endif
 
@@ -568,11 +568,11 @@ mpoy_console: $(BASE_OBJS) scripting.cmo
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLTOP) $(PREPROCESSOR) $(OCAML_INCLUDES) -cc mpicc -cclib -L./ \
 	-I $(OCAMLMPI) -cclib -L./grappa -cclib -L./graphps -custom -cclib \
-	-L$(OCAMLMPI) $(CCOPT) $(PROFILE) \
+	-L$(OCAMLMPI) $(LIBS) $(CCOPT) $(PROFILE) \
 	-cclib -l$(MPILNAME) -cclib -lcamlgrappa -o $@ mpi.cma $(GRAPHICS) camlp4o.cma unix.cma str.cma \
 	bigarray.cma $^
 else
-	$(OCAMLTOP) $(CCOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -o $@ -cclib -L./grappa \
+	$(OCAMLTOP) $(CCOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) $(LIBS) -o $@ -cclib -L./grappa \
 	-cclib -L./graphps -cclib -L./ -cclib -lcamlgrappa $(GRAPHICS) unix.cma camlp4o.cma str.cma \
 	bigarray.cma $^
 endif

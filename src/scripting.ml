@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1952 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1966 $"
 
 module IntSet = All_sets.Integers
 
@@ -1389,11 +1389,13 @@ let rec folder (run : r) meth =
     | #Methods.char_operations as meth -> 
             { run with characters = 
             CScrp.scriptchar_operations run.nodes run.data meth }
-    | `Bootstrap (it, _, _, _) as meth -> 
+    | `Bootstrap (it, a, b, c) -> 
+            let meth = `Bootstrap (it, a, b, (run.data.Data.root_at)) in
             let run = reroot_at_outgroup run in
             { run with bootstrap_support = 
                 Some (it, S.support run.trees run.nodes meth run.data run.queue) }
-    | `Jackknife (_, it, _, _, _) as meth ->
+    | `Jackknife (a, it, b, c, _) ->
+            let meth = `Jackknife (a, it, b, c, (run.data.Data.root_at)) in
             let run = reroot_at_outgroup run in
             { run with jackknife_support = 
                 Some (it, S.support run.trees run.nodes meth run.data run.queue) }

@@ -27,7 +27,7 @@ AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
               [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
 
 AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
-              [Force POY's user interface. Valid options are ncurses and readline. The default is ncurses.])],
+              [Force POY's user interface. Valid options are ncurses, readline, and html. The default is ncurses.])],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 

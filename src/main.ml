@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 1800 $"
+let () = SadmanOutput.register "Main" "$Revision: 1966 $"
 
-(* $Id: main.ml 1800 2007-05-08 01:02:29Z andres $ *)
+(* $Id: main.ml 1966 2007-07-16 17:35:15Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -79,7 +79,7 @@ let args =
 
 #endif
 
-let () = SadmanOutput.register "Main" "$Revision: 1800 $"
+let () = SadmanOutput.register "Main" "$Revision: 1966 $"
 
 let () = Status.init ()
 
@@ -257,7 +257,9 @@ let _ =
                 ~output_file:(!(Arguments.dump_file)) 
                 ~start:!script command 
             in
-            script := res 
+            script := res;
+            if !Arguments.only_run_argument_script then exit 1
+            else ()
         with
         | Stdpp.Exc_located (_, PoyCommand.Exit) -> exit 0
         | Stdpp.Exc_located ((a, b), Stream.Error err) 
@@ -286,8 +288,8 @@ let _ =
                 Status.clear_status_subwindows ();
                 let msg = "Search timed out" in
                 Status.user_message Status.Information msg
-        | err when ((not !(Arguments.just_exit)) && (Status.is_interactive ())
-            ||  (not !is_running_alone)) && (not debug_pass_errors) ->
+        | err when (((not !(Arguments.just_exit)) && (Status.is_interactive ())) && 
+                (not debug_pass_errors)) ->
                 Status.clear_status_subwindows ();
                 let msg = Printexc.to_string err in
                 Status.user_message Status.Error msg
