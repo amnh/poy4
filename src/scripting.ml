@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1966 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 1968 $"
 
 module IntSet = All_sets.Integers
 
@@ -1820,17 +1820,17 @@ module DNA = struct
             mt
 
         let of_file file = 
-            let ch = open_in file in
+            let ch = new FileStream.file_reader (`Local file) in
             try 
                 let res = 
                     Cost_matrix.Two_D.of_channel ~orientation:false
                     ~use_comb:true ch 
                 in
-                close_in ch;
+                ch#close_in;
                 res
             with 
             | err -> 
-                    close_in ch;
+                    ch#close_in;
                     raise err
         let all_ones () = of_sub_indel 1 1
 

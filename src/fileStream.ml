@@ -17,10 +17,30 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: fileStream.ml 1701 2007-03-14 17:18:13Z andres $ *)
+(* $Id: fileStream.ml 1968 2007-07-17 02:01:38Z andres $ *)
 (* Created Thu Apr 20 16:41:14 2006 (Illya Bomash) *)
 
 (** simple input streams as objects, with helper functions for parsing *)
+
+class type greader = object
+    val mutable character_number : int
+    val mutable stored : char list
+    method get : char
+    method get_position : int
+    method getch : char
+    method getch_safe : char option
+    method match_prefix : string -> bool
+    method putback : char -> unit
+    method read_excl : char list -> string
+    method read_float : float
+    method read_incl : char list -> string
+    method read_int : int
+    method read_line : string
+    method read_while : (char -> bool) -> string
+    method skip_ws : unit
+    method skip_ws_nl : unit
+    method close_in : unit
+end
 
 (** [string_of_charlist cl] makes a string from a list of characters *)
 let string_of_charlist cl =

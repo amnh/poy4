@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: alphabet.mli 1952 2007-07-10 18:28:23Z andres $ *)
+(* $Id: alphabet.mli 1968 2007-07-17 02:01:38Z andres $ *)
 (* Alphabet.
 *
 * Description and handling of different kinds of alphabets for the analysis of
@@ -63,7 +63,7 @@ val aminoacids : a
 
 (** [of_string l] creates an encoding for the string list [l] to produce an 
 * alphabet. *)
-val of_string : ?orientation:bool -> string list -> string -> string -> a
+val of_string : ?orientation:bool -> string list -> string -> string option -> a
 
 (** {2 Finding} *)
 
@@ -99,7 +99,7 @@ val size : a -> int
 
 (** [get_all a] returns the assigned code to represent all the elements in the
 * alphabet [a]. *)
-val get_all : a -> int
+val get_all : a -> int option
 
 (** [get_gap a] returns the assigned code to represent the gap element in the
 * alphabet [a]. *)
@@ -120,7 +120,7 @@ val print : a -> unit
 * list of strings, codes, and optional complements [l], with gap
 code [g] and all code [a], to create * an alphabet of kind [k] *)
 val list_to_a :
-  (string * int * int option) list -> string -> string -> kind -> a
+  (string * int * int option) list -> string -> string option -> kind -> a
 
 (** [simplified_alphabet a] return an alphabet with the following conditions:
 * If the kind of [a] is [Sequential] or [Simple_Bit_Flags], then the same 

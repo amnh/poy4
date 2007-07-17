@@ -28,7 +28,7 @@
  * handle unrooted trees for this kind of operations (remember the tree module has
  * a handle for "Unrooted" trees, meaning that we can safely keep this meaning
  * properly. *)
-let () = SadmanOutput.register "SankCS" "$Revision: 1801 $"
+let () = SadmanOutput.register "SankCS" "$Revision: 1968 $"
 
 
 type cost =
@@ -65,11 +65,6 @@ let string_of_cost = function
 let ( +$ ) a b = cost_plus a b
 let ( -$ ) a b = cost_minus a b
 let ( <$ ) a b = cost_less a b
-
-let assert_ninf a =
-    assert (a <> Infinity);
-    a
-
 
 type cm = int array array               (* never have infinity *)
 
@@ -115,6 +110,68 @@ type t = {
     (* A bunch of individual characters *)
     elts : elt array;
 }
+
+(* A default string representation as a list with the minimal states (those with
+* minimal cost in the state array). *)
+let elt_to_string a = 
+(*     let min = Array.fold_left cost_min Infinity a.s in *)
+    let sep = ref "" in
+    let res, _ = Array.fold_left 
+            begin fun (b, pos) a -> 
+                let next =
+                    if a = Infinity
+                    then b
+                    else
+                        let next =
+                    b ^ !sep
+                    ^ string_of_int pos ^ "="
+                    ^ string_of_cost a
+                        in
+                        sep := ";";
+                        next
+                in
+(*                     if a = min then begin *)
+(*                         let res = b ^ !sep ^ string_of_int pos in *)
+(*                         sep := ";"; *)
+(*                         res *)
+(*                     end *)
+(*                     else b *)
+(*                 in *)
+                next, pos + 1
+            end ("{",0) a.s in
+    res ^ "}"
+let to_string s =
+    let list = Array.to_list s.elts in
+    let strings = List.map elt_to_string list in
+    "[" ^ String.concat "; " strings ^ "]"
+
+let elt_to_full_string a =
+    let string_of_costarray a =
+        let ar =
+            Array.mapi (fun i c -> (string_of_int i ^ "=" ^ string_of_cost c)) a
+        in String.concat ";" (Array.to_list ar) in
+    let states = string_of_costarray a.s in
+    let beta = string_of_costarray a.beta in
+    let e = string_of_costarray a.e in
+    "states=[" ^ states ^ "]; beta=[" ^ beta ^ "]; e=[" ^ e ^ "]"
+let to_full_string s =
+    let list = Array.to_list s.elts in
+    let strings = List.map elt_to_full_string list in
+    "[" ^ String.concat "; " strings ^ "]"
+
+let to_string = to_full_string
+    
+
+let assert_ninf a x y=
+    assert (
+        if a = Infinity then begin
+         print_string (elt_to_full_string x);
+            print_string (elt_to_full_string y);
+            false
+        end else true);
+    a
+
+
 
 (* An empty character. This is used only for the parsing process. *)
 let empty =
@@ -245,7 +302,7 @@ let elt_median tcm a b =
             done;
         done;
         store_min !best min_cost;
-        assert_ninf !best
+        assert_ninf !best a b
     in
     let c = Array.init states states_init in
 
@@ -276,7 +333,7 @@ let median _ a b =
 let elt_distance tcm a b =
     let median = elt_median tcm a b in
     let get_cost m =
-        float_of_cost (assert_ninf (Array.fold_left cost_min Infinity m.s)) in
+        float_of_cost (assert_ninf (Array.fold_left cost_min Infinity m.s) a b) in
     let med_cost = get_cost median in
     let a_cost = get_cost a in
     let b_cost = get_cost b in
@@ -304,58 +361,6 @@ let compare_data a b =
 
 (* A dummy function to be improved later using the official parser *)
 let parse a = [("", empty) ]
-
-(* A default string representation as a list with the minimal states (those with
-* minimal cost in the state array). *)
-let elt_to_string a = 
-(*     let min = Array.fold_left cost_min Infinity a.s in *)
-    let sep = ref "" in
-    let res, _ = Array.fold_left 
-            begin fun (b, pos) a -> 
-                let next =
-                    if a = Infinity
-                    then b
-                    else
-                        let next =
-                    b ^ !sep
-                    ^ string_of_int pos ^ "="
-                    ^ string_of_cost a
-                        in
-                        sep := ";";
-                        next
-                in
-(*                     if a = min then begin *)
-(*                         let res = b ^ !sep ^ string_of_int pos in *)
-(*                         sep := ";"; *)
-(*                         res *)
-(*                     end *)
-(*                     else b *)
-(*                 in *)
-                next, pos + 1
-            end ("{",0) a.s in
-    res ^ "}"
-let to_string s =
-    let list = Array.to_list s.elts in
-    let strings = List.map elt_to_string list in
-    "[" ^ String.concat "; " strings ^ "]"
-
-let elt_to_full_string a =
-    let string_of_costarray a =
-        let ar =
-            Array.mapi (fun i c -> (string_of_int i ^ "=" ^ string_of_cost c)) a
-        in String.concat ";" (Array.to_list ar) in
-    let states = string_of_costarray a.s in
-    let beta = string_of_costarray a.beta in
-    let e = string_of_costarray a.e in
-    "states=[" ^ states ^ "]; beta=[" ^ beta ^ "]; e=[" ^ e ^ "]"
-let to_full_string s =
-    let list = Array.to_list s.elts in
-    let strings = List.map elt_to_full_string list in
-    "[" ^ String.concat "; " strings ^ "]"
-
-let to_string = to_full_string
-    
-
 let init2 len1 len2 fn =
     Array.init len1
         (fun i ->
@@ -612,13 +617,16 @@ let make_random_tcm ?(max=7) len =
 
 let of_parser tcm (arr, taxcode) mycode =
     let nstates = Array.length tcm in
-
     let make_elt (elt, ecode) =
         let states = match elt with
-        | Parser.Sankoff_Character (states, _) -> states
+        | Parser.Sankoff_Character ([], _) -> assert false
+        | Parser.Sankoff_Character (states, _) -> 
+                states
+
         | _ -> raise
               (Invalid_argument "Miscategorized Sankoff characters")
         in
+        assert (List.fold_left (fun acc x -> acc && x < nstates) true states);
         canonize tcm
             { empty_elt with
                   ecode = ecode;

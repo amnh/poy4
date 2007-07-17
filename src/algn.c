@@ -23,8 +23,8 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <limits.h>
-#define NDEBUG 1
 #include <assert.h>
+#define NDEBUG 1
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/custom.h>

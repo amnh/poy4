@@ -587,10 +587,11 @@ let process_trees data file =
 
 let process_tcm data file = 
     try
-        let ch, file = FileStream.channel_n_filename file in
+        let file = FileStream.filename file
+        and ch = new FileStream.file_reader file in
         let tcm = Parser.TransformationCostMatrix.of_channel ch in
         let tcm3 = Cost_matrix.Three_D.of_two_dim tcm in
-        close_in ch;
+        ch#close_in;
         let alph = Cost_matrix.Two_D.alphabet_size tcm in
         let msg = 
             "@[The@ file@ " ^ file ^ "@ defines@ a@ transformation@ cost@ matrix@ "
@@ -1817,7 +1818,7 @@ let create_alpha_c2_breakinvs (data : d) chcode =
 
     let max_code = gen_com_code + 1 in  
     let gen_alpha = 
-        Alphabet.list_to_a (List.rev !gen_alpha) "_" "*"
+        Alphabet.list_to_a (List.rev !gen_alpha) "_" (Some "*")
         Alphabet.Sequential
     in 
     (** Finish creating alphabet*)      
@@ -2537,7 +2538,10 @@ let classify_characters_by_alphabet_size data chars =
             data 
             --> get_sequence_alphabet char
             --> Alphabet.simplified_alphabet 
-            --> Alphabet.distinct_size
+            --> (fun x ->
+                    match Alphabet.kind x with
+                    | Alphabet.Sequential -> Alphabet.distinct_size x
+                    | _ -> (Alphabet.distinct_size x) - 1)
         in
         (char, size) :: acc
     in
@@ -2567,7 +2571,7 @@ let assign_transformation_gaps data chars transformation gaps =
     in
     let alphabet_sizes = classify_characters_by_alphabet_size data chars in
     List.fold_left ~f:(fun data (size, chars) ->
-        let size = size - 1 in
+        let size = size in
         let tcm = 
             Cost_matrix.Two_D.of_transformations_and_gaps (size < 7) size 
             transformation gaps
@@ -2609,8 +2613,9 @@ let rec assign_affine_gap_cost data chars cost =
 let rec assign_prep_tail filler data chars filit =
     match filit with
     | `File x ->
-            let ch = FileStream.open_in x in
+            let ch = new FileStream.file_reader x in
             let lst = Cost_matrix.Two_D.load_file_as_list ch in
+            ch#close_in;
             let arr = Array.of_list lst in
             assign_prep_tail filler data chars (`Array arr)
     | `Array arr ->

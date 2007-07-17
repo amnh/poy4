@@ -87,12 +87,13 @@ module Two_D : sig
     (** [of_channel file] parse the file containing a cost matrix and returns
     the processed data. Raise an Illegal_Cm_Format if the format can't be
     parsed. *)
-    val of_channel: ?orientation:bool -> ?use_comb:bool -> in_channel -> m
+    val of_channel: ?orientation:bool -> ?use_comb:bool ->
+        FileStream.greader -> m
 
     (** [of_channel_nocomb file] parse the file containing a cost matrix and
         returns the processed data, but without calculating combinations. Raise an
         Illegal_Cm_Format if the format can't be parsed. *)
-    val of_channel_nocomb: ?orientation:bool -> in_channel -> m
+    val of_channel_nocomb: ?orientation:bool -> FileStream.greader -> m
 
     (** [print ma] prints the matrix ma with alphabet size a in stdout. *)
     val output : out_channel -> m -> unit
@@ -139,7 +140,7 @@ module Two_D : sig
     * matrix cm. *)
     external lcm : m -> int = "cm_CAML_get_lcm"
 
-    val load_file_as_list : in_channel -> int list
+    val load_file_as_list : FileStream.greader -> int list
     val fill_tail : int array -> m -> unit 
     val fill_prepend : int array -> m -> unit 
     (** [combine cm] gets the combinations flag in the cost matrix cm. The

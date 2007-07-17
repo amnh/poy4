@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 1865 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 1968 $"
 
 
 exception Illegal_Cm_Format;;
@@ -104,7 +104,6 @@ module Two_D = struct
                 List.rev l;;
 
     let load_file_as_list ch =
-        let ch = new FileStream.stream_reader ch in
         let str = make_file_string ch "" in
         load_all_integers str [];;
 

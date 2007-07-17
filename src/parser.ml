@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 1952 $"
+let () = SadmanOutput.register "Parser" "$Revision: 1968 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2445,9 +2445,9 @@ module TransformationCostMatrix = struct
     let of_channel = Cost_matrix.Two_D.of_channel
 
     let of_file ?(use_comb = true) file =
-        let ch = FileStream.open_in file in
+        let ch = FileStream.Pervasives.open_in file in
         let res = of_channel ~use_comb:use_comb ch in
-        close_in ch;
+        ch#close_in;
         res
 
     let of_channel_nocomb = Cost_matrix.Two_D.of_channel_nocomb
@@ -2595,26 +2595,20 @@ end
 
 module Alphabet = struct
     let of_file fn orientation init3D = 
-        let file, fn = FileStream.channel_n_filename fn in
-        let alph = input_line file in
+        let file = FileStream.Pervasives.open_in fn in
+        let alph = FileStream.Pervasives.input_line file in
         let default_gap = "_" in
-        let default_all = default_gap in
         let elts = ((Str.split (Str.regexp " +") alph) @ [default_gap]) in
         let alph = Alphabet.of_string ~orientation:orientation
-            elts default_gap default_all in
-
-
+            elts default_gap None in
         let tcm = TransformationCostMatrix.of_channel_nocomb
             ~orientation:orientation file in
-
         let tcm3 = 
             match init3D with
             | true -> Cost_matrix.Three_D.of_two_dim tcm
             | false  ->  Cost_matrix.Three_D.default 
         in 
-
-        
-        let () = close_in file in
+        file#close_in;
         alph, tcm, tcm3
 end
 

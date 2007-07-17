@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 1952 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 1968 $"
 
 let debug = true
 
@@ -65,8 +65,7 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                                 let alphabet = 
                                     Data.get_sequence_alphabet seqcode data
                                 in
-                                let gapcode = Alphabet.get_gap alphabet
-                                and allcode = Alphabet.get_all alphabet in
+                                let gapcode = Alphabet.get_gap alphabet in
                                 let gap = Alphabet.match_code gapcode alphabet
                                 in
                                 (* Check if the sequence is missing data *)
@@ -79,7 +78,7 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                                     in
                                     if check 0 then
                                         for i = len - 1 downto 0 do
-                                            x.(i) <- allcode
+                                            x.(i) <- 0;
                                         done
                                     else ()
                                 in

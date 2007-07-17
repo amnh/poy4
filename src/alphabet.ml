@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 1952 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 1968 $"
 
-(* $Id: alphabet.ml 1952 2007-07-10 18:28:23Z andres $ *)
+(* $Id: alphabet.ml 1968 2007-07-17 02:01:38Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -34,7 +34,7 @@ type a = {
     code_to_string : string All_sets.IntegerMap.t;
     complement : int option All_sets.IntegerMap.t;
     gap : int;
-    all : int;
+    all : int option;
     size : int;
     kind : kind;
 }
@@ -102,7 +102,11 @@ let list_to_a lst gap all kind =
     All_sets.IntegerMap.empty, 0 in
     let s2c, c2s, cmp, cnt = List.fold_left add empty lst in
     let gap_code = All_sets.StringMap.find gap s2c    
-    and all_code = All_sets.StringMap.find all s2c in
+    and all_code = 
+        match all with
+        | Some all -> Some (All_sets.StringMap.find all s2c)
+        | None -> None
+    in
     { string_to_code = s2c; code_to_string = c2s; gap = gap_code; all = all_code;
       size = cnt; kind = kind; complement = cmp }
 
@@ -117,7 +121,7 @@ let dna =
         ("T", timine, Some adenine);
         ("_", gap, Some all);
         ("X", all, Some all)
-    ] "_" "X" Simple_Bit_Flags
+    ] "_" (Some "X") Simple_Bit_Flags
 
 (* The alphabet of accepted IUPAC codes (up to N), and other codes used in the
 * POY file format (_ up to |). *)
@@ -187,7 +191,7 @@ let nucleotides =
         Some (guanine lor citosine lor adenine)); 
         ("n", adenine lor citosine lor timine lor guanine,
         Some (timine lor guanine lor adenine lor citosine)); 
-    ] "_" "*" Extended_Bit_Flags
+    ] "_" (Some "*") Extended_Bit_Flags
 
 (* The list of aminoacids *)
 let aminoacids =
@@ -237,7 +241,7 @@ let aminoacids =
         ("y", tyrosine, None); 
         ("v", valine, None); 
         ("x", all_aminoacids, None); 
-    ] "_" "X" Sequential
+    ] "_" (Some "X") Sequential
 
 let match_base x alph =
     try
@@ -383,7 +387,12 @@ let simplified_alphabet alph =
     | Extended_Bit_Flags ->
             (* We need to extract those numbers that only have one bit on *)
             let gap = get_gap alph
-            and all = get_all alph in
+            and all = 
+                let all = get_all alph in
+                match all with
+                | Some all -> all 
+                | None -> failwith "Impossible"
+            in
             let has_one_bit_or_all v =
                 if v = all then true
                 else
@@ -403,7 +412,7 @@ let simplified_alphabet alph =
                 alph.code_to_string []
             in
             list_to_a list (find_code gap alph) 
-            (try find_code all alph with _ -> "*") Simple_Bit_Flags
+            (Some (try find_code all alph with _ -> "*")) Simple_Bit_Flags
 
 let distinct_size alph =
     All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1) alph.code_to_string 0

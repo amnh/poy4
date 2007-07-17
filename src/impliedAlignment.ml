@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1952 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 1968 $"
 
 exception NotASequence of int
 
@@ -188,8 +188,15 @@ let ancestor prealigned all_minus_gap a b cm m =
             let code, hom, n_a_pos, n_b_pos, na_hom, nb_hom, a_or, b_or, res_or =
                 match is_gap_median, it_a = gap, it_b = gap with
                 | false, false, false ->
-                        let codea = Hashtbl.find a.codes a_pos 
-                        and codeb = Hashtbl.find b.codes b_pos in
+                        let codea = 
+                            try Hashtbl.find a.codes a_pos with
+                            | Not_found ->
+                                    failwith 
+                                    (Printf.sprintf "Could not find %d with gap
+                                    %d and it_a %d and it_b %d\n" a_pos gap it_a
+                it_b)
+                        in
+                        let codeb = Hashtbl.find b.codes b_pos in
                         let hom_a = Hashtbl.find a_hom codea 
                         and hom_b = Hashtbl.find b_hom codeb in
                         Hashtbl.remove a_hom codea;
@@ -498,9 +505,14 @@ let analyze_tcm tcm alph =
         | h1 :: t1, _ :: t2 ->
                 compare_costs t1 t2 (List.fold_left (single_compare h1) res l2)
     in
+    let check_x x =
+        match all with
+        | Some y -> y <> x
+        | None -> true
+    in
     let get_cost_of_all_subs () =
         match 
-            List.filter (fun (_, x) -> (x <> gap) && (x <> all))
+            List.filter (fun (_, x) -> (x <> gap) && (check_x x))
             (Alphabet.to_list alph) 
         with
         | [] -> failwith "An empty alphabet?"
@@ -511,7 +523,7 @@ let analyze_tcm tcm alph =
     in
     let get_cost_of_gap () =
         match 
-            List.filter (fun (_, x) -> (x <> gap) && (x <> all))
+            List.filter (fun (_, x) -> (x <> gap) && (check_x x))
             (Alphabet.to_list alph) 
         with
         | [] -> failwith "An empty alphabet?"
@@ -552,8 +564,15 @@ let analyze_tcm tcm alph =
         with
         | IsSankoff -> AllSankoff
     in
+    let extract_all all =
+        match all with
+        | Some all -> all
+        | None -> assert false
+    in
     match get_case with
     | AllOne weight ->
+            (* We assume that we have dna sequences *)
+            let all = extract_all all in
             let encoding = 
                 Parser.Hennig.Encoding.set_weight
                 Parser.Hennig.Encoding.dna_encoding weight
@@ -574,7 +593,8 @@ let analyze_tcm tcm alph =
                 subsc
             in
             let notgap = lnot gap in
-            let all = notgap land all in
+            (* We assume we have dna sequences *)
+            let all = notgap land (extract_all all) in
             let to_parser is_missing states acc =
                 match is_missing, states with
                 | `Missing, _ ->
@@ -611,7 +631,7 @@ let analyze_tcm tcm alph =
                 subsc
             in
             let notgap = lnot gap in
-            let all = notgap land all in
+            let all = notgap land (extract_all all) in
             let to_parser is_missing states acc =
                 match is_missing, states with
                 | `Missing, _ ->
@@ -644,7 +664,9 @@ let analyze_tcm tcm alph =
     | AllSankoff ->
             let size = 
                 (* We remove one from the all elements representation *)
-                (Alphabet.distinct_size alph) - 1 
+                match Alphabet.get_all alph with
+                | Some _ -> (Alphabet.distinct_size alph) - 1 
+                | None -> Alphabet.distinct_size alph
             in
             let make_tcm () =
                 match Alphabet.kind alph with
@@ -675,6 +697,10 @@ let analyze_tcm tcm alph =
                 let res = Parser.Hennig.Encoding.set_set res set in
                 Parser.Hennig.Encoding.set_sankoff res (make_tcm ())
             in
+            let rec generate_all acc size = 
+                if size < 0 then acc
+                else generate_all (size :: acc) (size - 1)
+            in
             let convert_to_list x =
                 match Alphabet.kind alph with
                 | Alphabet.Simple_Bit_Flags ->
@@ -690,7 +716,7 @@ let analyze_tcm tcm alph =
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.convert_to_list"
             in
-            let all = convert_to_list all in
+            let all = generate_all [] (size - 1) in
             let gap_code =
                 (* Always the last code is the one of a gap in Sankoff *)
                 size - 1
@@ -1084,7 +1110,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                         in
                         if check 0 then begin
                             for i = len - 1 downto 0 do
-                                x.(i) <- Alphabet.get_all alph
+                                x.(i) <- 0;
                             done;
                             `Missing
                         end else `Exists
@@ -1232,9 +1258,15 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 List.map 
                     (fun x -> 
                          let alph = Data.get_alphabet data x in
-                         let gap = Alphabet.get_gap alph
-                         and all = Alphabet.get_all alph 
-                         and tcm = Data.get_sequence_tcm x data in
+                         let gap = Alphabet.get_gap alph in
+                         let tcm = Data.get_sequence_tcm x data in
+                         let all = 
+                             if 1 = Cost_matrix.Two_D.combine tcm then
+                                 match Alphabet.get_all alph with
+                                 | Some all -> all
+                                 | None -> assert false
+                             else (-1) (* we won't use it anyway *)
+                         in 
                          (if 1 = Cost_matrix.Two_D.combine tcm then
                             fun x -> x land ((lnot gap) land all)
                          else fun x -> x), filter_fn tree [x]) codes
