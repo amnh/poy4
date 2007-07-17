@@ -522,7 +522,6 @@ with type b = AllDirNode.OneDirF.n = struct
                     Printf.printf "The total cost of this will be %f\n%!"
                     (Node.Standard.total_cost None new_root);
                     *)
-
                     let new_root_p = 
                         { new_root with 
                               Node.characters = (Node.to_single (pre_ref_codes, fi_ref_codes) 
@@ -714,8 +713,8 @@ with type b = AllDirNode.OneDirF.n = struct
         in 
         let ptree = List.fold_left process ptree edgesnhandles in
         match !Methods.cost with
-        | `Exact -> assign_single ptree
-        | `Normal -> ptree
+        | `Exact 
+        | `Normal -> assign_single ptree
         | `Iterative ->
                 refresh_all_edges true (adjust_tree None (assign_single ptree))
 
