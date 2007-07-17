@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1952 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 1972 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1254,12 +1254,11 @@ let alternate_spr_tbr search =
     in
     let status = Status.create "Alternate" None ("") in
     let () = Status.full_report ~msg:("Beginning search") status in
-    let rec try_spr search = match search#any_trees with
+    let rec try_spr prev_best search = match search#any_trees with
     | false -> search
     | true ->
           Status.full_report ~msg:("SPR search") status;
           let search = spr_simple search in
-
           (* SPR is done---run TBR steps on the results *)
           Status.full_report
               ~msg:"Performing TBR swapping" status;
@@ -1275,17 +1274,17 @@ let alternate_spr_tbr search =
 (*               (fun search (tree, cost, tabu) -> *)
 (*                    tbr_step tree tabu search) search (Sexpr.of_list results) in *)
             let new_cost = find_best_cost search#results in
-            if new_cost < best_cost then 
+            if new_cost < best_cost && new_cost < prev_best then 
                 let search = search#clone in
                 let () = search#init
                     (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
                     results) 
                 in
-                try_spr search
+                try_spr new_cost search
             else search
               
     in
-    let search = try_spr search in
+    let search = try_spr max_float search in
     Status.finished status;
     search
 
