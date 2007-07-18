@@ -31,16 +31,16 @@ function generate_binary {
     mv -f src/poy $4
 }
 
-# Generating for Panther, we don't produce parallel version.
-if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc "--enable-interface=html" \
-    ./panther/seq_poy.command /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc; then
-    exit 1
-fi
-
-if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc "--enable-interface=ncurses" \
-./panther/ncurses_poy.command /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc; then
-    exit 1
-fi
+## Generating for Panther, we don't produce parallel version.
+#if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc "--enable-interface=html" \
+#    ./panther/seq_poy.command /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc; then
+#    exit 1
+#fi
+#
+#if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc "--enable-interface=ncurses" \
+#./panther/ncurses_poy.command /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc; then
+#    exit 1
+#fi
 
 
 # Generating for universal binaries under Tiger.
@@ -66,15 +66,15 @@ function generate_intel {
     ./universal/$3 /opt/ocaml/3.09.3/bin/ "" "$2"
 }
 
-if ! generate_intel "--enable-interface=html" gcc seq_poy_intel; then
+if ! generate_intel "--enable-interface=html" /opt/intel/cc/9.1.030/bin/icc seq_poy_intel; then
     exit 1
 fi
 
-if ! generate_intel "--enable-interface=ncurses" gcc ncurses_poy_intel; then
+if ! generate_intel "--enable-interface=ncurses" /opt/intel/cc/9.1.030/bin/icc ncurses_poy_intel; then
     exit 1
 fi
 if ! generate_intel "--enable-interface=html --enable-mpi=mpich" \
-    /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_intel; then
+    /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc par_poy_intel; then
     exit 1
 fi
 
