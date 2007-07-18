@@ -84,7 +84,7 @@ unsigned char *_algn_max_direction = NULL;
  * used in the first plane of the alignment. It didn't use this function because
  * the direction codes are different for three dimensional alignments.
  */
-#if ( __GNUC__ && __MMX__ )
+#if ( THIS_IS_OFF && __GNUC__ && __MMX__ )
 #ifdef _WIN32
 __inline void 
 #else

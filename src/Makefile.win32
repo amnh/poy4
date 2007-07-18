@@ -250,7 +250,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \"" `svnversion -n` "\"" > $@
+	echo "let build = \" 1980 \"" > $@
 
 compileFlags.ml: ../config
 	echo "(** automatically generated description of compile-time flags *)" \
