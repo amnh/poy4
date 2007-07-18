@@ -850,7 +850,7 @@
     \syntax{\obligatory{(\optional{argument list})}}  
 
 	\begin{poydescription} 
-        Imports data files and tree files.  Supported formats are ASN1, FASTA,
+        Imports data files and tree files.  Supported formats are ASN1, Clustal, FASTA,
         GBSeq, Genbank, Hennig86, Newick, NewSeq, Nexus, PHYLIP, POY3,
         TinySeq, and XML. Filenames should be enclosed in quotes and if multiple
         filenames are specified, they must be separated by commas.
@@ -1112,6 +1112,10 @@
             \poyexample{read(genome:("mt\_genomes", "nu\_genomes").}
             {Reads two files containing genomic (multi-chromosomal) sequence data.}
 
+	   \poyexample{read(prealigned: ("18s.aln", tcm:(1, 2))}
+	    {Reads the prealigned data file\texttt{18s.aln} generated from the nucleotide file \texttt{18s.FASTA}
+	    using the the transformation costs of 1 for substitutions and 2 for indels.}
+	
 	\end{poyexamples}
 
 	\begin{poyalso}
@@ -2165,12 +2169,12 @@
                 used by the \poyargument{normal\_do}).}
                 {exhaustivedo}
 
-            \argumentdefinition{iterative}{}
-                {Use iterative pass in the tree cost calculations. This improves
-                the tree cost estimation, but has a tremendous execution time.
-                Use at the very end to polish the final set of trees and perform
-                a final search.}
-                {}
+           % \argumentdefinition{iterative}{}
+               % {Use iterative pass in the tree cost calculations. This improves
+                %the tree cost estimation, but has a tremendous execution time.
+                %Use at the very end to polish the final set of trees and perform
+                %a final search.}
+                %{}
 
         \end{argumentgroup}
 
