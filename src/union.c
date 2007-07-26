@@ -101,7 +101,8 @@ union_move_left (unionofft a) {
 
 void
 union_merge (seqt a, seqt b, unionofft au, unionofft bu, unionofft c, cmt m) {
-    int items_prepended = 0, i, gap, lena, interm, *begina, *beginb, apos, bpos;
+    int items_prepended = 0, i, gap, lena, interm, apos, bpos;
+    SEQT *begina, *beginb;
     lena = seq_get_len (a);
     gap = cm_get_gap (m);
     begina = seq_get_begin (a);

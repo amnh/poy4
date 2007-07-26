@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: fileStream.ml 1968 2007-07-17 02:01:38Z andres $ *)
+(* $Id: fileStream.ml 2006 2007-07-26 18:31:33Z andres $ *)
 (* Created Thu Apr 20 16:41:14 2006 (Illya Bomash) *)
 
 (** simple input streams as objects, with helper functions for parsing *)
@@ -90,6 +90,23 @@ let is_char c c' = c = c'
 let is_ws_nl = function
     | ' ' | '\t' | '\010' | '\013' -> true
     | _ -> false
+
+let is_taxon_delimiter = function
+    | '[' | ']' | '(' | ')' | ',' | ';' | ' ' | '\t' | '\010' | '\013' -> true
+    | _ -> false
+
+let is_unacceptable_in_taxon_name = function
+    | '@' | '%' -> (* these break the formatter *) true
+    | _ -> false
+
+let has_condition check x = 
+    try
+        for i = 0 to (String.length x) - 1 do
+            if check x.[i] then raise Exit;
+        done;
+        false
+    with
+    | Exit -> true
 
 (** {2 Readers} *)
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 1968 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2006 $"
 
 
 exception Illegal_Cm_Format;;
@@ -532,7 +532,7 @@ module Two_D = struct
                   fill_cost_matrix ~use_comb:use_comb l w 
             | true ->
                   let l_arr = Array.of_list l in          
-                  let w2 = w * 2 in  
+                  let w2 = w * 2 - 1 in  
                   let l2 = ref [] in 
                   for code1 = 1 to w2 do 
                       for code2 = 1 to w2 do 
@@ -551,6 +551,7 @@ module Two_D = struct
     let of_list ?(use_comb=true) l =
         (* This function assumes that the list is a square matrix, list of
         * lists, all of the same size *)
+        
         let w = List.length l in
         let l = List.flatten l in 
         fill_cost_matrix ~use_comb:use_comb l w

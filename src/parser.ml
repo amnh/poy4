@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 1968 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2006 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -928,16 +928,7 @@ module Tree = struct
               Node (List.map (map fn) list, fn d)
 
     let gen_aux_of_stream_gen do_stream stream =
-        let taxon_name = function 
-            | 'a' .. 'z'
-            | 'A' .. 'Z'
-            | '_'
-            | '-'
-            | '.'
-            | '"'
-            | '0' .. '9' -> true
-            | _ -> false
-        in
+        let taxon_name x = not (FileStream.is_taxon_delimiter x) in
         let close_squared_parenthesis = [ ']' ] in
         let ignore_cost_bracket () =
             stream#read_excl close_squared_parenthesis;

@@ -384,12 +384,12 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
                      | Some seq1, None -> 
                            let len1 = Sequence.length seq1 in 
                            let seq2 = UtlPoy.create_gap_seq len1 in 
-                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in 
+                           let med = UtlPoy.create_median_deled_seq ~approx:approx seq1 cost_mat in 
                            med, seq1, seq2
                      | None, Some seq2 -> 
                            let len2 = Sequence.length seq2 in 
                            let seq1 = UtlPoy.create_gap_seq len2 in 
-                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in
+                           let med = UtlPoy.create_median_deled_seq ~approx:approx seq2 cost_mat in
                            med, seq1, seq2
                      | _, _ -> UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq ()
                  in 
@@ -539,12 +539,12 @@ let create_map med child_ref =
                  | true -> (str med.ref_code1), (str m.seq_ord1)
                  | false -> (str med.ref_code2), (str m.seq_ord2)
              in 
-             let attributes = [(Tags.GenomeMap.ref_code, p_ref_code);
-                               (Tags.GenomeMap.seq_order, p_seq_ord);
-                               (Tags.GenomeMap.dir_seg, "`Positive");
-                               (Tags.GenomeMap.ref_code, c_ref_code); 
-                               (Tags.GenomeMap.seq_order, c_seq_ord);
-                               (Tags.GenomeMap.dir_seg, "`Positive")
+             let attributes = [(Tags.GenomeMap.a_ref_code, p_ref_code);
+                               (Tags.GenomeMap.a_seq_order, p_seq_ord);
+                               (Tags.GenomeMap.a_dir_seg, "+");
+                               (Tags.GenomeMap.d_ref_code, c_ref_code); 
+                               (Tags.GenomeMap.d_seq_order, c_seq_ord);
+                               (Tags.GenomeMap.d_dir_seg, "+")
                               ] 
              in 
              let m : Tags.output = (Tags.GenomeMap.seg, attributes, `String "") in 

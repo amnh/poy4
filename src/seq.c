@@ -44,27 +44,27 @@ seq_get_len (const seqt a) {
 }
 
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_begin (const seqt a) {
     return (a->begin);
 }
 
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_head (const seqt a) {
     return (a->head);
 }
 
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_end (const seqt a) {
     return (a->end);
@@ -80,9 +80,9 @@ seq_begin (int cap, int len) {
 }
 
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_ptr (const seqt a, int p) {
     assert (p < a->len);
@@ -91,9 +91,9 @@ seq_get_ptr (const seqt a, int p) {
 }
     
 #ifdef _WIN32
-__inline int 
+__inline SEQT 
 #else
-inline int 
+inline SEQT 
 #endif
 seq_get (const seqt a, int p) {
     assert (p < a->len);
@@ -106,8 +106,8 @@ __inline void
 #else
 inline void
 #endif
-seq_set (seqt a, int p, int v) {
-    int *tmp;
+seq_set (seqt a, int p, SEQT v) {
+    SEQT *tmp;
     if (a->len == 0) {
         assert (p == 0);
         a->len++;
@@ -127,7 +127,7 @@ __inline void
 inline void
 #endif
 seq_reverse_ip (seqt cs) { 
-    int *a, *b, tmp;
+    SEQT *a, *b, tmp;
     a = seq_get_begin (cs);
     b = seq_get_end (cs);
     while (b > a) {
@@ -145,7 +145,7 @@ __inline void
 #else
 inline void
 #endif
-seq_prepend (seqt a, int v) {
+seq_prepend (seqt a, SEQT v) {
     assert(a->cap > a->len);
     a->begin = a->begin - 1;
     *(a->begin) = v;
@@ -159,7 +159,7 @@ __inline void
 inline void
 #endif
 seq_reverse (seqt src, seqt tgt) {
-    int *a, *b, *c;
+    SEQT *a, *b, *c;
     int i;
     tgt->len = src->len;
     tgt->begin = tgt->head + (tgt->cap - tgt->len);
@@ -207,7 +207,7 @@ inline int
 seq_compare (seqt a, seqt b) {
     int i;
     int la, lb;
-    int ca, cb;
+    SEQT ca, cb;
     la = seq_get_len (a);
     lb = seq_get_len (b);
     if (lb != la) {
@@ -308,7 +308,7 @@ seq_CAML_deserialize (void *v) {
     if (NULL == n) failwith ("Memory error");
     n->cap = deserialize_uint_4();
     n->len = deserialize_uint_4();
-    n->head = (int *) malloc (n->cap * sizeof(int));
+    n->head = (SEQT *) malloc (n->cap * sizeof(SEQT));
     if (n->head == NULL) failwith("Memory error.");
     n->end = n->head + n->cap - 1;
     n->begin = n->head + n->cap - n->len;
@@ -322,7 +322,7 @@ seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64)
 {
     CAMLparam1(vo);
     seqt v;
-    int *tmp;
+    SEQT *tmp;
     v = Seq_custom_val(vo);
     serialize_int_4(v->cap);
     serialize_int_4(v->len);
@@ -341,7 +341,7 @@ static struct custom_operations sequence_custom_operations  = {
     (&seq_CAML_deserialize)
 };
 
-#define SEQ_UNUSED_MEMORY 10000000
+#define SEQ_UNUSED_MEMORY 1000000
 
 value 
 seq_CAML_create (value cap) {
@@ -359,8 +359,8 @@ seq_CAML_create (value cap) {
     if (NULL == tmp2) failwith ("Memory error");
     tmp2->cap = len;
     tmp2->len = 0;
-    s = sizeof (int) * len;
-    tmp2->head = (int *) malloc (s);
+    s = sizeof (SEQT) * len;
+    tmp2->head = (SEQT *) malloc (s);
     tmp2->my_pool = NULL;
     if (tmp2->head == NULL) failwith ("Memory error.");
     tmp2->end = tmp2->begin = tmp2->head + len - 1;
@@ -382,7 +382,7 @@ seq_CAML_create_same (value other_seq, value cap) {
     tmp_p = Seq_custom_val(other_seq);
     if (NULL != tmp_p->my_pool)
         res = caml_alloc_custom 
-            (&sequence_custom_operations, (sizeof(struct seq *)), (tmp_p->my_pool->size) / (sizeof (int)), SEQ_UNUSED_MEMORY);
+            (&sequence_custom_operations, (sizeof(struct seq *)), (tmp_p->my_pool->size) / (sizeof (SEQT)), SEQ_UNUSED_MEMORY);
     else
         res = caml_alloc_custom 
             (&sequence_custom_operations, (sizeof(struct seq *)), len, SEQ_UNUSED_MEMORY);
@@ -391,13 +391,13 @@ seq_CAML_create_same (value other_seq, value cap) {
     p = tmp_p->my_pool;
     tmp2->cap = len;
     tmp2->len = 0;
-    s = sizeof (int) * len;
+    s = sizeof (SEQT) * len;
     if ((NULL != p) && (s <= p->size)) {
-        tmp2->head = (int *) pool_alloc (p, tmp2);
+        tmp2->head = (SEQT *) pool_alloc (p, tmp2);
         tmp2->my_pool = p;
     }
     else {
-        tmp2->head = (int *) malloc (s);
+        tmp2->head = (SEQT *) malloc (s);
         tmp2->my_pool = NULL;
     }
     if (tmp2->head == NULL) failwith ("Memory error.");
@@ -418,18 +418,18 @@ seq_CAML_create_pool (value pl, value cap) {
     len = Int_val(cap);
     p = Pool_custom_val(pl);
     res = caml_alloc_custom 
-        (&sequence_custom_operations, (sizeof(struct seq *)), p->size / (sizeof(int)), SEQ_UNUSED_MEMORY);
+        (&sequence_custom_operations, (sizeof(struct seq *)), p->size / (sizeof(SEQT)), SEQ_UNUSED_MEMORY);
     tmp3 = Seq_pointer(res);
     tmp2 = *tmp3 = (struct seq *) malloc (sizeof (struct seq));
     tmp2->cap = len;
     tmp2->len = 0;
-    s = sizeof (int) * len;
+    s = sizeof (SEQT) * len;
     if (s <= p->size) {
-        tmp2->head = (int *) pool_alloc (p, tmp2);
+        tmp2->head = (SEQT *) pool_alloc (p, tmp2);
         tmp2->my_pool = p;
     }
     else {
-        tmp2->head = (int *) malloc (s);
+        tmp2->head = (SEQT *) malloc (s);
         tmp2->my_pool = NULL;
     }
     if (tmp2->head == NULL) failwith ("Memory error.");
@@ -537,7 +537,8 @@ value
 seq_CAML_count (value gap, value seq) {
     CAMLparam2(gap, seq);
     seqt sc;
-    int i, cnt = 0, cgap;
+    int i, cnt = 0;
+    SEQT cgap;
     sc = Seq_custom_val (seq);
     cgap = Int_val(gap);
     for (i = 0; i < sc->len; i++) 
@@ -551,7 +552,8 @@ seq_CAML_encoding (value enc, value seq) {
     CAMLlocal1(resc);
     seqt sc;
     double *ec, res = 0.0, cost;
-    int i, base;
+    int i;
+    SEQT base;
     sc = Seq_custom_val(seq);
     ec = Data_bigarray_val(enc);
     /* TODO: This only works for DNA sequences right now */

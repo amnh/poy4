@@ -261,8 +261,8 @@ pool_CAML_create (value cap, value prealloc) {
     size_t s;
     struct pool *r, **tmp;
     c_prealloc = Int_val(prealloc);
-    s = (size_t) (sizeof(int) * (Int_val(cap)));
-    res = alloc_custom (&pool_custom_ops, (sizeof (struct pool*)), 1, 10);
+    s = (size_t) (sizeof(SEQT) * (Int_val(cap)));
+    res = alloc_custom (&pool_custom_ops, (sizeof (struct pool*)), 1, 2);
     tmp = Pool_pointer(res);
     r = *tmp = malloc (sizeof (struct pool));
     r->size = s;

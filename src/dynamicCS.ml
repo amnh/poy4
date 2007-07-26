@@ -99,8 +99,8 @@ let state (a : t) : Data.dyna_state_t=
     | SeqCS a -> `Seq
     | ChromCS a -> `Chromosome
     | GenomeCS a -> `Genome
-    | BreakinvCS a -> `Annotated
-    | AnnchromCS a -> `Breakinv
+    | BreakinvCS a -> `Breakinv
+    | AnnchromCS a -> `Annotated
 
 
 let code (a : t) = 
@@ -114,15 +114,29 @@ let code (a : t) =
 
 let leaf_sequences (a : t) = 
     match a with 
-    | SeqCS a -> a.SeqCS.sequences
-    | ChromCS a -> 
-          let sequences = 
-              IntMap.map 
-                  (fun med  -> 
-                       (List.hd med.Chrom.med_ls).ChromAli.seq 
-                  ) a.ChromCS.meds
-          in 
-          sequences
+    | SeqCS a -> IntMap.map (fun seq -> [|seq|]) a.SeqCS.sequences
+
+    | BreakinvCS a ->          
+          IntMap.map 
+              (fun med  -> 
+                   [|(List.hd med.Breakinv.med_ls).BreakinvAli.seq|]
+              ) a.BreakinvCS.meds
+
+
+    | ChromCS a ->          
+          IntMap.map 
+              (fun med  -> 
+                   [|(List.hd med.Chrom.med_ls).ChromAli.seq|]
+              ) a.ChromCS.meds
+
+    | AnnchromCS a ->
+          IntMap.map 
+              (fun med  -> 
+                   let seqt_arr = 
+                       (List.hd med.Annchrom.med_ls).AnnchromAli.seq_arr 
+                   in
+                   Array.map (fun seqt -> seqt.AnnchromAli.seq) seqt_arr
+              ) a.AnnchromCS.meds
     | _ -> failwith_todo "sequences in DynamicCS.ml"
 
 let unions (a : u) = 

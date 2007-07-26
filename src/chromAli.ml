@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 1952 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2006 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -261,14 +261,14 @@ let create_map med child_ref : (int * int * Tags.output) =
                  | false ->
                        (str med.ref_code2), (str m.sta2), (str m.en2), (get_dir m.dir2) 
              in 
-             let attributes = [(Tags.GenomeMap.ref_code, p_ref_code);
-                               (Tags.GenomeMap.start_seg, p_sta);
-                               (Tags.GenomeMap.end_seg, p_en );
-                               (Tags.GenomeMap.dir_seg, p_dir );
-                               (Tags.GenomeMap.ref_code, c_ref_code);
-                               (Tags.GenomeMap.start_seg, c_sta);
-                               (Tags.GenomeMap.end_seg, c_en );
-                               (Tags.GenomeMap.dir_seg, c_dir )
+             let attributes = [(Tags.GenomeMap.a_ref_code, p_ref_code);
+                               (Tags.GenomeMap.a_start_seg, p_sta);
+                               (Tags.GenomeMap.a_end_seg, p_en );
+                               (Tags.GenomeMap.a_dir_seg, p_dir );
+                               (Tags.GenomeMap.d_ref_code, c_ref_code);
+                               (Tags.GenomeMap.d_start_seg, c_sta);
+                               (Tags.GenomeMap.d_end_seg, c_en );
+                               (Tags.GenomeMap.d_dir_seg, c_dir )
                               ] 
              in 
              let m : Tags.output = (Tags.GenomeMap.seg, attributes, `String "") in 
@@ -311,12 +311,6 @@ let to_single single_parent child_ref c2 pam =
                                UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq1
                            else cost 
                        in 
-(*                       fprintf stdout "Seg_cost1: %i\n" cost;
-                       UtlPoy.printDNA seg.alied_med;
-                       UtlPoy.printDNA seg.alied_seq1;
-                       UtlPoy.printDNA single;
-                       print_newline ();
-*)
                        single, cost, seg.alied_seq1
                  | false ->
                        let single, cost =                          
@@ -338,14 +332,6 @@ let to_single single_parent child_ref c2 pam =
                                UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq2
                            else cost 
                        in 
-
-(*
-                       fprintf stdout "Seg_cost2: %i\n" cost;
-                       UtlPoy.printDNA seg.alied_med;
-                       UtlPoy.printDNA seg.alied_seq2;
-                       UtlPoy.printDNA single;
-                       print_newline ();
-*)
 
                        single, cost, seg.alied_seq2
              in 
@@ -396,6 +382,7 @@ let to_single single_parent child_ref c2 pam =
         | true -> single_parent.recost1
         | false -> single_parent.recost2
     in 
+  (*  fprintf stdout "Total cost: %i\n" (total_cost + recost); flush stdout;*)
     (total_cost + recost), recost, single_seq
 
 
@@ -410,6 +397,10 @@ let change_to_single med single_seq =
                       if code = gap then gap
                       else begin
                           let single_code = Sequence.get single_seq !num_dna in 
+                          (if (single_code land code = 0) then begin
+                               fprintf stdout "Code: %i, single_code: %i" code single_code;                               
+                               failwith "The code does not include the single_code";
+                          end);
                           incr num_dna;
                           single_code
                       end 
@@ -420,10 +411,15 @@ let change_to_single med single_seq =
                  `Positive Cost_matrix.Two_D.default in
              let new_cost2 = UtlPoy.cmp_ali_cost single_alied_med seg.alied_seq2
                  `Positive Cost_matrix.Two_D.default in
-             UtlPoy.printDNA seg.alied_med;
-             UtlPoy.printDNA single_alied_med;
              fprintf stdout "Previous_cost: %i, new_cost: %i (%i %i)\n" seg.cost
                  (new_cost1 + new_cost2) new_cost1 new_cost2; 
+
+             print_endline "Change to single";
+             UtlPoy.printDNA seg.alied_med;
+             UtlPoy.printDNA single_alied_med;
+             UtlPoy.printDNA seg.alied_seq1;
+             UtlPoy.printDNA seg.alied_seq2;
+             print_newline ();
 *)
              {seg with alied_med = single_alied_med}
 
@@ -516,11 +512,11 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               let len2 = en2 - sta2 + 1 in
               let subseq1 = UtlPoy.create_gap_seq len2 in 
               let subseq2 = Sequence.sub seq2 sta2 len2 in
-              let submed, _ = UtlPoy.create_median_seq
-                  ~approx:approx subseq1 subseq2 cost_mat 
+              let submed = UtlPoy.create_median_deled_seq
+                  ~approx:approx subseq2 cost_mat 
               in
 
-              let med_len = UtlPoy.cmp_num_DNA submed in
+              let med_len = UtlPoy.cmp_num_not_gap submed in
               let sta, en, nascent_len = match med_len with
               | 0 -> -1, -1, nascent_len
               | _ -> nascent_len + 1, nascent_len + med_len, nascent_len + med_len
@@ -545,24 +541,22 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               let subseq1 = Sequence.sub seq1 sta1 len1 in
               let subseq2 = UtlPoy.create_gap_seq len1 in 
 
-              let submed, _ = UtlPoy.create_median_seq
-                  ~approx:approx subseq1 subseq2 cost_mat 
+              let submed = UtlPoy.create_median_deled_seq
+                  ~approx:approx subseq1 cost_mat 
               in
 
-              let med_len = UtlPoy.cmp_num_DNA submed in 
-
-              let sta, en, nascent_len = match med_len with
+              let med_len = UtlPoy.cmp_num_not_gap submed in 
+              let sta, en, new_nascent_len = match med_len with
               | 0 -> -1, -1, nascent_len
               | _ -> nascent_len + 1, nascent_len + med_len, nascent_len + med_len
               in  
-
-              let map = {sta=nascent_len + 1; en = nascent_len + len1; alied_med = submed;
+              let map = {sta=sta; en = en; alied_med = submed;
                          cost = UtlPoy.cmp_gap_cost locus_indel_cost subseq1;
                          sta1 = sta1; en1 = en1; alied_seq1 = subseq1; dir1 = `Positive;                         
                          sta2 = -1; en2 = -1; alied_seq2 = subseq2; dir2 = `Positive;
                         }
               in 
-              List.append submed_ls [submed], nascent_len, List.append chrom_map [map]
+              List.append submed_ls [submed], new_nascent_len, List.append chrom_map [map]
                   
 
 
@@ -571,13 +565,13 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               match block_opt with
               | Some b -> 
                     let submed, cost = Block.create_median ~approx:approx b cost_mat in
-                    let med_len = UtlPoy.cmp_num_DNA submed in 
+                    let med_len = UtlPoy.cmp_num_not_gap submed in 
 
                     let sta, en, nascent_len = match med_len with
                     | 0 -> -1, -1, nascent_len
                     | _ -> nascent_len + 1, nascent_len + med_len, nascent_len + med_len
                     in  
-
+                    
                     let map = {sta=sta; en = en; alied_med = submed;
                                cost = cost;
                                sta1 = b.Block.sta1; en1 = b.Block.en1; 
@@ -605,7 +599,7 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
                     in 
 
 
-                    let med_len = UtlPoy.cmp_num_DNA submed in 
+                    let med_len = UtlPoy.cmp_num_not_gap submed in 
                     let sta, en, nascent_len = match med_len with
                     | 0 -> -1, -1, nascent_len
                     | _ -> nascent_len + 1, nascent_len + med_len, nascent_len + med_len 
@@ -664,8 +658,8 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
     
     let seq = UtlPoy.delete_gap (UtlPoy.concat submed_ls) in 
     let ref_code = Utl.get_new_chrom_ref_code() in 
-(*    fprintf stdout "New ref_code:%i -> %i %i \n" ref_code chrom1_id chrom2_id;
-      flush stdout; *)
+
+    (if Sequence.length seq = 0 then  failwith "Sequence length is Zero");
 
     {seq = seq; ref_code = ref_code;
      ref_code1 = chrom1_id;
@@ -814,6 +808,8 @@ let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam =
                          ali_mat alied_gen_seq1 alied_gen_seq2 
                          (order_arr, total_cost, recost1, recost2) cost_mat ali_pam
                  in
+(*                 print_map med.chrom_map; *)
+
                  med::med_ls
             ) all_order_ls []
         in

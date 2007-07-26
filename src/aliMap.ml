@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AliMap" "$Revision: 1875 $"
+let () = SadmanOutput.register "AliMap" "$Revision: 2006 $"
 (** The implementation of functions to find the map between two chromosomes *)
 
 type chromPairAliPam_t = ChromPam.chromPairAliPam_t
@@ -94,7 +94,6 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
              let s1 = subseq1.Subseq.sta in 
              let e1 = subseq1.Subseq.en in 
 	         let subseq1 = Sequence.sub seq1 s1 (e1 - s1 + 1) in  
-             let num_nu1 = UtlPoy.cmp_num_DNA subseq1 in  
 
              List.iter 
                  (fun subseq2 ->
@@ -102,14 +101,10 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
                       let s2 = subseq2.Subseq.sta in 
                       let e2 = subseq2.Subseq.en in 	              
 	                  let subseq2 = Sequence.sub seq2 s2 (e2 - s2 + 1) in 
-                      let num_nu2 = UtlPoy.cmp_num_DNA subseq2 in 
 
 
-                      let alied_seq1, alied_seq2, cost, _ = 
-                          match abs (num_nu1 - num_nu2) * 2 >=
-                              gen_cost_mat.(id1).(gen_gap_code) + gen_cost_mat.(id2).(gen_gap_code) with 
-                              | true -> empty_seq, empty_seq, Utl.infinity, 0
-                              | false -> UtlPoy.align2 subseq1 subseq2 cost_mat 
+                      let alied_seq1, alied_seq2, cost, _ =  
+                          UtlPoy.align2 subseq1 subseq2 cost_mat 
                       in
 
                       set_cost id1 id2  cost;          

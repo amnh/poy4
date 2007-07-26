@@ -407,7 +407,7 @@ val transform_dynamic :
 val transform_chrom_to_rearranged_seq :
   d ->
   Methods.dynamic_char_transform ->
-    'c -> (int * int array list All_sets.IntegerMap.t list) list list list -> d
+    'c -> (int * int array array All_sets.IntegerMap.t list) list list list -> d
 
 val print : d -> unit
 
@@ -446,6 +446,9 @@ val process_complex_terminals :
 
 val get_pool : d -> int -> Sequence.Pool.p
 val get_alphabet : d -> int -> Alphabet.a
+val get_pam : d -> int -> dyna_pam_t
+val get_character_state : d -> int -> dyna_state_t
+
 val process_taxon_code :
     d -> All_sets.StringMap.key -> string -> d * int
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 1915 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2006 $"
 
 let fprintf = Printf.fprintf
 
@@ -39,7 +39,7 @@ let create_gap_seq ?(gap=Alphabet.gap) len =
 
 
 
-let cmp_num_DNA seq = 
+let cmp_num_all_DNA seq = 
     let len = Sequence.length seq in 
     let gap = Alphabet.gap in 
     let num_nu = ref 0 in
@@ -49,14 +49,24 @@ let cmp_num_DNA seq =
     !num_nu
 
 
+let cmp_num_not_gap seq = 
+    let len = Sequence.length seq in 
+    let gap = Alphabet.gap in 
+    let num_nu = ref 0 in
+    for p = 0 to len - 1 do 
+        if (Sequence.get seq p) != gap then num_nu := !num_nu + 1;
+    done;
+    !num_nu
+
+
 
 let cmp_gap_cost indel seq = 
-    let num_char = cmp_num_DNA seq in 
+    let num_char = cmp_num_all_DNA seq in 
     match num_char with 
     | 0 -> 0
     | _ ->
           let o, e = indel in 
-          o + (num_char - 1) * e / 100
+          o + num_char * e / 100
 
 
 let cmp_ali_cost (alied_seq1 : Sequence.s) (alied_seq2 : Sequence.s) 
@@ -275,8 +285,7 @@ let reverse_subseq (seq : Sequence.s) (start_pos : int) (end_pos : int) =
 	end
 		
 
-let delete_gap seq = 
-	let gap_code = Alphabet.match_base "_" Alphabet.nucleotides in 
+let delete_gap ?(gap_code = Alphabet.match_base "_" Alphabet.nucleotides) seq = 
 	let new_len = Sequence.fold 
         (fun len code -> 
              if code = gap_code then len 
@@ -332,6 +341,24 @@ let create_median_seq ?(approx=false) alied_seq1 alied_seq2 cost_mat =
         cost := !cost + (Cost_matrix.Two_D.cost code1 code2 cost_mat)
     done;
     median, !cost
+
+
+
+let create_median_deled_seq ?(approx=false) seq cost_mat =
+    let len = Sequence.length seq in 
+    let gap = Alphabet.gap in
+    let get_median_code pos = 
+        let code = Sequence.get seq pos in 
+        match approx with 
+        | true -> code
+        | false ->              
+              if code land gap = 0 then code
+              else gap
+    in
+
+    let median = Sequence.init (fun pos -> get_median_code pos) len in
+
+    median
 
 
 let create_median ?(approx=false) seq1 seq2 

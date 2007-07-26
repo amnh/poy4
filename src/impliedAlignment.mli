@@ -42,17 +42,23 @@ type dyna_state_t = Data.dyna_state_t
 
 (* t is the presentation of a dynamic set (DynamicCS) in order to create implied
    alignments.
-   Note: sequences : ias list Codes.t where (ias list) is a list of equally
-   optimal medians in case of chromosomes
-   
+   Note: sequences : ias_arr list Codes.t where 
+   isa_arr is an array of ias in the case of annotated chromosomes (ach ias
+   presents a locus); ias_arr list) is a list of equally
+   optimal medians in case of chromosomes   
 *)
+
+type ias_arr = ias array
+
 type t = {
-    sequences : ias list All_sets.IntegerMap.t;
+    sequences : ias_arr list All_sets.IntegerMap.t;
     c2 : Cost_matrix.Two_D.m;
-    chrom_pam : Data.dyna_pam_t; 
+    chrom_pam : Data.dyna_pam_t;
     state : dyna_state_t;
     code : int;
+    alpha : Alphabet.a;
 }
+
 type pairs = int * t list
 
 (** A unique code generation function *)
@@ -61,9 +67,12 @@ type cg = (unit -> int)
 (** Creates a fresh code generation functions *)
 val code_generator : unit -> cg
 
-(** [create_ias s cg] creates a fresh sequence representation for implied
-* alignments of sequence [s] using the code generation function [cg]. *)
-val create_ias : Sequence.s -> int -> cg -> ias
+(** [create_ias status s cg] creates a fresh sequence representation for implied
+ * alignments of sequence [s] using the code generation function [cg].  
+ * state indicate the type of sequence, i.e., Sequence, Chromosome, Annotated,
+ * Genome, Breakinv....
+ *)
+val create_ias : dyna_state_t -> Sequence.s -> int -> cg -> ias
 
 exception IsSankoff
 
@@ -93,7 +102,7 @@ module type S = sig
     val of_tree : ((int -> int) * tree) -> Methods.implied_alignment
 
     val concat_alignment :
-          (int * int array list All_sets.IntegerMap.t list) list list ->
+          (int * int array array All_sets.IntegerMap.t list) list list ->
           (int * int array All_sets.IntegerMap.t list) list list
 
     val create : (tree -> int list -> tree) ->

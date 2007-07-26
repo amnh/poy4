@@ -88,7 +88,7 @@ void
 copySequence (struct seq *s, char *str) {
     int len, i;
     int v;
-    int *begin;
+    SEQT *begin;
     len = seq_get_len (s);
     begin = seq_get_begin(s);
     for (i = 1; i < len; i++) {

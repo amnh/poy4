@@ -213,7 +213,7 @@ ifeq ($(USEWIN32), false)
 	GETRUSAGE := getrusage.o
 endif
 
-BASE_OBJS :=  $(READLINE) sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
+BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
 	array_ops.cmo $(PARSER) distances.cma \
@@ -266,7 +266,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \" 1983 \"" > $@
+	echo "let build = \" " `/opt/local/bin/svnversion -n ./` "\"" > $@
 
 compileFlags.ml: ./config.log
 	echo "(** automatically generated description of compile-time flags *)" \

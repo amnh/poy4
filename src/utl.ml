@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Utl" "$Revision: 1875 $"
+let () = SadmanOutput.register "Utl" "$Revision: 2006 $"
 
 (** This module implements basic utilities *)
 
@@ -383,3 +383,5 @@ let break_array arr break_ls =
 let printIntSet s = 
     IntSet.iter (fun v -> fprintf stdout "%i " v) s;
     print_newline (); flush stdout
+
+

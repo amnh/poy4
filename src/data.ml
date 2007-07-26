@@ -1082,20 +1082,26 @@ let check_if_taxa_are_ok file taxa =
         List.iter (function 1 | 2 | 4 | 8 -> incr base | _ -> incr others) lst;
         !base > (3 * !others)
     in
-    let has_spaces x = Str.string_match (Str.regexp ".* .*") (trim x) 0 in
+    let has_spaces x = 
+        FileStream.has_condition FileStream.is_taxon_delimiter (trim x)
+    in
+    let has_unacceptable x =
+        FileStream.has_condition FileStream.is_unacceptable_in_taxon_name x
+    in
     (* We want to check if the names are unique and if there is a suspicious
     * name of a taxon *)
-    let _ = List.fold_left ~f:(fun acc x ->
+    let _, second = List.fold_left ~f:(fun (acc, is_ok) x ->
         let msg =
             ("@{<b>Warning!:@}@ There@ is@ a@ taxon@ name@ that@ has@ "
-            ^ "spaces@ on@ it.@ This@ leaves@ the@ generated@ trees@ "
+            ^ "illegal@ characters@ on@ it@ ([]();, ).@ This@ leaves@ the@ "
+            ^ "generated@ trees@ "
             ^ "unreadable!.@ If you@ want@ to@ continue,@ that's@ "
             ^ "your@ call...@ the@ file@ is@ " ^ file 
             ^ "@ and the@ taxon@ is@ " ^ x)
         in
         (* We'll see, if we can parse it with the dna parser, we will tell the
         * user that the name of the taxon looks suspicious. *)
-        let _ =
+        let is_ok =
             let name = Stream.of_string x in
             try 
                 let l = dna_lexer name [] 0 in
@@ -1106,21 +1112,36 @@ let check_if_taxa_are_ok file taxa =
                     ^ "file@ " ^ file ^ "!.@ The@ taxon@ is@ " ^ x)
                 else if has_spaces x then
                     Status.user_message Status.Error msg
-                else ()
+                else ();
+                if has_unacceptable x then begin
+                    Status.user_message Status.Error
+                    ("Illegal@ terminal@ name:@ the@ characters@ @@ and %% may " ^
+                    "cause@ POY@ to@ crash.@ Please@ remove@ them@ from@ your@ "
+                    ^ "terminal@ names.");
+                    false
+                end else is_ok
             with
             | _ -> 
                     if has_spaces x then
                         Status.user_message Status.Error msg
-                    else ()
+                    else ();
+                    if has_unacceptable x then begin
+                        Status.user_message Status.Error
+                        ("Illegal@ terminal@ name:@ the@ characters@ @@ and %% may " ^
+                        "cause@ POY@ to@ crash.@ Please@ remove@ them@ from@ your@ "
+                        ^ "terminal@ names.");
+                        false
+                    end else is_ok
         in
         if All_sets.Strings.mem x acc then begin
             Status.user_message Status.Error 
             ("@{<b>Warning!:@}@ There@ is@ a@ taxon@ duplicated@ in@ the@ "
             ^ "file@ " ^ file ^ "!.@ The@ duplicated@ taxon@ is@ " ^ x);
-            acc
-        end else All_sets.Strings.add x acc) ~init:All_sets.Strings.empty taxa
+            acc, is_ok
+        end else (All_sets.Strings.add x acc, is_ok)) ~init:(All_sets.Strings.empty,
+        true) taxa
     in
-    ()
+    second
 
 let aux_process_molecular_file processor builder dyna_state data file = 
     let alphabet = 
@@ -1163,11 +1184,19 @@ let aux_process_molecular_file processor builder dyna_state data file =
             in
             Status.user_message Status.Information (taxa_contents ^
             sequence_contents);
-            check_if_taxa_are_ok (FileStream.filename file) 
-            (let _, names = List.split res in names)
         in
         close_in ch;
-        processor alphabet res
+        if check_if_taxa_are_ok (FileStream.filename file) 
+            (let _, names = List.split res in names) then
+                processor alphabet res
+        else begin
+            Status.user_message Status.Error 
+            ("Ignoring@ the@ file@ " ^ FileStream.filename file ^ 
+            "@ as@ it@ contains@ illegal@ characters@ in@ the@ taxon@ " ^
+            "names@ (Andres@ is@ sure@ that@ POY@ will@ crash@ when@ you@ " ^
+            "attempt@ to@ get@ the@ results).");
+            data
+        end
     with
     | Sys_error err ->
             let file = FileStream.filename file in
@@ -1877,7 +1906,7 @@ let create_alpha_c2_breakinvs (data : d) chcode =
         ) all_seq_arr;  
 
     gen_cost_mat.(gen_gap_code).(gen_gap_code) <- 0; 
-    print_newline (); 
+
         
     let gen_cost_ls = List.tl (Array.to_list gen_cost_mat) in 
     let gen_cost_ls = List.map  
@@ -2412,23 +2441,23 @@ exception Invalid_Character of int
 (** transform all sequences whose codes are on the code_ls into chroms 
  * each ia for one character*)    
 let transform_chrom_to_rearranged_seq data meth tran_code_ls 
-        (ia_ls : ((int * (int array list IntMap.t) list) list list) list) = 
+        (ia_ls : ((int * (int array array IntMap.t) list) list list) list) = 
     let data = duplicate data in
 
     let tran_code_ls, _ = get_tran_code_meth data meth in 
 
     let num_ia = ref 0 in  
     let t_ch_ia_map = List.fold_left 
-        ~f:(fun (t_ch_ia_map : int array list FullTupleMap.t) ia  ->
+        ~f:(fun (t_ch_ia_map : int array array FullTupleMap.t) ia  ->
              List.fold_left 
                  ~f:(fun t_ch_ia_map handle_ia ->
                       List.fold_left 
                           ~f:(fun t_ch_ia_map (t_id, t_ia) ->
                                List.fold_left 
-                                   ~f:(fun t_ch_ia_map (ch_set_ia : int array list IntMap.t)->
+                                   ~f:(fun t_ch_ia_map (ch_set_ia : int array array IntMap.t)->
                                            IntMap.fold  
-                                            (fun chcode (t_ch_ia : int array list) t_ch_ia_map ->
-                                                 num_ia := List.length t_ch_ia;
+                                            (fun chcode (t_ch_ia : int array array) t_ch_ia_map ->
+                                                 num_ia := Array.length t_ch_ia;
                                                  FullTupleMap.add (t_id,chcode) t_ch_ia t_ch_ia_map 
                                                ) ch_set_ia t_ch_ia_map 
                                    ) ~init:t_ch_ia_map t_ia
@@ -2450,13 +2479,13 @@ let transform_chrom_to_rearranged_seq data meth tran_code_ls
              let seqs = IntMap.fold  
                  (fun (t_code : int) (t_name : string) seqs ->
                       try
-                          let ia_ls = FullTupleMap.find (t_code, char_code) t_ch_ia_map in
-                          let ia_ls = List.map 
+                          let ia_arr= FullTupleMap.find (t_code, char_code) t_ch_ia_map in
+                          let ia_arr = Array.map 
                               (fun ia ->
                                    let seq = Sequence.of_code_arr ia Alphabet.gap in 
                                    let seq = Sequence.prepend_char seq Alphabet.gap in 
                                    seq
-                              ) ia_ls
+                              ) ia_arr
                           in 
 (*
                           Printf.fprintf stdout "%s: " t_name;
@@ -2466,7 +2495,7 @@ let transform_chrom_to_rearranged_seq data meth tran_code_ls
                                     ) ia_ls; 
                           print_newline (); 
 *)
-                          ([[ia_ls]], t_name)::seqs                              
+                          ([[Array.to_list ia_arr]], t_name)::seqs                              
                       with Not_found -> seqs                              
                  ) data.taxon_codes []
              in                   
@@ -2661,6 +2690,18 @@ let get_pool data c =
 let get_alphabet data c =
     match Hashtbl.find data.character_specs c  with
     | Dynamic dspec -> dspec.alph
+    | _ -> failwith "Data.get_alphabet"
+
+
+let get_character_state data c =
+    match Hashtbl.find data.character_specs c  with
+    | Dynamic dspec -> dspec.state
+    | _ -> failwith "Data.get_alphabet"
+
+
+let get_pam data c =
+    match Hashtbl.find data.character_specs c  with
+    | Dynamic dspec -> dspec.pam
     | _ -> failwith "Data.get_alphabet"
 
 let to_faswincladfile data filename =

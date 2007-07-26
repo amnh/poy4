@@ -434,7 +434,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
 
                    if sq2_id = gen_gap_code then begin 
                        let med = UtlPoy.create_median_gap sq1_seq cost_mat in
-                       let med_len = UtlPoy.cmp_num_DNA med in  
+                       let med_len = UtlPoy.cmp_num_not_gap med in  
                        let sta, en = 
                            match med_len with 
                            | 0 -> -1, -1
@@ -464,7 +464,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                             sq2_seq cost_mat 
                         in 
                         let med, cost = UtlPoy.create_median_seq alied_seq1 alied_seq2 cost_mat in
-                        let med_len = UtlPoy.cmp_num_DNA med in  
+                        let med_len = UtlPoy.cmp_num_not_gap med in  
                         let sta, en = 
                             match med_len with 
                             | 0 -> -1, -1
@@ -495,7 +495,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                    let med, cost = UtlPoy.create_median_seq alied_seq1 
                        alied_seq2 cost_mat  
                    in  
-                   let med_len = UtlPoy.cmp_num_DNA med in  
+                   let med_len = UtlPoy.cmp_num_not_gap med in  
                    let sta, en = 
                        match med_len with 
                        | 0 -> -1, -1
@@ -743,11 +743,11 @@ let create_med med1 med2 cost_mat user_chrom_pams =
         | Some chrom1, None -> 
 
               let med_seq = UtlPoy.create_median_gap chrom1.seq cost_mat in 
-              let med_len = UtlPoy.cmp_num_DNA med_seq in 
+              let med_len = UtlPoy.cmp_num_not_gap med_seq in 
 
               let chrom1_len = Sequence.length chrom1.seq in  
               let o, e = ali_pam.ChromPam.chrom_indel_cost in  
-              let indel_cost = o + (med_len - 1) * e / 100 in 
+              let indel_cost = o + ((UtlPoy.cmp_num_all_DNA chrom1.seq) - 1) * e / 100 in 
 
               let seg =   
                   {sta = 0; en = med_len - 1; 
@@ -772,11 +772,11 @@ let create_med med1 med2 cost_mat user_chrom_pams =
 
         | None, Some chrom2 -> 
               let med_seq = UtlPoy.create_median_gap chrom2.seq cost_mat in
-              let med_len = UtlPoy.cmp_num_DNA med_seq in 
+              let med_len = UtlPoy.cmp_num_not_gap med_seq in 
 
               let o, e = ali_pam.ChromPam.chrom_indel_cost in 
               let chrom2_len = Sequence.length chrom2.seq in 
-              let indel_cost = o + (med_len - 1) * e / 100 in
+              let indel_cost = o + ( (UtlPoy.cmp_num_all_DNA chrom2.seq) - 1) * e / 100 in
 
               let seg =  
                   {sta = 0; en = med_len - 1;

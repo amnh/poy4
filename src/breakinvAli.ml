@@ -28,6 +28,11 @@ let fprintf = Printf.fprintf
 
 type breakinv_t = {
     seq : Sequence.s;
+
+    alied_med : Sequence.s;
+    alied_seq1 : Sequence.s;
+    alied_seq2 : Sequence.s;
+
     ref_code : int;
     ref_code1 : int;
     ref_code2 : int;
@@ -58,6 +63,10 @@ let breakinvPam_default = {
 let init seq = 
     {        
         seq = seq;  
+        alied_med = UtlPoy.get_empty_seq ();
+        alied_seq1 = UtlPoy.get_empty_seq ();
+        alied_seq2 = UtlPoy.get_empty_seq ();
+
         ref_code = Utl.get_new_chrom_ref_code ();
         ref_code1 = -1;
         ref_code2 = -1;
@@ -130,9 +139,8 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
                 alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
         in 
     
-        let alied_gen_seq2 = Sequence.to_array alied_gen_seq2 in     
         let re_seq2 =
-            Utl.filterArr alied_gen_seq2 (fun code2 -> code2 != Alphabet.get_gap alpha)
+            Utl.filterArr (Sequence.to_array alied_gen_seq2) (fun code2 -> code2 != Alphabet.get_gap alpha)
         in    
     
         
@@ -151,6 +159,10 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
                  in 
                  let med = 
                      {seq = med_seq; 
+                      alied_med = alied_gen_seq2;
+                      alied_seq1 = alied_gen_seq1;
+                      alied_seq2 = alied_gen_seq2;
+
                       ref_code = Utl.get_new_chrom_ref_code ();
                       ref_code1 = med1.ref_code;
                       ref_code2 = med2.ref_code;

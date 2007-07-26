@@ -21,6 +21,12 @@ let () = SadmanOutput.register "AllDirChar" "$Revision: 1616 $"
 
 module IntSet = All_sets.Integers
 
+let debug_profile_memory = false
+
+let current_snapshot x = 
+    if debug_profile_memory then MemProfiler.current_snapshot x
+    else ()
+
 module F : Ptree.Tree_Operations with 
 type a = AllDirNode.AllDirF.n
 with type b = AllDirNode.OneDirF.n = struct
@@ -572,6 +578,8 @@ with type b = AllDirNode.OneDirF.n = struct
     let refresh_all_edges adjusted ptree =
         let new_edges = 
             Tree.EdgeSet.fold (fun ((Tree.Edge (a, b)) as e) acc ->
+                current_snapshot
+                "AllDirChar.refresh_all_edges internal fold";
                 let data = 
                     try create_lazy_edge adjusted ptree a b with
                     | err -> 
@@ -624,6 +632,8 @@ with type b = AllDirNode.OneDirF.n = struct
             (* A function to add  the vertices using a post order traversal 
             * from the Ptree library. *)
             let add_vertex_post_order prev code ptree =
+                current_snapshot
+                "AllDirChar.internal_downpass.add_vertex_post_order";
                 match Ptree.get_node code ptree with
                 | Tree.Single _
                 | Tree.Leaf (_, _) -> Tree.Continue, ptree
@@ -640,6 +650,8 @@ with type b = AllDirNode.OneDirF.n = struct
             (* A function to add the vertices using a pre order traversal from
             * the Ptree library *)
             let add_vertex_pre_order prev code ptree =
+                current_snapshot
+                "AllDirChar.internal_downpass.add_vertex_pre_order";
                 match Ptree.get_node code ptree with
                 | Tree.Single _ 
                 | Tree.Leaf (_, _) -> Tree.Continue, ptree
@@ -673,7 +685,11 @@ with type b = AllDirNode.OneDirF.n = struct
         else 
             ptree --> refresh_all_edges false
 
-    let downpass = internal_downpass true
+    let downpass = 
+        current_snapshot "AllDirChar.downpass a";
+        let res = internal_downpass true in
+        current_snapshot "AllDirChar.downpass b";
+        res
 
     let clear_internals = 
         internal_downpass false
@@ -689,6 +705,7 @@ with type b = AllDirNode.OneDirF.n = struct
         let process ptree (edges, handle) =
             match
                 List.fold_left (fun acc ((Tree.Edge (a, b)) as e) ->
+                    current_snapshot "AllDirChar.uppass edge list fold";
                     let data = Ptree.get_edge_data e ptree in
                     let c = AllDirNode.OneDirF.root_cost data in
                     match acc with 

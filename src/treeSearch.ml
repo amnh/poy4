@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 1952 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2006 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -579,7 +579,6 @@ let rec find_local_optimum ?queue data emergency_queue
                     let res = (search_fn queue_manager)#results in
                     List.map (fun (a, _, _) ->
                         let a = PtreeSearch.uppass a in
-                        let a = TreeOps.clear_internals a in
                         (a, Ptree.get_cost `Unadjusted a)) res
                 with
                 | Sampler.TimedOut -> [(tree, Ptree.get_cost `Unadjusted tree)]

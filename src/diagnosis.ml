@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 1968 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 2006 $"
 
 let debug = true
 
@@ -54,21 +54,22 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                     | Not_found -> (string_of_int taxcode)
                 in
                 match sequence with
-                | sequence :: tl ->
+                | hd_sequence :: tl ->
                         let res = 
                             All_sets.IntegerMap.fold 
                             (fun c s acc -> Some (c, s))
-                            sequence None
+                            hd_sequence None
                         in
                         (match res with 
-                        | Some (seqcode, sequence) ->
-                                let alphabet = 
-                                    Data.get_sequence_alphabet seqcode data
+                         | Some (seqcode, sequence_arr) ->
+                               let sequence = sequence_arr.(0) in 
+                               let alphabet = 
+                                   Data.get_sequence_alphabet seqcode data
+                               in
+                               let gapcode = Alphabet.get_gap alphabet in
+                               let gap = Alphabet.match_code gapcode alphabet
                                 in
-                                let gapcode = Alphabet.get_gap alphabet in
-                                let gap = Alphabet.match_code gapcode alphabet
-                                in
-                                (* Check if the sequence is missing data *)
+                                 (* Check if the sequence is missing data *)
                                 let preprocess_sequence x =
                                     let len = Array.length x in
                                     let rec check it =
@@ -103,7 +104,18 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                                 "@,");
                                 Status.user_message fo result;
                                 Status.user_message fo "@]%!";
-                                (taxcode, tl) :: acc
+
+                                if Array.length sequence_arr = 1 then (taxcode, tl) :: acc
+                                else begin
+                                    let hd_sequence = All_sets.IntegerMap.map
+                                        (fun sequence_arr -> Array.of_list
+                                             (List.tl (Array.to_list sequence_arr)))
+                                        hd_sequence
+                                    in 
+                                    (taxcode, hd_sequence::tl)::acc
+                                end 
+
+
                         | None -> (taxcode, tl) :: acc)
                 | [] -> acc
             in
@@ -167,8 +179,8 @@ module Make
                     List.map (fun code -> Sexpr.map (fun x -> 
                         let seqname = Data.code_character code data in
                         let ia = IA.create CT.filter_characters [code] data x in
-                        let ia = List.map IA.concat_alignment ia in 
-                            (x.Ptree.tree, seqname) , ia) trees) char_codes  
+(*                        let ia = List.map IA.concat_alignment ia in *)
+                        (x.Ptree.tree, seqname) , ia) trees) char_codes  
                 in
                 List.iter (fun res ->
                     Status.user_message 

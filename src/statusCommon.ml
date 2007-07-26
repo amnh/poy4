@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 1952 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2006 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -73,6 +73,7 @@ module CommandCompletion = struct
         "clear_recovered";
         "codes";
         "collapse";
+        "compare";
         "complex";
         "consensus";
         "constraint";
@@ -175,6 +176,7 @@ module CommandCompletion = struct
         "select";
         "seq_to_breakinv";
         "seq_to_chrom";
+        "seq_stats";
         "set";
         "sig_block_len";
         "spr";

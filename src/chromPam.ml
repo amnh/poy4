@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 1915 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 2006 $"
 
 (** Chromosome parameters
  *
@@ -85,6 +85,7 @@ type chromPairAliPam_t = {
 }
 
 
+let locus_indel_cost_default = (10, 100)
 
 let chromPairAliPam_default = {
     min_pos1 = -1; max_pos1 = -1; min_pos2 = -1; max_pos2 = -1; 

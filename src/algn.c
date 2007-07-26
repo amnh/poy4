@@ -23,8 +23,8 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <limits.h>
-#include <assert.h>
 #define NDEBUG 1
+#include <assert.h>
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/custom.h>
@@ -84,7 +84,7 @@ unsigned char *_algn_max_direction = NULL;
  * used in the first plane of the alignment. It didn't use this function because
  * the direction codes are different for three dimensional alignments.
  */
-#if ( THIS_IS_OFF && __GNUC__ && __MMX__ )
+#if ( __GNUC__ && __MMX__ )
 #ifdef _WIN32
 __inline void 
 #else
@@ -336,7 +336,7 @@ algn_fill_row (int *mm, const int *pm, const int *gap_row, \
     for (; i <= end; i++) {
 
         aa = pm[i - 1] + alg_row[i];
-        bb += gap_row[i - 1];
+        bb += gap_row[i];
         cc = pm[i] + c;
 
 
@@ -1891,7 +1891,7 @@ inline int
 algn_fill_cube (const seqt s1, const seqt s2, const int *prec, \
         int s1_len, int s2_len, int s3_len, int *mm, unsigned char *dm, int uk, \
         int gap, int a_sz) {
-    int *s1p, *s2p;
+    SEQT *s1p, *s2p;
     /* Each of the following arrays hold some precalculated value for the
      * sequence s3 which is not passed as argument. */
     const int *gs2s3;     /** Align a gap and the current base of s2 with s3 */
@@ -2076,7 +2076,7 @@ inline int
 algn_fill_cube_ukk (const seqt s1, const seqt s2, const int *prec, \
         int s1_len, int s2_len, int s3_len, int *mm, unsigned char *dm, int uk, \
         int gap, int a_sz, int w, int d, int h) {
-    int *s1p, *s2p;
+    SEQT *s1p, *s2p;
     /* Each of the following arrays hold some precalculated value for the
      * sequence s3 which is not passed as argument. */
     const int *gs2s3;     /** Align a gap and the current base of s2 with s3 */
@@ -2252,7 +2252,7 @@ inline int
 algn_nw_limit (const seqt s1, const seqt s2, const cmt c, \
         matricest m, int deltawh, int st_s1, int len_s1, \
         int st_s2, int len_s2) {
-    const int *ss1, *ss2;
+    const SEQT *ss1, *ss2;
     int *mm, *prec, s1_len, s2_len;
     unsigned char *dm;
     ss1 = seq_get_begin (s1);
@@ -2295,7 +2295,7 @@ inline int
 #endif
 algn_nw_3d (const seqt s1, const seqt s2, const seqt s3,
         const cm_3dt c, matricest m, int w) {
-    const int *ss1, *ss2, *ss3;
+    const SEQT *ss1, *ss2, *ss3;
     int *mm, *prec, s1_len, s2_len, s3_len, gap, res;
     unsigned char *dm;
     ss1 = seq_get_begin (s1);
@@ -2954,7 +2954,7 @@ __inline void
 inline void
 #endif
 algn_get_median_2d_with_gaps (seqt s1, seqt s2, cmt m, seqt sm) {
-    int *begin1, *begin2;
+    SEQT *begin1, *begin2;
     int interm;
     int i;
     begin1 = seq_get_begin (s1);
@@ -2972,7 +2972,7 @@ __inline void
 inline void
 #endif
 algn_get_median_2d_no_gaps (seqt s1, seqt s2, cmt m, seqt sm) {
-    int *begin1, *begin2;
+    SEQT *begin1, *begin2;
     int interm;
     int i;
     begin1 = seq_get_begin (s1);
@@ -2990,7 +2990,8 @@ void
 algn_remove_gaps (int gap, seqt s) {
     int i, len;
     len = seq_get_len (s);
-    int *source, *destination, newlen = 0; 
+    SEQT *source, *destination;
+    int newlen = 0; 
     source = destination = s->end;
     for (i = len - 1; i >= 0; i--) {
         if (gap != *source) {
@@ -3055,7 +3056,7 @@ __inline void
 inline void
 #endif
 algn_ancestor_2 (seqt s1, seqt s2, cmt m, seqt sm ) {
-    int *begin1, *begin2;
+    SEQT *begin1, *begin2;
     int interm;
     int i, gap, is_combinations, cost_model, on_gap_block;
     begin1 = seq_get_begin (s1);
@@ -3090,7 +3091,7 @@ inline void
 #endif
 algn_get_median_3d (seqt s1, seqt s2, seqt s3, \
         cm_3dt m, seqt sm) {
-    int *end1, *end2, *end3;
+    SEQT *end1, *end2, *end3;
     int interm;
     int i;
     end1 = seq_get_end (s1);

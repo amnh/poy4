@@ -898,9 +898,13 @@
         \end{statement}
         
         \begin{statement}
-             If one of the taxon names in an imported molecular file contains
+             If one of the terminal names in an imported molecular file contains
              a space, `` '', \poy will issue a warning. This will also happen if a
              taxon name appears to match a nucleotide sequence.
+
+             If one of the terminal names in an imported molecular file contains
+             an \atsymbol or a percentage symbol, the file will not be loaded as
+             it may cause the program to crash when reporting results.
         \end{statement}
 	\end{poydescription}
 
@@ -1952,12 +1956,22 @@
                 {}
 
             \argumentdefinition{missing}{\obligatory{\poyint}}
-                {Selects terminals or characters to be excluded from the analysis
+                {Selects terminals or characters to be included in the analysis
                 based on the level of missing data. The
                 integer value sets the minimum percentage of missing
                 data. Terminals or characters that have \emph{more} missing data
-                than defined by the value are excluded from the analysis.}
+                than defined by the value are included in the analysis.}
                 {}
+               
+                \argumentdefinition{not\_missing}{\obligatory{\poyint}}
+                {Selects terminals or characters to be included from the analysis
+                based on the relative of missing data. The
+                integer value sets the minimum percentage of missing
+                data. Terminals or characters that have  \emph{less} missing data
+                than defined by the value are included in the analysis.
+                In effect, this selects a complement of data to the argument \poyargument{missing}.}
+                {notmissing}
+
                 \begin{statement}
                 For dynamic homology characters, the missing data refers to
                 sequence fragments, whereas for static characters it refers to
@@ -1994,18 +2008,7 @@
                 codes of which are listed in the string list.}
                 {notcodes}
 
-            \argumentdefinition{not missing}{\obligatory{\poyint}}
-                {Selects terminals or characters to be excluded from the analysis
-                based on the relative of missing data. The
-                integer value sets the minimum percentage of missing
-                data. Terminals or characters that have less missing data
-                than defined by the value are excluded from the analysis.
-                The integer value sets the minimum percentage of missing
-                data. Terminals that have \emph{less} missing data than defined by
-                the value are excluded from the analysis. In effect, this selects a
-                complement of data selected by the argument \poyargument{missing}.}
-                {notmissing}
-
+          
         \end{argumentgroup}
 
 		\begin{argumentgroup}{Select trees}

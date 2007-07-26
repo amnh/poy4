@@ -295,6 +295,7 @@ let get_active_ref_code t =
 
 
 let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+
     let single_parent, mine = 
         match is_root with 
         | true ->  alied_map, alied_map
@@ -312,14 +313,17 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                 List.find (fun med -> 
                                IntSet.mem med.AnnchromAli.ref_code ref_codes
                           ) med.Annchrom.med_ls
-            with Not_found -> failwith "Not found med -> to_formatter -> AnnchromCS"
+            with Not_found -> List.hd med.Annchrom.med_ls
+                (*failwith "Not found med -> to_formatter -> AnnchromCS"*)
         in         
         let cost,  recost, single_seq_arr = 
             let parent_med = IntMap.find code single_parent.meds in  
-            let aparent_med = List.find 
-                (fun med -> 
-                     IntSet.mem med.AnnchromAli.ref_code ref_codes 
-                ) parent_med.Annchrom.med_ls
+            let aparent_med = 
+                try
+                    List.find (fun med -> 
+                         IntSet.mem med.AnnchromAli.ref_code ref_codes 
+                    ) parent_med.Annchrom.med_ls
+                with Not_found -> List.hd parent_med.Annchrom.med_ls
             in            
             match is_root with
             | true ->
@@ -346,6 +350,7 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
     let meds, costs,  recosts, total_cost = 
         IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
     in 
+
     previous_total_cost, float_of_int total_cost, 
     {mine with meds = meds; 
          costs = costs;

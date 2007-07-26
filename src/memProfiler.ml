@@ -17,35 +17,29 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-type order_t = [ `BothSeq | `First | `Second ]
-type direction_t = [ `BothDir | `Negative | `Positive ]
-type re_meth_t = Data.re_meth_t
-type chromPairAliPam_t = {
-  k : int;
-  sig_k : int;
-  sig_block_len : int;
-  max_gap : int;
-  rearranged_len : int;
-  min_pos1 : int;
-  max_pos1 : int;
-  min_pos2 : int;
-  max_pos2 : int;
-  gap_opening_cost : int;
-  gap_ext_cost : int;
-  mat_cost : int;
-  mismat_cost : int;
-  re_meth : re_meth_t;
-  chrom_breakpoint : int;
-  keep_median : int;
-  swap_med : int;
-  approx : bool;
-  locus_indel_cost : int * int;
-  chrom_indel_cost : int * int;
-  chrom_hom : int;
-  circular : int;
-}
-val chromPairAliPam_default : chromPairAliPam_t
-val get_chrom_pam : Data.dyna_pam_t -> chromPairAliPam_t
-val cloneChromPairPam : chromPairAliPam_t -> chromPairAliPam_t
-val print_pair_ali_pam : chromPairAliPam_t -> unit
-val locus_indel_cost_default : int * int
+(** A module to profile the program's real memory usage. As we use C structures,
+* we can't really trust the garbage collector, so we are going to use the vsz
+* and rss reports from the standard unix ps program. *)
+
+let do_profile = false
+
+let current_snapshot = 
+    if do_profile then
+        let wd = Unix.getcwd () in
+        let pid = Unix.getpid () in
+        fun funct ->
+            let comd = 
+                Printf.sprintf "echo %s >> %s/poy_memory_profile.txt; ps -A -o vsz,rss,pid | grep %d >> %s/poy_memory_profile.txt"
+                funct wd pid wd
+            in
+            match Sys.command comd with
+            | 0 -> ()
+            | _ -> 
+                    Printf.printf 
+                    "Error while attempting to generate memory profile\n%!"
+    else fun _ -> ()
+
+let _ = 
+    if do_profile then
+        Sys.command "rm -f ./poy_memory_profile.txt"
+    else 0

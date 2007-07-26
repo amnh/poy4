@@ -18,9 +18,11 @@
 (* USA                                                                        *)
 
 type mst
+type priorities = Random | Closest | Furthest2
+type mst_preference = Closest | Furthest
 
-val kruskal : (int -> int -> float) -> int list -> mst
-val randomized_post_order : (int -> string) -> mst -> string Parser.Tree.t
-val randomized_bfs_traversal : mst -> int list
-val randomized_dfs_traversal : mst -> int list
+val kruskal : mst_preference -> (int -> int -> float) -> int list -> mst
+val post_order : priorities -> (int -> string) -> mst -> string Parser.Tree.t
+val bfs_traversal : priorities -> mst -> int list
+val dfs_traversal : priorities -> mst -> int list
 val print_mst_tree : (int -> string) -> mst -> string option -> unit

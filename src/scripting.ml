@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 1968 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2006 $"
 
 module IntSet = All_sets.Integers
 
@@ -211,7 +211,6 @@ let update_trees_to_data run =
     let doit replacer tree = 
         let res = CT.transform_tree replacer tree in
         let ach = Status.get_achieved st in
-        let res = TreeOps.clear_internals res in
         Data.flush run.data;
         Status.full_report ~adv:(ach + 1) st;
         res

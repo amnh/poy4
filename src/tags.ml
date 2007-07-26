@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 1952 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2006 $"
 
 type tag = string
 type value = tag
@@ -99,7 +99,7 @@ module Characters = struct
     let tcm = "Transformation Cost Matrix"
     let state = "State"
     let states = "States"
-    let ref_code = "Reference code"
+    let ref_code = "ReferenceCode"
     let chrom_map = "Pairwise_Alignment_Map"
 end
 
@@ -149,9 +149,24 @@ module GenomeMap = struct
     let genome = "GenomeMap"
     let chrom = "ChromosomeMap"
     let seg = "SegmentMap"
+
     let ref_code = "ReferenceCode"
+    let a_ref_code = "AncestorReferenceCode"
+    let d_ref_code = "DescendantReferenceCode"
+
     let seq_order = "SequenceOrder"
+    let a_seq_order = "AncestorSequenceOrder"
+    let d_seq_order = "DescendantSequenceOrder"
+
     let start_seg = "StartPosition"
+    let a_start_seg = "AncestorStartPosition"
+    let d_start_seg = "DescendantStartPosition"
+
     let end_seg = "EndPosition"
+    let a_end_seg = "AncestorEndPosition"
+    let d_end_seg = "DescendantEndPosition"
+
     let dir_seg = "Direction"        
+    let a_dir_seg = "AncestorDirection"        
+    let d_dir_seg = "DescendantDirection"        
 end

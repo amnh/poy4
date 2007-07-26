@@ -271,8 +271,9 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
     res->is_metric = is_metric;
     size = (1 << (res->lcm * 2)) * sizeof(int);
     res->cost = (int *) malloc (size);
-    res->median = (int *) malloc (size);
     res->worst = (int *) malloc (size);
+    size = (1 << (res->lcm * 2)) * sizeof(SEQT);
+    res->median = (SEQT *) malloc (size);
     res->prepend_cost = (int *) malloc (size);
     res->tail_cost = (int *) malloc (size);
     if ((res->cost == NULL) || (res->median == NULL)) {
@@ -310,7 +311,7 @@ cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
     cm_set_affine_3d (res, do_aff, gap_open);
     size = (res->a_sz + 1) * (res->a_sz + 1) * (res->a_sz + 1);
     res->cost = (int *) malloc (size * sizeof(int));
-    res->median = (int *) malloc (size * sizeof(int));
+    res->median = (SEQT *) malloc (size * sizeof(SEQT));
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);
         free (res->median);
@@ -340,9 +341,9 @@ cm_get_alphabet_size_3d (cm_3dt c) {
 }
 
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
 cm_get_gap (const cmt c) {
     assert(c != NULL);
@@ -350,9 +351,9 @@ cm_get_gap (const cmt c) {
 }
 
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
 cm_get_gap_3d (const cm_3dt c) {
     assert(c != NULL);
@@ -414,9 +415,9 @@ __inline int
 #else
 inline int
 #endif
-cm_calc_cost_position_3d (int a, int b, int c, int a_sz) {
+cm_calc_cost_position_seqt (SEQT a, SEQT b, int a_sz) {
     assert(a_sz >= 0);
-    return ((((a << a_sz) + b) << a_sz) + c);
+    return ((((int) a) << a_sz) + ((int) b));
 }
 
 #ifdef _WIN32
@@ -424,7 +425,41 @@ __inline int
 #else
 inline int
 #endif
-cm_calc_cost (int *tcm, int a, int b, int a_sz) {
+cm_calc_cost_position_3d_seqt (SEQT a, SEQT b, SEQT c, int a_sz) {
+    assert(a_sz >= 0);
+    return ((((((int) a) << a_sz) + ((int) b)) << a_sz) + ((int) c));
+}
+
+#ifdef _WIN32
+__inline int
+#else
+inline int
+#endif
+cm_calc_cost_position_3d (int a, int b, int c, int a_sz) {
+    assert(a_sz >= 0);
+    return ((((a << a_sz) + b) << a_sz) + c);
+}
+
+#ifdef _WIN32
+__inline SEQT
+#else
+inline SEQT
+#endif
+cm_calc_median (SEQT *tcm, SEQT a, SEQT b, int a_sz) {
+    SEQT *res;
+    assert (a_sz >= 0);
+    assert ((1 << a_sz) > a);
+    assert ((1 << a_sz) > b);
+    res = tcm + cm_calc_cost_position_seqt (a, b, a_sz);
+    return (*res);
+}
+
+#ifdef _WIN32
+__inline int
+#else
+inline int
+#endif
+cm_calc_cost (int *tcm, SEQT a, SEQT b, int a_sz) {
     int *res;
     assert (a_sz >= 0);
     assert ((1 << a_sz) > a);
@@ -434,11 +469,35 @@ cm_calc_cost (int *tcm, int a, int b, int a_sz) {
 }
 
 #ifdef _WIN32
+__inline SEQT
+#else
+inline SEQT
+#endif
+cm_calc_median_3d (SEQT *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
+    if (a_sz <= 0) failwith ("Alphabet size = 2");
+    if ((1 << a_sz) <= a) failwith ("2a is bigger than alphabet size");
+    if ((1 << a_sz) <= b) failwith ("b is bigger than alphabet size");
+    return (*(tcm + cm_calc_cost_position_3d (a, b, c, a_sz)));
+}
+
+#ifdef _WIN32
 __inline int
 #else
 inline int
 #endif
-cm_calc_cost_3d (int *tcm, int a, int b, int c, int a_sz) {
+cm_calc_cost_3d (int *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
+    if (a_sz <= 0) failwith ("Alphabet size = 2");
+    if ((1 << a_sz) <= a) failwith ("2a is bigger than alphabet size");
+    if ((1 << a_sz) <= b) failwith ("b is bigger than alphabet size");
+    return (*(tcm + cm_calc_cost_position_3d (a, b, c, a_sz)));
+}
+
+#ifdef _WIN32
+__inline SEQT
+#else
+inline SEQT
+#endif
+cm_calc_cost_3d_seqt (SEQT *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
     if (a_sz <= 0) failwith ("Alphabet size = 2");
     if ((1 << a_sz) <= a) failwith ("2a is bigger than alphabet size");
     if ((1 << a_sz) <= b) failwith ("b is bigger than alphabet size");
@@ -459,7 +518,7 @@ __inline int
 #else
 inline int
 #endif
-cm_calc_median_position (int a, int b, int a_sz) {
+cm_calc_median_position (SEQT a, SEQT b, int a_sz) {
     return (cm_calc_cost_position (a, b, a_sz));
 }
 
@@ -508,7 +567,7 @@ __inline int *
 #else
 inline int *
 #endif
-cm_get_row (int *tcm, int a, int a_sz) {
+cm_get_row (int *tcm, SEQT a, int a_sz) {
     if (a_sz <= 0) failwith ("Alphabet size = 3");
     if ((1 << a_sz) <= a) failwith ("3a is bigger than alphabet size");
     return (tcm + (a << a_sz));
@@ -519,11 +578,21 @@ __inline int *
 #else
 inline int *
 #endif
-cm_get_row_3d (int *tcm, int a, int b, int a_sz) {
+cm_get_row_3d (int *tcm, SEQT a, SEQT b, int a_sz) {
     if (a_sz <= 0) failwith ("Alphabet size = 4");
     if ((1 << a_sz) <= a) failwith ("4a is bigger than alphabet size");
     if ((1 << a_sz) <= b) failwith ("b is bigger than alphabet size");
     return (tcm + (((a << a_sz) + b) << a_sz));
+}
+
+#ifdef _WIN32
+__inline void
+#else
+inline void
+#endif
+cm_set_value_seqt (SEQT a, SEQT b, SEQT v, SEQT *p, int a_sz) {
+    *(p + (cm_calc_cost_position_seqt (a, b, a_sz))) = v;
+    return;
 }
 
 #ifdef _WIN32
@@ -539,7 +608,7 @@ cm_set_value (int a, int b, int v, int *p, int a_sz) {
 void
 cm_precalc_4algn (const cmt c, matricest matrix, const seqt s) {
     int i, j, l, m, *tmp_cost, *tcm, *tmp_to, *prepend, *tail, *to;
-    int *begin;
+    SEQT *begin;
     l = seq_get_len (s);
     to = mat_get_2d_prec (matrix);
     tcm = cm_get_transformation_cost_matrix (c);
@@ -571,7 +640,7 @@ cm_precalc_4algn (const cmt c, matricest matrix, const seqt s) {
 }
 
 const int *
-cm_get_precal_row (const int *p, int item, int len) {
+cm_get_precal_row (const int *p, SEQT item, int len) {
     return (p + (len * item));
 }
 
@@ -608,6 +677,16 @@ cm_precalc_4algn_3d (const cm_3dt c, int *to, const seqt s) {
                 *precalc_pos = *(tmp_cost + sequen); 
             }
         }
+    return;
+}
+
+#ifdef _WIN32
+__inline void
+#else
+inline void
+#endif
+cm_set_value_3d_seqt (SEQT a, SEQT b, SEQT c, SEQT v, SEQT *p, int a_sz) {
+    *(p + (cm_calc_cost_position_3d_seqt (a, b, c, a_sz))) = v;
     return;
 }
 
@@ -680,8 +759,8 @@ __inline void
 #else
 inline void
 #endif
-cm_set_median (int a, int b, int v, cmt c) {
-    cm_set_value (a, b, v, c->median, c->lcm);
+cm_set_median (SEQT a, SEQT b, SEQT v, cmt c) {
+    cm_set_value_seqt (a, b, v, c->median, c->lcm);
     return;
 }
 
@@ -690,8 +769,8 @@ __inline void
 #else
 inline void
 #endif
-cm_set_median_3d (int a, int b, int cp, int v, cm_3dt c) {
-    cm_set_value_3d (a, b, cp, v, c->median, c->lcm);
+cm_set_median_3d (SEQT a, SEQT b, SEQT cp, SEQT v, cm_3dt c) {
+    cm_set_value_3d_seqt (a, b, cp, v, c->median, c->lcm);
     return;
 }
 
@@ -709,7 +788,7 @@ cm_CAML_deserialize (void *v) {
     n->is_metric = deserialize_uint_4();
     len = 1 << (n->lcm * 2);
     n->cost = (int *) malloc (len * sizeof(int));
-    n->median = (int *) malloc (len * sizeof(int));
+    n->median = (SEQT *) malloc (len * sizeof(SEQT));
     n->worst = (int *) malloc (len * sizeof(int));
     n->prepend_cost = (int *) malloc (len * sizeof(int));
     n->tail_cost = (int *) malloc (len * sizeof(int));
@@ -735,7 +814,7 @@ cm_CAML_deserialize_3d (void *v) {
     n->gap_open = deserialize_uint_4();
     len = (n->a_sz + 1) * (n->a_sz + 1) * (n->a_sz + 1);
     n->cost = (int *) malloc (len * sizeof(int));
-    n->median = (int *) malloc (len * sizeof(int));
+    n->median = (SEQT *) malloc (len * sizeof(SEQT));
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
     deserialize_block_4(n->cost, len);
     deserialize_block_4(n->median, len);
@@ -837,6 +916,16 @@ cm_copy_contents (int *src, int *tgt, int len) {
     return;
 }
 
+
+void
+cm_copy_contents_seqt (SEQT *src, SEQT *tgt, int len) {
+    int i;
+    for (i = 0; i < len; i++)
+        *(tgt + i) = *(src + i);
+    return;
+}
+
+
 value
 cm_CAML_clone (value v) {
     CAMLparam1(v);
@@ -851,7 +940,7 @@ cm_CAML_clone (value v) {
             c->gap_open, c->is_metric, clone2);
     len = (c->a_sz + 1) * (c->a_sz + 1);
     cm_copy_contents (c->cost, clone2->cost, len);
-    cm_copy_contents (c->median, clone2->median, len);
+    cm_copy_contents_seqt (c->median, clone2->median, len);
     cm_copy_contents (c->worst, clone2->worst, len);
     cm_copy_contents (c->prepend_cost, clone2->prepend_cost, len);
     cm_copy_contents (c->tail_cost, clone2->tail_cost, len);
@@ -872,7 +961,7 @@ cm_CAML_clone_3d (value v) {
             c->gap_open, clone2);
     len = (c->a_sz + 1) * (c->a_sz + 1) * (c->a_sz + 1);
     cm_copy_contents (c->cost, clone2->cost, len);
-    cm_copy_contents (c->median, clone2->median, len);
+    cm_copy_contents_seqt (c->median, clone2->median, len);
     CAMLreturn(clone);
 }
 
@@ -1023,40 +1112,40 @@ cm_CAML_get_worst (value a, value b, value c) {
 value
 cm_CAML_get_median_3d (value a, value b, value c, value cm) {
     CAMLparam3(a, b, c);
-    int *tcm;
+    SEQT *tcm;
     cm_3dt tmp;
     tmp = Cost_matrix_struct_3d(cm);
     tcm = tmp->median;
-    CAMLreturn(Val_int(cm_calc_cost_3d(tcm, Int_val(a), Int_val(b), \
+    CAMLreturn(Val_int(cm_calc_cost_3d_seqt(tcm, Int_val(a), Int_val(b), \
                     Int_val(c), tmp->lcm)));
 }
 
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
-cm_get_median (const cmt tmp, int a, int b) {
-    return (cm_calc_cost((tmp->median), a, b, tmp->lcm));
+cm_get_median (const cmt tmp, SEQT a, SEQT b) {
+    return (cm_calc_median((tmp->median), a, b, tmp->lcm));
 }
 
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
-cm_get_median_3d (const cm_3dt t, int a, int b, int c) {
-    return (cm_calc_cost_3d((t->median), a, b, c, t->lcm));
+cm_get_median_3d (const cm_3dt t, SEQT a, SEQT b, SEQT c) {
+    return (cm_calc_median_3d((t->median), a, b, c, t->lcm));
 }
 
 value
 cm_CAML_get_median (value a, value b, value c) {
     CAMLparam3(a, b, c);
-    int *tcm;
+    SEQT *tcm;
     cmt tmp;
     tmp = Cost_matrix_struct(c);
     tcm = tmp->median;
-    CAMLreturn(Val_int(cm_calc_cost(tcm, Int_val(a), Int_val(b), tmp->lcm)));
+    CAMLreturn(Val_int(cm_calc_median(tcm, Int_val(a), Int_val(b), tmp->lcm)));
 }
 
 value

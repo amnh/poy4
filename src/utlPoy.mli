@@ -3,7 +3,8 @@ val is_existed_code : int -> Sequence.s -> bool
 val is_existed_char : string -> Sequence.s -> bool
 val printDNA : Sequence.s -> unit
 val create_gap_seq : ?gap:int -> int -> Sequence.s
-val cmp_num_DNA : Sequence.s -> int
+val cmp_num_all_DNA : Sequence.s -> int
+val cmp_num_not_gap : Sequence.s -> int
 val cmp_gap_cost : int * int -> Sequence.s -> int
 val cmp_ali_cost :
   Sequence.s -> Sequence.s -> [> `Positive ] -> Cost_matrix.Two_D.m -> int
@@ -25,12 +26,14 @@ val create_subalign2 :
   int -> int -> int -> int -> Sequence.s * Sequence.s * int
 val get_num_base : Sequence.s -> int
 val reverse_subseq : Sequence.s -> int -> int -> unit
-val delete_gap : Sequence.s -> Sequence.s
+val delete_gap : ?gap_code : int -> Sequence.s -> Sequence.s
 val create_median_gap :
   Sequence.s ->
   ?start_pos:int -> ?end_pos:int -> Cost_matrix.Two_D.m -> Sequence.s
 val create_median_seq :
     ?approx:bool -> Sequence.s -> Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s * int
+val create_median_deled_seq :
+    ?approx:bool -> Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s 
 val create_median :
     ?approx: bool ->  
   Sequence.s ->

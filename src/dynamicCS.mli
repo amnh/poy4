@@ -57,11 +57,12 @@ val failwith_todo : string -> 'a
 val total_cost : t -> float
 val total_recost : t -> float
 val subtree_recost : t -> float
+val alpha : t -> Alphabet.a
 val c2 : t -> Cost_matrix.Two_D.m
 val chrom_pam : t -> Data.dyna_pam_t
 val state : t -> Data.dyna_state_t
 val code : t -> int
-val leaf_sequences : t -> Sequence.s SeqCS.Codes.t
+val leaf_sequences : t -> Sequence.s array SeqCS.Codes.t
 val unions : u -> Sequence.Unions.u SeqCS.Codes.t
 val reprioritize : t -> t -> t
 val prioritize : t -> t

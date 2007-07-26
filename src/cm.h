@@ -38,7 +38,7 @@ struct cm {
     int gap_open;
     int is_metric;
     int *cost;
-    int *median;
+    SEQT *median;
     int *worst;         /* Missing in 3d */
     int *prepend_cost;  /* Missing in 3d */
     int *tail_cost;     /* Missing in 3d */
@@ -58,7 +58,7 @@ cm_get_alphabet_size (cmt c);
 /*
  * Retrieves the gap code as defined in the transformation cost matrix. 
  */
-inline int
+inline SEQT
 cm_get_gap (const cmt c);
 
 /*
@@ -121,7 +121,7 @@ __inline int
 #else
 inline int
 #endif
-cm_calc_median_position (int a, int b, int a_sz);
+cm_calc_median_position (SEQT a, SEQT b, int a_sz);
 
 /*
  * The median between to elements in the alphabet hold by t.
@@ -132,11 +132,11 @@ cm_calc_median_position (int a, int b, int a_sz);
  * according to the transformation cost matrix hold in t.
  */
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
-cm_get_median (const cmt t, int a, int b);
+cm_get_median (const cmt t, SEQT a, SEQT b);
 
 /*
  * Retrieves the transformation cost of the elements a and b as stored in the
@@ -148,7 +148,7 @@ __inline int
 #else
 inline int
 #endif
-cm_calc_cost (int *tcm, int a, int b, int a_sz);
+cm_calc_cost (int *tcm, SEQT a, SEQT b, int a_sz);
 
 /* 
  * The transformation cost matrix, as stored in ocaml, may have the actual
@@ -186,7 +186,7 @@ __inline int *
 #else
 inline int *
 #endif
-cm_get_row (int *tcm, int a, int a_sz);
+cm_get_row (int *tcm, SEQT a, int a_sz);
 
 /* 
  * Fills a precalculated matrix with the cost of comparing each elment in the
@@ -210,7 +210,7 @@ cm_precalc_4algn (const cmt c, matricest to_output, const seqt s);
  * matrix.
  */
 const int *
-cm_get_precal_row (const int *p, int item, int len);
+cm_get_precal_row (const int *p, SEQT item, int len);
 
 /** A three dimesional cost matrix 
  *
@@ -232,7 +232,7 @@ struct cm_3d {
     int gap_open;           /** The cost of opening a gap. This is only useful in 
                               certain cost_model_type's. */
     int *cost;              /** The transformation cost matrix. */
-    int *median;            /** The matrix of possible medians between elements in the 
+    SEQT *median;            /** The matrix of possible medians between elements in the 
                               alphabet. The best possible medians according to the cost 
                               matrix. */
 };
@@ -253,11 +253,11 @@ typedef struct cm_3d * cm_3dt;
  * contained in t.
  */
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
-cm_get_median_3d (const cm_3dt t, int a, int b, int c);
+cm_get_median_3d (const cm_3dt t, SEQT a, SEQT b, SEQT c);
 
 #ifdef _WIN32
 __inline int
@@ -270,9 +270,9 @@ cm_get_alphabet_size_3d (cm_3dt c);
  * Retrieves the gap code as defined in the transformation cost matrix. 
  */
 #ifdef _WIN32
-__inline int
+__inline SEQT
 #else
-inline int
+inline SEQT
 #endif
 cm_get_gap_3d (const cm_3dt c);
 
@@ -319,7 +319,7 @@ __inline int *
 #else
 inline int *
 #endif
-cm_get_row_3d (int *tcm, int a, int b, int a_sz);
+cm_get_row_3d (int *tcm, SEQT a, SEQT b, int a_sz);
 
 /*
  * Fills a precalculation for sequence s for a three dimensional sequence

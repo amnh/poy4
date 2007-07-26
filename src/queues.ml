@@ -20,8 +20,8 @@
 (** queues.ml - contains the serach managers that manage the queue of trees to
  * be searched. *)
 
-(* $Id: queues.ml 1952 2007-07-10 18:28:23Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 1952 $"
+(* $Id: queues.ml 2006 2007-07-26 18:31:33Z andres $ *)
+let () = SadmanOutput.register "Queues" "$Revision: 2006 $"
 
 (** {1 Types} *)
 
@@ -59,7 +59,7 @@ module type S = sig
     * trees that are accepted in the wagner building step, and the maximum
     * threshold above the current optimum that is acceptable for a tree to be
     * elgible for the next build round (next vertex addition). *)
-    class wagner_srch_mgr : int -> float -> wagner_mgr
+    class wagner_srch_mgr : bool -> int -> float -> wagner_mgr
 
     (** {2 Local Search Managers *)
     (** All the local search managers take a Sampler.search_manager as an
@@ -203,7 +203,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
     (** a search manager of the wagner tree construction. This keeps track of the
     * best tree at each round of node addition. *)
-    class wagner_srch_mgr max thresh : wagner_mgr = 
+    class wagner_srch_mgr verify_cost max thresh : wagner_mgr = 
         object (self)
         
         val mutable c_delta = Ptree.NoCost 
@@ -241,7 +241,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             (** Function to clone the current instance and fill it with default
              * values. *)
         method clone = 
-            new wagner_srch_mgr true_max m_thr
+            new wagner_srch_mgr verify_cost true_max m_thr
                 
             (** Function to return whether there are any more trees to search. *)
         method any_trees =
@@ -289,16 +289,21 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             let checker ((m_max, cur_best, results) as r) (v, estimate, _) =
                 if estimate > cur_best +. m_thr then  r
                 else begin
-                    let a, b, c, tabu_mgr = Lazy.force v in
-                    if ( b < cur_best ) then begin
+                    let a, b, c, tabu_mgr, cost_for_comparisons = 
+                        let a, b, c, tabu_mgr = Lazy.force v in
+                        if verify_cost then a, b, c, tabu_mgr, b
+                        else a, b, c, tabu_mgr, estimate
+                    in
+                    if ( cost_for_comparisons < cur_best ) then begin
                         (* We are ok, we must add this one *)
                         let counter, results = 
-                            self#filterout m_max results b b 
+                            self#filterout m_max results cost_for_comparisons
+                            cost_for_comparisons 
                         in
-                        m_max - 1 + counter, b,
+                        m_max - 1 + counter, cost_for_comparisons,
                         ((Lazy.lazy_from_val (a, b, c, tabu_mgr)), b, c) :: 
                             results
-                    end else if b < cur_best +. m_thr then begin
+                    end else if cost_for_comparisons < cur_best +. m_thr then begin
                         (* We are more or less ok, we make the decision based on
                         * m_max *)
                         if m_max > 0 then begin
@@ -307,7 +312,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                                 results
                         end else begin
                             let counter, results = 
-                                self#filterout m_max results b cur_best 
+                                self#filterout m_max results
+                                cost_for_comparisons cur_best 
                             in              
                             m_max - 1 + counter, cur_best,
                             ((Lazy.lazy_from_val (a, b, c, tabu_mgr)), b, c) ::

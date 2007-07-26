@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 1952 $"
+let () = SadmanOutput.register "Node" "$Revision: 2006 $"
 
 let debug = false
 let debug_exclude = false
@@ -1468,11 +1468,16 @@ let structure_into_sets data (nodes : node_data list) =
     in
     nodes, !data'
 
+let debug_profile_memory = false
 
+let current_snapshot x = 
+    if debug_profile_memory then MemProfiler.current_snapshot x
+    else ()
 
 let load_data ?taxa ?codes ?(classify=true) data = 
     (* Not only we make the list a set, we filter those characters that have
     * weight 0. *)
+    current_snapshot "Node.load_data start";
     let make_set_of_list lst =
         List.fold_left (fun acc x -> 
             if 0. = Data.get_weight x data then acc
@@ -1544,6 +1549,7 @@ let load_data ?taxa ?codes ?(classify=true) data =
         List.map (fun x -> { x with characters = sorted x.characters }) nodes
     in
     let nodes, data = structure_into_sets data nodes in
+    current_snapshot "Node.load_data end";
     data, nodes
 
 (* OUTPUT TO XML *)

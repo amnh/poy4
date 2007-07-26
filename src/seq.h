@@ -30,15 +30,16 @@
 #define Seq_pointer(a) ((struct seq **) Data_custom_val(a))
 #define Seq_custom_val(a) (*((struct seq **) Data_custom_val(a)))
 #define Seq_struct(a) (Seq_custom_val(a))
+#define SEQT unsigned char
 
 /* Sequence structure to be used inside ocaml custom types. */
 struct seq {
     int cap;        /* Capacity of the sequence memory structure. */
     int len;        /* Total length of the sequence stored. */
-    int *head;
-    int *begin;      /* Offset of the position where the first element of 
+    SEQT *head;
+    SEQT *begin;      /* Offset of the position where the first element of 
                        the sequence is actually stored. */
-    int *end;
+    SEQT *end;
     struct pool *my_pool;
 };
 
@@ -57,7 +58,7 @@ __inline void
 #else
 inline void
 #endif
-seq_prepend (seqt a, int v);
+seq_prepend (seqt a, SEQT v);
 
 /* Gets the total length of the sequence a */
 #ifdef _WIN32
@@ -69,36 +70,36 @@ seq_get_len (const seqt a);
 
 /* Gets a pointer to the beginning of the sequence a */
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_begin (const seqt a);
 
 /* Gets a pointer to the beginning of the array where the sequence is stored.
  * Note that begin != head. */
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_head (const seqt a);
 
 /* Gets a pointer to the memory location where the last element of the sequence
  * a is stored. */
 #ifdef _WIN32
-__inline int *
+__inline SEQT *
 #else
-inline int *
+inline SEQT *
 #endif
 seq_get_end (const seqt a);
 
 /* Gets the value of the sequence a in the position p, a starting in position 0
  */
 #ifdef _WIN32
-__inline int 
+__inline SEQT 
 #else
-inline int 
+inline SEQT 
 #endif
 seq_get (const seqt a, int p);
 
@@ -108,6 +109,6 @@ __inline void
 #else
 inline void
 #endif
-seq_set (seqt a, int p, int v);
+seq_set (seqt a, int p, SEQT v);
 
 #endif /* SEQ_H */

@@ -19,20 +19,27 @@
 
 let () = SadmanOutput.register "Mst" "$Revision: 1673 $"
 
-type mst = int list All_sets.IntegerMap.t
+type mst = (int * float) list All_sets.IntegerMap.t
 
 let empty = All_sets.IntegerMap.empty
 
-let connect_one_dir a b mst = 
+let connect_one_dir a b distance mst = 
     if All_sets.IntegerMap.mem a mst then
         let cr = All_sets.IntegerMap.find a mst in
-        All_sets.IntegerMap.add a (b :: cr) mst
-    else All_sets.IntegerMap.add a [b] mst
+        All_sets.IntegerMap.add a ((b, distance) :: cr) mst
+    else All_sets.IntegerMap.add a [(b, distance)] mst
 
-let connect a b mst = 
-    connect_one_dir b a (connect_one_dir a b mst)
+let connect a b distance mst = 
+    connect_one_dir b a distance (connect_one_dir a b distance mst)
 
-let kruskal distance_matrix list =
+type mst_preference = Closest | Furthest
+
+let kruskal meth distance_matrix list =
+    let comparison = 
+        match meth with
+        | Closest -> (fun x y -> x >= y)
+        | Furthest -> (fun x y -> x <= y)
+    in
     let find_best did todo =
         List.fold_left (fun tmpacc in_tree ->
             List.fold_left (fun acc not_in_tree ->
@@ -42,7 +49,7 @@ let kruskal distance_matrix list =
                         not_in_tree)
                 | Some (cd, _, _) ->
                         let nd = distance_matrix in_tree not_in_tree in
-                        if nd >= cd then acc
+                        if comparison nd cd then acc
                         else Some (nd, in_tree, not_in_tree))
             tmpacc todo) None did
     in
@@ -50,7 +57,7 @@ let kruskal distance_matrix list =
         match find_best did todo with
         | None -> mst
         | Some (tadd, a, b) -> 
-                let mst = connect a b mst
+                let mst = connect a b tadd mst
                 and did = b :: did 
                 and todo = List.filter (fun x -> x <> b) todo in
                 aux_kruskal (tadd +. total) mst did todo
@@ -74,7 +81,7 @@ let rec collapser tree =
 
 let get_neighbors_not_visited visited vertex mst =
     let neighs = All_sets.IntegerMap.find vertex mst in
-    List.filter (fun x -> not (All_sets.Integers.mem x visited)) neighs
+    List.filter (fun (x, _) -> not (All_sets.Integers.mem x visited)) neighs
 
 let vertices_from_mst mst = 
     All_sets.IntegerMap.fold (fun a _ acc -> a :: acc) mst [] 
@@ -91,7 +98,18 @@ let random_list lst =
     Array_ops.randomize arr;
     Array.to_list arr
 
-let randomized_post_order to_name mst =
+type priorities = Random | Closest | Furthest2
+
+let process_list_by_method meth lst =
+    List.map (fun (x, _) -> x) 
+    (match meth with
+    | Random -> random_list lst
+    | Closest -> List.sort (fun (_, (x : float)) (_, (y : float)) ->
+            compare x y) lst
+    | Furthest2 -> 
+            List.sort (fun (_, (x: float)) (_, (y : float)) -> compare y x) lst)
+
+let post_order prioritize to_name mst =
     let rec aux_dfs visited vertex =
         let leaf = 
             let name = to_name vertex in
@@ -99,7 +117,7 @@ let randomized_post_order to_name mst =
         and visited = All_sets.Integers.add vertex visited in
         let neighbors = 
             let tmp = get_neighbors_not_visited visited vertex mst in
-            random_list tmp
+            process_list_by_method prioritize tmp
         in
         let visited, trees = 
             List.fold_left (fun (visited, trees) vertex ->
@@ -120,6 +138,7 @@ let simplified_order to_name mst =
         match get_neighbors_not_visited visited vertex mst with
         | [] -> visited, (Parser.Tree.Leaf name)
         | neighbors ->
+                let neighbors = List.map (fun (x, _) -> x) neighbors in
                 let visited, trees =
                     List.fold_left (fun (visited, trees) vertex ->
                         let visited, nt = aux_dfs visited vertex in
@@ -130,13 +149,13 @@ let simplified_order to_name mst =
     let start =  (* If we have choosen a leaf, we take it's neighbor *)
         let item = get_random_vertex mst in
         match get_neighbors_not_visited All_sets.Integers.empty item mst with
-        | [one] -> one
+        | [(one, _)] -> one
         | _ -> item
     in
     let _, tree = aux_dfs All_sets.Integers.empty start in
     tree
 
-let randomized_bfs_traversal mst =
+let bfs_traversal prioritize mst =
     let queue = Queue.create () in
     let rec aux_bfs visited acc =
         if not (Queue.is_empty queue) then
@@ -145,7 +164,7 @@ let randomized_bfs_traversal mst =
             and visited = All_sets.Integers.add item visited in
             let ngbs = 
                 let t = get_neighbors_not_visited visited item mst in
-                random_list t 
+                process_list_by_method prioritize t 
             in
             let _ = List.iter (fun x -> Queue.push x queue) ngbs in
             aux_bfs visited acc
@@ -155,13 +174,13 @@ let randomized_bfs_traversal mst =
     Queue.add item queue;
     aux_bfs All_sets.Integers.empty []
 
-let randomized_dfs_traversal mst =
+let dfs_traversal prioritize mst =
     let rec aux_dfs (visited, acc) item = 
         let acc = item :: acc
         and visited = All_sets.Integers.add item visited in
         let ngbs =
             let t = get_neighbors_not_visited visited item mst in
-            random_list t
+            process_list_by_method prioritize t
         in
         List.fold_left aux_dfs (visited, acc) ngbs 
     in
