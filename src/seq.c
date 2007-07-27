@@ -445,7 +445,7 @@ seq_CAML_get (value s, value p) {
     int cp;
     cs = Seq_custom_val(s);
     cp = Int_val(p);
-    CAMLreturn (Val_int(seq_get (cs, cp)));
+    CAMLreturn (Val_int((int) (seq_get (cs, cp))));
 }
 
 value

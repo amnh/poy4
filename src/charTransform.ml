@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 1952 2007-07-10 18:28:23Z andres $ *)
+(* $Id: charTransform.ml 2013 2007-07-27 20:25:21Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,13 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 1952 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2013 $"
+
+let check_assertion_two_nbrs a b c =
+    if a <> Tree.get_id b then true
+    else 
+        let _ = Status.user_message Status.Error c in
+        false
 
 module type S = sig
     type a 
@@ -483,6 +489,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                     --> fun x -> (x, Node.Union.leaf None None x)
                     --> fun x -> Ptree.add_node_data code x final_tree
             | (Tree.Interior (_, par, a, b)) as node ->
+                    assert (check_assertion_two_nbrs prev node "5");
                     let a, b = Tree.other_two_nbrs prev node in
                     Ptree.get_node_data code original_tree 
                     --> fun x -> 
@@ -559,15 +566,18 @@ insert_union parent union_node tmp
             let rec traverse_tree parent1 parent2 ch1 ch2 positions1 positions2 acc =
                 let node1, node1u = Ptree.get_node_data ch1 tree 
                 and node2, node2u = Ptree.get_node_data ch2 tree in
-                let node1, node2, ch1, ch2 =
+                let node1, node2, ch1, ch2, parent1, parent2 =
                     if 
                         Node.min_child_code parent1 node1 < 
                         Node.min_child_code parent2 node2 
                     then
-                        (node1, node1u), (node2, node2u), ch1, ch2 
-                    else (node2, node2u), (node1, node1u), ch2, ch1
+                        (node1, node1u), (node2, node2u), ch1, ch2, parent1,
+                        parent2
+                    else (node2, node2u), (node1, node1u), ch2, ch1, parent2,
+                    parent1
                 in
                 let process_one parent node_data ch positions acc =
+                    assert (ch <> parent);
                     if Tree.is_leaf ch tree.Ptree.tree then
                         let _, the_sequence, the_union, _, _, alph =
                             get_sequence None code node_data in
@@ -578,6 +588,7 @@ insert_union parent union_node tmp
                     else
                         match Ptree.get_node ch tree with
                         | (Tree.Interior (a, b, c, d)) as n' ->
+                                assert (check_assertion_two_nbrs parent n' "6");
                                 let c, d = Tree.other_two_nbrs parent n' in
                                 let (_, ts, the_union, _, _, _) = 
                                     get_sequence (Some parent) code node_data 
@@ -587,9 +598,12 @@ insert_union parent union_node tmp
                                     let p1, p2 = 
                                         Sequence.Unions.get_positions the_union positions
                                     in
-                                    if (ever_increasing p1) && (ever_increasing p2) then
+                                    if (ever_increasing p1) && (ever_increasing
+                                    p2) then begin
+                                        assert (a <> c); 
+                                        assert (a <> d);
                                         traverse_tree (Some a) (Some a) c d p1 p2 acc
-                                    else begin
+                                    end else begin
                                         let printer x = 
                                             List.iter (fun (x, _) -> print_int x;
                                             print_string " ") x;
@@ -618,7 +632,10 @@ insert_union parent union_node tmp
                 in
                 let p1, p2 = 
                     match parent1, parent2 with
-                    | Some x, Some y -> x, y
+                    | Some x, Some y -> 
+                            assert (x <> ch1);
+                            assert (y <> ch2);
+                            x, y
                     | _ -> assert false
                 in
                 let acc = process_one p1 node1 ch1 positions1 acc in
@@ -628,6 +645,7 @@ insert_union parent union_node tmp
             let root = Ptree.get_component_root handle tree in
             match root.Ptree.root_median with
             | Some ((`Edge (a, b)), _) ->
+                    assert (a <> b);
                     let p1, p2 = Sequence.Unions.get_positions union positions in
                     traverse_tree (Some b) (Some a) a b p1 p2 [], code
             | _ -> failwith "Impossible"

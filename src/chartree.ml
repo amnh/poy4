@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 1952 2007-07-10 18:28:23Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 1952 $"
+(* $Id: chartree.ml 2013 2007-07-27 20:25:21Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 2013 $"
 
 
 (** chartree.ml *)
@@ -42,6 +42,12 @@ let debug_costfn = false
 let debug_uppass_which_handle = false
 let debug_no_incremental = false
 let odebug = Status.user_message Status.Information
+
+let check_assertion_two_nbrs a b c =
+    if a <> Tree.get_id b then true
+    else 
+        let _ = Status.user_message Status.Error c in
+        false
 
 module IntSet = All_sets.Integers
 
@@ -131,7 +137,8 @@ let downpass_handle handle ({Ptree.tree=tree} as ptree) =
                        | None ->
                              ch2id, ch3id
                        | Some parent_id ->
-                             Tree.other_two_nbrs parent_id node in
+                               assert (check_assertion_two_nbrs parent_id node "9");
+                               Tree.other_two_nbrs parent_id node in
                    let ch1data = Ptree.get_node_data ch1id curr_tree in
                    let ch2data = Ptree.get_node_data ch2id curr_tree in
                    let selfdata =
@@ -263,8 +270,10 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
                    | Some parent_id -> begin
                          (* We should treat the case of the node which is the
                             handle's parent separately; we now do this. *)
-                         let ch1id, ch2id = Tree.other_two_nbrs
-                             parent_id node in
+                         let ch1id, ch2id = 
+                             assert (check_assertion_two_nbrs parent_id node "0");
+                             Tree.other_two_nbrs parent_id node 
+                         in
                          let mydata = get_node nid ptree in
                          let pardata = get_parent nid parent_id ptree in
                          let ch1data = get_node ch1id ptree in

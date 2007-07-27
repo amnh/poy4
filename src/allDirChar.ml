@@ -227,12 +227,19 @@ with type b = AllDirNode.OneDirF.n = struct
         tree
 
 
+    let check_assertion_two_nbrs a b c =
+        if a <> Tree.get_id b then true
+        else 
+            let _ = Status.user_message Status.Error c in
+            false
+
     let get_pre_active_ref_code ptree = 
         let rec get_subtree parent current acc_pre_codes = 
             let pre_codes = 
                 try                      
                     let a, b = 
                         let currentn = Ptree.get_node current ptree in 
+                        assert (check_assertion_two_nbrs parent currentn "1");
                         Tree.other_two_nbrs parent currentn
                     in
                     let current_d = 
@@ -313,6 +320,7 @@ with type b = AllDirNode.OneDirF.n = struct
             try 
                 let a, b = 
                     let currentn = Ptree.get_node current ptree in 
+                    assert (check_assertion_two_nbrs parent currentn "2");
                     Tree.other_two_nbrs parent currentn
                 in
                 ptree
@@ -640,7 +648,9 @@ with type b = AllDirNode.OneDirF.n = struct
                 | (Tree.Interior (_, par, a, b)) as v ->
                         let a, b = 
                             match prev with
-                            | Some prev -> Tree.other_two_nbrs prev v
+                            | Some prev -> 
+                                    assert (check_assertion_two_nbrs prev v "3");
+                                    Tree.other_two_nbrs prev v
                             | None -> a, b
                         in
                         let interior = create_lazy_interior_down ptree code a b
@@ -659,6 +669,7 @@ with type b = AllDirNode.OneDirF.n = struct
                         let a, b, prev =
                             match prev with
                             | Some prev ->
+                                    assert (check_assertion_two_nbrs prev v "4");
                                     let a, b = Tree.other_two_nbrs prev v in
                                     a, b, prev
                             | None -> 

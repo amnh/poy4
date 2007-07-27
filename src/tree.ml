@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 1865 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2013 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -929,9 +929,12 @@ let other_two_nbrs nbr node =
                 assert (
                     if nbr = nbr3 then true
                     else begin
-                        Printf.printf "This is the failure point: %d but the \
-                        neighbors of %d are %d %d and %d" nbr id nbr1 nbr2
-                        nbr3;
+                        let mst = 
+                            Printf.sprintf "This is the failure point: %d but the \
+                            neighbors of %d are %d %d and %d" nbr id nbr1 nbr2
+                            nbr3 
+                        in
+                        let _ = Status.user_message Status.Error mst in
                         false
                     end);
                 (nbr1, nbr2)

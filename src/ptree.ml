@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 1972 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2013 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1512,7 +1512,9 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
               let data = str_gen self in
               Parser.Tree.Leaf data, 0, data
         | Tree.Interior (our_id, _, _, _) ->
-              let (ch1, ch2) = Tree.other_two_nbrs prev_node node in
+              let (ch1, ch2) = 
+                  assert (prev_node <> Tree.get_id node);
+                  Tree.other_two_nbrs prev_node node in
               let a, ad, ao = rec_down (Tree.get_node ch1 tree) our_id in
               let b, bd, bo = rec_down (Tree.get_node ch2 tree) our_id in
               let a =
@@ -1739,7 +1741,9 @@ let to_xml ch tree d =
                 flush ch;
         | Tree.Interior (our_id, _, _, _) ->
                 let data = get_node_data our_id tree in
-                let (ch1, ch2) = Tree.other_two_nbrs prev_node node in
+                let (ch1, ch2) = 
+                    assert (prev_node <> Tree.get_id node);
+                    Tree.other_two_nbrs prev_node node in
                 output_string ch "<htu>\n";
                 flush ch;
                 Node.to_xml d ch data;
