@@ -272,10 +272,10 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
     size = (1 << (res->lcm * 2)) * sizeof(int);
     res->cost = (int *) malloc (size);
     res->worst = (int *) malloc (size);
-    size = (1 << (res->lcm * 2)) * sizeof(SEQT);
-    res->median = (SEQT *) malloc (size);
     res->prepend_cost = (int *) malloc (size);
     res->tail_cost = (int *) malloc (size);
+    size = (1 << (res->lcm * 2)) * sizeof(SEQT);
+    res->median = (SEQT *) malloc (size);
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);
         free (res->median);

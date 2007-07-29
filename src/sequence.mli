@@ -392,13 +392,13 @@ module Unions : sig
     type u = { 
         seq : s; 
         offset : 
-            (int, Bigarray.int_elt, Bigarray.c_layout) 
+            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
             Bigarray.Array1.t;
         union_c1 : 
-            (int, Bigarray.int_elt, Bigarray.c_layout) 
+            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
             Bigarray.Array1.t;
         union_c2 :
-            (int, Bigarray.int_elt, Bigarray.c_layout) 
+            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
             Bigarray.Array1.t;
     }
 

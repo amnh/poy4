@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2013 2007-07-27 20:25:21Z andres $ *)
+(* $Id: charTransform.ml 2016 2007-07-29 16:44:07Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2013 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2016 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -623,8 +623,8 @@ insert_union parent union_node tmp
                                         print_newline ();
                                         for i = cap - union_len to cap - 1 do
                                             Printf.printf "%d, %d\n" 
-                                            the_union.Sequence.Unions.union_c1.{i}
-                                            the_union.Sequence.Unions.union_c2.{i};
+                                            (Int32.to_int the_union.Sequence.Unions.union_c1.{i})
+                                            (Int32.to_int the_union.Sequence.Unions.union_c2.{i});
                                         done;
                                         failwith "Assertion broken in 631";
                                     end

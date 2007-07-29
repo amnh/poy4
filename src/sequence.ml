@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 1952 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2016 $"
 
 module Pool = struct
     type p
@@ -1416,21 +1416,19 @@ module Unions = struct
     * don't change it unless you change also the C side (union.c and union.h). 
     * *)
         type off_type = 
-            (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Array1.t
+            (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
 
         type u = {
             seq : s;
             offset : off_type;
             union_c1 : off_type;
-            union_c2 : off_type;
-        }
-
+            union_c2 : off_type; } 
         let create_seq = create 
 
         let create_union do_init s = 
             let create cap =
                     Bigarray.Array1.create 
-                    Bigarray.int
+                    Bigarray.int32
                     Bigarray.c_layout 
                     cap
             in
@@ -1438,7 +1436,7 @@ module Unions = struct
                 let _ = 
                     let cap = Bigarray.Array1.dim res in
                     for i = cap - 1 downto 0 do
-                        res.{i} <- 0;
+                        res.{i} <- Int32.zero;
                     done
                 in
                 res
@@ -1448,7 +1446,7 @@ module Unions = struct
                     let cap = Bigarray.Array1.dim res in
                     let offset = cap - len in
                     for i = 0 to len - 1 do
-                        res.{i + offset} <- i;
+                        res.{i + offset} <- Int32.of_int i;
                     done;
                 in
                 res
@@ -1493,8 +1491,8 @@ module Unions = struct
             let seq_len = length ua.seq in
             let get_position arr (x, y) = 
                 try
-                    arr.{len - seq_len + x},
-                    arr.{len - seq_len + y} 
+                    Int32.to_int (arr.{len - seq_len + x}),
+                    Int32.to_int arr.{len - seq_len + y}
                 with
                 | err ->
                         print_endline ("I have an error with len " ^
