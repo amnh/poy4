@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2006 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2019 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -277,11 +277,6 @@ module Fasta = struct
                 else ()
 
     let process_sequence remove_gaps lexer alph lst =
-(*
-        List.iter (fun s -> print_string s; print_string "<->") lst;
-        print_newline ();
-        print_newline ();
-*)
         let lst = List.rev lst in
         let gap = Alphabet.get_gap alph in
         let seq, length =

@@ -342,6 +342,7 @@ static struct custom_operations sequence_custom_operations  = {
 };
 
 #define SEQ_UNUSED_MEMORY 1000000
+#define SHORT_SEQUENCES 16384
 
 value 
 seq_CAML_create (value cap) {
@@ -352,6 +353,15 @@ seq_CAML_create (value cap) {
     int len;
     size_t s;
     len = Int_val(cap);
+#ifndef USE_LONG_SEQUENCES
+    if (len > SHORT_SEQUENCES) 
+        failwith ("You are analyzing long sequences. This version \
+                of POY was compiled without the --enable-long-sequences option, \
+                setting a hard-coded limit of SHORT_SEQUENCES in their length. \
+                To run this analysis you need to enable that option at compile time. \
+                Either compile yourself the program, or request a version suited \
+                for your needs in the POY mailing list (poy4@googlegroups.com).");
+#endif
     res = caml_alloc_custom 
         (&sequence_custom_operations, (sizeof(struct seq *)), len, SEQ_UNUSED_MEMORY);
     tmp3 = Seq_pointer(res);

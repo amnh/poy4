@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2016 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2019 $"
 
 module Pool = struct
     type p
@@ -1415,8 +1415,21 @@ module Unions = struct
     * ATTENTION, WARNING: The following structure is used AS IS in the C side,
     * don't change it unless you change also the C side (union.c and union.h). 
     * *)
+#ifdef USE_LONG_SEQUENCES
         type off_type = 
             (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
+        let zero = Int32.zero
+        let to_int = Int32.to_int
+        let of_int = Int32.of_int
+        let constructor = Bigarray.int32
+#else
+        type off_type = 
+            (int, Bigarray.int16_signed_elt, Bigarray.c_layout) Bigarray.Array1.t
+        let zero = 0
+        let to_int x = x
+        let of_int x = x
+        let constructor = Bigarray.int16_signed
+#endif
 
         type u = {
             seq : s;
@@ -1428,7 +1441,7 @@ module Unions = struct
         let create_union do_init s = 
             let create cap =
                     Bigarray.Array1.create 
-                    Bigarray.int32
+                    constructor
                     Bigarray.c_layout 
                     cap
             in
@@ -1436,7 +1449,7 @@ module Unions = struct
                 let _ = 
                     let cap = Bigarray.Array1.dim res in
                     for i = cap - 1 downto 0 do
-                        res.{i} <- Int32.zero;
+                        res.{i} <- zero;
                     done
                 in
                 res
@@ -1446,7 +1459,7 @@ module Unions = struct
                     let cap = Bigarray.Array1.dim res in
                     let offset = cap - len in
                     for i = 0 to len - 1 do
-                        res.{i + offset} <- Int32.of_int i;
+                        res.{i + offset} <- of_int i;
                     done;
                 in
                 res
@@ -1491,8 +1504,8 @@ module Unions = struct
             let seq_len = length ua.seq in
             let get_position arr (x, y) = 
                 try
-                    Int32.to_int (arr.{len - seq_len + x}),
-                    Int32.to_int arr.{len - seq_len + y}
+                    to_int (arr.{len - seq_len + x}),
+                    to_int arr.{len - seq_len + y}
                 with
                 | err ->
                         print_endline ("I have an error with len " ^

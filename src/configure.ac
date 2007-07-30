@@ -14,6 +14,8 @@ AC_SUBST(USEGRAPHICS)
 AC_SUBST(USEINTERFACE)
 AC_SUBST(USESHAREDHD)
 AC_SUBST(USEPARALLEL)
+AC_SUBST(USE_LONG_SEQUENCES)
+AC_SUBST(USE_LARGE_ALPHABETS)
 AC_SUBST(MPILNAME)
 AC_SUBST(OCAML)
 AC_SUBST(OCAMLC)
@@ -38,6 +40,16 @@ AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi=libname],
 
 AC_ARG_ENABLE([shared-hd], [AS_HELP_STRING([--enable-shared-hd],
               [Force POY to support live broadcast of file contents when running in parallel. The default is false.])], [USESHAREDHD=true], [USESHAREDHD=false])
+
+AC_ARG_ENABLE([long-sequences], [AS_HELP_STRING([--enable-long-sequences], 
+              [Enable the analysis of sequences longer than 16383 elements (The limit would be  2^31 or 2^63 for 32 bit and 64 bit architectures respectively). When using this option, more memory will be needed for the default search strategies. If you are analyzing fragments shorted than, say 12.000 bp, you are unlikely to need this option.])], 
+              [USE_LONG_SEQUENCES=true], 
+              [USE_LONG_SEQUENCES=false])
+
+AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
+              [Enable the analysis of alphabets larger than 255 elements. When using this option, more memory will be needed to store each tree (4 or 8 times more for 32 and 64 bit computers respectively). This option is only needed for large alphabets if you use custom alphabets. Normal nucleotide, aminoacid, or morphological analyses are nor affected by this option.])],
+              [USE_LARGE_ALPHABETS=true],
+              [USE_LARGE_ALPHABETS=false])
 
 # Checking for libraries according to the user's options.
 AS_IF([test $USEINTERFACE = "ncurses"], [AC_CHECK_LIB([ncurses], [scrollok],

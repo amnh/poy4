@@ -256,6 +256,14 @@ cmt
 cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
         int is_metric, cmt res) {
     size_t size;
+#ifndef USE_LARGE_ALPHABETS
+    if (a_sz > 255) 
+        failwith ("Apparently you are analyzing large alphabets. This version \
+                of POY was compiled without the --enable-large-alphabets option. \
+                To run this analysis you need to enable that option at compile time. \
+                Either compile yourself the program, or request a version suited \
+                for your needs in the POY mailing list (poy4@googlegroups.com).");
+#endif
     if (combinations != 0) {
         cm_set_gap (res, 1 << (a_sz - 1));
         cm_set_a_sz (res, cm_combinations_of_alphabet (a_sz));

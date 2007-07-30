@@ -30,7 +30,11 @@
 #define Seq_pointer(a) ((struct seq **) Data_custom_val(a))
 #define Seq_custom_val(a) (*((struct seq **) Data_custom_val(a)))
 #define Seq_struct(a) (Seq_custom_val(a))
+#ifdef USE_LARGE_ALPHABETS 
+#define SEQT unsigned long
+#else
 #define SEQT unsigned char
+#endif
 
 /* Sequence structure to be used inside ocaml custom types. */
 struct seq {

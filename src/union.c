@@ -26,7 +26,7 @@
 #include "union.h"
 
 void
-union_prepend_pair (unionofft a, unionofft b, unionofft c, int or){
+union_prepend_pair (unionofft a, unionofft b, unionofft c, SEQT or){
     seq_prepend (c->s, \
             or | seq_get (a->s, a->position) \
             | seq_get (b->s, b->position));
@@ -38,7 +38,7 @@ union_prepend_pair (unionofft a, unionofft b, unionofft c, int or){
 }
 
 void
-union_prepend_item (unionofft source, unionofft target, int or) {
+union_prepend_item (unionofft source, unionofft target, SEQT or) {
     seq_prepend (target->s, or | seq_get (source->s, source->position));
     source->position--;
     source->end--;
@@ -46,8 +46,8 @@ union_prepend_item (unionofft source, unionofft target, int or) {
 }
 
 int 
-union_copy_single (unionofft a, unionofft c, int it, int or) {
-    int i;
+union_copy_single (unionofft a, unionofft c, UNION_OFFT it, SEQT or) {
+    UNION_OFFT i;
     i = *(a->end);
     it += i;
     while (i > 0) {
@@ -59,7 +59,7 @@ union_copy_single (unionofft a, unionofft c, int it, int or) {
 
 int
 union_copy_non_homologous (unionofft au, unionofft bu, unionofft c, \
-        int items, int gap) {
+        UNION_OFFT items, SEQT gap) {
     if (au->position != -1) 
         items = union_copy_single (au, c, items, gap);
     if (bu->position != -1)
@@ -68,9 +68,9 @@ union_copy_non_homologous (unionofft au, unionofft bu, unionofft c, \
 }
 
 void
-union_prepend_and_fill_items (int interm, unionofft c, int prep, unionofft a, \
-        unionofft b, int apos, int bpos) {
-    int i;
+union_prepend_and_fill_items (SEQT interm, unionofft c, UNION_OFFT prep, unionofft a, \
+        unionofft b, UNION_OFFT apos, UNION_OFFT bpos) {
+    UNION_OFFT i;
     for (i = prep; i > 0; i--) {
         *(c->end) = i;
         c->end--;
@@ -89,9 +89,9 @@ union_prepend_and_fill_items (int interm, unionofft c, int prep, unionofft a, \
     return;
 }
 
-int
+SEQT
 union_move_left (unionofft a) {
-    int res;
+    SEQT res;
     res = seq_get (a->s, a->position);
     a->position--;
     a->end--;
@@ -101,7 +101,7 @@ union_move_left (unionofft a) {
 
 void
 union_merge (seqt a, seqt b, unionofft au, unionofft bu, unionofft c, cmt m) {
-    int items_prepended = 0, i, gap, lena, interm, apos, bpos;
+    UNION_OFFT items_prepended = 0, i, gap, lena, interm, apos, bpos;
     SEQT *begina, *beginb;
     lena = seq_get_len (a);
     gap = cm_get_gap (m);
@@ -115,12 +115,11 @@ union_merge (seqt a, seqt b, unionofft au, unionofft bu, unionofft c, cmt m) {
         if (i >= 0) {
             interm = cm_get_median (m, begina[i], beginb[i]);
             if (gap == interm) {
-                if ((i != 0) && (gap == begina[i]))
-                    union_prepend_item (bu, c, gap);
-                else if ((gap == beginb[i]) && (i != 0))
-                    union_prepend_item (au, c, gap);
-                else if (i != 0) 
-                    union_prepend_pair (au, bu, c, gap);
+                if (i != 0) {
+                    if (gap == begina[i]) union_prepend_item (bu, c, gap);
+                    else if (gap == beginb[i]) union_prepend_item (au, c, gap);
+                    else union_prepend_pair (au, bu, c, gap);
+                }
                 else {
                     union_prepend_and_fill_items (gap, c, items_prepended, au, bu, \
                             0, 0);
@@ -135,7 +134,7 @@ union_merge (seqt a, seqt b, unionofft au, unionofft bu, unionofft c, cmt m) {
                     apos = 0;
                     bpos = bu->position;
                     interm = interm | union_move_left (bu);
-                } 
+                }
                 else if (gap == beginb[i]) {
                     bpos = 0;
                     apos = au->position;
@@ -164,8 +163,8 @@ union_merge (seqt a, seqt b, unionofft au, unionofft bu, unionofft c, cmt m) {
 }
 
 void
-union_CAML_produce (unionofft u, seqt s, int *off, int *begin, \
-        int *ca_offsets, int *cb_offsets, int length) {
+union_CAML_produce (unionofft u, seqt s, UNION_OFFT *off, UNION_OFFT *begin, \
+        UNION_OFFT *ca_offsets, UNION_OFFT *cb_offsets, UNION_OFFT length) {
     u->s = s;
     u->offsets = off;
     u->begin = begin;
@@ -186,14 +185,14 @@ union_CAML_produce (unionofft u, seqt s, int *off, int *begin, \
 
 void
 union_CAML_unwrap (value a, unionofft u) {
-    int *offset, length, capacity, *ca_offsets, *cb_offsets;
+    UNION_OFFT *offset, length, capacity, *ca_offsets, *cb_offsets;
     seqt s;
     s =  Seq_struct (Field (a, 0)); /* The sequence */
-    offset = (int *) Data_bigarray_val(Field(a, 1));
+    offset = (UNION_OFFT *) Data_bigarray_val(Field(a, 1));
     length = seq_get_len (s);
     capacity = seq_get_cap (s);
-    ca_offsets = (int *) Data_bigarray_val(Field(a, 2));
-    cb_offsets = (int *) Data_bigarray_val(Field(a, 3));
+    ca_offsets = (UNION_OFFT *) Data_bigarray_val(Field(a, 2));
+    cb_offsets = (UNION_OFFT *) Data_bigarray_val(Field(a, 3));
     if (length == 0) 
         union_CAML_produce (u, s, offset, (offset + capacity - 1), \
                 (ca_offsets + capacity - 1), (cb_offsets + capacity - 1),

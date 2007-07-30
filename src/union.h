@@ -23,17 +23,23 @@
 #include "seq.h"
 #include "cm.h"
 
+#ifdef USE_LONG_SEQUENCES
+#define UNION_OFFT signed int
+#else
+#define UNION_OFFT signed short
+#endif
+
 struct unionoff {
     seqt s;         /* A pointer to the sequence that holds the union */
-    int *offsets;   /* A pointer to the array of offsets */
-    int *begin;     /* The current position where the sequence starts */
-    int *end;       /* The end of the offset array. This is after the 
+    UNION_OFFT *offsets;   /* A pointer to the array of offsets */
+    UNION_OFFT *begin;     /* The current position where the sequence starts */
+    UNION_OFFT *end;       /* The end of the offset array. This is after the 
                        first writtable memory position */
-    int *ca_offsets;
-    int *cb_offsets;
-    int counter;    /* A convenient counter for the merging operations */
-    int length;     /* The current number of items it holds */
-    int position;   /* The location of the current position in some 
+    UNION_OFFT *ca_offsets;
+    UNION_OFFT *cb_offsets;
+    UNION_OFFT counter;    /* A convenient counter for the merging operations */
+    UNION_OFFT length;     /* The current number of items it holds */
+    UNION_OFFT position;   /* The location of the current position in some 
                        internal operations */
 };
 

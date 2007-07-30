@@ -389,17 +389,24 @@ end
 
 module Unions : sig
 
+#ifdef USE_LONG_SEQUENCES
+    type off_type =
+            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
+            Bigarray.Array1.t
+
+    val to_int : int32 -> int
+#else
+    type off_type =
+            (int, Bigarray.int16_signed_elt, Bigarray.c_layout) 
+            Bigarray.Array1.t
+    val to_int : int -> int
+#endif
+
     type u = { 
         seq : s; 
-        offset : 
-            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
-            Bigarray.Array1.t;
-        union_c1 : 
-            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
-            Bigarray.Array1.t;
-        union_c2 :
-            (int32, Bigarray.int32_elt, Bigarray.c_layout) 
-            Bigarray.Array1.t;
+        offset : off_type;
+        union_c1 : off_type;
+        union_c2 : off_type;
     }
 
     val leaf : s -> u

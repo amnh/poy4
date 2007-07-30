@@ -663,6 +663,8 @@ USEGRAPHICS
 USEINTERFACE
 USESHAREDHD
 USEPARALLEL
+USE_LONG_SEQUENCES
+USE_LARGE_ALPHABETS
 MPILNAME
 OCAML
 OCAMLC
@@ -1258,12 +1260,28 @@ Optional Features:
                           Valid options are none, ocaml, and tk. The default
                           is none
   --enable-interface      Force POY's user interface. Valid options are
-                          ncurses and readline. The default is ncurses.
+                          ncurses, readline, and html. The default is ncurses.
   --enable-mpi=libname    Turns on parallel support using MPI, with the
                           library name libname. When using MPI remember to set
                           CC to mpicc.
   --enable-shared-hd      Force POY to support live broadcast of file contents
                           when running in parallel. The default is false.
+  --enable-long-sequences Enable the analysis of sequences longer than 16383
+                          elements (The limit would be 2^31 or 2^63 for 32 bit
+                          and 64 bit architectures respectively). When using
+                          this option, more memory will be needed for the
+                          default search strategies. If you are analyzing
+                          fragments shorted than, say 12.000 bp, you are
+                          unlikely to need this option.
+  --enable-large-alphabets
+                          Enable the analysis of alphabets larger than 255
+                          elements. When using this option, more memory will
+                          be needed to store each tree (4 or 8 times more for
+                          32 and 64 bit computers respectively). This option
+                          is only needed for large alphabets if you use custom
+                          alphabets. Normal nucleotide, aminoacid, or
+                          morphological analyses are nor affected by this
+                          option.
 
 Some influential environment variables:
   CC          C compiler command
@@ -2644,6 +2662,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
+
 # Checking the kind of graphics that we intend to support.
 # Check whether --enable-graphics was given.
 if test "${enable_graphics+set}" = set; then
@@ -2674,6 +2694,22 @@ if test "${enable_shared_hd+set}" = set; then
   enableval=$enable_shared_hd; USESHAREDHD=true
 else
   USESHAREDHD=false
+fi
+
+
+# Check whether --enable-long-sequences was given.
+if test "${enable_long_sequences+set}" = set; then
+  enableval=$enable_long_sequences; USE_LONG_SEQUENCES=true
+else
+  USE_LONG_SEQUENCES=false
+fi
+
+
+# Check whether --enable-large-alphabets was given.
+if test "${enable_large_alphabets+set}" = set; then
+  enableval=$enable_large_alphabets; USE_LARGE_ALPHABETS=true
+else
+  USE_LARGE_ALPHABETS=false
 fi
 
 
@@ -5915,6 +5951,8 @@ USEGRAPHICS!$USEGRAPHICS$ac_delim
 USEINTERFACE!$USEINTERFACE$ac_delim
 USESHAREDHD!$USESHAREDHD$ac_delim
 USEPARALLEL!$USEPARALLEL$ac_delim
+USE_LONG_SEQUENCES!$USE_LONG_SEQUENCES$ac_delim
+USE_LARGE_ALPHABETS!$USE_LARGE_ALPHABETS$ac_delim
 MPILNAME!$MPILNAME$ac_delim
 OCAML!$OCAML$ac_delim
 OCAMLC!$OCAMLC$ac_delim
@@ -5928,7 +5966,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 59; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 61; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
