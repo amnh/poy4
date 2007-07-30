@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 1966 $"
+let () = SadmanOutput.register "Main" "$Revision: 2026 $"
 
-(* $Id: main.ml 1966 2007-07-16 17:35:15Z andres $ *)
+(* $Id: main.ml 2026 2007-07-30 22:37:51Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -79,7 +79,7 @@ let args =
 
 #endif
 
-let () = SadmanOutput.register "Main" "$Revision: 1966 $"
+let () = SadmanOutput.register "Main" "$Revision: 2026 $"
 
 let () = Status.init ()
 
@@ -146,6 +146,7 @@ let script =
         let lst = (List.rev !(Arguments.input)) in
         Some (PoyCommand.read_script_files false lst)
     with
+    (*
         | Stdpp.Exc_located (_, PoyCommand.Exit) -> exit 0
         | Stdpp.Exc_located ((a, b), Stream.Error err) 
         | Stdpp.Exc_located ((a, b), Token.Error err) ->
@@ -158,6 +159,7 @@ let script =
                 Status.user_message Status.Error msg;
                 if !(Arguments.just_exit) then exit 1
                 else None
+                *)
         | err ->
                 let msg = Printexc.to_string err in
                 Status.user_message Status.Error msg;
@@ -261,17 +263,18 @@ let _ =
             if !Arguments.only_run_argument_script then exit 1
             else ()
         with
-        | Stdpp.Exc_located (_, PoyCommand.Exit) -> exit 0
-        | Stdpp.Exc_located ((a, b), Stream.Error err) 
-        | Stdpp.Exc_located ((a, b), Token.Error err) ->
+        | Camlp4.PreCast.Loc.Exc_located (_, PoyCommand.Exit) -> exit 0
+        | Camlp4.PreCast.Loc.Exc_located (a, Stream.Error err) ->
+                let beg = Camlp4.PreCast.Loc.start_off a
+                and en = Camlp4.PreCast.Loc.stop_off a in
               let is_unknown = "illegal begin of expr" = err in
               let msg = "@[<v 4>Command error between characters @{<b>" ^ 
-                string_of_int a.Lexing.pos_cnum ^ "@} and @{<b>" ^
-                string_of_int b.Lexing.pos_cnum ^ "@}:@,@["^
+                string_of_int beg ^ "@} and @{<b>" ^
+                string_of_int en ^ "@}:@,@["^
                 (if is_unknown then "Unknown command" else
                     err) ^ "@]@]\n" in
                 Status.user_message Status.Error msg;
-                Status.error_location a.Lexing.pos_cnum b.Lexing.pos_cnum;
+                Status.error_location beg en;
                 let elements =
                     if is_unknown
                     then all_matches ~group:1 unknown_command_regexp !input

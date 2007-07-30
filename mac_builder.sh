@@ -36,19 +36,23 @@ function generate_binary {
     mv -f src/$8 $4
 }
 
+OCAMLROOT=/opt/ocaml
+OCAMLVERSION=3.10.0
+OCAML_PATH=/opt/ocaml/${OCAMLVERSION}
+
 # Generating for Panther, we don't produce parallel version.
 function panther_distribution {
     rm -f ./panther/seq_poy_panther.command
     rm -f ./panther/ncurses_poy_panther.command
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
         "--enable-interface=html" ./panther/seq_poy_panther.command \
-        /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc poy; then
+        ${OCAML_PATH}/panther/bin "" gcc poy; then
         exit 1
     fi
 
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
         "--enable-interface=ncurses" ./panther/ncurses_poy_panther.command \
-        /Developer/SDKs/MacOSX10.3.9.sdk/usr/bin "" gcc poy; then
+        ${OCAML_PATH}/panther/bin  "" gcc poy; then
         exit 1
     fi
 }
@@ -58,12 +62,12 @@ function panther_distribution {
 # Generating for PowerPC
 function generate_ppc {
     generate_binary /Developer/SDKs/MacOSX10.4u.sdk ppc "$1" \
-    ./$UNIVERSAL_DIRECTORY/$3 /opt/ocaml/ppc/3.09.3/bin/ "" "$2" $4
+    ./$UNIVERSAL_DIRECTORY/$3 ${OCAML_PATH}/tiger/ppc/bin "" "$2" $4
 }
 
 function generate_intel {
     generate_binary /Developer/SDKs/MacOSX10.4u.sdk i386 "$1" \
-    ./$UNIVERSAL_DIRECTORY/$3 /opt/ocaml/3.09.3/bin/ "" "$2" $4
+    ./$UNIVERSAL_DIRECTORY/$3 ${OCAML_PATH}/tiger/intel/bin "" "$2" $4
 }
 
 function make_universals {

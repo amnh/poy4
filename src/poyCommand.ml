@@ -912,18 +912,18 @@ let transform_all_commands (x : command list) =
 let to_local x = List.map (fun x -> `Local x) x
 
 (* The necessary types to produce the tree of the parsed input. *)
-let create_expr lexer = 
-    let gram = Grammar.gcreate lexer in
-    let expr = Grammar.Entry.create gram "expr" in
-    EXTEND
+open Camlp4.PreCast
+let create_expr () = 
+    let expr = Gram.Entry.mk "expr" in
+    EXTEND Gram
         GLOBAL: expr;
-        expr: [ [a = LIST1 command; EOI -> (a : command list)] ];
+        expr: [ [a = LIST1 command; `EOI -> (a : command list)] ];
         (* Application commands *)
         (* Transforming taxa or characters *)
         transform:
             [
                 [ LIDENT "transform"; left_parenthesis; 
-                    x = LIST0 transform_argument SEP ","; right_parenthesis ->
+                    x = LIST0 [ x = transform_argument -> x] SEP ","; right_parenthesis ->
                         (`Transform x : transform) ]
             ];
         transform_argument:
@@ -948,17 +948,17 @@ let create_expr lexer =
                 [ LIDENT "trailing_deletion"; ":"; x = STRING -> `TailFile x ] |
                 [ LIDENT "td"; ":"; x = STRING -> `TailFile x ] |
                 [ LIDENT "trailing_deletion"; ":"; left_parenthesis; 
-                    x = LIST1 INT SEP ","; right_parenthesis -> 
+                    x = LIST1 [ x = INT -> x]  SEP ","; right_parenthesis -> 
                         `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "td"; ":"; left_parenthesis; x = LIST1 INT SEP ",";
+                [ LIDENT "td"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
                     right_parenthesis -> 
                         `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
                 [ LIDENT "trailing_insertion"; ":"; x = STRING -> `PrepFile x ] |
                 [ LIDENT "ti"; ":"; x = STRING -> `PrepFile x ] |
                 [ LIDENT "trailing_insertion"; ":"; left_parenthesis; 
-                    x = LIST1 INT SEP ","; right_parenthesis -> 
+                    x = LIST1 [ x = INT -> x] SEP ","; right_parenthesis -> 
                         `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "ti"; ":"; left_parenthesis; x = LIST1 INT SEP ",";
+                [ LIDENT "ti"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
                     right_parenthesis -> 
                         `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
                 [ LIDENT "static_approx"; x = OPT informative_characters -> 
@@ -981,15 +981,15 @@ let create_expr lexer =
                 [ LIDENT "weightfactor"; ":"; x = neg_integer_or_float -> `WeightFactor (float_of_string x) ] |
                 [ LIDENT "search_based" -> `SearchBased ] |
                 [ LIDENT "seq_to_chrom"; ":"; left_parenthesis; x = LIST0
-                        chromosome_argument SEP ","; right_parenthesis -> `SeqToChrom x ] | 
+                        [ x = chromosome_argument -> x] SEP ","; right_parenthesis -> `SeqToChrom x ] | 
                 [ LIDENT "seq_to_breakinv"; ":"; left_parenthesis; x = LIST0
-                        chromosome_argument SEP ","; right_parenthesis -> `SeqToBreakinv x ] | 
+                        [ x = chromosome_argument -> x] SEP ","; right_parenthesis -> `SeqToBreakinv x ] | 
 
                 [ LIDENT "annchrom_to_breakinv"; ":"; left_parenthesis; x = LIST0
-                        chromosome_argument SEP ","; right_parenthesis -> `AnnchromToBreakinv x ] | 
+                        [x = chromosome_argument -> x] SEP ","; right_parenthesis -> `AnnchromToBreakinv x ] | 
 
                 [ LIDENT "dynamic_pam"; ":"; left_parenthesis; x = LIST0 
-                        chromosome_argument SEP ","; right_parenthesis -> `ChangeDynPam x ] | 
+                        [ x = chromosome_argument -> x] SEP ","; right_parenthesis -> `ChangeDynPam x ] | 
                 [ LIDENT "chrom_to_seq" -> `ChromToSeq [] ] |
                 [ LIDENT "breakinv_to_seq" -> `BreakinvToSeq [] ] 
             ];
@@ -1040,14 +1040,15 @@ let create_expr lexer =
                     `ClearRecovered ] |
                 [ LIDENT "quit" ; left_parenthesis; right_parenthesis -> `Exit ] |
                 [ LIDENT "echo"; left_parenthesis; a = STRING; OPT ",";
-                    x = LIST0 output_class SEP ","; right_parenthesis -> `Echo (a, x) ] |
+                    x = LIST0 [x = output_class -> x ] SEP ","; right_parenthesis -> `Echo (a, x) ] |
                 [ LIDENT "help"; left_parenthesis; a = OPT string_or_ident; 
                     right_parenthesis -> `Help a ] |
-                [ LIDENT "set"; left_parenthesis; b = LIST0 setting SEP ","; 
+                [ LIDENT "set"; left_parenthesis; b = LIST0 [x = setting -> x] SEP ","; 
                     right_parenthesis -> `Set b ] |
                 [ LIDENT "redraw"; left_parenthesis; right_parenthesis -> `Redraw ] |
                 [ LIDENT "wipe"; left_parenthesis; right_parenthesis -> `Wipe ] |
-                [ LIDENT "clear_memory"; left_parenthesis; x = LIST0 clear_options
+                [ LIDENT "clear_memory"; left_parenthesis; x = LIST0 [x =
+                    clear_options -> x]
                     SEP ","; right_parenthesis -> `ClearMemory x ] |
                 [ LIDENT "load"; left_parenthesis; a = STRING; 
                     right_parenthesis -> `Load a ] |
@@ -1062,7 +1063,7 @@ let create_expr lexer =
                         `Use (all_store_types, a) ] |
                 [ LIDENT "rediagnose"; left_parenthesis; 
                     right_parenthesis -> `ReDiagnose ] |
-                [ LIDENT "run"; left_parenthesis; a = LIST0 STRING SEP ","; 
+                [ LIDENT "run"; left_parenthesis; a = LIST0 [x = STRING -> x] SEP ","; 
                     right_parenthesis -> `ReadScript a ] |
                 [ LIDENT "cd"; left_parenthesis; a = STRING; right_parenthesis ->
                     `ChangeWDir a ] |
@@ -1105,7 +1106,8 @@ let create_expr lexer =
         (* Reporting *)
         report:
             [
-                [ LIDENT "report"; left_parenthesis; a = LIST0 report_argument SEP ","; 
+                [ LIDENT "report"; left_parenthesis; a = LIST0 [x =
+                    report_argument -> x] SEP ","; 
                     right_parenthesis -> `Report a ]
             ];
         report_argument:
@@ -1169,7 +1171,8 @@ let create_expr lexer =
         (* Perturbation method *)
         perturb:
             [
-                [ LIDENT "perturb"; left_parenthesis; x = LIST0 perturb_argument SEP ","; 
+                [ LIDENT "perturb"; left_parenthesis; x = LIST0 [x =
+                    perturb_argument -> x] SEP ","; 
                     right_parenthesis -> `Perturb x ]
             ];
         perturb_argument:
@@ -1198,7 +1201,8 @@ let create_expr lexer =
         (* Selecting characters or taxa *)
         select:
             [
-                [ LIDENT "select"; left_parenthesis; x = LIST0 select_argument SEP ","; 
+                [ LIDENT "select"; left_parenthesis; x = LIST0 [x =
+                    select_argument -> x] SEP ","; 
                     right_parenthesis -> `Select x ]
             ];
         select_argument:
@@ -1220,7 +1224,8 @@ let create_expr lexer =
         (* Renaming characters or taxa *)
         rename:
             [
-                [ rename_cmd; left_parenthesis; x = LIST0 rename_argument SEP ","; 
+                [ rename_cmd; left_parenthesis; x = LIST0 [x = rename_argument
+                -> x] SEP ","; 
                     right_parenthesis -> `Rename x ]
             ];
         rename_cmd:
@@ -1254,32 +1259,38 @@ let create_expr lexer =
             ];
         loop:
             [
-                [ LIDENT "repeat"; x = INT; LIDENT "times"; com = LIST0 command; 
+                [ LIDENT "repeat"; x = INT; LIDENT "times"; com = LIST0 [x =
+                    command -> x]; 
                     LIDENT "end" -> `Repeat (int_of_string x, com) ] 
             ];
         read:
             [
-                [ LIDENT "read"; left_parenthesis; a = LIST0 read_argument SEP ","; 
+                [ LIDENT "read"; left_parenthesis; a = LIST0 [x = read_argument
+                -> x] SEP ","; 
                     right_parenthesis -> `Read a ]
             ];
         build:
             [
-                [ LIDENT "build"; left_parenthesis; a = LIST0 build_argument SEP ","; 
+                [ LIDENT "build"; left_parenthesis; a = LIST0 [x =
+                    build_argument -> x] SEP ","; 
                     right_parenthesis -> `Build a ]
             ];
         swap:
             [
-                [ LIDENT "swap"; left_parenthesis; a = LIST0 swap_argument SEP ","; 
+                [ LIDENT "swap"; left_parenthesis; a = LIST0 [x = swap_argument
+                -> x] SEP ","; 
                     right_parenthesis -> (`Swap a :> swap) ]
             ];
         search:
             [
-                [ LIDENT "search"; left_parenthesis; a = LIST0 search_argument SEP
+                [ LIDENT "search"; left_parenthesis; a = LIST0 [x =
+                    search_argument -> x]  SEP
                 ","; right_parenthesis -> `Search a ]
             ];
         fuse:
             [
-                [ LIDENT "fuse"; left_parenthesis; a = LIST0 fuse_argument SEP ","; 
+                [ LIDENT "fuse"; left_parenthesis; a = LIST0 [x = fuse_argument
+                -> x] SEP ","; 
                     right_parenthesis -> (`Fuse a) ]
             ];
         fuse_argument:
@@ -1302,7 +1313,7 @@ let create_expr lexer =
         calculate_support:
             [
                 [ LIDENT "calculate_support"; left_parenthesis; a = LIST0
-                support_argument SEP ","; 
+                [x = support_argument -> x]  SEP ","; 
                 right_parenthesis -> `Support a ]
             ];
         (* Reading a file *)
@@ -1317,7 +1328,8 @@ let create_expr lexer =
             ];
         read_argument:
             [ 
-                [ LIDENT "annotated"; ":"; left_parenthesis; a = LIST1 otherfiles SEP ","; 
+                [ LIDENT "annotated"; ":"; left_parenthesis; a = LIST1 [x =
+                    otherfiles -> x] SEP ","; 
                     right_parenthesis -> ((`AnnotatedFiles a) :> Methods.input) ] |
                 [ LIDENT "prealigned"; ":"; left_parenthesis; a = otherfiles;
                 ","; b = prealigned_costs; right_parenthesis -> `Prealigned (a,
@@ -1327,27 +1339,32 @@ let create_expr lexer =
         otherfiles:
             [
                 [ f = STRING -> `AutoDetect [`Local f] ] |
-                [ LIDENT "nucleotides"; ":"; left_parenthesis; a = LIST1 STRING SEP ","; 
+                [ LIDENT "nucleotides"; ":"; left_parenthesis; a = LIST1 [x =
+                    STRING -> x] SEP ","; 
                     right_parenthesis -> `Nucleotides (to_local a) ] |
 
-                [ LIDENT "chromosome"; ":"; left_parenthesis; a = LIST1 STRING SEP ","; 
+                [ LIDENT "chromosome"; ":"; left_parenthesis; a = LIST1 [x =
+                    STRING -> x] SEP ","; 
                     right_parenthesis -> `Chromosome (to_local a) ] |
 
-                [ LIDENT "genome"; ":"; left_parenthesis; a = LIST1 STRING SEP ","; 
+                [ LIDENT "genome"; ":"; left_parenthesis; a = LIST1 [x = STRING
+                -> x]SEP ","; 
                     right_parenthesis -> `Genome (to_local a) ] |
 
-                [ LIDENT "aminoacids"; ":"; left_parenthesis; a = LIST1 STRING SEP ","; 
+                [ LIDENT "aminoacids"; ":"; left_parenthesis; a = LIST1 [x =
+                    STRING -> x] SEP ","; 
                     right_parenthesis -> `Aminoacids (to_local a) ] |
              
                 [ LIDENT "custom_alphabet"; ":"; left_parenthesis; seq = STRING;","; cost_mat = STRING; OPT ",";
-                  read_options = LIST0 read_optiona SEP ","; right_parenthesis 
+                  read_options = LIST0 [x = read_optiona -> x] SEP ","; right_parenthesis 
                       -> `GeneralAlphabetSeq (`Local seq, `Local cost_mat, read_options)  ] |
 
                 [ LIDENT "breakinv"; ":"; left_parenthesis; seq = STRING; ","; cost_mat = STRING; OPT ",";
-                  read_options = LIST0 read_optiona SEP ","; right_parenthesis 
+                  read_options = LIST0 [x = read_optiona -> x] SEP ","; right_parenthesis 
                       -> `Breakinv (`Local seq, `Local cost_mat, read_options)  ] |
 
-                [ LIDENT "complex"; left_parenthesis; a = LIST1 STRING SEP ","; 
+                [ LIDENT "complex"; left_parenthesis; a = LIST1 [x = STRING ->
+                    x] SEP ","; 
                     right_parenthesis -> `ComplexTerminals (to_local a) ] 
             ];
 
@@ -1359,7 +1376,7 @@ let create_expr lexer =
 
         tree_information_list:
             [   
-                [ ":"; "("; x = LIST0 tree_information SEP ","; ")" -> x ]
+                [ ":"; "("; x = LIST0 [x = tree_information -> x] SEP ","; ")" -> x ]
             ];
         tree_information:
             [
@@ -1399,7 +1416,7 @@ let create_expr lexer =
                     ((`UnionBased x) : Methods.tabu_join_strategy)  ] |
                 [ LIDENT "all"; x = OPT integer -> `AllBased x ] |
                 [ LIDENT "constraint"; ":"; left_parenthesis; 
-                    x = LIST1 constraint_options SEP ","; right_parenthesis
+                    x = LIST1 [x = constraint_options -> x] SEP ","; right_parenthesis
                     -> `Partition x ] |
                 [ LIDENT "constraint" -> `Partition [] ]
             ];
@@ -1574,7 +1591,7 @@ let create_expr lexer =
             ];
         list_of_jackknifea:
             [
-                [ ":"; left_parenthesis; x = LIST0 jackknifea SEP ","; 
+                [ ":"; left_parenthesis; x = LIST0 [x = jackknifea -> x] SEP ","; 
                     right_parenthesis -> x ]
             ];
         jackknifea:
@@ -1587,22 +1604,28 @@ let create_expr lexer =
         right_parenthesis: [ [ ")" ] ];
         identifiers:
             [
-                [ LIDENT "not" ; LIDENT "files"; ":"; left_parenthesis; x = LIST0 STRING SEP ","; 
+                [ LIDENT "not" ; LIDENT "files"; ":"; left_parenthesis; x =
+                    LIST0 [x = STRING -> x] SEP ","; 
                     right_parenthesis -> `Files (false, x) ] |
                 [ x = old_identifiers -> (x :> identifiers) ] |
-                [ LIDENT "files"; ":"; left_parenthesis; x = LIST0 STRING SEP ","; 
+                [ LIDENT "files"; ":"; left_parenthesis; x = LIST0 [x = STRING
+                -> x] SEP ","; 
                     right_parenthesis -> `Files (true, x) ] 
             ];
         old_identifiers:
             [
                 [ LIDENT "all" -> `All ] |
-                [ LIDENT "not"; LIDENT "names"; ":"; left_parenthesis; x = LIST0 STRING SEP ","; 
+                [ LIDENT "not"; LIDENT "names"; ":"; left_parenthesis; x = LIST0
+                [x = STRING -> x] SEP ","; 
                     right_parenthesis -> `Names (false, x) ] |
-                [ LIDENT "not"; LIDENT "codes"; ":"; left_parenthesis; x = LIST0 INT SEP ","; 
+                [ LIDENT "not"; LIDENT "codes"; ":"; left_parenthesis; x = LIST0
+                [x = INT -> x] SEP ","; 
                     right_parenthesis -> `Some (false, List.map int_of_string x) ] |
-                [ LIDENT "names"; ":"; left_parenthesis; x = LIST0 STRING SEP ","; 
+                [ LIDENT "names"; ":"; left_parenthesis; x = LIST0 [x = STRING
+                -> x] SEP ","; 
                     right_parenthesis -> `Names (true, x) ] |
-                [ LIDENT "codes"; ":"; left_parenthesis; x = LIST0 INT SEP ","; 
+                [ LIDENT "codes"; ":"; left_parenthesis; x = LIST0 [x = INT ->
+                    x] SEP ","; 
                     right_parenthesis -> `Some (true, List.map int_of_string x) ] |
                 [ LIDENT "static" -> `AllStatic ] | 
                 [ LIDENT "dynamic" -> `AllDynamic ] |
@@ -1653,15 +1676,17 @@ and read_script_files optimize files =
                 let comm = of_file false f in
                 `Echo ("Running file " ^ f, `Information) :: comm
             with
-            | Stdpp.Exc_located ((a, b), Stream.Error err) 
-            | Stdpp.Exc_located ((a, b), Token.Error err) ->
+            | Loc.Exc_located (a, Stream.Error err) ->
+            (*
+            | Loc.Exc_located (a, Token.Error err) ->
+                    *)
                     let is_unknown = "illegal begin of expr" = err in
                     let msg = "@[<v 4>@[Command@ error@ in@ file@ @{<b>" ^
-                    f ^ "@}@ line@ @{<b>" ^ string_of_int a.Lexing.pos_lnum ^ 
+                    f ^ "@}@ line@ @{<b>" ^ string_of_int (Loc.start_line a) ^
                     "@}@ between@ characters@ @{<b>" ^ 
-                    string_of_int (a.Lexing.pos_cnum - a.Lexing.pos_bol)
+                    string_of_int ((Loc.start_off a) - (Loc.start_bol a))
                     ^ "@} and @{<b>" ^
-                    string_of_int (b.Lexing.pos_cnum - b.Lexing.pos_bol)
+                    string_of_int ((Loc.stop_off a) - (Loc.stop_bol a))
                     ^ "@} :@]@,@[" ^
                     (if is_unknown then "Unknown command" else
                         err) ^ "@]@]\n" in
@@ -1684,11 +1709,10 @@ and simplify_directory dir =
 
 and of_stream optimize str =
     let cur_directory = Sys.getcwd () in
-    let lexer = Plexer.gmake () in
-    let expr = create_expr lexer in
+    let expr = create_expr () in
     let res = 
         str 
-        --> Grammar.Entry.parse expr
+        --> Gram.parse expr (Loc.mk "<stream>")
         --> transform_all_commands
         --> List.map (process_commands false)
         --> List.flatten

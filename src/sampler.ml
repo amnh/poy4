@@ -224,14 +224,6 @@ module MakeApp (Node : NodeSig.S)
                 Stack.iter (List.iter print) queue.stack;
                 timer <- Timer.start ();
 
-            method private timed_operation _ =
-                self#print_stack
-
-            method process _ _ _ _ _ _ _ _ =
-                if time < Timer.wall timer then 
-                    self#print_stack
-                else ()
-
             method clone = ({<>} :> ('a, 'b) search_manager_sampler)
 
             method private timed_operation _ =

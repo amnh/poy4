@@ -79,7 +79,7 @@ else
 	LABLTK =
 endif
 
-PREPROCESSOR = -pp 'camlp4o pa_extend.cmo'
+PREPROCESSOR = -pp 'camlp4orf pa_extend.cmo'
 
 
 # Encapsulate all the options

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 1952 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2026 $"
 
 open StdLabels
 
@@ -60,25 +60,25 @@ type spec =
     | Trees of string list
     | TreesList of string list
 
+open Camlp4.PreCast
 let verbosity = ref Max
-let gram = Grammar.gcreate (Plexer.gmake ())
-let expr = Grammar.Entry.create gram "expr"
+let expr = Gram.Entry.mk "expr"
 
 let print_verbosity a b = 
     match a, !verbosity with
     | Max, Max | Med, Med | Med, Max | Min, _ -> print_endline b
     | _ -> ()
 
-EXTEND
+EXTEND Gram
     GLOBAL: expr;
-    expr: [ [a = LIST1 recexpr; EOI -> a] ];
+    expr: [ [a = LIST1 [x = recexpr -> x]; `EOI -> a] ];
     recexpr: 
         [ 
             [ "define"; "character"; name = UIDENT; "as"; 
-            specs = LIST1 character_funcs; opt = OPT options; "end"
+            specs = LIST1 [x = character_funcs -> x]; opt = OPT options; "end"
             -> Character (name, specs, opt) ] |
             [ "define"; "set"; name = UIDENT; "as"; "alphabet"; "with"; "{"; 
-            alph = LIST1 UIDENT SEP ";"; "}"; opt = OPT options ; "end" -> 
+            alph = LIST1 [x = UIDENT -> x] SEP ";"; "}"; opt = OPT options ; "end" -> 
                 Alphabet (name, alph, opt) ] |
             [ "define"; "set"; name = UIDENT; "as"; "wordset"; "with"; 
             alph = UIDENT; "with"; "["; min = INT; max = INT; "]";
@@ -89,18 +89,18 @@ EXTEND
             min = INT; max = INT; "]"; opt = OPT options; "end" -> 
                 let range = int_of_string min, int_of_string max in
                 IntSet (name, range, opt) ] |
-            [ "load"; "dna"; specs = LIST1 dynhom SEP "and"; 
+            [ "load"; "dna"; specs = LIST1 [x = dynhom -> x] SEP "and"; 
                 "end" -> Dna_Sequences specs ] |
-            [ "load"; "protein"; specs = LIST1 dynhom SEP "and"; 
+            [ "load"; "protein"; specs = LIST1 [x = dynhom -> x] SEP "and"; 
                 "end" -> Protein_Sequences specs ] |
-            [ "load"; "static"; files = LIST1 STRING; "end" -> Static files ] |
-            [ "trees"; "files"; file = LIST1 STRING; "end" -> Trees file ] |
-            [ "trees"; trees = LIST1 STRING; "end" -> TreesList trees ] |
-            [ "names"; file = LIST1 STRING; "end" -> Synonyms file ] |
-            [ "names"; names = LIST1 synnames; "end" -> SynonymsList names ] |
-            [ "ignore"; "file"; files = LIST1 STRING; 
+            [ "load"; "static"; files = LIST1 [x = STRING -> x]; "end" -> Static files ] |
+            [ "trees"; "files"; file = LIST1 [x = STRING -> x]; "end" -> Trees file ] |
+            [ "trees"; trees = LIST1 [x = STRING -> x]; "end" -> TreesList trees ] |
+            [ "names"; file = LIST1 [x = STRING -> x]; "end" -> Synonyms file ] |
+            [ "names"; names = LIST1 [x = synnames -> x]; "end" -> SynonymsList names ] |
+            [ "ignore"; "file"; files = LIST1 [x = STRING -> x]; 
                 "end" -> Ignore_files files ] |
-            [ "ignore"; names = LIST1 STRING; "end" -> Ignore names ]
+            [ "ignore"; names = LIST1 [x = STRING -> x]; "end" -> Ignore names ]
         ];
     synnames:
         [
@@ -108,22 +108,22 @@ EXTEND
         ];
     dynhom:
         [
-            [ files = LIST1 STRING; opt = OPT dynhomopt -> (files, opt) ]
+            [ files = LIST1 [x = STRING -> x]; opt = OPT dynhomopt -> (files, opt) ]
         ];
     dynhomopt:
         [
-            [ "using"; opt = LIST1 dynhomopts -> opt ]
+            [ "using"; opt = LIST1 [x = dynhomopts -> x] -> opt ]
         ];
     dynhomopts:
         [
             [ "transformation"; "cost"; "matrix"; file = STRING -> Data.Tcm file ] |
             [ "tcm"; file = STRING -> Data.Tcm file ] |
-            [ "fixed"; "states"; file = OPT STRING -> Data.Fixed file ] |
-            [ "fs"; file = OPT STRING -> Data.Fixed file ]
+            [ "fixed"; "states"; file = OPT [ x = STRING -> x ]  -> Data.Fixed file ] |
+            [ "fs"; file = OPT [x = STRING -> x] -> Data.Fixed file ]
         ];
     heading_char_funcs:
         [ 
-            [ "let"; name = LIDENT; params = LIST0 params -> name, params]
+            [ "let"; name = LIDENT; params = LIST0 [x = params -> x] -> name, params]
         ];
     character_funcs:
         [
@@ -141,7 +141,7 @@ EXTEND
             | [ "tl"; s = u_lang_apps -> Tail s ] 
             | [ "pre"; s = u_lang_apps -> Predecessor s ] 
             | [ "suc"; s = u_lang_apps -> Successor s ] 
-            | [ fname = LIDENT; res = LIST0 u_lang_apps -> 
+            | [ fname = LIDENT; res = LIST0 [x = u_lang_apps -> x] -> 
                     Application (fname, res) ] (* Careful with this one! *)
         ];
     u_lang_apps:
@@ -165,7 +165,7 @@ EXTEND
         ];
     options: 
         [ 
-            [ "with"; "probability"; "{"; probs = LIST1 assigned_prob SEP ";";
+            [ "with"; "probability"; "{"; probs = LIST1 [x = assigned_prob -> x] SEP ";";
             "}" -> EProbability ("", probs) ] |
             [ "with"; "probability"; f = distributions -> FProbability f ] 
         ];
@@ -179,11 +179,11 @@ EXTEND
         ];
     fname_for_prob:
         [
-            [ el = "prep" -> el ] |
-            [ el = "hd" -> el ] |
-            [ el = "tl" -> el ] |
-            [ el = "pre" -> el ] |
-            [ el = "suc" -> el ] |
+            [ el = "prep" -> Gram.Token.to_string el ] |
+            [ el = "hd" -> Gram.Token.to_string el ] |
+            [ el = "tl" -> Gram.Token.to_string el ] |
+            [ el = "pre" -> Gram.Token.to_string el ] |
+            [ el = "suc" -> Gram.Token.to_string el ] |
             [ el = UIDENT -> el] |
             [ el = LIDENT -> el ]
         ];
@@ -201,7 +201,7 @@ END
 
 let of_channel ch = 
     let st = Stream.of_channel ch in
-    Grammar.Entry.parse expr st
+    Gram.parse expr (Loc.mk "<stream>") st
 
 (* Process the output of the [of_channel] function above. This is a rather long
 * thing, so lets see how this documentation goes.  *)
