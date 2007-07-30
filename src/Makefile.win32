@@ -15,6 +15,8 @@ USEINTERFACE := $(strip $(USEINTERFACE))
 USEGRAPHICS := $(strip $(USEGRAPHICS))
 USEWIN32 := $(strip $(USEWIN32))
 USESHAREDHD := $(strip $(USESHAREDHD))
+USE_LONG_SEQUENCES := $(strip $(USE_LONG_SEQUENCES))
+USE_LARGE_ALPHABETS := $(strip $(USE_LARGE_ALPHABETS))
 
 PDCOBJS = /home/andres/pdcurs28/pdcclip.o /home/andres/pdcurs28/pdcdebug.o /home/andres/pdcurs28/pdcdisp.o /home/andres/pdcurs28/pdcgetsc.o /home/andres/pdcurs28/pdckbd.o \
 /home/andres/pdcurs28/pdcscrn.o /home/andres/pdcurs28/pdcsetsc.o /home/andres/pdcurs28/pdcutil.o /home/andres/pdcurs28/pdcwin.o
@@ -87,6 +89,14 @@ ifeq ($(USEPARALLEL), true)
 ifeq ($(USENOSHAREDHD), true)
 	DEFOPTS := $(DEFOPTS) -DUSENOSHAREDHD
 endif
+endif
+
+ifeq ($(USE_LONG_SEQUENCES), true)
+	DEFOPTS := $(DEFOPTS) -DUSE_LONG_SEQUENCES
+endif
+
+ifeq ($(USE_LARGE_ALPHABETS), true)
+	DEFOPTS := $(DEFOPTS) -DUSE_LARGE_ALPHABETS
 endif
 
 
@@ -474,6 +484,14 @@ sadmanOutput.cmo: sadmanOutput.cmi sadmanOutput.ml
 	$(OCAMLC) -g $(OCAML_INCLUDES) -c $(DEBUG) sadmanOutput.ml
 sadmanOutput.cmx: sadmanOutput.cmi sadmanOutput.ml
 	$(OCAMLOPT) $(OCAML_INCLUDES) -c sadmanOutput.ml
+sequence.cmi: matrix.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi sequence.mli
+	$(OCAMLC) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.mli
+sequence.cmo: sadmanOutput.cmi matrix.cmi fingerPrint.cmi cost_matrix.cmi \
+    alphabet.cmi all_sets.cmi sequence.cmi sequence.ml
+	$(OCAMLC) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.ml
+sequence.cmx: sadmanOutput.cmx matrix.cmx fingerPrint.cmx cost_matrix.cmx \
+    alphabet.cmx all_sets.cmx sequence.cmi sequence.ml
+	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
 scripting.cmo: scripting.cmi scripting.ml
 	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
 scripting.cmx: scripting.cmi scripting.ml
@@ -498,7 +516,7 @@ fileStream.cmx: fileStream.ml
 
 .SUFFIXES: .ml .mli .cmo .cmx .cmi .c .o
 
-CPREPROCESSED = fileStream.ml sampler.ml timer.ml scripting.ml main.ml
+CPREPROCESSED = fileStream.ml sequence.ml sequence.mli sampler.ml timer.ml scripting.ml main.ml
 DOCFILTER = $(CAMLP4PROCESSED) $(CPREPROCESSED)
 
 .depend: nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml *.ml *.mli *.c *.h

@@ -6,6 +6,8 @@ if ! svn update; then
     exit 1
 fi
 
+cp ./config.win32 config
+
 cd ./src
 
 cp ./Makefile.win32 Makefile

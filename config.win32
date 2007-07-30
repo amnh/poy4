@@ -16,6 +16,9 @@ export MPIINCDIR = /usr/share/mpich/include
 export MPILIBDIR = /usr/share/mpich/lib
 export MPILNAME = mpich
 
+export USE_LARGE_ALPHABETS = false
+export USE_LONG_SEQUENCES = false
+
 # Compilers of choice
 export OCAML = ocaml
 export OCAMLC = ocamlc.opt
