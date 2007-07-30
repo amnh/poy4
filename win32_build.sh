@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH=/cygdrive/c/ocamlmgw/3_10_0/bin:$PATH
 source $HOME/.keychain/${HOSTNAME}-sh
 
 if ! svn update; then
