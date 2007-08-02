@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2033 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2036 $"
 
 open StdLabels
 
@@ -75,18 +75,20 @@ EXTEND Gram
     recexpr: 
         [ 
             [ "define"; "character"; name = UIDENT; "as"; 
-            specs = LIST1 [x = character_funcs -> x]; opt = OPT options; "end"
+            specs = LIST1 [x = character_funcs -> x]; opt = OPT options;
+            "end_def"
             -> Character (name, specs, opt) ] |
-            [ "define"; "set"; name = UIDENT; "as"; "alphabet"; "with"; "{"; 
-            alph = LIST1 [x = UIDENT -> x] SEP ";"; "}"; opt = OPT options ; "end" -> 
+            [ "define"; "set_def"; name = UIDENT; "as"; "alphabet"; "with"; "{"; 
+            alph = LIST1 [x = UIDENT -> x] SEP ";"; "}"; opt = OPT options ;
+            "end_def" -> 
                 Alphabet (name, alph, opt) ] |
-            [ "define"; "set"; name = UIDENT; "as"; "wordset"; "with"; 
+            [ "define"; "set_def"; name = UIDENT; "as"; "wordset"; "with"; 
             alph = UIDENT; "with"; "["; min = INT; max = INT; "]";
-            opt = OPT options; "end" -> 
+            opt = OPT options; "end_def" -> 
                 let range = int_of_string min, int_of_string max in
                 WordSet (name, alph, range, opt) ] |
-            [ "define"; "set"; name = UIDENT; "as"; "integers"; "with"; "["; 
-            min = INT; max = INT; "]"; opt = OPT options; "end" -> 
+            [ "define"; "set_def"; name = UIDENT; "as"; "integers"; "with"; "["; 
+            min = INT; max = INT; "]"; opt = OPT options; "end_def" -> 
                 let range = int_of_string min, int_of_string max in
                 IntSet (name, range, opt) ] 
         ];

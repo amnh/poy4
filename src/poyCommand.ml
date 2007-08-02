@@ -1002,18 +1002,18 @@ let create_expr () =
             [
                 [ LIDENT "inversion"; ":"; c = INT -> 
                       `Inversion (int_of_string c) ]  |
-                [ LIDENT "breakpoint"; ":"; c = INT -> 
+                [ LIDENT "locus_breakpoint"; ":"; c = INT -> 
                       `Breakpoint (int_of_string c) ]  |
                 [ LIDENT "chrom_breakpoint"; ":"; c = INT -> 
                       `Chrom_Breakpoint (int_of_string c) ]  |
                 [ LIDENT "circular"; ":"; e = boolean -> `Circular e] |
 
                 [ LIDENT "locus_indel"; ":"; left_parenthesis; o = INT; 
-                    ","; e = FLOAT; right_parenthesis ->
+                    ","; e = integer_or_float; right_parenthesis ->
                       `Locus_Indel_Cost ( (int_of_string o), 
                       int_of_float ((float_of_string e) *. 100.0) ) ] | 
                 [ LIDENT "chrom_indel"; ":"; left_parenthesis; o = INT; 
-                ","; e = FLOAT; right_parenthesis ->
+                ","; e = integer_or_float; right_parenthesis ->
                       `Chrom_Indel_Cost ( (int_of_string o), 
                       int_of_float ((float_of_string e) *. 100.0) ) ] | 
                 [ LIDENT "chrom_hom"; ":"; c = FLOAT -> 
