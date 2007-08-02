@@ -554,11 +554,11 @@ ifeq ($(USEPARALLEL), true)
 	$(OCAMLC) -custom $(OCAML_INCLUDES) -cc mpicc -cclib -L$(OCAMLMPI) \
 		-cclib -l$(MPILNAME) $(OCAMLMPI)/mpi.cma -cclib -l$(MPILNAME) \
 		-cclib -lcamlgrappa $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
-		$(GRAPHICS) camlp4.cma unix.cma str.cma bigarray.cma $^
+		$(GRAPHICS) camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
 else
 		$(OCAMLC) -custom $(OCAML_INCLUDES) -cclib -L$(OCAMLMPI) \
 		-cclib -lcamlgrappa $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
-		$(GRAPHICS) camlp4.cma unix.cma str.cma bigarray.cma $^
+		$(GRAPHICS) camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
 endif
 
 
@@ -567,20 +567,20 @@ ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -cclib -L./grappa \
 	-cclib -L./graphps -cclib -L./ \
 	-cclib -L$(OCAMLMPI) $(CCOPT) $(NCURSES_LIBRARIES) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) \
-	-cclib -l$(MPILNAME) -cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) camlp4.cmxa \
+	-cclib -l$(MPILNAME) -cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa \
 	unix.cmxa str.cmxa bigarray.cmxa $^
 else
 	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -verbose -ccopt -v -cclib -L./grappa \
 	-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
 	$(CCOPT) -cclib -lcamlgrappa $(NCURSES_LIBRARIES) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) -o poy \
-	$(GRAPHICS:.cma=.cmxa) camlp4.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
+	$(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
 endif
 
 poy_test: $(TEST_OBJS_OPT)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -verbose -ccopt -v -cclib \
 	-L./grappa -cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
 	$(CCOPT) -cclib -lcamlgrappa $(NCURSES_LIBRARIES) $(PROFILE) -o poy_test \
-	$(GRAPHICS:.cma=.cmxa) camlp4.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
+	$(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
 
 # Interactive console to test various features
 #mpoy_console: sequences.cma parsers.cma distances.cma trees.cma 
