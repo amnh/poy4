@@ -364,8 +364,8 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
 
     | GenomeCS t,  _ -> begin
           match parent_t with
-          | None -> GenomeCS.to_formatter attr t None d
-          | Some (GenomeCS parent_t) -> GenomeCS.to_formatter attr t (Some parent_t) d
+          | None -> GenomeCS.to_formatter ref_codes attr t None d
+          | Some (GenomeCS parent_t) -> GenomeCS.to_formatter ref_codes attr t (Some parent_t) d
           | _ -> failwith "to_formatter in dynamicCS"
       end 
 
@@ -387,6 +387,7 @@ let get_active_ref_code t =
     | ChromCS t -> ChromCS.get_active_ref_code t
     | AnnchromCS t -> AnnchromCS.get_active_ref_code t
     | BreakinvCS t -> BreakinvCS.get_active_ref_code t
+    | GenomeCS t -> GenomeCS.get_active_ref_code t
     | _ -> IntSet.empty, IntSet.empty
 
 

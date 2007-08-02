@@ -41,6 +41,7 @@ type seg_t = {
     en : int;
     cost : int; 
     med_chrom_id : int;
+    alied_med : Sequence.s;
 
 
     ref_code1 : int;    (** Child's code *)
@@ -69,6 +70,13 @@ type chrom_t = {
 type med_t = {
     chrom_arr : chrom_t array;
     genome_ref_code : int;
+    genome_ref_code1 : int;
+    genome_ref_code2 : int;
+    cost1 :int;
+    recost1 : int;
+    cost2 : int;
+    recost2 : int;
+
 }
 
 type genome_block_t = {
@@ -146,7 +154,15 @@ let genome_map_to_string genome =
     String.concat " @@ " (Array.to_list chrom_map_str) 
 
 
-let ref_genome = ref {chrom_arr = [||]; genome_ref_code = -1}
+let ref_genome = ref {chrom_arr = [||]; 
+                      genome_ref_code = -1; 
+                      genome_ref_code1 = -1;
+                      genome_ref_code2 = -1;
+                      cost1 = 0;
+                      recost1 = 0;
+                      cost2 = 0;
+                      recost2 = 0}
+
 
 let assign_hom_chrom med cost_mat user_chrom_pams = 
     if !(med.chrom_arr.(0).chrom_id) = -1 then begin
@@ -231,7 +247,13 @@ let init (genome  : Sequence.s Data.dyna_data) =
         ) (Array.to_list chrom_arr)
     in 
     let med = {chrom_arr = Array.of_list clean_chrom_ls; 
-               genome_ref_code = Utl.get_new_genome_ref_code ()
+               genome_ref_code = Utl.get_new_genome_ref_code ();
+               genome_ref_code1 = -1;
+               genome_ref_code2 = -1;
+               cost1 = 0;
+               recost1 = 0;
+               cost2 = 0;
+               recost2 = 0;
               }
     in 
 (*    print_genome med; *)
@@ -353,11 +375,12 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
 
     let pair_gap subseq chrom_seq = 
        let id = subseq.Subseq.id in 
-       let del_cost = 
-           let o, e = ali_pam.ChromPam.locus_indel_cost in
-           let len = Subseq.get_len subseq in  
-           o + (e * (len - 1)) / 100 
-       in                    
+       let ss = Subseq.get_subseq chrom_seq subseq in
+
+  
+       let del_cost = UtlPoy.cmp_gap_cost
+           ali_pam.ChromPam.chrom_indel_cost ss
+       in
        gen_c2.(id).(gen_gap_code) <-  del_cost;
        gen_c2.(gen_gap_code).(id) <-  del_cost;
     in
@@ -406,7 +429,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
             else move (p+1)
         in 
         let sq2_id =  move 0 in
-        if sq2_id = 0 then chrom_id, 0, `Positive
+        if sq2_id = gen_gap_code then chrom_id, gen_gap_code, `Positive
         else if sq2_id > 0 then chrom_id, sq2_id, `Positive
         else begin (* sq2_id = -1 *)
             let gb_id = List.hd sq1.Subseq.block_id_ls in  
@@ -433,6 +456,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                    let _, sq2_id, _ = search_sq2 sq1 in
 
                    if sq2_id = gen_gap_code then begin 
+                       let sq2_seq = UtlPoy.create_gap_seq (Sequence.length sq1_seq) in 
                        let med = UtlPoy.create_median_gap sq1_seq cost_mat in
                        let med_len = UtlPoy.cmp_num_not_gap med in  
                        let sta, en = 
@@ -445,12 +469,13 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                            {sta = sta; en = en;
                             cost = gen_c2.(sq1_id).(gen_gap_code);  
                             med_chrom_id = chrom_id;  
+                            alied_med = med;
                         
                             ref_code1 = genome1_ref_code; sta1 = s1;  en1 = e1;  
                             chi1_chrom_id = chrom_id;  alied_seq1 = sq1_seq;  dir1 = `Positive;  
 
                             ref_code2 = -1; sta2 = -1;  en2 = -1;  
-                            chi2_chrom_id = chrom_id;  alied_seq2 = UtlPoy.get_empty_seq (); dir2 = `Positive
+                            chi2_chrom_id = chrom_id;  alied_seq2 = sq2_seq; dir2 = `Positive
                            }                        
                        in  
                        chrom_med_len := !chrom_med_len + med_len;
@@ -474,7 +499,8 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                         let seg = 
                             {sta = sta; en = en;
                              cost = cost; med_chrom_id = chrom_id; 
-                        
+                             alied_med = med;
+
                              ref_code1 = genome1_ref_code; sta1 = s1;  en1 = e1; 
                              chi1_chrom_id = chrom_id; alied_seq1 = alied_seq1; dir1 = `Positive;  
 
@@ -506,6 +532,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                    let seg = 
                       {sta = sta; en = en;
                        cost = cost; med_chrom_id = chrom_id; 
+                       alied_med = med;
 
                        ref_code1 = genome1_ref_code;
                        sta1 = b.Block.sta1; en1 = b.Block.en1; chi1_chrom_id = gb.chrom1_id;
@@ -539,7 +566,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
             let chrom22_id, sq22_id, dir22 = search_sq2 loci1_arr.(p+1) in
             let one_bp = 
                 if (chrom21_id != chrom_id) || (chrom22_id != chrom_id) then chrom_bp
-                else if (sq21_id = 0) || (sq22_id = 0) then 0
+                else if (sq21_id = gen_gap_code) || (sq22_id = gen_gap_code) then 0
                 else if ( (sq21_id + 1 = sq22_id) && (dir21 = `Positive) && (dir22 = `Positive) ) ||
                     ( (sq21_id - 1 = sq22_id) && (dir21 = `Negative)  && (dir22 = `Negative) ) then 0
                 else  bp
@@ -553,10 +580,11 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
     let total_bp_cost = cmp_breakpoint_cost in
     let med_ls = List.rev med_ls in 
     let seg_ls = List.rev seg_ls in 
+
     let med = UtlPoy.concat med_ls in 
 
-
-    med, seg_ls, (chrom_cost - (recost1 + recost2) + total_bp_cost), total_bp_cost
+    let edit_cost = chrom_cost - (recost1 + recost2) in
+    med, seg_ls, (edit_cost + total_bp_cost), 0, total_bp_cost
 
 
 
@@ -603,16 +631,19 @@ let create_chrom_med (genome1_ref_code, chrom1) (genome2_ref_code, chrom2) gb_ls
     List.iter Subseq.print loci2_ls;
 *)
     let chrom_id = !(chrom1.chrom_id) in
-    let med, seg_ls, chrom_cost, recost = create_fast_general_ali chrom_id
+    let med, seg_ls, chrom_cost, recost1, recost2 = create_fast_general_ali chrom_id
         genome1_ref_code chrom1.seq loci1_ls genome2_ref_code chrom2.seq loci2_ls gb_ls cost_mat chrom_pams 
     in 
     let chrom_ref_code = Utl.get_new_chrom_ref_code () in 
 
 
-
-    {chrom_id = ref chrom_id; 
-     chrom_ref_code = chrom_ref_code; 
-     seq = med; map = seg_ls}, chrom_cost, recost
+    let chrom_med = {
+        chrom_id = ref chrom_id; 
+        chrom_ref_code = chrom_ref_code; 
+        seq = med; 
+        map = seg_ls}
+    in 
+    chrom_med, chrom_cost, recost1, recost2
 
 
     
@@ -718,7 +749,8 @@ let create_med med1 med2 cost_mat user_chrom_pams =
 
     let rev_chrom_med_ls = ref [] in 
     let g_cost = ref 0 in 
-    let g_recost = ref 0 in 
+    let g_recost1 = ref 0 in 
+    let g_recost2 = ref 0 in 
 
 
 
@@ -731,7 +763,7 @@ let create_med med1 med2 cost_mat user_chrom_pams =
         let chrom2_opt = find_chrom chrom_id med2 in 
         match chrom1_opt, chrom2_opt with
         | Some chrom1, Some chrom2 ->
-              let chrom_med,  chrom_cost, recost = create_chrom_med
+              let chrom_med,  chrom_cost, recost1, recost2 = create_chrom_med
                   (child1_genome_ref_code, chrom1)
                   (child2_genome_ref_code, chrom2) gb_ls cost_mat ali_pam
               in 
@@ -739,19 +771,22 @@ let create_med med1 med2 cost_mat user_chrom_pams =
               rev_chrom_med_ls := chrom_med::!rev_chrom_med_ls; 
 
               g_cost := !g_cost + chrom_cost;
-              g_recost := !g_recost + recost;
+              g_recost1 := !g_recost1 + recost1;
+              g_recost2 := !g_recost2 + recost2;
         | Some chrom1, None -> 
 
               let med_seq = UtlPoy.create_median_gap chrom1.seq cost_mat in 
               let med_len = UtlPoy.cmp_num_not_gap med_seq in 
 
               let chrom1_len = Sequence.length chrom1.seq in  
-              let o, e = ali_pam.ChromPam.chrom_indel_cost in  
-              let indel_cost = o + ((UtlPoy.cmp_num_all_DNA chrom1.seq) - 1) * e / 100 in 
+              let indel_cost = UtlPoy.cmp_gap_cost
+                  ali_pam.ChromPam.chrom_indel_cost chrom1.seq
+              in
 
               let seg =   
                   {sta = 0; en = med_len - 1; 
                    cost = indel_cost; med_chrom_id = chrom_id; 
+                   alied_med = med_seq;
                     
                    ref_code1 = child1_genome_ref_code; sta1 = 0;  en1 = chrom1_len - 1;
                    chi1_chrom_id = !(chrom1.chrom_id); alied_seq1 = chrom1.seq; dir1 = `Positive;  
@@ -774,14 +809,17 @@ let create_med med1 med2 cost_mat user_chrom_pams =
               let med_seq = UtlPoy.create_median_gap chrom2.seq cost_mat in
               let med_len = UtlPoy.cmp_num_not_gap med_seq in 
 
-              let o, e = ali_pam.ChromPam.chrom_indel_cost in 
               let chrom2_len = Sequence.length chrom2.seq in 
-              let indel_cost = o + ( (UtlPoy.cmp_num_all_DNA chrom2.seq) - 1) * e / 100 in
+              let indel_cost = UtlPoy.cmp_gap_cost
+                  ali_pam.ChromPam.chrom_indel_cost chrom2.seq
+              in
+
 
               let seg =  
                   {sta = 0; en = med_len - 1;
                    cost = indel_cost; med_chrom_id = chrom_id; 
-                    
+                   alied_med = med_seq;
+  
                    ref_code1 = -1; sta1 = -1;  en1 = -1;
                    chi1_chrom_id = -1; alied_seq1 = UtlPoy.get_empty_seq (); dir1 = `Positive;  
 
@@ -812,12 +850,18 @@ let create_med med1 med2 cost_mat user_chrom_pams =
         (fun chrom -> Sequence.length chrom.seq > 0) chrom_med_ls
     in 
     let genome_med = {chrom_arr = Array.of_list chrom_med_ls; 
-                      genome_ref_code = Utl.get_new_genome_ref_code ()}
+                      genome_ref_code = Utl.get_new_genome_ref_code ();
+                      genome_ref_code1 = med1.genome_ref_code;
+                      genome_ref_code2 = med2.genome_ref_code;
+                      cost1 = !g_cost - !g_recost2;
+                      recost1 = !g_recost1;
+                      cost2 = !g_cost - !g_recost1;
+                      recost2 = !g_recost2}
     in 
     
     if (List.length chrom_med_ls = 0) then failwith "Created a fucking empty genome";
     
-    genome_med, !g_cost, !g_recost
+    genome_med, !g_cost, !g_recost1, !g_recost2
         
 
 
@@ -839,9 +883,9 @@ let cmp_cost med1 med2 cost_mat user_chrom_pams =
         close_out genomeFile;
     end;   
 
-    let _, cost, recost = create_med med1 med2 cost_mat user_chrom_pams in 
+    let _, cost, recost1, recost2 = create_med med1 med2 cost_mat user_chrom_pams in 
 
-    cost, recost
+    cost, recost1, recost2
 
 
 (** Compute the cost between two genomes with rearrangement operations *)
@@ -864,9 +908,9 @@ let find_med2_ls med1 med2 cost_mat user_chrom_pams =
     end;   
     
 
-    let med, cost, recost  = create_med med1 med2 cost_mat user_chrom_pams in 
+    let med, cost, recost1, recost2  = create_med med1 med2 cost_mat user_chrom_pams in 
 
-    cost, recost, [med]
+    cost, recost1, recost2, [med]
     
 
 let compare med1 med2 =
@@ -908,3 +952,56 @@ let compare med1 med2 =
           compare_chrom 0
     
 
+
+
+
+
+let create_map anc_med des_ref : (int * int * Tags.output) = 
+    let str = string_of_int in  
+ 
+    let create_chrom_map m =      
+        let a_chrom_id, a_sta, a_en, a_dir  = 
+            (str m.med_chrom_id), (str m.sta), (str m.en), "+" 
+        in 
+        let d_chrom_id, d_sta, d_en, d_dir = 
+            match des_ref = anc_med.genome_ref_code1 with
+            | true ->
+                  (str m.chi1_chrom_id), (str m.sta1), (str m.en1), (Utl.get_dir m.dir1) 
+            | false ->
+                  (str m.chi2_chrom_id), (str m.sta2), (str m.en2), (Utl.get_dir m.dir2) 
+        in 
+        let attributes = [(Tags.GenomeMap.a_chrom_id, a_chrom_id);
+                          (Tags.GenomeMap.a_start_seg, a_sta);
+                          (Tags.GenomeMap.a_end_seg, a_en);
+                          (Tags.GenomeMap.a_dir_seg, a_dir);
+                          (Tags.GenomeMap.d_chrom_id, d_chrom_id);
+                          (Tags.GenomeMap.d_start_seg, d_sta);
+                          (Tags.GenomeMap.d_end_seg, d_en);
+                          (Tags.GenomeMap.d_dir_seg, d_dir)
+                         ] 
+        in 
+        let m : Tags.output = (Tags.GenomeMap.seg, attributes, `String "") in 
+        `Single m
+    in   
+    
+    let chrom_map_ls = List.map 
+        (fun chrom -> 
+             let seg_ls = List.map create_chrom_map chrom.map in
+             let chrom_map : Tags.output = 
+                 (Tags.GenomeMap.chrom, [], `Structured (`Set seg_ls))
+             in 
+             `Single chrom_map
+        ) (Array.to_list anc_med.chrom_arr) 
+    in 
+
+    let attributes = [(Tags.GenomeMap.a_ref_code, str anc_med.genome_ref_code); 
+                      (Tags.GenomeMap.d_ref_code, str des_ref)] 
+    in 
+
+    let genome_map : Tags.output = 
+        (Tags.GenomeMap.genome, attributes, `Structured (`Set chrom_map_ls)) 
+    in 
+
+    match des_ref = anc_med.genome_ref_code1 with
+    | true -> anc_med.cost1, anc_med.recost1, genome_map
+    | false -> anc_med.cost2, anc_med.recost2, genome_map

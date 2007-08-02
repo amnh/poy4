@@ -81,12 +81,12 @@ let update_cost_mat meds1 meds2 =
 
         let med1 = List.hd meds1.med_ls in  
         let med2 = List.hd meds2.med_ls in  
-        let cost, recost = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in  
+        let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in  
         meds1.approx_cost_arr.(code2) <- cost; 
         meds2.approx_cost_arr.(code1) <- cost; 
 
-        meds1.approx_recost_arr.(code2) <- recost; 
-        meds2.approx_recost_arr.(code1) <- recost; 
+        meds1.approx_recost_arr.(code2) <- (recost1 + recost2); 
+        meds2.approx_recost_arr.(code1) <- (recost1 + recost2); 
     end
 
 
@@ -97,13 +97,13 @@ let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
             (fun best_meds med1 -> 
                  List.fold_left  
                      (fun best_meds med2 -> 
-                          let cost, recost, med_ls =
+                          let cost, recost1, recost2, med_ls =
                               GenomeAli.find_med2_ls med1 med2 meds1.c2
                                   meds1.chrom_pam 
                           in  
                           if cost < best_meds.total_cost then  
                               { best_meds with med_ls = med_ls; 
-                                    total_cost = cost; total_recost = recost}
+                                    total_cost = cost; total_recost = (recost1 + recost2)}
                           else best_meds                      
                      ) best_meds meds2.med_ls
             ) {meds1 with med_ls = []; total_cost = max_int} meds1.med_ls
@@ -142,8 +142,8 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (best_cost, recost) med1 ->
                    List.fold_left 
                        (fun (best_cost, recost) med2 ->
-                            let acost, a_recost = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
-                            if acost < best_cost then acost, a_recost
+                            let acost, a_recost1, a_recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            if acost < best_cost then acost, a_recost1 + a_recost2
                             else best_cost, recost
                        ) (best_cost, recost) meds2.med_ls
               ) (max_int, 0) meds1.med_ls
@@ -165,8 +165,8 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (min_cost, min_recost) med1 ->
                    List.fold_left 
                        (fun (min_cost2, min_recost2) med2 ->
-                            let cost, recost = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
-                            if cost < min_cost2 then cost, recost
+                            let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            if cost < min_cost2 then cost, recost1 + recost2
                             else min_cost2, min_recost2
                        ) (min_cost, min_recost) meds2.med_ls
               ) (max_int, 0) meds1.med_ls
@@ -188,8 +188,8 @@ let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (max_cost, max_recost) med1 ->
                    List.fold_left 
                        (fun (max_cost2, max_recost2) med2 ->
-                            let cost, recost = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
-                            if cost > max_cost2 then cost, recost
+                            let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            if cost > max_cost2 then cost, recost1 + recost2
                             else max_cost2, max_recost2
                        ) (max_cost, max_recost) meds2.med_ls
               ) (0, 0) meds1.med_ls
@@ -228,3 +228,15 @@ let compare (meds1 : meds_t) (meds2 : meds_t) =
 
 let clean_median meds1 meds2 = 
     meds1, meds2
+
+
+
+(** ============================================================== **)
+let get_active_ref_code meds = 
+(*
+    List.iter (fun med -> fprintf stdout "%i -> %i %i\n " med.ChromAli.ref_code
+                   med.ChromAli.ref_code1 med.ChromAli.ref_code2) meds.med_ls;
+  flush stdout; 
+*)  
+    let med = List.hd meds.med_ls in
+    med.GenomeAli.genome_ref_code, med.GenomeAli.genome_ref_code1, med.GenomeAli.genome_ref_code2

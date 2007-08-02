@@ -553,11 +553,11 @@ ifeq ($(USEPARALLEL), true)
 	$(OCAMLC) -custom $(OCAML_INCLUDES) -cc mpicc -cclib -L$(OCAMLMPI) \
 		-cclib -l$(MPILNAME) $(OCAMLMPI)/mpi.cma -cclib -l$(MPILNAME) \
 		-cclib -lcamlgrappa $(LIBS)  $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
-		$(GRAPHICS) camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
+		$(GRAPHICS) dynlink.cma camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
 else
 		$(OCAMLC) -custom $(OCAML_INCLUDES) -cclib -L$(OCAMLMPI) \
 		-cclib -lcamlgrappa $(LIBS) $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
-		$(GRAPHICS) camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
+		$(GRAPHICS) dynlink.cma camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
 endif
 
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 2006 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2033 $"
 
 type tag = string
 type value = tag
@@ -153,6 +153,10 @@ module GenomeMap = struct
     let ref_code = "ReferenceCode"
     let a_ref_code = "AncestorReferenceCode"
     let d_ref_code = "DescendantReferenceCode"
+
+
+    let a_chrom_id = "AncestorChromosomeID"
+    let d_chrom_id = "DescendantChromosomeID"
 
     let seq_order = "SequenceOrder"
     let a_seq_order = "AncestorSequenceOrder"

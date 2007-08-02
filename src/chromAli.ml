@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 2006 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2033 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -121,12 +121,6 @@ let clone_med m = {
     chrom_map = List.map clone_seg m.chrom_map
 }
 
-let get_dir dir =  
-    match dir with 
-    | `Positive -> "+" 
-    | `Negative -> "-" 
-    | _ -> "" 
-
 
 let print_map map = 
     print_endline "Start the chromosome map";
@@ -192,97 +186,43 @@ let print_median med_ls outfile =
     close_out f
 
 
-(** for implied alignments *)
-let convert_map med = 
-    let gap = Alphabet.gap in 
-    let med_pos = ref (-1) in 
-    let rev_map = List.fold_left 
-        (fun map seg -> 
-             let len = Sequence.length seg.alied_med in 
-             (if (len != Sequence.length seg.alied_seq1) or 
-                 (len != Sequence.length seg.alied_seq2) then 
-                 failwith "alied_med, alied_seq1, alied_seq2 do not the same lengths");
-        
-
-             let pos1 = ref (-1) in 
-             let pos2 = ref (-1) in 
-             let adder map p med_code =
-                 let idx = 
-                     match med_code = gap with
-                     | true ->  -1
-                     | false -> incr med_pos; !med_pos
-                 in 
-                 let code1 = Sequence.get seg.alied_seq1 p in  
-                 let idx1 = 
-                     match code1 = gap with
-                     | true -> -1
-                     | false -> incr pos1; seg.sta1 + !pos1
-                 in 
-
-                 let idx2, code2 = 
-                     match seg.dir2 with 
-                     | `Positive -> begin
-                           let code2 =  Sequence.get seg.alied_seq2 p in 
-                           match code2 = gap with
-                           | true -> -1, code2
-                           | false -> incr pos2; seg.sta2 + !pos2, code2
-                                 
-                       end 
-                     | `Negative -> begin
-                           let code2 =  Sequence.get seg.alied_seq2 (len-p-1) in 
-                           match code2 = gap with
-                           | true -> -1, code2
-                           | false -> incr pos2; seg.en2 - !pos2, code2
-                       end 
-                     | _ -> failwith "convert map in ChromAli"
-                 in                  
-                 (idx, med_code, idx1, code1, idx2, code2)::map
-             in 
-             
-             Sequence.foldi adder map seg.alied_med                     
-        ) [] med.chrom_map
-    in 
-    let map = List.rev rev_map in 
-    map 
-
-
-
-let create_map med child_ref : (int * int * Tags.output) = 
+let create_map anc_med des_ref : (int * int * Tags.output) = 
     let str = string_of_int in  
     let seg_ls = List.map 
         (fun m -> 
-             let p_ref_code, p_sta, p_en, p_dir  = 
-                 (str med.ref_code), (str m.sta), (str m.en), "+" 
+             let a_ref_code, a_sta, a_en, a_dir  = 
+                 (str anc_med.ref_code), (str m.sta), (str m.en), "+" 
              in 
-             let c_ref_code, c_sta, c_en, c_dir = 
-                 match child_ref = med.ref_code1 with
+             let d_ref_code, d_sta, d_en, d_dir = 
+                 match des_ref = anc_med.ref_code1 with
                  | true ->
-                       (str med.ref_code1), (str m.sta1), (str m.en1), (get_dir m.dir1) 
+                       (str anc_med.ref_code1), (str m.sta1), (str m.en1), (Utl.get_dir m.dir1) 
                  | false ->
-                       (str med.ref_code2), (str m.sta2), (str m.en2), (get_dir m.dir2) 
+                       (str anc_med.ref_code2), (str m.sta2), (str m.en2), (Utl.get_dir m.dir2) 
              in 
-             let attributes = [(Tags.GenomeMap.a_ref_code, p_ref_code);
-                               (Tags.GenomeMap.a_start_seg, p_sta);
-                               (Tags.GenomeMap.a_end_seg, p_en );
-                               (Tags.GenomeMap.a_dir_seg, p_dir );
-                               (Tags.GenomeMap.d_ref_code, c_ref_code);
-                               (Tags.GenomeMap.d_start_seg, c_sta);
-                               (Tags.GenomeMap.d_end_seg, c_en );
-                               (Tags.GenomeMap.d_dir_seg, c_dir )
+             let attributes = [(Tags.GenomeMap.a_ref_code, a_ref_code);
+                               (Tags.GenomeMap.a_start_seg, a_sta);
+                               (Tags.GenomeMap.a_end_seg, a_en );
+                               (Tags.GenomeMap.a_dir_seg, a_dir );
+                               (Tags.GenomeMap.d_ref_code, d_ref_code);
+                               (Tags.GenomeMap.d_start_seg, d_sta);
+                               (Tags.GenomeMap.d_end_seg, d_en );
+                               (Tags.GenomeMap.d_dir_seg, d_dir )
                               ] 
              in 
              let m : Tags.output = (Tags.GenomeMap.seg, attributes, `String "") in 
              `Single m
-        ) med.chrom_map 
+        ) anc_med.chrom_map 
     in 
+
 
     let chrom_map : Tags.output = 
         (Tags.GenomeMap.chrom, [], `Structured (`Set  seg_ls)) 
     in 
 
-    match child_ref = med.ref_code1 with
-    | true -> med.cost1, med.recost1, chrom_map
-    | false -> med.cost2, med.recost2, chrom_map
+    match des_ref = anc_med.ref_code1 with
+    | true -> anc_med.cost1, anc_med.recost1, chrom_map
+    | false -> anc_med.cost2, anc_med.recost2, chrom_map
 
 
 
@@ -406,21 +346,6 @@ let change_to_single med single_seq =
                       end 
                  ) seg.alied_med
              in 
-(*
-             let new_cost1 = UtlPoy.cmp_ali_cost single_alied_med seg.alied_seq1
-                 `Positive Cost_matrix.Two_D.default in
-             let new_cost2 = UtlPoy.cmp_ali_cost single_alied_med seg.alied_seq2
-                 `Positive Cost_matrix.Two_D.default in
-             fprintf stdout "Previous_cost: %i, new_cost: %i (%i %i)\n" seg.cost
-                 (new_cost1 + new_cost2) new_cost1 new_cost2; 
-
-             print_endline "Change to single";
-             UtlPoy.printDNA seg.alied_med;
-             UtlPoy.printDNA single_alied_med;
-             UtlPoy.printDNA seg.alied_seq1;
-             UtlPoy.printDNA seg.alied_seq2;
-             print_newline ();
-*)
              {seg with alied_med = single_alied_med}
 
         ) med.chrom_map
@@ -653,7 +578,7 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
     
     let submed_ls, med_len, chrom_map = List.fold_left adder ([], -1, [])  ali_order_ls  in
     if (List.length chrom_map = 0) then begin
-        failwith "Chrom_map length is Zeooo";
+        failwith "Chrom_map length is Zero";
     end;
     
     let seq = UtlPoy.delete_gap (UtlPoy.concat submed_ls) in 

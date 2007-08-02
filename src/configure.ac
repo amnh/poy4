@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ(2.59)
 AC_INIT(FULL-PACKAGE-NAME, VERSION, BUG-REPORT-ADDRESS)
 AC_CONFIG_SRCDIR([add.c])
 AC_CONFIG_HEADER([config.h])
@@ -66,6 +66,17 @@ AC_CHECK_PROGS([OCAMLC], [ocamlc.opt ocamlc])
 AC_CHECK_PROGS([OCAMLOPT], [ocamlopt.opt ocamlopt])
 AC_CHECK_PROGS([OCAMLDEP], [ocamldep])
 AC_CHECK_PROGS([OCAMLTOP], [ocamlmktop])
+
+
+case `../gnu/config.guess` in
+    x86_64*)
+        OCAMLOPT="${OCAMLOPT} -fno-PIC"
+        ;;
+    *)
+        OCAMLOPT=${OCAMLOPT}
+        ;;
+esac
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h unistd.h])

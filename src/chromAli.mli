@@ -36,10 +36,10 @@ val create_med : Sequence.s -> med_t
 val to_single : med_t -> int -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s
 
 val init_med : Sequence.s -> med_t
-val get_dir : [> `Negative | `Positive ] -> string
+
 val print_map : seg_t list -> unit
 val print_median : med_t list -> string -> unit
-val convert_map : med_t -> (int * int * int * int * int * int) list
+
 val create_map : med_t -> int -> int * int * Tags.output
 val create_global_map :
   Sequence.s ->

@@ -62,3 +62,4 @@ val equalArr : 'a array -> 'b array -> ('a -> 'b -> int) -> bool
 val filterArray : ('a -> bool) -> 'a array -> 'a array
 val break_array : 'a array -> (int * int) list -> 'a array list
 val printIntSet : IntSet.t -> unit
+val get_dir : [> `Negative | `Positive ] -> string

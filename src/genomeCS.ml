@@ -24,6 +24,7 @@ let () = SadmanOutput.register "GenomeCS" "$Revision: 1266 $"
 let fprintf = Printf.fprintf
 
 module IntMap = All_sets.IntegerMap
+module IntSet = All_sets.Integers
 
 type meds_t = Genome.meds_t
 
@@ -206,48 +207,96 @@ let compare_data a b =
     IntMap.fold comparator b.meds 0
 
 
-let to_formatter attr t (parent_t : t option) d : Tags.output list = 
+
+
+let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list = 
+    let _, state = List.hd attr in   
+
     let output_genome code med acc =
-        let cost, recost = 
-            match parent_t with
-            | None -> "0", "0"
-            | Some parent ->
-                  let parent_med = IntMap.find code parent.meds in 
+        let med = 
+            try
+                List.find (fun med ->                     
+                               IntSet.mem med.GenomeAli.genome_ref_code  ref_codes
+                          ) med.Genome.med_ls
+            with Not_found -> failwith "Not found med -> to_formatter -> GenomeCS"
+        in         
+        let cost, recost,  map = 
+            match parent_t with  
+            | None -> 0, 0, None
+            | Some parent -> begin 
+                  let parent_med = IntMap.find code parent.meds in  
+                  let parent_med = List.find 
+                      (fun med -> 
+                           IntSet.mem med.GenomeAli.genome_ref_code ref_codes 
+                      ) parent_med.Genome.med_ls
+                  in                 
+                  if state = "Single" then 0, 0, None 
+                  else begin
+                      let cost, recost, map = 
+                      match state with
+                      | "Preliminary" ->
+                            GenomeAli.create_map parent_med med.GenomeAli.genome_ref_code  
+                      | "Final" ->
+                            GenomeAli.create_map med parent_med.GenomeAli.genome_ref_code   
+                      | _ -> failwith "To_formatter is available only for preliminary and final states"
+(*                            let _, _, map = GenomeAli.create_map parent_med med.GebineAli.genome_ref_code in 
+                            let cost = IntMap.find code t.costs in 
+                              let recost = IntMap.find code t.recosts in 
+                              (int_of_float cost), (int_of_float recost), map *)
 
-                  let cost, recost = Genome.cmp_min_pair_cost med parent_med in 
-
-                  string_of_int cost, string_of_int recost
+                      in 
+                      cost, recost, Some map
+                  end 
+              end 
+   
+        in 
  
-        in  
-        let collect acc (med :  GenomeAli.med_t) = 
-            let chrom_arr = GenomeAli.get_chroms med in 
-            let chromStr_arr = Array.map 
-                (fun chrom -> Sequence.to_formater chrom Alphabet.nucleotides) chrom_arr 
-            in
-            let genome = String.concat " @@ " (Array.to_list chromStr_arr) in 
-            let name = Data.code_character code d in 
-
-            let map = GenomeAli.genome_map_to_string med in 
-
-            let attributes = 
-                (Tags.Characters.name, name) ::                    
-                (Tags.Characters.cost, cost) ::
-                (Tags.Characters.recost, recost) ::
-                (Tags.Characters.ref_code, string_of_int med.GenomeAli.genome_ref_code)::
-                (Tags.Characters.chrom_map, map)::
-                attr
-            in
-            let contents = `String genome in
-            let acc = (Tags.Characters.genome, attributes, contents) :: acc in
-
-            acc
+        let chrom_arr = GenomeAli.get_chroms med in 
+        let chromStr_arr = Array.map 
+            (fun chrom -> Sequence.to_formater chrom Alphabet.nucleotides) chrom_arr 
         in
 
-        List.fold_left collect acc med.Genome.med_ls 
-    in
+        let genome = String.concat " @@ " (Array.to_list chromStr_arr) in 
+        let name = Data.code_character code d in  
+        
 
-    let f = IntMap.fold output_genome t.meds [] in 
-    f
+        let cost_str = 
+            match state with
+            | "Single" -> (string_of_int cost) ^ " - " ^ (string_of_int cost)
+            | _ -> "0 - " ^ (string_of_int cost)
+        in 
+
+        let attributes =  
+            (Tags.Characters.name, name) ::                     
+                (Tags.Characters.cost, cost_str) :: 
+                (Tags.Characters.recost, string_of_int recost) :: 
+                (Tags.Characters.ref_code, string_of_int med.GenomeAli.genome_ref_code):: 
+                attr 
+        in 
+
+        let acc = match map with
+        | Some map ->
+              let content = (Tags.Characters.sequence, [], `String genome) in  
+            (Tags.Characters.genome, attributes, 
+             `Structured (`Set [`Single map; `Single content])) :: acc 
+        | None ->
+            (Tags.Characters.genome, attributes, `String genome):: acc 
+        in 
+        acc
+    in
+    IntMap.fold output_genome t.meds []
+
+
+
+let get_active_ref_code t = 
+    IntMap.fold 
+        (fun _ meds (acc_ref_code, acc_child_ref_code) ->
+             let ref_code, child1_ref_code, child2_ref_code = 
+                 Genome.get_active_ref_code meds 
+             in
+             IntSet.add ref_code acc_ref_code,
+             IntSet.add child2_ref_code (IntSet.add child1_ref_code acc_child_ref_code)  
+        ) t.meds (IntSet.empty, IntSet.empty)
 
 
 

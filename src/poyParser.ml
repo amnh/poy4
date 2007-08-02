@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2026 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2033 $"
 
 open StdLabels
 
@@ -88,38 +88,7 @@ EXTEND Gram
             [ "define"; "set"; name = UIDENT; "as"; "integers"; "with"; "["; 
             min = INT; max = INT; "]"; opt = OPT options; "end" -> 
                 let range = int_of_string min, int_of_string max in
-                IntSet (name, range, opt) ] |
-            [ "load"; "dna"; specs = LIST1 [x = dynhom -> x] SEP "and"; 
-                "end" -> Dna_Sequences specs ] |
-            [ "load"; "protein"; specs = LIST1 [x = dynhom -> x] SEP "and"; 
-                "end" -> Protein_Sequences specs ] |
-            [ "load"; "static"; files = LIST1 [x = STRING -> x]; "end" -> Static files ] |
-            [ "trees"; "files"; file = LIST1 [x = STRING -> x]; "end" -> Trees file ] |
-            [ "trees"; trees = LIST1 [x = STRING -> x]; "end" -> TreesList trees ] |
-            [ "names"; file = LIST1 [x = STRING -> x]; "end" -> Synonyms file ] |
-            [ "names"; names = LIST1 [x = synnames -> x]; "end" -> SynonymsList names ] |
-            [ "ignore"; "file"; files = LIST1 [x = STRING -> x]; 
-                "end" -> Ignore_files files ] |
-            [ "ignore"; names = LIST1 [x = STRING -> x]; "end" -> Ignore names ]
-        ];
-    synnames:
-        [
-            [ src = STRING; dst = STRING -> (src, dst) ]
-        ];
-    dynhom:
-        [
-            [ files = LIST1 [x = STRING -> x]; opt = OPT dynhomopt -> (files, opt) ]
-        ];
-    dynhomopt:
-        [
-            [ "using"; opt = LIST1 [x = dynhomopts -> x] -> opt ]
-        ];
-    dynhomopts:
-        [
-            [ "transformation"; "cost"; "matrix"; file = STRING -> Data.Tcm file ] |
-            [ "tcm"; file = STRING -> Data.Tcm file ] |
-            [ "fixed"; "states"; file = OPT [ x = STRING -> x ]  -> Data.Fixed file ] |
-            [ "fs"; file = OPT [x = STRING -> x] -> Data.Fixed file ]
+                IntSet (name, range, opt) ] 
         ];
     heading_char_funcs:
         [ 
