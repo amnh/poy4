@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2036 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2049 $"
 
 open StdLabels
 
@@ -370,7 +370,7 @@ let process_tree prev lst =
         | Static files ->
                 let files = List.map (fun x -> `Remote x) files in
                 (* Load a hennig or dpread file containing static characters *)
-                List.fold_left ~f:Data.add_static_file ~init:data files 
+                List.fold_left ~f:(Data.add_static_file `Hennig) ~init:data files 
         | Dna_Sequences lst -> 
                 (* Load a list of files of DNA sequences *)
                 let lst = List.map (fun (x, y) -> 
@@ -427,30 +427,8 @@ let of_file data file =
             Status.user_message Status.Error msg;
             raise e
 
-let set_character_weight data (c, w) =
-    match Hashtbl.find data.Data.character_specs c with
-    | Data.Static (enc, fn) ->
-            let data = Data.duplicate data in
-            let w = truncate w in
-            let n = 
-                Data.Static (Parser.Hennig.Encoding.set_weight enc w, fn) 
-            in
-            Hashtbl.replace data.Data.character_specs c n;
-            data
-    | Data.Dynamic y ->
-            let data = Data.duplicate data in
-            let y = Data.Dynamic { y with Data.weight = w } in
-            Hashtbl.replace data.Data.character_specs c y;
-            data
-    | _ -> data
-
-let get_characters_weight data = 
-    Hashtbl.fold (fun x y acc -> 
-        match y with
-        | Data.Static (enc, fn) -> 
-                (x, float_of_int (Parser.Hennig.Encoding.get_weight enc)) :: acc
-        | Data.Dynamic y -> (x, y.Data.weight) :: acc
-        | _ -> acc) data.Data.character_specs []
+let set_character_weight data (c, w) = Data.transform_weight (`ReWeight (`Some
+(true, [c]), w)) data
 
 let guess_class_and_add_file is_prealigned data filename =
     if Data.file_exists data filename then
@@ -493,7 +471,14 @@ let guess_class_and_add_file is_prealigned data filename =
             | Parser.Is_Phylip | Parser.Is_Hennig -> 
                     let data = add_file [Data.Characters; Data.Trees] in
                     file_type_message "hennig86/Nona";
-                    Data.add_static_file data filename
+                    Data.add_static_file `Hennig data filename
+            | Parser.Is_Dpread ->
+                    let data = add_file [Data.Characters; Data.Trees] in
+                    file_type_message "dpread file";
+                    let parsed = Parser.OldHennig.of_file filename in
+                    let fn = FileStream.filename filename in
+                    let converted = Parser.SC.of_old_parser fn None parsed in
+                    Data.add_static_parsed_file data fn converted
             | Parser.Is_Transformation_Cost_Matrix ->
                     let data = add_file [Data.CostMatrix] in
                     file_type_message "Transformation@ Cost@ Matrix";
@@ -510,7 +495,10 @@ let guess_class_and_add_file is_prealigned data filename =
                     let data = add_file [Data.Trees] in
                     file_type_message "Tree@ List";
                     Data.process_trees data filename
-            | Parser.Is_Unknown | Parser.Is_Nexus -> 
+            | Parser.Is_Nexus -> 
+                    file_type_message "Nexus@ File";
+                    Data.add_static_file `Nexus data filename 
+            | Parser.Is_Unknown ->
                     let data = 
                         add_file [Data.Characters; Data.Trees;
                         Data.CostMatrix] 

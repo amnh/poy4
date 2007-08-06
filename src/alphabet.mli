@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: alphabet.mli 1968 2007-07-17 02:01:38Z andres $ *)
+(* $Id: alphabet.mli 2049 2007-08-06 19:06:02Z andres $ *)
 (* Alphabet.
 *
 * Description and handling of different kinds of alphabets for the analysis of
@@ -135,6 +135,7 @@ val to_list : a -> (string * int) list
 val to_formatter : a -> Tags.output
 
 module Lexer : sig
+
     (* The returned list is in the inverse order of the stream. It is done like
     * this because the sequences are loaded by prepending, so there is no need
     * to hit the performance by keeping the order of the sequences being read.
@@ -142,5 +143,15 @@ module Lexer : sig
     * (false). *)
     val make_lexer : 
         bool -> a -> (char Stream.t -> int list -> int -> int list * int)
+
+    (** Simmilar to [make_lexer] with two main differences: 0) first argument
+    * specifies the polymorphic style according to the file format i) second argument is
+    * a boolean for whether or not it should respect the case of the alphabet,
+    * and ii) it doesn't consume the entire stream but returns one element at a
+    * time. The list of elements is returned because a small set of alphabet
+    * elements can be enclosed inside {} or (). *)
+    val make_simplified_lexer : [ `Nexus | `Hennig | `None ] -> 
+        bool -> bool -> a -> (char Stream.t -> int list)
+
 end
 

@@ -448,6 +448,11 @@ let to_single ?(is_root=false) ref_codes alied_map parent mine =
           in
           prev_cost, new_cost, AnnchromCS median          
 
+    | GenomeCS parent, GenomeCS mine, GenomeCS alied_map ->
+          let prev_cost, new_cost, median = 
+              GenomeCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+          in
+          prev_cost, new_cost, GenomeCS median          
 
     | _, mine, _ -> 
 

@@ -131,7 +131,7 @@ type specs =
     (** Static homology characters, includes the encoding specs from the
     * parser and the name of the file it comes from (the name includes the
     * column number). *)
-    | Static of (Parser.Hennig.Encoding.s * string)
+    | Static of Parser.SC.static_spec
 
     (** A dynamic homology based character type, with three parameters, the
     * file name containing the set of sequences, the filename of the valid 
@@ -169,7 +169,7 @@ type cs_d =
     | Dyna of (int * Sequence.s dyna_data)
     (* A static homology character, containing its code, and the character
     * itself *)
-    | Stat of (int * Parser.t)
+    | Stat of (int * int list option)
 
 type cs = cs_d * specified
 
@@ -464,9 +464,13 @@ let annotated_sequences bool data =
 
 let get_weight c data = 
     match Hashtbl.find data.character_specs c with
-    | Static (enc, _) -> 
-            float_of_int (Parser.Hennig.Encoding.get_weight enc)
+    | Dynamic spec -> spec.weight
+    | Static spec -> spec.Parser.SC.st_weight
     | _ -> 1.0
+
+let get_weights data =
+    Hashtbl.fold (fun x _ acc -> (x, get_weight x data) :: acc) 
+    data.character_specs []
 
 (* Returns a fresh object with the added synonym from [a] to [b] to [data]. *)
 let add_synonym data (a, b) =
@@ -735,61 +739,71 @@ let get_taxon_characters data tcode =
     | _ -> create_ht ()
 
 (* Changes in place *)
-let add_static_character_spec data (code, enc, filename) =
-    Hashtbl.replace data.character_specs code (Static (enc, filename));
-    Hashtbl.replace data.character_names filename code;
-    Hashtbl.replace data.character_codes code filename
+let add_static_character_spec data (code, spec) =
+    Hashtbl.replace data.character_specs code (Static spec);
+    Hashtbl.replace data.character_names spec.Parser.SC.st_name code;
+    Hashtbl.replace data.character_codes code spec.Parser.SC.st_name
 
-let report_static_input file (x, y, _) =
-    let characters = Array.length x 
-    and taxa = List.length y in
+let report_static_input file (taxa, characters, matrix, tree) =
+    let characters = Array.length characters 
+    and taxa = Array.length taxa in
     let msg =
         "@[The@ file@ " ^ file ^ "@ defines@ " ^ string_of_int characters 
         ^ "@ characters@ in@ " ^ string_of_int taxa ^ "@ taxa.@]"
     in
     Status.user_message Status.Information msg
 
-let gen_add_static_parsed_file do_duplicate data file (enc, res, trees) =
+let gen_add_static_parsed_file do_duplicate data file ((taxa, characters,
+matrix, trees) : Parser.SC.file_output) =
     let data = 
         if do_duplicate then duplicate data 
         else data
     in
     (* A function to report the taxa loading *)
-    let len = List.length res in
-    let st = Status.create "Loading Characters" (Some len) "taxa" in
-    let len = Array.length enc in
+    let len_taxa = Array.length taxa in
+    let st = Status.create "Loading Characters" (Some len_taxa) "taxa" in
     (* [codes] contain the character speecification for the sequences in
     * this file *)
     let codes = 
         let builder x = 
             incr data.character_code_gen;
-            let code = !(data.character_code_gen)
-            and enc = enc.(x)
-            and filename = file ^ ":" ^ (string_of_int x) in
-            code, enc, filename
+            (!(data.character_code_gen)), x
         in
-        Array.init ~f:builder len
+        Array.map ~f:builder characters
     in
     Status.full_report ~msg:"Storing the character specifications" st;
     (* Now we add the codes to the data *)
     Array.iter ~f:(add_static_character_spec data) codes;
     (* And now a function to add one taxon at a time to the data *)
-    let process_taxon data (ch, taxon_name) =
-        let data, tcode = process_taxon_code data taxon_name file in
-        let tl = get_taxon_characters data tcode in
-        let add_character column it =
-            let chcode, _, _ = codes.(column) in
-            let spec = if Parser.is_unknown it then `Unknown else `Specified in
-            Hashtbl.replace tl chcode ((Stat (chcode, it)), spec);
-            (column + 1)
-        in
-        let _ = Array.fold_left ~f:add_character ~init:0 ch in
-        Hashtbl.replace data.taxon_characters tcode tl;
-        let did = Status.get_achieved st in
-        Status.full_report ~adv:(did + 1) st;
-        data
+    let data = Array.fold_left ~f:(fun data name ->
+        match name with
+        | Some name ->
+                let data, _ = process_taxon_code data name file in
+                data
+        | None -> data) ~init:data taxa 
     in
-    let data = List.fold_left ~f:process_taxon ~init:data res in
+    for row = 0 to len_taxa - 1 do
+        (* We ignore the data because we already processed the names *)
+        match taxa.(row) with
+        | None -> ()
+        | Some tname ->
+                let _, tcode = process_taxon_code data tname file in
+                let tl = get_taxon_characters data tcode in
+                let add_character column it =
+                    let chcode, _ = codes.(column) in
+                    let specified = 
+                        match it with
+                        | Some _ -> `Specified
+                        | None -> `Unknown
+                    in
+                    Hashtbl.replace tl chcode ((Stat (chcode, it)), specified);
+                    (column + 1)
+                in
+                let _ = Array.fold_left ~f:add_character ~init:0 matrix.(row) in
+                Hashtbl.replace data.taxon_characters tcode tl;
+                let did = Status.get_achieved st in
+                Status.full_report ~adv:(did + 1) st;
+    done;
     Status.finished st;
     { data with trees = data.trees @ trees }
 
@@ -804,10 +818,10 @@ let add_multiple_static_parsed_file data list =
     ~init:data list
 
 
-let add_static_file ?(report = true) data file = 
+let add_static_file ?(report = true) style data file = 
     try
         let ch, file = FileStream.channel_n_filename file in
-        let r = Parser.Hennig.of_channel ch in
+        let r = Parser.SC.of_channel style ch file in
         if report then report_static_input file r;
         close_in ch;
         add_static_parsed_file data file r
@@ -866,7 +880,6 @@ let process_parsed_sequences alphabet file dyna_state data res =
                            failwith ("Inconsistent input file " ^  file);  
                    end) arr
         ); 
-
         let res = ref [] in
         for j = loci - 1 downto 0 do 
             let loci = ref [] in
@@ -974,7 +987,6 @@ let process_parsed_sequences alphabet file dyna_state data res =
             add_character num_taxa max_len data 
         in 
         data.seg_code_gen := 0;
-
         let rec add_taxon data t = 
             match t >= num_taxa with
             | true -> data 
@@ -1455,10 +1467,8 @@ let to_channel ch data =
         output_string ch "\n"
     in
     let print_characters _ = function
-        | Static (a, fname) ->
-                let str = Parser.Hennig.Encoding.to_string a in
-                output_string ch fname;
-                output_string ch " -> ";
+        | Static a ->
+                let str = Parser.SC.to_string a in
                 output_string ch str;
                 output_string ch "\n"
         | Dynamic dspec ->
@@ -1493,7 +1503,10 @@ let taxon_code name data =
 
 let get_tcm code data = 
     match Hashtbl.find data.character_specs code with
-    | Static (r, _) -> Parser.Hennig.Encoding.get_tcm r
+    | Static spec -> 
+            (match spec.Parser.SC.st_type with
+            | Parser.SC.STSankoff x -> x
+            | _ -> failwith "Unexpected")
     | _ -> failwith "Unexpected"
 
 
@@ -1555,27 +1568,28 @@ let categorize data =
                } in                         
     let categorizer code spec data =
         match spec with
-        | Static (enc, _) -> (* Process static characters *)
-              if Parser.Hennig.Encoding.is_sankoff enc then
-                  classify code data
-              else if Parser.Hennig.Encoding.is_ordered enc && 
-                  Parser.Hennig.Encoding.has_states 2 max_int enc then 
+        | Static enc -> (* Process static characters *)
+                let observed = List.length enc.Parser.SC.st_observed in
+                let between x y = observed >= x && observed <= y in
+                (match enc.Parser.SC.st_type with
+                | Parser.SC.STSankoff _ -> classify code data
+                | Parser.SC.STOrdered when observed > 1 ->
                       { data with additive = code :: data.additive }
-              else if Parser.Hennig.Encoding.has_states 2 8 enc then
-                  { data with non_additive_8 = code ::
-                          data.non_additive_8 }
-              else if Parser.Hennig.Encoding.has_states 9 16 enc then
-                  { data with non_additive_16 = code :: 
-                          data.non_additive_16 }
-              else if Parser.Hennig.Encoding.has_states 17 32 enc then
-                  { data with non_additive_32 = code :: 
-                          data.non_additive_32 }
-              else if not (Parser.Hennig.Encoding.is_ordered enc) 
-                  && Parser.Hennig.Encoding.has_states 2 max_int enc
-              then
-                  { data with non_additive_33 = code :: 
-                          data.non_additive_33 }
-              else data
+                | Parser.SC.STOrdered -> data
+                | Parser.SC.STUnordered ->
+                        if between 2 8 then
+                            { data with non_additive_8 = code ::
+                                data.non_additive_8 }
+                        else if between 9 16 then
+                            { data with non_additive_16 = code :: 
+                                data.non_additive_16 }
+                        else if between 17 32 then
+                            { data with non_additive_32 = code :: 
+                                data.non_additive_32 }
+                        else if observed > 32 then
+                            { data with non_additive_33 = code :: 
+                                data.non_additive_33 }
+                        else data)
         | Dynamic _ -> { data with dynamics = code :: data.dynamics }
         | Set -> data
     in
@@ -1629,10 +1643,10 @@ let get_taxa data =
 let get_used_observed code d =
     let a = 
         match Hashtbl.find d.character_specs code with
-        | Static (a, _) -> a
+        | Static a -> a
         | _ -> failwith "Data.get_used_observed expects a static character"
     in
-    match Parser.Hennig.Encoding.get_used_observed a with
+    match a.Parser.SC.st_used_observed with
     | Some x -> x
     | None -> failwith "Data.get_used_observed"
 
@@ -1691,7 +1705,7 @@ let ignored_characters_to_formatter d : Tags.output =
     Tags.Data.ignored_characters, [], `Structured (`Set res)
 
 let states_set_to_formatter enc : Tags.output = 
-    let set = Parser.Hennig.Encoding.get_set enc in
+    let set = Parser.OldHennig.Encoding.get_set enc in
     let add item acc =
         `Single (Tags.Characters.state, [Tags.Characters.value,
         string_of_int item], `Structured `Empty) :: acc
@@ -1701,35 +1715,8 @@ let states_set_to_formatter enc : Tags.output =
 
 let character_spec_to_formatter enc : Tags.output =
     match enc with
-    | Static (enc, name) ->
-            if Parser.Hennig.Encoding.is_ordered enc then
-                Tags.Characters.additive,
-                [
-                    Tags.Characters.name, name;
-                    Tags.Characters.min, string_of_int 
-                    (Parser.Hennig.Encoding.get_min enc);
-                    Tags.Characters.max, string_of_int (
-                        Parser.Hennig.Encoding.get_max enc);
-                    Tags.Characters.weight, string_of_int (
-                        Parser.Hennig.Encoding.get_weight enc)
-                ],
-                `Structured `Empty
-            else if not (Parser.Hennig.Encoding.is_sankoff enc) then
-                Tags.Characters.nonadditive,
-                [
-                    Tags.Characters.name, name;
-                    Tags.Characters.weight, string_of_int (
-                        Parser.Hennig.Encoding.get_weight enc)
-                ],
-                `Structured (`Single (states_set_to_formatter enc))
-            else if (Parser.Hennig.Encoding.is_sankoff enc) then 
-                Tags.Characters.sankoff, 
-                [
-                    Tags.Characters.name, name;
-                    Tags.Characters.weight, string_of_int
-                        (Parser.Hennig.Encoding.get_weight enc)
-                ], `Structured (`Single (states_set_to_formatter enc))
-            else failwith "What is this?"
+    | Static enc ->
+            Parser.SC.to_formatter enc
     | Dynamic dspec ->
             Tags.Characters.molecular, 
             [
@@ -2416,7 +2403,7 @@ let process_ignore_characters_file report data file =
             data
 
 let replace_name_in_spec name = function
-    | Static (e, _) -> Static (e, name)
+    | Static e -> Static { e with Parser.SC.st_name = name }
     | Dynamic dspec -> Dynamic { dspec with filename = name }
     | Set -> Set
 
@@ -2705,13 +2692,14 @@ let get_pam data c =
     | _ -> failwith "Data.get_alphabet"
 
 let to_faswincladfile data filename =
+    ()
     (*
     let by_name data x y = 
         let namex = Hashtbl.find data.character_codes x 
         and namey = Hashtbl.find data.character_codes y in
         String.compare namex namey 
     in
-    *)
+    TODO
     let has_sankoff =
         match data.sankoff with
         | [] -> false
@@ -2818,17 +2806,13 @@ let to_faswincladfile data filename =
         fo (string_of_int number_of_taxa);
         fo "@\n";
     in
-    let get_tcm code = 
-        match Hashtbl.find data.character_specs code with
-        | Static (enc, _) -> Parser.Hennig.Encoding.get_tcm enc 
-        | _ -> failwith "Sequence characters are not supported in fastwinclad"
-    in
+    let get_tcm = get_tcm data in
     let output_weights (acc, pos) code = 
         match Hashtbl.find data.character_specs code with
-        | Static (enc, _) ->
-                let weight = Parser.Hennig.Encoding.get_weight enc in 
-                if weight = 1 then (acc, pos + 1)
-                else (acc ^ "ccode /" ^ string_of_int weight ^ " " ^ 
+        | Static enc ->
+                let weight = enc.Parser.SC.st_weight in 
+                if weight = 1. then (acc, pos + 1)
+                else (acc ^ "ccode /" ^ string_of_int (truncate weight) ^ " " ^ 
                 string_of_int pos ^ ";@\n", pos + 1)
         | _ -> failwith "Sequence characters are not supported in fastwinclad"
     in
@@ -2883,7 +2867,7 @@ let to_faswincladfile data filename =
     fo weights;
     fo "@\n";
     fo "@]"
-
+    *)
 let report_taxon_file_cross_reference chars data filename =
     let files_arr, taxa = 
         match chars with
@@ -2984,25 +2968,17 @@ let flush d =
 
 let set_weight weight spec =
     match spec with
-    | Static (enc, str) ->
-            Static (Parser.Hennig.Encoding.set_weight enc (int_of_float
-            weight), str)
+    | Static enc ->
+            Static { enc with Parser.SC.st_weight = weight}
     | Dynamic enc ->
             Dynamic ({ enc with weight = weight })
     | _ -> spec
 
 let set_weight_factor weight spec =
     match spec with
-    | Static (enc, str) ->
-            let new_weight =
-                let prev_weight = 
-                    float_of_int 
-                    (Parser.Hennig.Encoding.get_weight enc)
-                in
-                int_of_float (weight *. prev_weight)
-            in
-            Static (Parser.Hennig.Encoding.set_weight enc
-            new_weight, str)
+    | Static enc ->
+            Static 
+            { enc with Parser.SC.st_weight = enc.Parser.SC.st_weight *. weight }
     | Dynamic enc ->
             Dynamic ({ enc with weight = enc.weight *. weight })
     | _ -> spec
@@ -3084,7 +3060,8 @@ let make_fixed_states chars data =
                     let ch, file = 
                         FileStream.channel_n_filename (`Local file) 
                     in
-                    let r = Parser.Hennig.of_channel ch in
+                    let r = Parser.OldHennig.of_channel ch in
+                    let r = Parser.SC.of_old_parser file None r in
                     close_in ch;
                     gen_add_static_parsed_file false data char_name r
                 with
@@ -3179,14 +3156,14 @@ let lexicographic_taxon_codes data =
     change_taxon_codes (Array.stable_sort ~cmp:lexicographic_sort) data
 
 (* A function to produce the alignment of prealigned data *)
-let process_prealigned analyze_tcm data code =
+let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) =
     let character_name = code_character code data in
     let _, do_states, do_encoding = 
         let cm = get_sequence_tcm code data
         and alph = get_sequence_alphabet code data in
         analyze_tcm cm alph
     in
-    let process_taxon a b ((enc, acc, _) as res)=
+    let process_taxon a b ((enc, names, acc) as res)=
         match Hashtbl.find b code with
         | (Stat _), _
         | _, `Unknown -> res
@@ -3211,12 +3188,27 @@ let process_prealigned analyze_tcm data code =
                                 do_states `Exists base acc) 
                             [] v.seq
                         in
-                        enc, (Array.of_list seq, name) :: acc, []
+                        enc, (Some name) :: names, (Array.of_list seq) :: acc
                 | _ -> 
                         failwith 
                         "Aren't sequences supposed to be just one?"
     in
-    character_name, Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
+    let enc, names, matrix = 
+        Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
+    in
+    let newenc = Array.init (Array.length enc) (fun pos ->
+        Parser.SC.of_old_spec character_name None enc.(pos) pos) 
+    in
+    let matrix = 
+        let matrix = Array.of_list matrix in
+        Array.init (Array.length matrix) 
+            (fun x -> Array.init (Array.length enc)
+            (fun y -> 
+                Parser.SC.of_old_atom newenc.(y) enc.(y) matrix.(x).(y)))
+    in
+    let res = (Array.of_list names, newenc, matrix, []) in
+    Parser.SC.fill_observed res;
+    character_name, res
 
 let prealigned_characters analyze_tcm data chars =
     let codes = get_chars_codes_comp data chars in
@@ -3360,3 +3352,16 @@ module Sample = struct
         data
 
 end
+
+
+let to_human_readable data code item =
+    let spec = 
+        match Hashtbl.find data.character_specs code with
+        | Static x -> x
+        | _ -> assert false
+    in
+    let name =
+        try List.nth spec.Parser.SC.st_labels item with
+        | _ -> Alphabet.match_code item spec.Parser.SC.st_alph 
+    in
+    name

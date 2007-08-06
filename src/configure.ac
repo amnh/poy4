@@ -22,6 +22,8 @@ AC_SUBST(OCAMLC)
 AC_SUBST(OCAMLOPT)
 AC_SUBST(OCAMLDEP)
 AC_SUBST(OCAMLTOP)
+AC_SUBST(OCAMLLEX)
+AC_SUBST(OCAMLYACC)
 AC_SUBST(LIBS)
 
 # Checking the kind of graphics that we intend to support.
@@ -63,6 +65,8 @@ AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
 
 AC_CHECK_PROGS([OCAML], [ocaml])
 AC_CHECK_PROGS([OCAMLC], [ocamlc.opt ocamlc])
+AC_CHECK_PROGS([OCAMLYACC], [ocamlyacc])
+AC_CHECK_PROGS([OCAMLLEX], [ocamllex])
 AC_CHECK_PROGS([OCAMLOPT], [ocamlopt.opt ocamlopt])
 AC_CHECK_PROGS([OCAMLDEP], [ocamldep])
 AC_CHECK_PROGS([OCAMLTOP], [ocamlmktop])

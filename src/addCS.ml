@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AddCS" "$Revision: 1644 $"
+let () = SadmanOutput.register "AddCS" "$Revision: 2049 $"
 
 (* Internal only exceptions *)
 exception Success
@@ -71,7 +71,8 @@ let of_array arr k =
             if All_sets.Integers.mem c !codes then raise Duplicated
             else begin
                 codes := All_sets.Integers.add c !codes;
-                if b < a then raise Illegal_State
+                if b < a then 
+                    raise Illegal_State
                 else ()
             end
     in
@@ -451,8 +452,10 @@ let to_formatter attr c parent d : Tags.output list =
                 attr
         in
         let contents = `Set [
-            `Single (Tags.Characters.min, [], `String (string_of_int min));
-            `Single (Tags.Characters.max, [], `String (string_of_int max))
+            `Single (Tags.Characters.min, [], 
+            `String (Data.to_human_readable d code min));
+            `Single (Tags.Characters.max, [], 
+            `String (Data.to_human_readable d code max))
         ]
         in
         (Tags.Characters.additive, attributes, `Structured contents)
@@ -528,13 +531,29 @@ end
 
 (* For now we can only handle characters that have differences of less than 16
 * units. *)
-let of_parser (it, taxon) code = 
+let of_parser data (it, taxon) code = 
+    let first lst =
+        match lst with
+        | h :: _ -> h
+        | _ -> assert false
+    in
+    let rec last lst = 
+        match lst with
+        | [h] -> h
+        | _ :: tl -> last tl
+        | [] -> assert false
+    in
     let check_type_and_val acc = function 
-        | Parser.Ordered_Character (min, max, _), code -> (min, max, code) :: acc
-        | Parser.Inactive_Character, _ -> acc
-        | _ ->
-                print_string "AddCS.of_parser1.\n";
-                raise Illegal_Arguments
+        | Some v, code -> 
+                let v = List.sort compare v in
+                (first v, last v, code) :: acc
+        | None, code ->
+                match Hashtbl.find data.Data.character_specs code with
+                | Data.Static enc -> 
+                        (first enc.Parser.SC.st_observed, 
+                        last enc.Parser.SC.st_observed,
+                        code) :: acc
+                | _ -> assert false
     in
     let arr = Array.of_list (List.rev (Array.fold_left check_type_and_val []
     it)) in

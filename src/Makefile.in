@@ -40,6 +40,8 @@ OCAMLC := @OCAMLC@
 OCAMLOPT := @OCAMLOPT@
 OCAMLDEP := @OCAMLDEP@
 OCAMLTOP := @OCAMLTOP@
+OCAMLLEX := @OCAMLLEX@
+OCAMLYACC := @OCAMLYACC@
 
 INCLUDE = `$(OCAMLC) -where`
 export DEPEND = .depend
@@ -190,7 +192,7 @@ CHARACTER = $(READLINE) sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
 	dynamicCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
 	characterScripting.cmo  metric.cmo
 
-PARSER = parser.cmo $(LANGUAGE) 
+PARSER = nexus.cmo hennig.cmo hennigLexer.cmo hennigParser.cmo nexusLexer.cmo nexusParser.cmo parser.cmo $(LANGUAGE) 
 
 ifeq ($(USEGRAPHICS), tk)
       TREEOUTPUT = asciiTree.cmo graphTree.cmo graphicTK.cmo graphicsPs.cmo
@@ -257,7 +259,9 @@ all_libs: status_ncurses.cma status_flat.cma sequences.cma distances.cma \
 clean:	
 	rm -f *.annot *.cmi *.cmo *.cmx* *.o *.a *.so \
 	mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml \
-	nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c status.ml ocaml-str \
+	nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml hennigParser.mli hennigLexer.ml \
+	nexusParser.ml nexusParser.mli nexusLexier.ml \
+	status.ml ocaml-str \
 	$(LOCAL_CLEAN) 
 	@for subs in $(SUBDIRS); do \
 	  cd $$subs; \
@@ -529,6 +533,24 @@ ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlc -v -g ultrametric.ml -package ocamlgraph -linkpkg
 ultrametric.cmx: status.cmx ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlopt -v ultrametric.ml -package ocamlgraph -linkpkg
+
+hennigParser.cmi: hennig.cmo hennigParser.mly
+	$(OCAMLYACC) hennigParser.mly
+	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) hennigParser.mli
+
+hennigParser.ml: hennigParser.cmi
+
+hennigLexer.ml: hennig.cmo hennigParser.cmi hennigLexer.mll
+	$(OCAMLLEX) hennigLexer.mll
+
+nexusParser.cmi: nexus.cmo nexusParser.mly
+	$(OCAMLYACC) nexusParser.mly
+	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) nexusParser.mli
+
+nexusParser.ml: nexusParser.cmi
+
+nexusLexer.ml: nexus.cmo nexusParser.cmi nexusLexer.mll
+	$(OCAMLLEX) nexusLexer.mll
 
 .ml.cmo:
 	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) $<

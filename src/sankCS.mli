@@ -42,8 +42,6 @@ val parse : 'a -> (string * t) list     (** See {!Character.CharacterSet} *)
 val to_string : t -> string             (** See {!Character.CharacterSet} *)
 val median_3 : t -> t -> t -> t -> t    (** See {!Character.CharacterSet} *)
 val dist_2 : t -> t -> t -> float       (** See {!Character.CharacterSet} *)
-val state_to_xml : out_channel -> t -> Data.d -> unit
-    (** Write the state to XML *)
 val cardinal : t -> int
 
 (** {2 Creation} *)
@@ -55,7 +53,7 @@ val make_sank : int -> cm -> (int * int list) list -> t
         the element and the list of observed states. *)
 
 (** {2 Output and other functions} *)
-val of_parser : cm -> ((Parser.t * int) array * int) -> int -> t * int
+val of_parser : cm -> ((int list option * int) array * int) -> int -> t * int
 
 val print_tcm : cm -> unit              (** prints to standard output *)
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2019 2007-07-30 14:50:30Z andres $ *)
+(* $Id: charTransform.ml 2049 2007-08-06 19:06:02Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2019 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2049 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -130,7 +130,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
     let ratchet data probability severity = 
         let severity = float_of_int severity in
-        let d = PoyParser.get_characters_weight data in
+        let d = Data.get_weights data in
         let counter = ref 0 in
         let perturbator (x, y) =
             incr counter;
@@ -139,7 +139,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             else (x, y)
         in
         let d = List.map perturbator d in
-        List.fold_left PoyParser.set_character_weight data d, !counter
+        List.fold_left (fun a (x, w) -> 
+            Data.transform_weight (`ReWeight ((`Some (false, [x])), w)) a) 
+            data d, !counter
 
     let filter_characters tree codes = 
         let filter_codes node = Node.f_codes codes node in
@@ -198,7 +200,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         TreeOps.uppass (TreeOps.downpass tree)
 
     let resample_characters n data =
-        let d = PoyParser.get_characters_weight data in
+        let d = Data.get_weights data in
         let d = Array.of_list d in
         let max = Array.length d in
         let res = Array.map (fun (x, y) -> (x, 0.)) d in
@@ -208,7 +210,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             let (x, y) = res.(element) in
             res.(element) <- (x, y +. b);
         done;
-        Array.fold_left PoyParser.set_character_weight data res
+        Array.fold_left 
+        (fun a (b, c) -> Data.transform_weight 
+            (`ReWeight ((`Some (false, [b])), c)) a) data res
 
     let resample_characters_in_tree n data tree = 
         let new_data = resample_characters n data in

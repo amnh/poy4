@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 1708 2007-03-16 21:59:34Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 1708 $"
+(* $Id: nonaddCS.ml 2049 2007-08-06 19:06:02Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2049 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -216,6 +216,7 @@ let make_list_iter map from tto =
         else (map i) :: (mli (i + 1))
     in
     mli from
+
 let to_string a =
     let strlist =
         make_list_iter
@@ -223,69 +224,17 @@ let to_string a =
             0 ((cardinal a) - 1) in
     "[" ^ String.concat " " strlist ^ "]"
 
-let state_to_xml ch a d =
-    let output_string = output_string ch in
-    let encoding_num n =
-        let specs = Hashtbl.find d.Data.character_specs n in
-        match specs with
-        | Data.Static (a, _) -> a
-        | _ -> raise (Invalid_argument "parse data is not static") in
-    let get_hashtable n =
-        match Parser.Hennig.Encoding.get_used_observed (encoding_num n) with
-        | Some h -> h
-        | _ -> raise (Invalid_argument "No hash table") in
-    let output_elt_state i =
-        let hashtable = get_hashtable i in
-        fun state ->
-            try
-                output_string
-                    ("<elt>" ^ string_of_int (Hashtbl.find hashtable state) ^ "</elt>")
-            with
-            | err ->
-                  prerr_string ("I couldn't find a state in the hashtable of \
-                specifications. I was requested " ^ string_of_int state ^ 
-                                    " from elt " ^ string_of_int i ^ "\n");
-                  output_string "Error?"
-    in
-    let elt_iter fn (_, elt) =
-        let rec elt_iter elt c =
-            if (elt land 1) <> 0 then fn c;
-            if elt <> 0 then elt_iter (elt lsr 1)  (c * 2)
-        in
-        elt_iter elt 1
-    in
-    let char_to_xml (code, char) =
-
-        output_string "\n<character:nonadditive code=\"";
-        output_string (string_of_int code);
-        output_string "\">";
-
-        elt_iter (output_elt_state code) char;
-
-        output_string "</character:nonadditive>";
-    in
-    let chars = to_simple_list a in
-
-    output_string "<data>";
-    List.iter char_to_xml chars;
-    output_string "</data>";
-    output_string "\n"
-
 let to_formatter attrs c parent d : Tags.output list =
     let elt_iter elt =
-        let rec elt_iter acc elt c =
+        let rec elt_iter acc elt c cntr =
             if elt = 0 then acc 
             else if (elt land 1) <> 0 then 
-                elt_iter (c :: acc) (elt lsr 1) (c * 2)
-            else elt_iter acc (elt lsr 1)  (c * 2)
+                elt_iter (cntr :: acc) (elt lsr 1) (c * 2) (cntr + 1)
+            else elt_iter acc (elt lsr 1)  (c * 2) (cntr + 1)
         in
-        elt_iter [] elt 1
+        elt_iter [] elt 1 0
     in
-
-
-
     let output_character (code, (_, char)) (_, cost) =
-        let used_observed = Data.get_used_observed code d in
         let res = elt_iter char in 
         let attributes =  
             (Tags.Characters.name, (Data.code_character code d)) :: 
@@ -293,20 +242,18 @@ let to_formatter attrs c parent d : Tags.output list =
                 attrs 
         in 
         let to_sexp = fun x -> 
-            `Single (Tags.Characters.value, [], `String (string_of_int 
-                (Hashtbl.find used_observed x)))
+            `Single (Tags.Characters.value, [], 
+            `String (Data.to_human_readable d code x))
         in
         let contents = `Set (List.map to_sexp res) in 
         (Tags.Characters.nonadditive, attributes, `Structured contents) 
     in
     let c_ls = to_simple_list c in 
-    
     let dist_list =  
         match parent with 
         | None -> Array.to_list (Array.make (List.length c_ls) (0, 0.) ) 
         | Some parent -> distance_list c parent  
     in 
-    
     List.map2 output_character c_ls dist_list 
  
 
@@ -432,34 +379,45 @@ let map f a =
 let is_empty a =
     cardinal a = 0
 
-let of_parser (elts, code) n =
+let of_parser data (elts, code) n =
     let make_set elts =
         let nelts = Array.length elts in
-        let true_nelts = 
-            Array.fold_left (fun acc x ->
-                match x with
-                | Parser.Unordered_Character _, _ -> acc + 1
-                | Parser.Inactive_Character, _ -> acc
-                | _ -> 
-                    raise
-                  (Invalid_argument "Nonadditive characters must be unordered"))
-            0 elts 
-        in
+        let true_nelts = Array.length elts in
         let set = make_new_unsafe true_nelts code in
-        let rec filler item true_item =
+        let rec filler item =
             if item = nelts then ()
             else 
                 let (elt, eltcode) = elts.(item) in
-                match elt with
-                | Parser.Unordered_Character (elt, _) -> 
-                        set_elt_code set true_item eltcode;
-                        set_elt set true_item elt;
-                        filler (item + 1) (true_item + 1)
-                | Parser.Inactive_Character -> 
-                        filler (item + 1) true_item
-                | _ -> failwith "Impossible"
+                let observed = 
+                    match Hashtbl.find data.Data.character_specs eltcode with
+                    | Data.Static enc -> enc.Parser.SC.st_observed 
+                    | _ -> assert false
+                in
+                let observed_arr = Array.of_list observed in
+                let matcher x =
+                    let max = Array.length observed_arr in
+                    let rec aux_matcher pos x =
+                        if pos = max then failwith "Not found?" 
+                        else if observed_arr.(pos) = x then 1 lsl pos
+                        else aux_matcher (pos + 1) x
+                    in
+                    if max > 0 then aux_matcher 0 x
+                    else 0
+                in
+                let elt =
+                    let elt = 
+                        match elt with
+                        | Some x -> x
+                        | None -> observed
+                    in
+                    List.fold_left (fun acc item -> acc lor (matcher item)) 0 
+                    elt
+                in
+                set_elt_code set item eltcode;
+                set_elt set item elt;
+                filler (item + 1) 
         in
-        filler 0 0;
+        filler 0;
         set
     in
     (make_set elts, code)

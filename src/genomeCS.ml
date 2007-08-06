@@ -300,3 +300,77 @@ let get_active_ref_code t =
 
 
 
+
+
+
+let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+    let single_parent, mine = 
+        match is_root with 
+        | true ->  alied_map, alied_map
+        | false -> single_parent, mine
+    in 
+
+
+    let previous_total_cost = mine.total_cost in 
+    let c2 = mine.c2 in 
+
+    let median code med (acc_meds, acc_costs, acc_recosts, acc_total_cost) =        
+
+        let amed = 
+            try
+                List.find (fun med -> 
+                               IntSet.mem med.GenomeAli.genome_ref_code ref_codes
+                          ) med.Genome.med_ls
+            with Not_found -> List.hd med.Genome.med_ls
+        in         
+
+
+        let cost,  recost, single_genome = 
+            let parent_med = IntMap.find code single_parent.meds in  
+            let aparent_med = 
+                try
+                    List.find  
+                        (fun med -> 
+                             IntSet.mem med.GenomeAli.genome_ref_code ref_codes 
+                        ) parent_med.Genome.med_ls
+                with Not_found -> List.hd parent_med.Genome.med_ls
+            in            
+
+
+
+            match is_root with
+            | false -> 
+                  GenomeAli.to_single aparent_med amed c2  med.Genome.chrom_pam
+            | true ->
+                  let single_root = Array.map 
+                      (fun chromt ->  
+                           let single_seq = UtlPoy.get_single_seq
+                               chromt.GenomeAli.seq c2 in 
+                           single_seq
+                      ) amed.GenomeAli.chrom_arr
+                  in 
+                  
+                  0, 0, single_root
+        in 
+
+        let single_med = GenomeAli.change_to_single amed single_genome in 
+
+
+        let single_med = {med with Genome.med_ls = [single_med]} in 
+
+
+        let new_single = IntMap.add code single_med acc_meds in
+        let new_costs = IntMap.add code (float_of_int cost) acc_costs in 
+        let new_recosts = IntMap.add code (float_of_int recost) acc_recosts in 
+        new_single, new_costs, new_recosts, (acc_total_cost + cost)
+    in
+    let meds, costs,  recosts, total_cost = 
+        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+    in 
+
+
+    previous_total_cost, float_of_int total_cost, 
+    {mine with meds = meds; 
+         costs = costs;
+         recosts = recosts;
+         total_cost = float_of_int total_cost}

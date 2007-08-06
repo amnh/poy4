@@ -120,9 +120,8 @@ type spec = {
  * characteristics of a particular character *)
 type specs = 
     (** Static homology characters, includes the encoding specs from the
-    * parser and the name of the file it comes from (the name includes the
-    * column number). *)
-    | Static of (Parser.Hennig.Encoding.s * string)
+    * parser *)
+    | Static of Parser.SC.static_spec
     (** A dynamic homology based character type, with three parameters, the
     * file name containing the set of sequences, the filename of the valid 
     * fixed states that can be used for that set of sequences, and the file
@@ -180,8 +179,8 @@ type cs_d =
     |  Dyna of (int * Sequence.s dyna_data)
 
     (* A static homology character, containing its code, and the character
-    * itself *)
-    | Stat of (int * Parser.t)
+    * itself. If None, means missing data. *)
+    | Stat of (int * int list option)
 
 type cs = cs_d * specified
 
@@ -320,6 +319,8 @@ val get_tcm : int -> d -> tcm
 
 val get_weight : int -> d -> float
 
+val get_weights : d -> (int * float) list
+
 val process_parsed_sequences : 
     Alphabet.a -> string -> dyna_state_t -> d -> 
     (Sequence.s list list list * Parser.taxon) list -> d
@@ -327,7 +328,7 @@ val process_parsed_sequences :
 
 val process_molecular_file : bool -> dyna_state_t -> d -> Parser.filename -> d
 
-val add_static_file : ?report:bool -> d -> Parser.filename -> d
+val add_static_file : ?report:bool -> [`Hennig | `Nexus] -> d -> Parser.filename -> d
 
 val process_tcm : d -> Parser.filename -> d
 
@@ -366,13 +367,9 @@ val add_file : d -> contents list -> Parser.filename -> d
 
 val get_taxa : d -> string list
 
-val add_static_parsed_file : d -> string -> 
-    Parser.Hennig.Encoding.s array * (Parser.t array * string) list *
-        string Parser.Tree.t list list -> d
+val add_static_parsed_file : d -> string -> Parser.SC.file_output -> d
 
-val add_multiple_static_parsed_file : d -> (string *
-    (Parser.Hennig.Encoding.s array * (Parser.t array * string) list *
-        string Parser.Tree.t list list)) list -> d
+val add_multiple_static_parsed_file : d -> (string * Parser.SC.file_output) list -> d
 
 val get_used_observed : int -> d -> (int, int) Hashtbl.t
 
@@ -491,9 +488,10 @@ end
 
 val prealigned_characters :   
     (Cost_matrix.Two_D.m -> Alphabet.a ->
-              'a * ([> `Exists ] -> int -> Parser.t list -> Parser.t list) *
-                 (int -> Parser.Hennig.Encoding.s list ->
-                     Parser.Hennig.Encoding.s list)) ->
+              'a * ([> `Exists ] -> int -> Parser.t list -> 
+                  Parser.t list) *
+                 (int -> Parser.OldHennig.Encoding.s list ->
+                     Parser.OldHennig.Encoding.s list)) ->
                            d -> bool_characters -> d
 
 (** [compare_all_pairs a b c d] compare for each taxon the characters with code
@@ -519,3 +517,5 @@ val compare_pairs : bool_characters -> bool_characters -> bool -> d ->
 * distances, and [f] is the sum of all the distances. In total (z ^ 2 / 2 - z)
 * distances are computed. *)
 val sequence_statistics : bool_characters -> d -> (string * (int * int * int * int * int * int * int)) list
+
+val to_human_readable : d -> int -> int -> string

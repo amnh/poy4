@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2006 $"
+let () = SadmanOutput.register "Node" "$Revision: 2049 $"
 
 let debug = false
 let debug_exclude = false
@@ -1055,7 +1055,7 @@ let collapse characters all_static =
                 let lst = simplify lst in
                 if SetLists.mem lst acc then
                     let code, nweight = SetLists.find lst acc in
-                    SetLists.add lst (code, (weight + nweight)) acc
+                    SetLists.add lst (code, (weight +. nweight)) acc
                 else SetLists.add lst (code, weight) acc) SetLists.empty 
                 all_static
         in
@@ -1068,36 +1068,29 @@ let classify chars data =
     let all_static = 
         Hashtbl.fold (fun code spec acc ->
             match spec with
-            | Data.Static (enc, _) when 
-                (All_sets.Integers.mem code chars) 
-                && (not (Parser.Hennig.Encoding.is_ordered enc)) 
-                && (not (Parser.Hennig.Encoding.is_sankoff enc)) ->
-                        (code, enc) :: acc
+            | Data.Static spec ->
+                    (match spec.Parser.SC.st_type with
+                    | Parser.SC.STUnordered ->
+                        (code, spec) :: acc
+                    | _ -> acc)
             | _ -> acc) data.Data.character_specs []
     in
-    let taxa (code, enc) = 
+    let taxa (code, spec) = 
+        let weight, observed = 
+            match spec.Parser.SC.st_type with
+            | Parser.SC.STUnordered ->
+                    spec.Parser.SC.st_weight, spec.Parser.SC.st_observed
+            | _ -> assert false
+        in
         Hashtbl.fold (fun _ taxon_chars acc ->
             let lst =
                 try
                     match Hashtbl.find taxon_chars code with
-                    | (Data.Stat (c, Parser.Unordered_Character (v, _))), _ ->
-                            let weight = Data.get_weight c data in
-                            (c, int_of_float weight, 
-                            Cost_matrix.Two_D.list_of_bits v 33)
+                    | (Data.Stat (c, (Some v)), `Specified) -> (c, weight, v)
+                    | (Data.Stat (c, v), _) -> (c, weight, observed)
                     | _ -> failwith "Impossible 2?"
                 with
-                | Not_found -> 
-                        let all_bits =
-                            match 
-                            Parser.Hennig.Encoding.get_used_observed enc
-                            with
-                            | Some htbl ->
-                                    Hashtbl.fold (fun x _ acc -> x :: acc) 
-                                    htbl []
-                            | None -> failwith "Nothing? Impossible!"
-                        in
-                        let weight = Data.get_weight code data in
-                        (code, int_of_float weight, all_bits)
+                | Not_found -> (code, weight, observed)
             in
             lst :: acc) data.Data.taxon_characters []
     in
@@ -1142,7 +1135,7 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 | None -> Data.get_weight c !data
                 | Some v ->
                         let a, _ = All_sets.IntegerMap.find c v in
-                        float_of_int a
+                        a
             in
             let table = Hashtbl.create 1667 in
             let weights = 
@@ -1181,28 +1174,19 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             let specs =
                 Hashtbl.find !data.Data.character_specs code in
             match specs with
-            | Data.Static (encoding, _) -> encoding
+            | Data.Static encoding -> encoding
             | Data.Dynamic _
             | Data.Set -> failwith "get_static_encoding" in
 
-        let module Enc = Parser.Hennig.Encoding in
+        let module Enc = Parser.OldHennig.Encoding in
 
         let gen_add code =
             let enc = get_static_encoding code in
-            
-            (Data.Stat (code, Parser.Ordered_Character (Enc.get_min enc,
-                                                          Enc.get_max enc,
-                                                          true)), `Unknown) 
+            (Data.Stat (code, Some enc.Parser.SC.st_observed), `Unknown) 
         in
         let gen_nadd code =
             let enc = get_static_encoding code in
-            let set = Enc.get_set enc in
-            let setlist = All_sets.Integers.elements set in
-            let hash = Enc.get_observed_used enc in
-            (Data.Stat (code, Parser.Unordered_Character ((try Parser.lor_list_withhash
-                                                            setlist hash with _
-                                                            -> 0),
-                                                        true)), `Unknown) 
+            (Data.Stat (code, Some enc.Parser.SC.st_observed), `Unknown) 
         in
         let gen_dynamic code =
             let alph = Data.get_alphabet !data code in
@@ -1218,13 +1202,10 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             let specs = Hashtbl.find !data.Data.character_specs code in
             let states = 
                 match specs with
-                | Data.Static (enc, _) ->
-                        let set = Enc.get_set enc in
-                        All_sets.Integers.elements set
+                | Data.Static enc -> enc.Parser.SC.st_observed
                 | _ -> assert false 
             in
-            (Data.Stat (code, Parser.Sankoff_Character (states, true)),
-             `Unknown)
+            (Data.Stat (code, Some states), `Unknown)
         in
         !data, 
         fun tcode acc ->
@@ -1288,19 +1269,19 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             in
             let result = 
                 List.fold_left 
-                (add_characters NonaddCS8.of_parser 
+                (add_characters (NonaddCS8.of_parser !data)
                 (fun c w -> Nonadd8 (make_with_w c w)))
                 result lnadd8_chars
             in
             let result =
                 List.fold_left 
-                (add_characters NonaddCS16.of_parser 
+                (add_characters (NonaddCS16.of_parser !data)
                 (fun c w -> Nonadd16 (make_with_w c w)))
                 result lnadd16_chars
             in
             let result =
                 List.fold_left 
-                (add_characters NonaddCS32.of_parser 
+                (add_characters (NonaddCS32.of_parser !data)
                 (fun c w -> Nonadd32 (make_with_w c w)))
                 result lnadd32_chars
             in
@@ -1310,7 +1291,7 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             in
             let result = 
                 List.fold_left 
-                (add_characters AddCS.of_parser 
+                (add_characters (AddCS.of_parser !data)
                 (fun c w -> Add (make_with_w c w)))
                 result ladd_chars
             in

@@ -28,7 +28,7 @@
  * handle unrooted trees for this kind of operations (remember the tree module has
  * a handle for "Unrooted" trees, meaning that we can safely keep this meaning
  * properly. *)
-let () = SadmanOutput.register "SankCS" "$Revision: 1968 $"
+let () = SadmanOutput.register "SankCS" "$Revision: 2049 $"
 
 
 type cost =
@@ -469,49 +469,6 @@ let dist_2 r a d =
     done;
     !acc
 
-let elt_to_xml ch a d =
-    let output_string = output_string ch in
-    let code = a.ecode in
-    let specs =
-        Hashtbl.find d.Data.character_specs code in
-
-    let encoding_num = match specs with
-    | Data.Static (a, _) -> a
-    | _ -> raise (Invalid_argument "parse data is not static") in
-
-    let hashtable = match Parser.Hennig.Encoding.get_used_observed encoding_num
-    with
-    | Some h -> h
-    | None -> raise (Invalid_argument "no hash table") in
-
-    let output_state i =
-        let prefix = ref "" in
-        output_string !prefix;
-        output_string (string_of_int (Hashtbl.find hashtable i));
-        prefix := "; " in
-    
-    let our_min = ref Infinity in
-    let min_list = ref [] in
-    for i = (Array.length a.e) - 1 downto 0 do
-        if a.e.(i) < !our_min
-        then begin
-            our_min := a.e.(i);
-            min_list := [i]
-        end
-        else if a.e.(i) = !our_min
-        then min_list := i :: !min_list
-    done;
-    output_string "    <character:Sankoff>";
-    List.iter output_state !min_list;
-    output_string "</character:Sankoff>\n"
-
-let state_to_xml ch a d =
-    output_string ch "<data>\n";
-    for i = 0 to Array.length a.elts - 1 do
-        elt_to_xml ch a.elts.(i) d
-    done;
-    output_string ch "</data>\n"
-
 let elt_to_formatter attr d tcm elt elt_parent : Tags.output =
 (*    let used_observed = Data.get_used_observed elt.ecode d in *)
     let (cost, lst) = Array.fold_left (fun ((min, minlist) as acc) x ->
@@ -522,6 +479,7 @@ let elt_to_formatter attr d tcm elt elt_parent : Tags.output =
                 else if x = min then (x, (x :: minlist))
                 else acc) (max_int, []) elt.e
     in
+    let lst = List.map (Data.to_human_readable d elt.ecode) lst in 
 (*    let lst = List.map (Hashtbl.find used_observed) lst in *)
     let attributes = 
         let cost = elt_distance tcm elt elt_parent in
@@ -529,7 +487,7 @@ let elt_to_formatter attr d tcm elt elt_parent : Tags.output =
         (Tags.Characters.cost, string_of_float cost) :: attr
     in
     let create = fun x ->
-        `Single (Tags.Characters.value, [], `String (string_of_int x))
+        `Single (Tags.Characters.value, [], `String x)
     in
     (Tags.Characters.sankoff, attributes, `Structured (`Set (List.map create
     lst)))
@@ -541,7 +499,6 @@ let to_formatter attr a (parent : t option) d : Tags.output list =
     | Some parent -> Array.to_list parent.elts 
     | None -> items   
     in 
-    
     let tcm = a.tcm  in
     List.map2 (elt_to_formatter attr d tcm) items  items_parent
 
@@ -617,14 +574,12 @@ let make_random_tcm ?(max=7) len =
 
 let of_parser tcm (arr, taxcode) mycode =
     let nstates = Array.length tcm in
+    let all_states = Array.to_list (Array.init nstates (fun x -> x)) in
     let make_elt (elt, ecode) =
-        let states = match elt with
-        | Parser.Sankoff_Character ([], _) -> assert false
-        | Parser.Sankoff_Character (states, _) -> 
-                states
-
-        | _ -> raise
-              (Invalid_argument "Miscategorized Sankoff characters")
+        let states = 
+            match elt with
+            | Some states -> states
+            | None -> all_states
         in
         assert (List.fold_left (fun acc x -> acc && x < nstates) true states);
         canonize tcm
@@ -634,8 +589,7 @@ let of_parser tcm (arr, taxcode) mycode =
                     (fun i ->
                          if List.mem i states
                          then Cost 0
-                         else Infinity);
-            }
+                         else Infinity);}
     in
 
     let elts = Array.map make_elt arr in

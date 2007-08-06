@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 1968 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 2049 $"
 
-(* $Id: alphabet.ml 1968 2007-07-17 02:01:38Z andres $ *)
+(* $Id: alphabet.ml 2049 2007-08-06 19:06:02Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -152,8 +152,8 @@ let nucleotides =
         Some (timine lor guanine lor adenine lor citosine)); 
         ("X", adenine lor citosine lor timine lor guanine, 
         Some (timine lor guanine lor adenine lor citosine)); 
-        ("-", gap, Some all); 
         ("_", gap, Some all); 
+        ("-", gap, Some all); 
         ("1", 17, Some (all land (lnot 17)));
         ("2", 18, Some (all land (lnot 18)));
         ("3", 19, Some (all land (lnot 19)));
@@ -170,27 +170,6 @@ let nucleotides =
         ("#", 30, Some (all land (lnot 30)));
         ("*", 31, Some (all land (lnot 31)));
         ("?", 31, Some (all land (lnot 31)));
-        ("a", adenine, Some timine); 
-        ("c", citosine, Some guanine); 
-        ("g", guanine, Some citosine);
-        ("t", timine, Some adenine); 
-        ("u", uracile, Some adenine);
-        ("m", adenine lor citosine, Some (timine lor guanine)); 
-        ("r", adenine lor guanine, Some (timine lor citosine)); 
-        ("w", adenine lor timine, Some (timine lor adenine)); 
-        ("s", citosine lor guanine, Some (guanine lor citosine)); 
-        ("y", citosine lor timine, Some (guanine lor adenine)); 
-        ("k", guanine lor timine, Some (citosine lor adenine)); 
-        ("v", adenine lor citosine lor guanine, 
-        Some (timine lor guanine lor citosine)); 
-        ("h", adenine lor citosine lor timine, 
-        Some (timine lor guanine lor adenine)); 
-        ("d", adenine lor guanine lor timine,
-        Some (timine lor citosine lor adenine)); 
-        ("b", citosine lor guanine lor timine,
-        Some (guanine lor citosine lor adenine)); 
-        ("n", adenine lor citosine lor timine lor guanine,
-        Some (timine lor guanine lor adenine lor citosine)); 
     ] "_" (Some "*") Extended_Bit_Flags
 
 (* The list of aminoacids *)
@@ -220,27 +199,6 @@ let aminoacids =
         ("X", all_aminoacids, None); 
         ("_", aa_gap, None);
         ("-", aa_gap, None);
-        ("a", alanine, None); 
-        ("r", arginine, None); 
-        ("n", asparagine, None); 
-        ("d", aspartic, None); 
-        ("c", cysteine, None); 
-        ("q", glutamine, None); 
-        ("e", glutamic, None); 
-        ("g", glycine, None); 
-        ("h", histidine, None); 
-        ("i", isoleucine, None); 
-        ("l", leucine, None); 
-        ("k", lysine, None); 
-        ("m", methionine, None); 
-        ("f", phenylalanine, None); 
-        ("p", proline, None); 
-        ("s", serine, None); 
-        ("t", threonine, None); 
-        ("w", tryptophan, None); 
-        ("y", tyrosine, None); 
-        ("v", valine, None); 
-        ("x", all_aminoacids, None); 
     ] "_" (Some "X") Sequential
 
 let match_base x alph =
@@ -307,7 +265,7 @@ module Lexer = struct
 
     type p = Code of int | Unfinished of p CM.t
 
-    let make_lexer issue_warnings a = 
+    let internal_lexer respect_case a =
         let rec add_stream stream code acc =
             match acc with
             | Code x -> failwith "This alphabet is not prefix free"
@@ -315,7 +273,7 @@ module Lexer = struct
                     try
                         let c = Stream.next stream in
                         if CM.mem c set then 
-                            let nacc = CM.find c set  in
+                            let nacc = CM.find c set in
                             match add_stream stream code nacc with
                             | Code _ -> failwith "This alphabet is not prefix free"
                             | res -> Unfinished (CM.add c res set)
@@ -328,31 +286,104 @@ module Lexer = struct
                     | Stream.Failure -> Code code
         in
         let lst = All_sets.StringMap.fold (fun a b acc ->
+            let a = if not respect_case then String.uppercase a else a in
             (Stream.of_string a, b) :: acc) a.string_to_code []
         in
-        let lexer = List.fold_left (fun acc (a, b) ->
+        List.fold_left (fun acc (a, b) ->
             add_stream a b acc) (Unfinished CM.empty) lst
-        in
-        fun stream lst len ->
-            let rec single_processor acc = function
-                | Code x -> 
-                        x :: acc
-                | Unfinished x ->
 
-                        let c = Stream.next stream in
-                        try single_processor acc (CM.find c x) with
-                        | Not_found as err ->
-                                if issue_warnings then begin
-                                    Status.user_message Status.Error 
-                                    ("I@ could@ not@ find@ the@ character@ " ^ 
-                                    String.make 1 c ^ "@ in@ position@ " ^
-                                    string_of_int (Stream.count stream));
-                                    Status.user_message Status.Error
-                                    ("I@ found@ an@ illegal@ character@ in@ " ^
-                                    "the@ " ^ "last@ file@ I@ was@ reading.");
-                                end else ();
-                                raise err
+    let rec single_processor issue_warnings respect_case stream acc = function
+        | Code x -> 
+                x :: acc
+        | Unfinished x ->
+                let c = 
+                    let c = Stream.next stream in
+                    if respect_case then c
+                    else Char.uppercase c 
+                in
+                try single_processor issue_warnings respect_case stream acc 
+                (CM.find c x) with
+                | Not_found as err ->
+                        if issue_warnings then begin
+                            Status.user_message Status.Error 
+                            ("I@ could@ not@ find@ the@ character@ " ^ 
+                            String.make 1 c ^ "@ in@ position@ " ^
+                            string_of_int (Stream.count stream));
+                            Status.user_message Status.Error
+                            ("I@ found@ an@ illegal@ character@ in@ " ^
+                            "the@ " ^ "last@ file@ I@ was@ reading.");
+                        end else ();
+                        raise err
+
+    let make_simplified_lexer style respect_case issue_warnings a =
+        let lexer = internal_lexer respect_case a in
+        fun stream ->
+            let rec ignore_comment () =
+                try
+                    while true do
+                        match Stream.peek stream with
+                        | None -> failwith "Unterminated comment in Nexus file"
+                        | Some ']' ->
+                                Stream.junk stream;
+                                raise Exit
+                        | Some '[' ->
+                                Stream.junk stream;
+                                ignore_comment ()
+                        | _ -> ()
+                    done
+                with
+                | Exit -> ()
             in
+            let rec full_processor acc = 
+                match Stream.peek stream with
+                | None -> failwith "Illegal non closed polymorphism"
+                | Some v ->
+                        match v with
+                        | ' ' | '\010' | '\012' | '\014' | '\015' ->
+                                Stream.junk stream;
+                                full_processor acc
+                        | '}' | ')' when style = `Nexus ->
+                                Stream.junk stream;
+                                acc
+                        | '{' | '(' when style = `Nexus ->
+                                failwith "Illegal nested polymorphism"
+                        | ']' when style = `Hennig ->
+                                Stream.junk stream;
+                                acc
+                        | '[' when style = `Hennig ->
+                                failwith "Illegal nested polymorphism"
+                        | _ ->
+                                let res = 
+                                    single_processor issue_warnings respect_case stream acc lexer
+                                in
+                                full_processor res
+            in
+            let rec processor_driver () =
+                match Stream.peek stream with
+                | None -> raise Exit
+                | Some v ->
+                        match v with
+                        | ' ' | '\010' | '\012' | '\014' | '\015' ->
+                                Stream.junk stream;
+                                processor_driver ();
+                        | '{' | '(' | '[' when style = `Nexus ->
+                                Stream.junk stream;
+                                if v <> '[' then
+                                    full_processor []
+                                else begin 
+                                    ignore_comment ();
+                                    processor_driver ()
+                                end
+                        | '[' when style = `Hennig ->
+                                Stream.junk stream;
+                                full_processor []
+                        | _ -> single_processor issue_warnings respect_case stream [] lexer
+            in
+            processor_driver ()
+
+    let make_lexer issue_warnings a = 
+        let lexer = internal_lexer false a in
+        fun stream lst len ->
             let rec full_processor acc cnt =
                 match Stream.peek stream with
                 | Some v ->
@@ -361,7 +392,8 @@ module Lexer = struct
                                 Stream.junk stream;
                                 full_processor acc cnt
                         | _ ->
-                                let res = single_processor acc lexer in
+                                let res = single_processor issue_warnings
+                                false stream acc lexer in
 (*                                Printf.fprintf stdout " "; *)
                                 full_processor res (cnt + 1)
                         end

@@ -86,3 +86,4 @@ val to_formatter :
   Tags.attribute list -> t -> t option -> Data.d -> Tags.output list
 
 val get_active_ref_code : t -> IntSet.t * IntSet.t
+val to_single : ?is_root:bool -> IntSet.t -> t -> t -> t -> float * float * t

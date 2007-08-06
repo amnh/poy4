@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 2033 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2049 $"
 
 type tag = string
 type value = tag
@@ -101,6 +101,23 @@ module Characters = struct
     let states = "States"
     let ref_code = "ReferenceCode"
     let chrom_map = "Pairwise_Alignment_Map"
+
+    (* The labels of the states of the characters *)
+    let label = "Label"
+    let labels = "Labels"
+    let item = "Item"
+    let observed = "Observed"
+    let source = "File Source"
+    let missing_symbol = "Missing Symbol"
+    let matchstate_symbol = "Match Symbol"
+    let gap_symbol = "Gap Symbol"
+    let ignore = "Ignore"
+    let case = "Case Sentive"  
+
+    let equivalencies = "Equivalencies"
+    let equivalent = "Equivalency"
+    let from = "From"
+    let towards = "To"
 end
 
 module Nodes = struct

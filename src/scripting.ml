@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2006 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2049 $"
 
 module IntSet = All_sets.Integers
 
@@ -298,7 +298,7 @@ let load_data (meth : Methods.input) data nodes =
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
                 let alphabet, twod, threed =
-                    Parser.Alphabet.of_file alph orientation init3D in
+                    Parser.PAlphabet.of_file alph orientation init3D in
                 let data = 
                     Data.set_sequence_defaults (Data.GeneralAlphabet 
                     (FileStream.filename alph, twod, threed, alphabet)) data 
@@ -316,7 +316,7 @@ let load_data (meth : Methods.input) data nodes =
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
                 let alphabet, twod, threed =
-                    Parser.Alphabet.of_file alph orientation init3D in
+                    Parser.PAlphabet.of_file alph orientation init3D in
                 let data = 
                     Data.set_sequence_defaults 
                     (Data.GeneralAlphabet (FileStream.filename alph, twod, 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2006 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2049 $"
 
 exception NotASequence of int
 
@@ -787,8 +787,8 @@ let analyze_tcm tcm alph =
             (* We assume that we have dna sequences *)
             let all = extract_all all in
             let encoding = 
-                Parser.Hennig.Encoding.set_weight
-                Parser.Hennig.Encoding.dna_encoding weight
+                Parser.OldHennig.Encoding.set_weight
+                Parser.OldHennig.Encoding.dna_encoding weight
             in
             let to_parser is_missing states acc = 
                 match is_missing, states with
@@ -800,9 +800,9 @@ let analyze_tcm tcm alph =
             get_case, to_parser, to_encoding
     | AllOneGapSame (subsc, gapcost) ->
             let present_absent = 
-                Parser.Hennig.Encoding.gap_encoding gapcost
+                Parser.OldHennig.Encoding.gap_encoding gapcost
             and subs = 
-                Parser.Hennig.Encoding.set_weight Parser.Hennig.Encoding.dna_encoding
+                Parser.OldHennig.Encoding.set_weight Parser.OldHennig.Encoding.dna_encoding
                 subsc
             in
             let notgap = lnot gap in
@@ -836,11 +836,11 @@ let analyze_tcm tcm alph =
             * We will have to filter out columns that are not gap opening
             * but only extension.
             * *)
-            let gap_opening = Parser.Hennig.Encoding.gap_encoding gapopening
-            and gap_extension = Parser.Hennig.Encoding.gap_encoding gapcost
+            let gap_opening = Parser.OldHennig.Encoding.gap_encoding gapopening
+            and gap_extension = Parser.OldHennig.Encoding.gap_encoding gapcost
             and subs = 
-                Parser.Hennig.Encoding.set_weight
-                Parser.Hennig.Encoding.dna_encoding
+                Parser.OldHennig.Encoding.set_weight
+                Parser.OldHennig.Encoding.dna_encoding
                 subsc
             in
             let notgap = lnot gap in
@@ -896,9 +896,9 @@ let analyze_tcm tcm alph =
                         failwith "Impliedalignment.make_tcm"
             in
             let enc = 
-                let res = Parser.Hennig.Encoding.default () in
-                let res = Parser.Hennig.Encoding.set_min res 0 in
-                let res = Parser.Hennig.Encoding.set_max res (size - 1) in
+                let res = Parser.OldHennig.Encoding.default () in
+                let res = Parser.OldHennig.Encoding.set_min res 0 in
+                let res = Parser.OldHennig.Encoding.set_max res (size - 1) in
                 let set = 
                     let rec add_consecutive_integers cur max acc = 
                         if cur = max then acc
@@ -908,8 +908,8 @@ let analyze_tcm tcm alph =
                     in
                     add_consecutive_integers 0 size All_sets.Integers.empty
                 in
-                let res = Parser.Hennig.Encoding.set_set res set in
-                Parser.Hennig.Encoding.set_sankoff res (make_tcm ())
+                let res = Parser.OldHennig.Encoding.set_set res set in
+                Parser.OldHennig.Encoding.set_sankoff res (make_tcm ())
             in
             let rec generate_all acc size = 
                 if size < 0 then acc
@@ -1465,15 +1465,12 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                                 | AffinePartition (_, ex, op) -> op, ex
                                                 | AllSankoff -> 0, 0
                                             in 
-                                                                    
                                             let pam = Data.get_pam data code in 
-
                                             let op, ex = match pam.Data.locus_indel_cost with
                                             | Some (op, ex) -> op, ex 
                                             | None -> ChromPam.locus_indel_cost_default 
                                             in 
                                             let locus_indel_cost = op + ex * seq_len / 100 in 
-
                                             let num_gaps = (locus_indel_cost - seq_op)/seq_ex in
 (*                                            fprintf stdout "Number gaps: %i\n" num_gaps; *)
                                             let alph = Data.get_alphabet data code in 
@@ -1485,7 +1482,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                       | _ -> `Missing
                                   end 
                             in  
-                             
                             clas,
                             (Array.fold_right (to_parser is_missing) s acc), 
                             (Array.fold_right to_encoding s acc2))
@@ -1529,13 +1525,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 | _, None, _ -> failwith "How is this possible?")
         | _ -> failwith "ImpliedAlignment.ia_to_parser_compatible"
 
-
-
-
-
-
-
-
     let update_ia_encodings (encs, species, trees) =
         let add_states int acc =
             match int with
@@ -1555,14 +1544,14 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         let arr = Array.of_list species in
         let arr = Array.map (fun (a, _) -> a) arr in
         let updater pos enc = 
-            if Parser.Hennig.Encoding.is_sankoff enc ||
-                Parser.Hennig.Encoding.is_ordered enc then enc
+            if Parser.OldHennig.Encoding.is_sankoff enc ||
+                Parser.OldHennig.Encoding.is_ordered enc then enc
             else 
                 let ns = Array.fold_left (fun acc taxon ->
                     add_states taxon.(pos) acc) All_sets.Integers.empty 
                     arr 
                 in
-                Parser.Hennig.Encoding.set_set enc ns
+                Parser.OldHennig.Encoding.set_set enc ns
         in
         let arr = Array.mapi updater encs in
         arr, species, trees
@@ -1572,11 +1561,12 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             Status.create "Static Approximation" None 
             "Converting implied alignments to static characters"
         in
-        let res = ia_to_parser_compatible data iamtx in
+        let res = (ia_to_parser_compatible data iamtx) in
         let res = 
             if remove_non_informative then update_ia_encodings res 
             else res
         in
+        let res = Parser.SC.of_old_parser character None res in
         Status.finished st;
         character, res
 

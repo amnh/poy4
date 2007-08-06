@@ -1005,3 +1005,194 @@ let create_map anc_med des_ref : (int * int * Tags.output) =
     match des_ref = anc_med.genome_ref_code1 with
     | true -> anc_med.cost1, anc_med.recost1, genome_map
     | false -> anc_med.cost2, anc_med.recost2, genome_map
+
+
+
+
+
+
+
+let to_single single_parent med c2 pam = 
+
+    let is_first_child = single_parent.genome_ref_code1 = med.genome_ref_code in 
+
+    let gap = Cost_matrix.Two_D.gap c2 in
+    let ali_pam = ChromPam.get_chrom_pam pam in     
+    let is_gap_seq seq = 
+        Sequence.fold (fun is_gap code -> if code = gap then is_gap else false)
+            true seq
+    in 
+
+    let total_cost = ref 0 in
+    let single_genome = Array.map 
+        (fun chromt -> 
+
+             let seg_ls = Array.fold_left 
+                 (fun seg_ls anc_chrom ->
+                      List.fold_left 
+                          (fun seg_ls seg ->                               
+                               match is_first_child with
+                               | true ->
+                                     if seg.chi1_chrom_id != !(chromt.chrom_id) then seg_ls
+                                     else begin
+                                         let single, cost = UtlPoy.closest_alied_seq
+                                             seg.alied_med seg.alied_seq1 c2
+                                         in  
+                                         let cost =  
+                                             if seg.sta1 = -1 then
+                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_med
+                                             else if is_gap_seq seg.alied_med then 
+                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq1
+                                             else cost 
+                                         in 
+                                         total_cost := !total_cost + cost;
+                                         (single, seg.alied_seq1, seg.sta1, seg.en1)::seg_ls
+                                     end   
+                               | false  -> 
+                                     if seg.chi2_chrom_id != !(chromt.chrom_id) then seg_ls
+                                     else begin
+                                         let single, cost = UtlPoy.closest_alied_seq
+                                             seg.alied_med seg.alied_seq2 c2
+                                         in  
+                                         let cost =  
+                                             if seg.sta2 = -1 then
+                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_med
+                                             else if is_gap_seq seg.alied_med then 
+                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq2
+                                             else cost 
+                                         in 
+                                         total_cost := !total_cost + cost;
+                                         (single, seg.alied_seq2, seg.sta2, seg.en2)::seg_ls
+                                     end 
+                          ) seg_ls anc_chrom.map                           
+                 ) [] single_parent.chrom_arr                  
+             in   
+
+             let sorted_seg_ls = List.sort 
+                 (fun seg1 seg2 ->
+                      let _, _, sta1, _ = seg1 in 
+                      let _, _, sta2, _ = seg2 in
+                      sta1 - sta2 
+                 ) (List.filter (fun (_, _, sta, _) -> sta != -1) seg_ls)
+             in      
+
+             let process_indel_locus sta en = 
+                 match sta > en with
+                 | true -> UtlPoy.get_empty_seq (), 0 
+                 | false ->                       
+                       let ss = Sequence.sub chromt.seq sta (en - sta +1 ) in 
+                       let cost = UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost ss in
+                       let single = UtlPoy.get_single_seq ss c2 in 
+                       single, cost
+             in 
+                 
+             let seq_len = Sequence.length chromt.seq in 
+             let seg_ls, last_p =
+                 List.fold_right 
+                     (fun seg (seg_ls, last_p) ->
+                          let alied_single, alied_seq, sta, en = seg in 
+                          let gapless_alied_single = Sequence.fold_righti 
+                              (fun gapless_alied_single p code ->
+                                   match code = gap with
+                                   | false -> code::gapless_alied_single
+                                   | true ->
+                                         if Sequence.get alied_seq p = gap then gapless_alied_single
+                                         else code::gapless_alied_single
+                              ) [] alied_single
+                          in                       
+                          let gapless_alied_single = UtlPoy.of_array (Array.of_list  gapless_alied_single) in
+
+                          let indel_single, cost = process_indel_locus (en + 1) last_p in 
+                          total_cost := !total_cost + cost;
+
+                          (indel_single::gapless_alied_single::seg_ls), sta - 1
+                     ) sorted_seg_ls ([], seq_len - 1) 
+             in 
+             let seg_ls = match last_p >= 0 with
+             | false -> seg_ls
+             | true ->
+                   let indel_single, cost = process_indel_locus 0 last_p in 
+                   total_cost := !total_cost + cost;
+                   indel_single::seg_ls
+             in 
+
+             let single_chrom = UtlPoy.concat seg_ls in 
+(*             print_endline "After making single"; flush stdout;
+             UtlPoy.printDNA chromt.seq;
+               UtlPoy.printDNA single_chrom;
+             print_newline (); flush stdout;
+*)
+             single_chrom
+        ) med.chrom_arr 
+    in
+    
+    Array.iter (fun chromt -> 
+                    if List.length chromt.map = 1 then begin                        
+                        let seg = List.hd chromt.map in 
+                        if (is_first_child && (seg.sta1 = -1))
+                            || (not is_first_child && seg.sta2 = -1) then begin
+                                let cost = UtlPoy.cmp_gap_cost ali_pam.ChromPam.chrom_indel_cost chromt.seq in
+                                total_cost := !total_cost + cost
+
+                            end 
+                    end 
+               ) single_parent.chrom_arr;
+
+    let recost = 
+        match med.genome_ref_code = single_parent.genome_ref_code1 with
+        | true -> single_parent.recost1
+        | false -> single_parent.recost2
+    in 
+
+    (!total_cost + recost), recost, single_genome
+
+
+
+
+let change_to_single med single_genome = 
+    let gap = Alphabet.gap in 
+
+
+
+
+    let new_chrom_arr = Array.mapi 
+        (fun idx chromt -> 
+
+             let single_seq = single_genome.(idx) in 
+             let num_dna = ref 0 in  
+(*        
+             print_endline "Single_seq";
+             UtlPoy.printDNA single_seq; 
+             UtlPoy.printDNA chromt.seq; 
+             print_endline "alied_med"; 
+             List.iter (fun seg -> 
+                            UtlPoy.printDNA seg.alied_med; 
+                       ) chromt.map;
+             print_newline ();
+*)
+
+             let new_map = List.map 
+                 (fun seg ->
+                      let single_alied_med = UtlPoy.map 
+                          (fun code ->
+                               if code = gap then gap
+                               else begin
+                                   let single_code = Sequence.get single_seq !num_dna in 
+                                   (if (single_code land code = 0) then begin
+                                        fprintf stdout "Code: %i, single_code: %i" code single_code;                               
+                                        failwith "The code does not include the single_code";
+                                    end);
+                                   incr num_dna;
+                                   single_code
+                               end 
+                          ) seg.alied_med
+                      in 
+                      {seg with alied_med = single_alied_med}
+                          
+                 ) chromt.map
+             in              
+             {chromt with map = new_map; seq = (UtlPoy.delete_gap single_seq)}
+        ) med.chrom_arr 
+    in 
+    
+    {med with chrom_arr = new_chrom_arr}

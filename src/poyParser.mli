@@ -98,10 +98,6 @@ val of_file : Data.d -> string -> Data.d
 * The output is valid input for [process_tree]. *)
 val of_channel : Pervasives.in_channel -> spec list
 
-val get_characters_weight : Data.d -> (int * float) list
-
-val set_character_weight : Data.d -> (int * float) -> Data.d
-
 val guess_class_and_add_file : bool -> Data.d -> Parser.filename -> Data.d
 
 val explode_filenames : [`Local of string | `Remote of string ] list -> string list

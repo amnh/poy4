@@ -117,3 +117,8 @@ val find_med2_ls :
   Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * int * med_t list
 val compare : med_t -> med_t -> int
 val create_map : med_t -> int -> int * int * Tags.output
+val to_single :
+  med_t ->
+  med_t ->
+  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s array
+val change_to_single : med_t -> Sequence.s array -> med_t

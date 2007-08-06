@@ -52,3 +52,4 @@ val closest_alied_seq :
 val of_array : int array -> Sequence.s
 
 val map : (int -> int) -> Sequence.s -> Sequence.s
+val get_single_seq : Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s
