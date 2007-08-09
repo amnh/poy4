@@ -50,26 +50,6 @@ number_of_states:
     | DNA           { `Dna }
     | PROTEINS      { `Proteins }
     | NUMBER INT    { `Number (int_of_string $2) }
-anything_list:
-    | anything anything_list { [] }
-    |    { [] }
-anything:
-    | INT { [] }
-    | CHAR { [] }
-    | LPARENT { []}
-    | RPARENT { [] }
-    | GT { [] }
-    | EQUAL {[]}
-    | QUESTION { [] }
-    | DASH { [] }
-    | LSQ { [] }
-    | PLUS { [] }
-    | RSQ  { [] }
-    | STAR  { [] }
-    | BACKSLASH { [] }
-    | LBRACKET { [] }
-    | RBRACKET { [] }
-    | DOT { [] }
 char_names_list:
     | CHARNAME char_names_list { 
         let res = 
