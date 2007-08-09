@@ -1,5 +1,25 @@
 /* Parser for nexus files */
+%{
+let parse_error s = 
+    try
+        let b = (Parsing.symbol_start_pos ()) 
+        and e = (Parsing.symbol_end_pos ()) in
+        let b = string_of_int (b.Lexing.pos_cnum)
+        and e = string_of_int (e.Lexing.pos_cnum) in
+        Status.user_message Status.Error 
+        (s ^ "@ between@ characters@ " ^ b ^ 
+        "@ and@ " ^ e)
+    with
+    | _ -> Status.user_message Status.Error s
 
+let report_error b e =
+    let b = string_of_int (b.Lexing.pos_cnum)
+    and e = string_of_int (e.Lexing.pos_cnum) in
+    Status.user_message Status.Error 
+    ("There@ was@ a@ parsing@ error@ between@ characters@ " ^ b ^ "@ and@ "
+    ^ e)
+%}
+%token EOF
 %token <string> ANCSTATES
 %token <string> ASSUMPTIONS
 %token <string> AVERAGE
@@ -66,10 +86,11 @@
 %token <string> NCHAR
 %token <string> NEWSTATE
 %token <string> NEWTAXA
-%token <string> NO
+%token <string> NOLABELS
 %token <string> NONE
 %token <string> NOTES
 %token <string> NTAX
+%token <string> NOTOKENS
 %token <string> NUCLEOTIDE
 %token <string> NUCORDER
 %token <string> OPTIONS
@@ -124,6 +145,8 @@ COLON
 %token <string> IDENT
 %token <string> FLOAT
 %token <string> INTEGER
+%start tree
+%type <Nexus.tree> tree
 %start header
 %type <unit> header
 %start block
@@ -139,59 +162,73 @@ header:
     ;
 block:
     | BEGIN TAXA SEMICOLON taxa END SEMICOLON  
-        { `Taxa $4 }
+        { Nexus.Taxa $4 }
     | BEGIN CHARACTERS SEMICOLON characters END SEMICOLON 
-        { `Characters $4 }
+        { Nexus.Characters $4 }
     | BEGIN DATA SEMICOLON characters END SEMICOLON
-        { `Characters $4 }
+        { Nexus.Characters $4 }
     | BEGIN UNALIGNED SEMICOLON unaligned END SEMICOLON
-        { `Unaligned $4 }
+        { Nexus.Unaligned $4 }
     | BEGIN TREES SEMICOLON trees END SEMICOLON
-        { `Trees $4 }
+        { Nexus.Trees $4 }
     | BEGIN NOTES SEMICOLON notes END SEMICOLON 
-        { `Notes $4 }
+        { Nexus.Notes $4 }
     | BEGIN DISTANCES SEMICOLON distances END SEMICOLON 
-        { `Distances $4 }
+        { Nexus.Distances $4 }
     | BEGIN ASSUMPTIONS SEMICOLON assumptions END SEMICOLON
-        { `Assumptions $4 }
+        { Nexus.Assumptions $4 }
     | BEGIN SETS SEMICOLON list_of_anything END SEMICOLON
-        { `Ignore $2 }
-    | BEGIN IDENT list_of_anything END SEMICOLON
-        { `Ignore $2 }
+        { Nexus.Ignore $2 }
+    | BEGIN IDENT error END SEMICOLON
+        { Nexus.Error $2 }
+    | BEGIN TAXA SEMICOLON error END SEMICOLON  
+        { Nexus.Error $2 }
+    | BEGIN UNALIGNED SEMICOLON error END SEMICOLON
+        { Nexus.Error $2 }
+    | BEGIN NOTES SEMICOLON error END SEMICOLON 
+        { Nexus.Error $2 }
+    | BEGIN DISTANCES SEMICOLON error END SEMICOLON 
+        { Nexus.Error $2 }
+    | BEGIN SETS SEMICOLON error END SEMICOLON
+        { Nexus.Error $2 }
     ;
 assumptions:
-    | optional_assumption_options optional_user_type optional_type_set 
-     optional_wtset optional_exset optional_ancstates
-        { ($1, $2, $3, $4, $5, $6) }
+    | assumption_items assumptions { $1 :: $2 }
+    | { [] }
+    ;
+assumption_items:
+    | optional_assumption_options   { Nexus.Options $1 }
+    | optional_user_type            { Nexus.UserType $1 }
+    | optional_type_set             { Nexus.TypeDef $1 }
+    | optional_wtset                { Nexus.WeightDef $1 }
+    | optional_exset                { Nexus.ExcludeSet $1 }
+    | optional_ancstates            { Nexus.AncestralDef $1 }
     ;
 optional_assumption_options:
-    | OPTIONS deftype polytcount gapmode SEMICOLON
-        { ($2, $3, $4) }
-    |   { None, `MinSteps, `NewState }
+    | OPTIONS deftype polytcount gapmode SEMICOLON { ($2, $3, $4) }
     ;
 deftype:
     | DEFTYPE EQUAL IDENT { Some $3 }
     | { None }
     ;
 polytcount:
-    | POLYTCOUNT EQUAL MINSTEPS { `MinSteps }
-    | POLYTCOUNT EQUAL MAXSTEPS { `MaxSteps }
-    | { `MinSteps }
+    | POLYTCOUNT EQUAL MINSTEPS { Nexus.MinSteps }
+    | POLYTCOUNT EQUAL MAXSTEPS { Nexus.MaxSteps }
+    | { Nexus.MinSteps }
     ;
 gapmode:
-    | GAPMODE EQUAL MISSING { `Missing }
-    | GAPMODE EQUAL NEWSTATE { `NewState }
-    | { `NewState }
+    | GAPMODE EQUAL MISSING { Nexus.Missing }
+    | GAPMODE EQUAL NEWSTATE { Nexus.NewState }
+    | { Nexus.NewState }
     ;
 optional_user_type:
-    | USERTYPE IDENT user_type_definition SEMICOLON { Some ($2, $3) }
-    | { None }
+    | USERTYPE IDENT user_type_definition SEMICOLON { ($2, $3) }
     ;
 user_type_definition:
-    | EQUAL INTEGER numbers_and_chars { `StepMatrix ($2, $3) }
-    | LPARENT STEPMATRIX RPARENT EQUAL INTEGER numbers_and_chars 
-        { `StepMatrix ($5, $6) }
-    | LPARENT CSTREE DATA_CSTREE { `CSTree $3 }
+    | EQUAL INTEGER numbers_and_chars { Nexus.StepMatrix ($2, $3) }
+    | STEPMATRIX EQUAL INTEGER numbers_and_chars 
+        { Nexus.StepMatrix ($3, $4) }
+    | CSTREE DATA_CSTREE { Nexus.CSTree $2 }
     ;
 numbers_and_chars:
     | number_and_char numbers_and_chars { $1 :: $2 }
@@ -201,44 +238,39 @@ number_and_char:
     | INTEGER   { $1 }
     | FLOAT     { $1 }
     | CHAR      { Char.escaped $1 }
+    | COLON     { ":" }
+    | EQUAL     { "=" }
+    | COMMA     { "," }
+    | BACKSLASH { "/" }
+    | DASH      { "-" }
+    | STAR      { "*" }
+    | IDENT     { $1 }
     ;
 optional_type_set:
     | TYPESET optional_set_for_assumptions { $2 }
-    | { None }
     ;
 optional_wtset:
     | WTSET optional_set_for_assumptions { $2 }
-    | { None }
     ;
+do_token:
+    | NOTOKENS { false }
+    | TOKENS { true }
+    | { false }
+do_star:
+    | STAR { false }
+    | { true }
 optional_set_for_assumptions:
-    | IDENT NO TOKENS EQUAL standard_type_set SEMICOLON 
-        { Some (false, $1, false, `Standard $5) }
-    | STAR IDENT NO TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (true, $2, false, `Standard $6) }
-    | IDENT TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (false, $1, true, `Standard $4) }
-    | STAR IDENT TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (true, $2, true, `Standard $5) }
-    | IDENT LPARENT STANDARD RPARENT NO TOKENS EQUAL standard_type_set SEMICOLON 
-        { Some (false, $1, false, `Standard $8) }
-    | STAR IDENT LPARENT STANDARD RPARENT NO TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (true, $2, false, `Standard $9) }
-    | IDENT LPARENT STANDARD RPARENT TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (false, $1, true, `Standard $7) }
-    | STAR IDENT LPARENT STANDARD RPARENT TOKENS EQUAL standard_type_set SEMICOLON
-        { Some (true, $2, true, `Standard $8) }
-    | IDENT LPARENT VECTOR RPARENT NO TOKENS EQUAL vector_type_set SEMICOLON 
-        { Some (false, $1, false,`Vector $8) }
-    | STAR IDENT LPARENT VECTOR RPARENT NO TOKENS EQUAL vector_type_set SEMICOLON
-        { Some (true, $2, false, `Vector $9) }
-    | IDENT LPARENT VECTOR RPARENT TOKENS EQUAL vector_type_set SEMICOLON
-        { Some (false, $1, true, `Vector $7) }
-    | STAR IDENT LPARENT VECTOR RPARENT TOKENS EQUAL vector_type_set SEMICOLON
-        { Some (true, $2, true, `Vector $8) }
+    | do_star IDENT do_token EQUAL standard_type_set SEMICOLON 
+        { ($1, $2, $3, Nexus.Standard $5) }
+    | do_star IDENT STANDARD do_token EQUAL standard_type_set SEMICOLON 
+        { ($1, $2, $4, Nexus.Standard $6) }
+    | do_star IDENT VECTOR do_token EQUAL vector_type_set SEMICOLON 
+        { ($1, $2, $4,Nexus.Vector $6) }
     ;
 standard_type_set_item:
-    | INTEGER COLON characterset_list { `Code ($1, $3) }
-    | IDENT COLON characterset_list   { `Name ($1, $3) }
+    | INTEGER COLON characterset_list { Nexus.Code ($1, $3) }
+    | FLOAT COLON characterset_list   { Nexus.Code ($1, $3) }
+    | IDENT COLON characterset_list   { Nexus.IName ($1, $3) }
     ;
 standard_type_set:
     | standard_type_set_item COMMA standard_type_set { ($1 :: $3) }
@@ -250,11 +282,9 @@ vector_type_set:
     ;
 optional_exset:
     | EXSET optional_set_for_assumptions { $2 }
-    | { None }
     ;
 optional_ancstates:
     | ANCSTATES optional_set_for_assumptions { $2 }
-    | { None }
     ;
 distances:
     | optional_distances_dimensions optional_format optional_taxlabels DATA SEMICOLON
@@ -286,46 +316,46 @@ optional_set_pair_list:
     | { [] }
     ;
 set_pair:
-    | TAXON EQUAL characterset     { `TaxonSet $3 }
-    | CHARACTER EQUAL characterset { `CharacterSet $3 }
-    | STATE EQUAL characterset      { `StateSet $3 }
-    | TREE EQUAL characterset        { `TreeSet $3 }
+    | TAXON EQUAL characterset     { Nexus.TaxonSet $3 }
+    | CHARACTER EQUAL characterset { Nexus.CharacterSet $3 }
+    | STATE EQUAL characterset      { Nexus.StateSet $3 }
+    | TREE EQUAL characterset        { Nexus.TreeSet $3 }
     ;
 source:
-    | INLINE    {`Inline }
-    | FILE      { `File }
-    | RESOURCE  { `Resource }
+    | INLINE    {Nexus.Inline }
+    | FILE      { Nexus.File }
+    | RESOURCE  { Nexus.Resource }
     ;
 optional_pictureformat:
     | FORMAT EQUAL pictureformat { Some $3 }
     | { None }
     ;
 pictureformat:
-    | PICT      { `Pict }
-    | TIFF      { `Tiff }
-    | EPS       { `Eps }
-    | JPEG      { `Jpeg }
-    | GIF       { `Gif }
+    | PICT      { Nexus.Pict }
+    | TIFF      { Nexus.Tiff }
+    | EPS       { Nexus.Eps }
+    | JPEG      { Nexus.Jpeg }
+    | GIF       { Nexus.Gif }
     ;
 optional_encode:
     | ENCODE EQUAL pictureencoding { Some $3 }
     | { None }
     ;
 pictureencoding:
-    | NONE  { `None }
-    | UUENCODE { `UUEncode }
-    | BINHEX    { `BinHex }
+    | NONE  { Nexus.None }
+    | UUENCODE { Nexus.UUEncode }
+    | BINHEX    { Nexus.BinHex }
     ;
 trees:
-    | optional_translate tree_list SEMICOLON { ($1, $2) }
+    | optional_translate tree_list { ($1, $2) }
     ;
 optional_translate:
     | TRANSLATE pairs_list SEMICOLON { $2 }
     | { [] }
     ;
 tree_list:
-    | DATA tree_list { $1 :: $2 }
-    | DATA           { [ $1 ] }
+    | DATA SEMICOLON tree_list { $1 :: $3 }
+    | DATA SEMICOLON { [ $1 ] }
     ;
 pairs_list:
     | IDENT IDENT COMMA pairs_list { ($1, $2) :: $4 }
@@ -389,40 +419,60 @@ optional_format:
     ;
 format_items_list:
     | format_items format_items_list { $1 :: $2 }
+    | error format_items_list { 
+        report_error (Parsing.symbol_start_pos ()) (Parsing.symbol_end_pos ());
+        $2 }
     |           { [] }
     ;
 format_items:
-    | DATATYPE EQUAL datatype { `Datatype $3 }
-    | RESPECTCASE { `RespectCase }
-    | MISSING EQUAL symbol { `Missing $3 }
-    | GAP EQUAL symbol { `Gap $3 }
+    | DATATYPE EQUAL datatype { Nexus.Datatype $3 }
+    | DATATYPE EQUAL error {
+        Status.user_message Status.Error
+        ("Many@ \"NEXUS\"@ files@ include@ in@ the@ CHARACTERS@ or@ DATA@ " ^
+        "block@ the@ dataype@ @[<b>mixed@]@ or@ @[<b>restriction@]@ or@ something@ else.@ " ^
+        "@ Those@ are@ most@ likely@ Mr.Bayes@ files.@ No@ matter@ that@ " ^
+        "they@ say@ #NEXUS@ at@ the@ beginning,@ this@ is@ not@ a@ valid@ " ^
+        "NEXUS@ file.@ I can@ not@ process@ this.@ I@ am@ sorry. " ^
+        "You'll@ have@ to@ convert@ it@ to@ a@ valid@ nexus@ file.");
+        raise Parsing.Parse_error }
+    | RESPECTCASE { Nexus.RespectCase }
+    | MISSING EQUAL symbol { Nexus.FMissing $3 }
+    | GAP EQUAL symbol { Nexus.Gap $3 }
     | SYMBOLS EQUAL QUOTED { 
         let len = String.length $3 in
-        `Symbols (String.sub $3 0 (len - 1))}
-    | EQUATE EQUAL QUOTED { `Equate $3 }
-    | MATCHCHAR EQUAL symbol { `MatchChar $3 }
-    | NO LABELS     { `Labels false }
-    | LABELS        { `Labels true }
-    | TRANSPOSE     { `Transpose }
-    | INTERLEAVE    { `Interleave }
-    | ITEMS EQUAL item { `Items $3 }
-    | STATESFORMAT EQUAL states_format { `StatesFormat $3 }
-    | NO TOKENS     { `Tokens false }
-    | TOKENS        { `Tokens true }
-    | TRIANGLE EQUAL triangle_format { `Triangle $3 }
+        Nexus.Symbols (String.sub $3 0 (len - 1))}
+    | EQUATE EQUAL QUOTED { Nexus.Equate $3 }
+    | MATCHCHAR EQUAL symbol { Nexus.MatchChar $3 }
+    | NOLABELS     { Nexus.Labels false }
+    | LABELS        { Nexus.Labels true }
+    | TRANSPOSE     { Nexus.Transpose }
+    | INTERLEAVE    EQUAL { 
+        Status.user_message Status.Error
+        ("Many@ \"NEXUS\"@ files@ include@ in@ the@ CHARACTERS@ or@ DATA@ " ^
+        "block@ the@ directives@ interleave=yes@ or@ interleave=no.@ " ^
+        "@[<b>That@ is@ not@ a@ valid@ NEXUS@ directive@].@ To@ fix@ your@ file@ " ^
+        "replace@ interleave=yes@ with@ INTERLEAVE,@ or@ just@ remove@ it@ " ^
+        "if@ you@ see@ interleave=no.");
+        raise Parsing.Parse_error }
+    | INTERLEAVE    { Nexus.Interleave }
+    | ITEMS EQUAL item { Nexus.Items $3 }
+    | STATESFORMAT EQUAL states_format { Nexus.StatesFormat $3 }
+    | NOTOKENS     { Nexus.Tokens false }
+    | TOKENS        { Nexus.Tokens true }
+    | TRIANGLE EQUAL triangle_format { Nexus.Triangle $3 }
     ;
 triangle_format:
-    | LOWER { `Lower }
-    | UPPER { `Upper }
-    | BOTH { `Both }
+    | LOWER { Nexus.Lower }
+    | UPPER { Nexus.Upper }
+    | BOTH { Nexus.Both }
     ;
 datatype:
-    | STANDARD { `Standard }
-    | DNA { `Dna }
-    | RNA { `Rna }
-    | NUCLEOTIDE { `Nucleotide }
-    | PROTEIN { `Protein }
-    | CONTINUOUS { `Continuous }
+    | STANDARD { Nexus.DStandard }
+    | DNA { Nexus.Dna }
+    | RNA { Nexus.Rna }
+    | NUCLEOTIDE { Nexus.Nucleotide }
+    | PROTEIN { Nexus.Protein }
+    | CONTINUOUS { Nexus.Continuous }
     ;
 symbol:
     | IDENT { $1 }
@@ -438,20 +488,20 @@ symbol_pair:
     | symbol EQUAL LPARENT symbol_list RPARENT { ($1, $4) }
     ;
 item:
-    | MIN { `Min }
-    | MAX { `Max }
-    | MEDIAN  { `Median }
-    | AVERAGE { `Average }
-    | VARIANCE { `Variance }
-    | STDERROR { `Stderror }
-    | SAMPLESIZE { `SampleSize }
-    | STATES     { `States }
+    | MIN { Nexus.Min }
+    | MAX { Nexus.Max }
+    | MEDIAN  { Nexus.Median }
+    | AVERAGE { Nexus.Average }
+    | VARIANCE { Nexus.Variance }
+    | STDERROR { Nexus.Stderror }
+    | SAMPLESIZE { Nexus.SampleSize }
+    | STATES     { Nexus.States }
     ;
 states_format:
-    | STATESPRESENT { `StatesPresent }
-    | INDIVIDUALS   { `Individuals }
-    | COUNT         { `Count }
-    | FREQUENCY     { `Frequency }
+    | STATESPRESENT { Nexus.StatesPresent }
+    | INDIVIDUALS   { Nexus.Individuals }
+    | COUNT         { Nexus.Count }
+    | FREQUENCY     { Nexus.Frequency }
     ;
 optional_taxa_dimensions:
     | NTAX EQUAL INTEGER { Some $3 }
@@ -470,15 +520,26 @@ characterset_list:
     | characterset      { [$1] }
     ;
 characterset:
-    | INTEGER DASH INTEGER { `Range ($1, $3) }
-    | INTEGER              { `Single ($1) }
-    | IDENT                { `Name $1 }
+    | INTEGER DASH CHAR    { Nexus.Range ($1, None) }
+    | INTEGER DASH INTEGER { Nexus.Range ($1, Some $3) }
+    | INTEGER              { Nexus.Single ($1) }
+    | IDENT                { Nexus.Name $1 }
+    | CHAR                 { Nexus.Name (String.make 1 $1) }
     ;
 list_of_anything:
     | any_thing_minus_end list_of_anything { () }
     | any_thing_minus_end { () }
     ;
 any_thing_minus_end:
+    | TAXA  { () }
+    | DATA  { () }
+    | UNALIGNED  { () }
+    | TREES  { () }
+    | NOTES  { () }
+    | DISTANCES  { () }
+    | ASSUMPTIONS  { () }
+    | SETS  { () }
+    | CHARACTERS { () }
     | ANCSTATES { () }
     | AVERAGE { () }
     | BINHEX { () }
@@ -539,7 +600,6 @@ any_thing_minus_end:
     | NCHAR { () }
     | NEWSTATE { () }
     | NEWTAXA { () }
-    | NO { () }
     | NONE { () }
     | NTAX { () }
     | NUCLEOTIDE { () }
@@ -553,7 +613,6 @@ any_thing_minus_end:
     | RESPECTCASE { () }
     | RNA { () }
     | SAMPLESIZE { () }
-    | SETS { () }
     | SOURCE { () }
     | STANDARD { () }
     | STATE { () }
@@ -601,4 +660,25 @@ any_thing_minus_end:
     | DASH { () }
     | LPARENT { () }
     | RPARENT { () }
+    ;
+tree:
+    | do_star IDENT EQUAL single_tree EOF { $4 }
+    ;
+single_tree:
+    | IDENT optional_length { Nexus.Leaf ($1, $2) }
+    | LPARENT single_tree_list RPARENT optional_label optional_length 
+                            { Nexus.Node ($2, $4, $5) }
+    ;
+single_tree_list:
+    | single_tree COMMA single_tree_list { $1 :: $3 }
+    | single_tree { [$1] }
+    ;
+optional_length:
+    | COLON INTEGER { Some (float_of_string $2) }
+    | COLON FLOAT { Some (float_of_string $2) }
+    | { None }
+    ;
+optional_label:
+    | IDENT     { Some $1 }
+    | { None }
     ;

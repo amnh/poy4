@@ -15,6 +15,7 @@ type char_change =
 
 type char_name = string
 type command = 
+    | Nstates of [ `Dna | `Rna | `Proteins | `Number of int ] option
     | Ccode of char_change list
     | Cost of cost_change list
     | Tread of string

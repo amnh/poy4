@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: fileStream.ml 2006 2007-07-26 18:31:33Z andres $ *)
+(* $Id: fileStream.ml 2060 2007-08-09 16:04:10Z andres $ *)
 (* Created Thu Apr 20 16:41:14 2006 (Illya Bomash) *)
 
 (** simple input streams as objects, with helper functions for parsing *)
@@ -158,7 +158,10 @@ object (self)
         (* assume input is cooked (multiple newline chars replaced with single
            \n) *)
         let line = self#read_excl ['\n'; '\013'; '\010'] in
-        ignore (self#match_prefix "\n");
+        while ( (self#match_prefix "\n") || (self#match_prefix "\013") ||
+        (self#match_prefix "\010")) do
+            ()
+        done;
         line
 
     (** [skip_ws] skips past leading whitespace, but not newlines.  Raises

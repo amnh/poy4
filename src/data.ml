@@ -1731,7 +1731,8 @@ let characters_to_formatter d : Tags.output =
     let create code name acc =
         let enc = Hashtbl.find d.character_specs code in
         let res = Tags.Characters.character, 
-        [ (Tags.Characters.name, name) ],
+        [ (Tags.Characters.name, name); ("code", string_of_int
+        code) ],
         `Structured (`Single (character_spec_to_formatter enc))
         in
         (`Single res) :: acc

@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 2049 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 2060 $"
 
-(* $Id: alphabet.ml 2049 2007-08-06 19:06:02Z andres $ *)
+(* $Id: alphabet.ml 2060 2007-08-09 16:04:10Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -339,7 +339,7 @@ module Lexer = struct
                 | None -> failwith "Illegal non closed polymorphism"
                 | Some v ->
                         match v with
-                        | ' ' | '\010' | '\012' | '\014' | '\015' ->
+                        | '\001' .. '\032' ->
                                 Stream.junk stream;
                                 full_processor acc
                         | '}' | ')' when style = `Nexus ->
@@ -363,7 +363,7 @@ module Lexer = struct
                 | None -> raise Exit
                 | Some v ->
                         match v with
-                        | ' ' | '\010' | '\012' | '\014' | '\015' ->
+                        | '\001' .. '\032' ->
                                 Stream.junk stream;
                                 processor_driver ();
                         | '{' | '(' | '[' when style = `Nexus ->
@@ -388,7 +388,7 @@ module Lexer = struct
                 match Stream.peek stream with
                 | Some v ->
                         begin match v with
-                        | ' ' | '\010' | '\012' | '\014' | '\015' ->
+                        | '\001' .. '\032' ->
                                 Stream.junk stream;
                                 full_processor acc cnt
                         | _ ->

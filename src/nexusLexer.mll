@@ -19,7 +19,7 @@
         ("CHARSTATELABELS", fun x -> CHARSTATELABELS x);
         ("CODEORDER", fun x -> CODEORDER x);
         ("CODESET", fun x -> CODESET x);
-        ("CODONS", fun x -> CODONS x);
+(*        ("CODONS", fun x -> CODONS x); we can't handle the codons block *)
         ("CONDONPOSSET", fun x -> CONDONPOSSET x);
         ("CONTINUOUS", fun x -> CONTINUOUS x);
         ("COUNT", fun x -> COUNT x);
@@ -70,10 +70,11 @@
         ("NCHAR", fun x -> NCHAR x);
         ("NEWSTATE", fun x -> NEWSTATE x);
         ("NEWTAXA", fun x -> NEWTAXA x);
-        ("NO", fun x -> NO x);
+        ("NOLABELS", fun x -> NOLABELS x);
         ("NONE", fun x -> NONE x);
         ("NOTES", fun x -> NOTES x);
         ("NTAX", fun x -> NTAX x);
+        ("NOTOKENS", fun x -> NOTOKENS x);
         ("NUCLEOTIDE", fun x -> NUCLEOTIDE x);
         ("NUCORDER", fun x -> NUCORDER x);
         ("OPTIONS", fun x -> OPTIONS x);
@@ -146,20 +147,18 @@ and comment = parse
 and cstree = parse
       [ ^ ';']+ as id   { DATA_CSTREE id }
 and token = parse
-      [ ' ' '\t' '\n']       { token lexbuf } (* skip blanks *)
-    | "#NEXUS"             { NEXUS }
-    | "MATRIX"          { raw lexbuf }
-    | "TREE"            { raw lexbuf }
-    | "TEXT"            { raw lexbuf }
-    | "PICTURE"         { raw lexbuf }
-    | "#nexus"              { NEXUS }
-    | "matrix"          { raw lexbuf }
-    | "tree"            { raw lexbuf }
-    | "text"            { raw lexbuf }
-    | "picture"         { raw lexbuf }
-    | [ 'a'-'z' 'A'-'Z' ]+ as id 
+      [ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ]       { token lexbuf } 
+      (* skip blanks *)
+    | [ 'a'-'z' 'A'-'Z' '#' '_']+ [ 'a'-'z' 'A'-'Z' '#' '_' '0'-'9']* as id 
         { try
-            (Hashtbl.find keyword_table (String.uppercase id)) id
+            let string = String.uppercase id in
+            match string with
+            | "#NEXUS" -> NEXUS
+            | "PICTURE"
+            | "TEXT"
+            | "MATRIX" 
+            | "TREE" -> raw lexbuf
+            | x -> (Hashtbl.find keyword_table string) id
         with
         | Not_found -> IDENT id }
     | [ '"' ]           { inquotes lexbuf }
@@ -173,7 +172,22 @@ and token = parse
     | [ ')']            { RPARENT }
     | [ '*' ]           { STAR }
     | [ '[']            { incr comment_depth; comment lexbuf }
-    | ['0'-'9']+ ['.'] ['0'-'9']+ as i { FLOAT i }
+    | ['0'-'9']+ ['.'] ['0'-'9']* as i { FLOAT i }
     | ['0'-'9']+ as i   { INTEGER i }
-    | [^ ' ' '\t' '\n'] as i            { CHAR i }
+    | [ '\''][^ '\'']*['\''] as i { IDENT i }
+    | [^ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ] as i            { CHAR i }
     | eof               { raise Eof }
+and tree_tokens = parse
+     [ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ] { tree_tokens lexbuf }
+    | [ '*' ] { STAR }
+    | [ '=' ] { EQUAL }
+    | [ ',' ] { COMMA }
+    | [ ':' ] { COLON }
+    | [ ';' ] { SEMICOLON }
+    | [ '(' ] { LPARENT }
+    | [ ')' ] { RPARENT }
+    | ['0'-'9']+['.']['0'-'9']* as i { FLOAT i }
+    | ['0'-'9']+ as i { INTEGER i }
+    | [^ '(' ')' ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ';' ':' ',' ]+ as i
+        { IDENT i }
+    | eof           { EOF }

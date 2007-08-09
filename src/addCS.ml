@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AddCS" "$Revision: 2049 $"
+let () = SadmanOutput.register "AddCS" "$Revision: 2060 $"
 
 (* Internal only exceptions *)
 exception Success
@@ -217,7 +217,7 @@ let to_list_with_cost t =
                 in
                 build (it - 1) (res :: acc)
             with
-            | Failure "Not found." -> build (it - 1) acc
+            | Failure "Not_found" -> build (it - 1) acc
         end
     in
     build (len - 1) []

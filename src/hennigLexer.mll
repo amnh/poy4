@@ -23,39 +23,23 @@
         --> make_all_prefixes 2 "proc" PROCESS
         --> make_all_prefixes 2 "optcode" OPTCODE
         --> make_all_prefixes 2 "cnames"    CHARNAMECMD
+        --> make_all_prefixes 2 "nstates" NSTATES
+        --> (fun x -> ("dna", DNA) :: ("prot", PROTEINS) :: ("num", NUMBER) ::
+            x)
 
     let _ = 
-        List.iter (fun (keyw, tok) -> Hashtbl.add keyword_table keyw tok) 
+        List.iter (fun (keyw, tok) -> 
+            Hashtbl.add keyword_table (String.uppercase keyw) tok) 
         token_table
 
+    let is_prefix a b =
+        let la = String.length a in
+        la <= (String.length b) &&
+        (a = (String.sub b 0 la))
 }
 
 rule token = parse
       [ ' ' '\t' '\n' '\010' '\013' '\012' ]    { token lexbuf }
-    | "xread" { raw lexbuf }
-    | "xrea"  { raw lexbuf }
-    | "xre"   { raw lexbuf }
-    | "xr"    { raw lexbuf }
-    | "tread" { rawtree lexbuf }
-    | "trea"  { rawtree lexbuf }
-    | "tre"   { rawtree lexbuf }
-    | "tr"    { rawtree lexbuf }
-    | "ccode" { CCODE }
-    | "ccod" { CCODE }
-    | "cco" { CCODE }
-    | "cc" { CCODE }
-    | "proc"  { PROCESS }
-    | "pro"  { PROCESS }
-    | "pr"  { PROCESS }
-    | "costs" { COST }
-    | "cost" { COST }
-    | "cos" { COST }
-    | "co" { COST }
-    | "cnames" { CHARNAMECMD }
-    | "cname" { CHARNAMECMD }
-    | "cnam" { CHARNAMECMD }
-    | "cna" { CHARNAMECMD }
-    | "cn" { CHARNAMECMD }
     | [';'] { SEMICOLON }
     | [ '-' ] { DASH }
     | [ '0' - '9']+ as id { INT id }
@@ -71,8 +55,13 @@ rule token = parse
     | [ '?' ] { QUESTION }
     | [ '(' ] { LPARENT }
     | [ ')' ] { RPARENT }
-    | [ 'a'-'z' 'A'-'Z'] [^ ' ' '\t' '\n' '\010' '\013' '\012' ';']+ as word 
-        { WORD word }
+    | [ 'a'-'z' 'A'-'Z']+ as word { 
+        let uword = String.uppercase word in
+        try Hashtbl.find keyword_table uword with 
+        | Not_found -> 
+                if is_prefix uword "TREAD" then rawtree lexbuf
+                else if is_prefix uword "XREAD" then raw lexbuf
+                else WORD word }
     | [ ^ '\000' ] as ch { CHAR ch } 
     | eof       { raise Eof }
 and characters_names = parse

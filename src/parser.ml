@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2049 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2060 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2367,6 +2367,7 @@ module SC = struct
         | STSankoff _ ->
                 Tags.Characters.sankoff, info, contents
 
+    module N = Nexus
     module Nexus = struct
 
         let get_something find filter default form =
@@ -2374,8 +2375,8 @@ module SC = struct
             | Not_found -> default
 
         let get_missing =
-            get_something (function `Missing _ -> true | _ -> false) 
-            (function `Missing x -> x | _ -> assert false) 
+            get_something (function Nexus.FMissing _ -> true | _ -> false) 
+            (function Nexus.FMissing x -> x | _ -> assert false) 
             "?"
 
         let parse_symbols str = 
@@ -2419,55 +2420,123 @@ module SC = struct
                 (a, List.flatten res)) res
 
         let get_symbols =
-            get_something (function `Symbols _ -> true | _ -> false)
-            (function `Symbols x -> parse_symbols x | _ -> assert false)
+            get_something (function Nexus.Symbols _ -> true | _ -> false)
+            (function Nexus.Symbols x -> parse_symbols x | _ -> assert false)
             ["0"; "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"]
             
         let get_equate =
-            get_something (function `Equate _ -> true | _ -> false)
-            (function `Equate x -> parse_equate x | _ -> assert false)
+            get_something (function Nexus.Equate _ -> true | _ -> false)
+            (function Nexus.Equate x -> parse_equate x | _ -> assert false)
             []
 
         let get_true_false x =
             get_something (fun y -> y = x) (function _ -> true) false
 
-        let get_transposed = get_true_false `Transpose
+        let get_transposed = get_true_false Nexus.Transpose
 
-        let get_interleaved = get_true_false `Interleave
+        let get_interleaved = get_true_false Nexus.Interleave
+
+        let get_labels =
+            get_something (function Nexus.Labels _ -> true | _ -> false) 
+            (function Nexus.Labels x -> x | _ -> assert false)
+            true
 
         let get_token =
-            get_something (function `Tokens _ -> true | _ -> false)
-            (function `Tokens x -> x | _ -> assert false)
+            get_something (function Nexus.Tokens _ -> true | _ -> false)
+            (function Nexus.Tokens x -> x | _ -> assert false)
             false
 
         let get_gap =
-            get_something (function `Gap _ -> true | _ -> false)
-            (function `Gap x -> x | _ -> assert false)
+            get_something (function Nexus.Gap _ -> true | _ -> false)
+            (function Nexus.Gap x -> x | _ -> assert false)
             "-"
 
         let get_respect_case =
-            get_something (function `RespectCase -> true | _ -> false)
+            get_something (function Nexus.RespectCase -> true | _ -> false)
             (function _ -> true)
             false
 
+        let get_matchchar =
+            get_something (function Nexus.MatchChar _ -> true | _ -> false)
+            (function Nexus.MatchChar x -> Some x | _ -> assert false)
+            None
+
         let make_symbol_alphabet gap symbols form =
             let get_datatype = 
-                get_something (function `Datatype x -> true | _ -> false)
-                (function `Datatype x -> x | _ -> assert false) 
-                `Standard
+                get_something (function Nexus.Datatype x -> true | _ -> false)
+                (function Nexus.Datatype x -> x | _ -> assert false) 
+                Nexus.DStandard
             in
             match get_datatype form with
-            | `Protein -> Alphabet.aminoacids
-            | `Nucleotide | `Dna | `Rna ->
-                    Alphabet.nucleotides
-            | `Standard ->
+            | Nexus.Protein ->
+                    Alphabet.list_to_a
+                    [("A", 0, None); 
+                    ("C", 1, None); 
+                    ("D", 2, None); 
+                    ("E", 3, None); 
+                    ("F", 4, None); 
+                    ("G", 5, None); 
+                    ("H", 6, None); 
+                    ("I", 7, None); 
+                    ("K", 8, None); 
+                    ("L", 9, None); 
+                    ("M", 10, None); 
+                    ("N", 11, None); 
+                    ("P", 12, None); 
+                    ("Q", 13, None); 
+                    ("R", 14, None); 
+                    ("S", 15, None); 
+                    ("T", 16, None); 
+                    ("V", 17, None); 
+                    ("W", 18, None); 
+                    ("Y", 19, None); 
+                    ("*", 20, None);
+                    (gap, 21, None);]
+                    gap None Alphabet.Sequential,
+                    [("B", ["D"; "N"]); ("Z", ["E"; "Q"])]
+            | Nexus.Rna ->
+                    Alphabet.list_to_a 
+                    [("A", 0, None); ("C", 1, None); ("G", 2, None); ("U", 3,
+                    None); (gap, 4, None)]
+                    gap None Alphabet.Sequential,
+                    [("R", ["A"; "G"]);
+                    ("Y", ["C"; "U"]);
+                    ("M", ["A"; "C"]);
+                    ("K", ["G"; "U"]);
+                    ("S", ["C"; "U"]);
+                    ("W", ["A"; "U"]);
+                    ("H", ["A"; "C"; "U"]);
+                    ("B", ["C"; "G"; "U"]);
+                    ("V", ["A"; "C"; "G"]);
+                    ("D", ["A"; "G"; "U"]);
+                    ("N", ["A"; "C"; "G"; "U"]);
+                    ("X", ["A"; "C"; "G"; "U"])]
+            | Nexus.Nucleotide | Nexus.Dna ->
+                    Alphabet.list_to_a 
+                    [("A", 0, None); ("C", 1, None); ("G", 2, None); ("T", 3,
+                    None); (gap, 4, None)]
+                    gap None Alphabet.Sequential,
+                    [("R", ["A"; "G"]);
+                    ("Y", ["C"; "T"]);
+                    ("M", ["A"; "C"]);
+                    ("K", ["G"; "T"]);
+                    ("S", ["C"; "T"]);
+                    ("W", ["A"; "T"]);
+                    ("H", ["A"; "C"; "T"]);
+                    ("B", ["C"; "G"; "T"]);
+                    ("V", ["A"; "C"; "G"]);
+                    ("D", ["A"; "G"; "T"]);
+                    ("N", ["A"; "C"; "G"; "T"]);
+                    ("X", ["A"; "C"; "G"; "T"])]
+            | Nexus.DStandard ->
                 let cnt = ref 0 in
                 let alph = List.map (fun x -> 
                     incr cnt;
-                    x, !cnt, None) symbols 
+                    x, !cnt, None) (symbols @ [gap])
                 in
-                Alphabet.list_to_a alph gap None Alphabet.Sequential
-            | `Continuous ->
+                Alphabet.list_to_a alph gap None Alphabet.Sequential,
+                get_equate form
+            | Nexus.Continuous ->
                     failwith "We don't support continuous characters ..."
 
         let default_static char_cntr file form pos =
@@ -2476,16 +2545,17 @@ module SC = struct
             and gap = get_gap form
             and respect_case = get_respect_case form 
             and _ = incr char_cntr in
+            let alph, equate = make_symbol_alphabet gap symbols form in
             { st_filesource = file;
               st_name = file ^ ":" ^ string_of_int !char_cntr;
-            st_alph = make_symbol_alphabet gap symbols form;
+            st_alph = alph;
             st_observed = [];
             st_labels = [];
             st_weight = 1.0;
             st_type = STUnordered;
-            st_equivalents = get_equate form;
+            st_equivalents = equate;
             st_missing = missing; 
-            st_matchstate = None;
+            st_matchstate = get_matchchar form;
             st_gap = gap;
             st_eliminate = false;
             st_case = respect_case;
@@ -2547,7 +2617,7 @@ module SC = struct
             try while true do
                 let line = stream#read_line in
                 let line = 
-                    let line =  Str.split (Str.regexp "[ \t]") line in
+                    let line =  Str.split (Str.regexp "[ \t]+") line in
                     List.filter (function "" -> false | _ -> true) line
                 in
                 match line with
@@ -2608,7 +2678,44 @@ module SC = struct
             done
 
 
-        let process_matrix style matrix taxa characters get_row_number assign_item data =
+        let remove_comments string = 
+            let len = String.length string in
+            let b = Buffer.create len in
+            let rec in_comment pos =
+                let start = ref pos in
+                try while !start < len do
+                    begin match string.[!start] with
+                    | ']' -> raise Exit
+                    | '[' -> 
+                            start := in_comment !start;
+                            ()
+                    | _ -> ()
+                    end;
+                    incr start;
+                done;
+                failwith "Finished string and the comments are still there!"
+                with
+                | Exit -> !start
+            in
+            let start = ref 0 in
+            while !start < len do
+                begin match string.[!start] with
+                | '[' -> start := in_comment (!start + 1) 
+                | x -> Buffer.add_char b x
+                end;
+                incr start;
+            done;
+            Buffer.contents b
+
+
+        let process_matrix labels style matrix taxa characters get_row_number 
+        assign_item data =
+            let concat lst = 
+                match style with
+                | `None -> String.concat "" lst
+                | `Hennig -> "[" ^ String.concat " " lst ^ "]"
+                | `Nexus -> "{" ^ String.concat " " lst ^ "}"
+            in
             let generate_alphabet item = 
                 Alphabet.Lexer.make_simplified_lexer style item.st_case true
                 item.st_alph
@@ -2623,32 +2730,49 @@ module SC = struct
                 match Stream.peek stream with
                 | None -> failwith "Short NEXUS matrix?"
                 | Some x ->
-                        if x = alph_spec.st_missing.[0] then begin
-                            Stream.junk stream;
-                            None
-                        end else if has_equate x alph_spec.st_equivalents
-                        then
-                            let _, eqts  = 
-                                find_equate x alph_spec.st_equivalents 
-                            in
-                            let _ = Stream.junk stream in
-                            process_position alph_parser alph_spec 
-                            (Stream.of_string (String.concat "" eqts)) position
-                        else 
-                            match alph_spec.st_matchstate with
-                            | None -> Some (alph_parser stream)
-                            | Some first ->
-                                    if x = first.[0] then begin
-                                        Stream.junk stream;
-                                        matrix.(!first_taxon).(position)
-                                    end else Some (alph_parser stream)
+                        match x with
+                        | ' '| '\001' .. '\032' -> 
+                                Stream.junk stream;
+                                process_position alph_parser alph_spec stream
+                                position
+                        | x ->
+                                let x = 
+                                    if not alph_spec.st_case then Char.uppercase x 
+                                    else x
+                                in
+                                if x = alph_spec.st_missing.[0] then begin
+                                    Stream.junk stream;
+                                    None
+                                end else if has_equate x alph_spec.st_equivalents
+                                then
+                                    let _, eqts  = 
+                                        find_equate x alph_spec.st_equivalents 
+                                    in
+                                    let _ = Stream.junk stream in
+                                    match eqts with
+                                    | [] -> None
+                                    | _ ->
+                                            Some (alph_parser 
+                                            (Stream.of_string (concat eqts)))
+                                else 
+                                    try
+                                        match alph_spec.st_matchstate with
+                                        | None -> Some (alph_parser stream)
+                                        | Some first ->
+                                                if x = first.[0] then begin
+                                                    Stream.junk stream;
+                                                    matrix.(!first_taxon).(position)
+                                                end else Some (alph_parser stream)
+                                    with
+                                    | err ->
+                                            raise err
             in
             let is_space stream =
                 match Stream.peek stream with
                 | None -> false
                 | Some x -> 
                         match x with
-                        | ' ' | '\010' .. '\015' ->
+                        | ' '| '\001' .. '\031' ->
                                 true
                         | x -> 
                                 false
@@ -2658,13 +2782,29 @@ module SC = struct
                     Stream.junk stream
                 done
             in
-            let get_name stream = 
-                consume_spaces stream;
-                let b = Buffer.create 13 in
-                while not (is_space stream) do
-                    Buffer.add_char b (Stream.next stream)
-                done;
-                Buffer.contents b
+            let get_name =
+                let taxa_len = Array.length taxa in
+                if not labels then 
+                    let cntr = ref (-1) in
+                    (fun stream -> incr cntr; 
+                        if !cntr = taxa_len then 
+                            let _ = Status.user_message Status.Error
+                            ("Your@ input@ matrix@ declares@ less@ " ^
+                            "taxa@ than@ there@ are@ in@ your@ matrix.") in
+                            failwith "Illegal input file"
+                        else
+                        match taxa.(!cntr) with
+                        | Some x -> x
+                        | None -> failwith "Taxon undefined")
+                else 
+                    (fun stream ->
+                    consume_spaces stream;
+                    let b = Buffer.create 13 in
+                    while not (is_space stream) do
+                        Buffer.add_char b (Stream.next stream)
+                    done;
+                    let name = Buffer.contents b in
+                    name)
             in
             let rec taxon_processor x position =
                 match x with
@@ -2777,9 +2917,10 @@ module SC = struct
             in
             let _ =
                 (* We are ready now to fill the contents of the matrix *)
+                let chars = remove_comments chars.Nexus.chars in
                 let data =
-                    if get_interleaved form then uninterleave chars.Nexus.chars
-                    else chars.Nexus.chars
+                    if get_interleaved form then uninterleave chars
+                    else chars
                 in
                 let get_row_number, assign_item =
                     if get_transposed form then
@@ -2793,8 +2934,8 @@ module SC = struct
                                     Printf.printf "Failed in %d, %d" x y;
                                     raise err)
                 in
-                process_matrix `Nexus matrix taxa characters get_row_number
-                assign_item data
+                process_matrix (get_labels form) `Nexus matrix taxa characters 
+                get_row_number assign_item data
             in
             let _ =
                 (* Time to eliminate the characters that the person doesn't really
@@ -2802,31 +2943,324 @@ module SC = struct
                 match chars.Nexus.char_eliminate with
                 | None -> ()
                 | Some x ->
-                        match x with
-                        | `Range (a, b) ->
-                                let a = int_of_string a
-                                and b = int_of_string b in
-                                for i = a + start_position to b + start_position 
-                                do
-                                    characters.(i) <- 
-                                        { characters.(i) with st_eliminate = true }
-                                done
-                        | `Single v ->
-                                let v = int_of_string v in
-                                characters.(v) <- 
-                                    { characters.(v) with st_eliminate = true }
-                        | `Name name ->
-                                let v = find_character characters name in
-                                characters.(v) <-
-                                    { characters.(v) with st_eliminate = true }
+                        let rec process_range x =
+                            match x with
+                            | Nexus.Range (a, b) ->
+                                    let a = int_of_string a
+                                    and b = 
+                                        match b with
+                                        | None -> (Array.length characters) - 1
+                                        | Some b -> int_of_string b in
+                                    for i = 
+                                        a + start_position to 
+                                        b + start_position 
+                                    do
+                                        characters.(i) <- 
+                                            { characters.(i) with 
+                                            st_eliminate = true }
+                                    done
+                            | Nexus.Single v ->
+                                    let v = int_of_string v in
+                                    characters.(v) <- 
+                                        { characters.(v) with 
+                                        st_eliminate = true }
+                            | Nexus.Name name ->
+                                    let upp_name = 
+                                        String.uppercase name 
+                                    and lst = 
+                                        (Array.length characters) - 1 
+                                    in
+                                    if "ALL" = upp_name then
+                                        process_range 
+                                        (Nexus.Range ("0", 
+                                        Some (string_of_int lst)))
+                                    else 
+                                        let v = 
+                                            if upp_name = "." then
+                                                (Array.length characters) - 1 
+                                            else find_character characters name 
+                                        in
+                                        characters.(v) <-
+                                            { characters.(v) with st_eliminate = true }
+                        in
+                        process_range x
             in
             (* Move on, we are done with this block *)
             (txn_cntr, char_cntr, taxa, characters, matrix, trees)
 
+        let rec apply_on_character_set characters f x =
+            let last = (Array.length characters) - 1 in
+            match x with
+            | Nexus.Range (a, b) ->
+                    let a = int_of_string a
+                    and b = 
+                        match b with
+                        | None -> last
+                        | Some b ->  int_of_string b 
+                    in
+                    for i = a to b do
+                        f i;
+                    done
+            | Nexus.Single v ->
+                    f (int_of_string v);
+            | Nexus.Name name ->
+                    let up_name = String.uppercase name in
+                    if "ALL" = up_name then
+                        apply_on_character_set characters f
+                        (Nexus.Range ("0", 
+                        (Some (string_of_int last))))
+                    else if "." = up_name then
+                        f last
+                    else
+                        f (find_character characters name)
+
+        let make_ordered_matrix obsv = 
+            let rec tail lst = 
+                match lst with
+                | [h] -> h
+                | _ :: tl -> tail tl
+                | [] -> failwith "empty list?"
+            in
+            let b = tail obsv in
+            Array.init b (fun x ->
+                Array.init b (fun y -> abs (x - y)))
+
+        let create_cost_type x =
+            let do_irreversible updown x =
+                (* TODO the following function and update the 
+                * codes of the characters to be consecutive numbers
+                * *)
+                let mtx = make_ordered_matrix x.st_observed in
+                let len = Array.length mtx in
+                for i = 1 to (len - 1) do
+                    for j = 0 to i - 1 do
+                        match updown with
+                        | `DOWN -> mtx.(i).(j) <- max_int;
+                        | `UP -> mtx.(j).(i) <- max_int;
+                            done;
+                    done;
+                    { x with st_type = STSankoff mtx } 
+            in
+            match String.uppercase x with
+            | "UNORD" -> 
+                    (fun x -> { x with st_type =
+                        STUnordered })
+            | "ORD" -> 
+                    (fun x -> { x with st_type =
+                        STOrdered })
+            | "IRREV.DOWN"
+            | "IRREV" ->
+                    do_irreversible `DOWN
+            | "IRREV.UP" ->
+                    do_irreversible `UP
+            | x -> 
+                    failwith 
+                    ("POY@ does@ not@ support@ the@ " ^
+                    x ^ "@ character@ type@ requested.")
+
+        let produce_cost_type_function (labels, cost_matrix) character =
+            let len = Array.length labels in
+            let permutation_array =
+                let labels = Array.init len (fun x ->
+                    Alphabet.match_base labels.(x) character.st_alph, x) in
+                Array.sort (fun (a, _) (b, _) -> a - b) labels;
+                Array.map (fun (_, b) -> b) labels
+            in
+            let cost_matrix = 
+                Array.init len (fun x ->
+                    Array.init len (fun y ->
+                        int_of_float 
+                        cost_matrix.(permutation_array.(x)).(permutation_array.(y))))
+            in 
+            { character with st_type = STSankoff cost_matrix }
+
+        let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, matrix,
+        trees) item =
+            match item with
+            | Nexus.Options (default, polytcount, gapmode) ->
+                    let _ =
+                        match default with
+                        | None -> ()
+                        | Some x ->
+                                let def = create_cost_type x in
+                                for i = 0 to (Array.length characters) - 1 do
+                                    characters.(i) <- def characters.(i);
+                                done
+                    in
+                    let _ =
+                        match polytcount with
+                        | Nexus.MinSteps -> ()
+                        | Nexus.MaxSteps -> 
+                                Status.user_message Status.Error
+                                ("POY@ will@ ignore@ the@ MaxSteps@ command@ " ^
+                                "in@ your@ nexus@ file")
+                    in
+                    let _ =
+                        match gapmode with
+                        | Nexus.Missing -> 
+                                let ntax = (Array.length matrix) - 1 
+                                and nchar = (Array.length characters) - 1 in
+                                let gaps = 
+                                    Array.map (fun spec ->
+                                        let gap = spec.st_gap in 
+                                        Some [(Alphabet.match_base gap
+                                        spec.st_alph)]) characters 
+                                in
+                                for i = 0 to ntax do
+                                    for j = 0 to nchar do
+                                        if matrix.(i).(j) = gaps.(j) then
+                                            matrix.(i).(j) <- None
+                                    done;
+                                done;
+                        | Nexus.NewState -> ()
+                    in
+                    ()
+            | Nexus.UserType (name, x) ->
+                    let _ =
+                        match x with
+                        | Nexus.StepMatrix (size, stepmtx) ->
+                                let stepmtx = String.concat " " stepmtx in
+                                let size = int_of_string size in
+                                let stepmtx = remove_comments stepmtx in
+                                let stepmtx = 
+                                    ref 
+                                    (Str.split 
+                                    (Str.regexp "[ \010\011\012\013\014\015]+")
+                                    stepmtx)
+                                in
+                                let headers = 
+                                    Array.init size (fun _ -> 
+                                        match !stepmtx with
+                                        | h :: t->
+                                                stepmtx := t;
+                                                h
+                                        | [] -> failwith "Invalid nexus matrix?")
+                                in
+                                let mtx = Array.init size (fun _ ->
+                                    Array.init size (fun _ ->
+                                        match !stepmtx with
+                                        | "i" :: t ->
+                                                stepmtx := t;
+                                                max_float
+                                        | "." :: t ->
+                                                stepmtx := t;
+                                                0.
+                                        | x :: t ->
+                                                stepmtx := t;
+                                                float_of_string x
+                                        | [] -> failwith "Insufficient matrix?"))
+                                in
+                                let name = String.uppercase name in
+                                Hashtbl.add cost_table name (headers, mtx)
+                        | Nexus.CSTree _ -> 
+                                failwith 
+                                ("POY@ does@ not@ support@ CSTrees@ from@ " ^
+                                "NEXUS@ files")
+                    in
+                    ()
+            | Nexus.WeightDef (has_star, name, has_token, set) ->
+                    let set_item weight x =
+                        characters.(x) <- 
+                            { characters.(x) with st_weight = weight }
+                    in
+                    let _ =
+                        match set with
+                        | Nexus.Standard items ->
+                                let process_item = function
+                                    | Nexus.Code (v, who) ->
+                                            let weight = float_of_string v in
+                                            List.iter (apply_on_character_set
+                                            characters (set_item
+                                            weight)) who
+                                    | Nexus.IName _ ->
+                                            failwith "Unexpected name"
+                                in
+                                List.iter process_item items
+                        | Nexus.Vector items ->
+                                let _ =
+                                    List.fold_left 
+                                    (fun pos x ->
+                                        set_item (float_of_string x) pos; 
+                                        pos + 1)
+                                    0 items
+                                in 
+                                ()
+                    in
+                    ()
+            | Nexus.TypeDef (has_star, name, has_token, set) ->
+                    let set_typedef clas x =
+                        let clas = String.uppercase clas in
+                        let new_def = 
+                            match clas with
+                            | "ORD" 
+                            | "UNORD"
+                            | "IRREV"
+                            | "IRREV.UP"
+                            | "IRREV.DOWN" -> create_cost_type clas
+                            | name ->
+                                    produce_cost_type_function 
+                                    (Hashtbl.find cost_table name)
+                        in
+                        characters.(x) <- new_def characters.(x)
+                    in
+                    let _ =
+                        match set with
+                        | Nexus.Standard items ->
+                                let process_item = function
+                                    | Nexus.Code (v, who)
+                                    | Nexus.IName (v, who) ->
+                                            List.iter (apply_on_character_set 
+                                            characters (set_typedef v)) who
+                                in
+                                List.iter process_item items
+                        | Nexus.Vector items ->
+                                let _ = 
+                                    List.fold_left 
+                                    (fun pos x ->
+                                        set_typedef x pos;
+                                        pos + 1) 
+                                    0 items
+                                in
+                                ()
+                    in
+                    ()
+            | _ -> ()
+
+
+        let process_tree tree = 
+            let tree = remove_comments tree in
+            let lex = Lexing.from_string tree in
+            NexusParser.tree NexusLexer.tree_tokens lex
+
+        let generate_parser_friendly translations taxa tree =
+            let rec process_name name =
+                try 
+                    process_name (List.assoc name translations)
+                with
+                | Not_found -> 
+                        try 
+                            match taxa.(find_taxon taxa name) with
+                            | None -> name
+                            | Some x -> x
+                        with
+                        | _ -> 
+                                try match taxa.(int_of_string name) with
+                                | None -> name
+                                | Some x -> x
+                                with
+                                | _ -> name
+            in
+            let rec translate_branch = function
+                | Nexus.Leaf (name, _) -> Tree.Leaf (process_name name)
+                | Nexus.Node (a, _, _) ->
+                        Tree.Node (List.map translate_branch a, "")
+            in
+            [translate_branch tree]
+
         let process_parsed file 
         ((txn_cntr, char_cntr, taxa, characters, matrix, trees) as acc) parsed =
             match parsed with
-            | `Taxa (number, taxa_list) ->
+            | Nexus.Taxa (number, taxa_list) ->
                     let cnt = int_of_string number in
                     let taxa =
                         if cnt <> List.length taxa_list then
@@ -2835,9 +3269,28 @@ module SC = struct
                         else add_all_taxa txn_cntr taxa taxa_list
                     in
                     (txn_cntr, char_cntr, taxa, characters, matrix, trees)
-            | `Characters chars -> 
+            | Nexus.Characters chars -> 
                     add_prealigned_characters file chars 
                     (txn_cntr, char_cntr, taxa, characters, matrix, trees)
+            | Nexus.Ignore _ -> acc
+            | Nexus.Error block ->
+                    Status.user_message Status.Error
+                    ("There@ is@ a@ parsing@ error@ in@ the@ block@ " ^
+                    block ^ ". I@ will@ ignore@ the@ block@ and@ " ^
+                    "continue@ with@ the@ rest@ of@ the@ file.");
+                    acc
+            | Nexus.Assumptions lst ->
+                    let table = Hashtbl.create 37 in
+                    List.iter (update_assumptions table acc) lst;
+                    acc
+            | Nexus.Trees (translations, newtrees) ->
+                    let handle_tree tree = 
+                        generate_parser_friendly translations taxa (process_tree tree)
+                    in
+                    let newtrees = List.map handle_tree newtrees in
+                    (txn_cntr, char_cntr, taxa, characters, matrix, trees @
+                    newtrees)
+
             | _ -> acc
 
         let of_channel ch file =
@@ -2870,30 +3323,68 @@ module SC = struct
 
     module Hennig = struct
 
-        let all_states = ["0"; "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"]
-        let default_alphabet =
-            let alph = 
-                List.map (fun x -> x, int_of_string x, None) 
-                ["0"; "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"]
-            in
-            Alphabet.list_to_a alph "9" None Alphabet.Sequential
-
-        let default_hennig file pos = 
+        let default_hennig alph equates file pos = 
             { st_filesource = file;
               st_name = file ^ ":" ^ string_of_int pos;
-              st_alph = default_alphabet;
+              st_alph = alph;
               st_observed = [];
               st_labels = [];
               st_weight = 1.0;
               st_type = STOrdered;
-              st_equivalents = [("-", all_states)];
+              st_equivalents = equates @ [("-", [])];
               st_missing = "?"; 
               st_matchstate = None;
-              st_gap = "";
+              st_gap = ""; (* Someting that can't come from the input *)
               st_eliminate = false;
               st_case = true;
               st_used_observed = None;
               st_observed_used = None}
+
+        let hennig_for_upto file n pos =
+            let all_list = ["0"; "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9";
+            "A"; "B"; "C"; "D"; "E"; "F"; "G"; "H"; "I"; "J"; "K"; "L"; "M";
+            "N"; "O"; "P"; "Q"; "R"; "S"; "T"; "U"; "V"] in
+            if n < 0 then failwith "Illegal number of states requested"
+            else
+                let rec get_up_to lst x =
+                    match x, lst with
+                    | 0, _ -> []
+                    | 1, h :: _ -> [h]
+                    | n, h :: t -> h :: get_up_to t (n - 1)
+                    | _ -> failwith "Illegal number"
+                in
+                let lst = get_up_to all_list n in
+                let alph, equates= 
+                    Nexus.make_symbol_alphabet "7" lst [N.Datatype N.DStandard]
+                in
+                default_hennig alph equates file pos
+
+        let rec generate_default of_type file pos =
+            match of_type with
+            | Some `Dna -> 
+                    let alph, equates = 
+                        Nexus.make_symbol_alphabet "-" [] [N.Datatype N.Dna]
+                    in
+                    default_hennig alph equates file pos
+            | Some `Rna ->
+                    let alph, equates = 
+                        Nexus.make_symbol_alphabet "-" [] [N.Datatype N.Rna]
+                    in
+                    default_hennig alph equates file pos
+            | Some `Protein ->
+                    let alph, equates = 
+                        Nexus.make_symbol_alphabet "-" [] [N.Datatype N.Protein]
+                    in
+                    default_hennig alph equates file pos
+            | Some (`Number x) ->
+                    if x < 9 then
+                        hennig_for_upto file 8 pos
+                    else if x < 17 then
+                        hennig_for_upto file 16 pos
+                    else if x < 33 then
+                        hennig_for_upto file 32 pos
+                    else failwith "We can't hold it, can you?"
+            | None -> generate_default (Some (`Number 32)) file pos
 
         let assign_names characters name =
             match name with
@@ -2922,7 +3413,7 @@ module SC = struct
                     if x = y then 0
                     else 1))
 
-        let process_command file (taxa, characters, matrix, trees) = function
+        let process_command file (mode, taxa, characters, matrix, trees) = function
             | Hennig.Xread data ->
                     let lex = Lexing.from_string data in
                     let (nch, ntaxa, to_parse) = 
@@ -2935,17 +3426,17 @@ module SC = struct
                         | [||], [||], [||] ->
                                 (* We are OK to continue *)
                                 Array.make ntaxa None, Array.init nch
-                                (default_hennig file), 
+                                (generate_default mode file), 
                                 Array.init ntaxa (fun _ -> Array.make nch None)
                         | _ -> 
                                 failwith 
                                 "We only allow one xread command per hennig file"
                     in
                     (* Now we can parse the contents using the default parser *)
-                    Nexus.process_matrix `Hennig matrix taxa characters 
+                    Nexus.process_matrix true `Hennig matrix taxa characters 
                     (fun name -> Nexus.find_taxon taxa name)
                     (fun x y v -> matrix.(x).(y) <- v) to_parse;
-                    taxa, characters, matrix, trees
+                    mode, taxa, characters, matrix, trees
             | Hennig.Charname name_list ->
                     (* We need to parse each of the charname entries *)
                     let name_list = 
@@ -2953,8 +3444,8 @@ module SC = struct
                         name_list
                     in
                     List.iter (assign_names characters) name_list;
-                    taxa, characters, matrix, trees
-            | Hennig.Ignore -> taxa, characters, matrix, trees
+                    mode, taxa, characters, matrix, trees
+            | Hennig.Ignore -> mode, taxa, characters, matrix, trees
             | Hennig.Ccode char_changes ->
                     List.iter (fun char_change ->
                         let modifier, chars = 
@@ -2978,7 +3469,7 @@ module SC = struct
                         List.iter (fun x -> 
                             characters.(x) <- modifier characters.(x))
                         (get_chars (Array.length characters) chars)) char_changes;
-                    taxa, characters, matrix, trees
+                    mode, taxa, characters, matrix, trees
             | Hennig.Tread new_trees ->
                     let new_trees = 
                         let trees = Tree.of_string new_trees in
@@ -2996,8 +3487,8 @@ module SC = struct
                             List.map (fun t -> t) trees
                         with _ -> []
                     in
-                    taxa, characters, matrix, trees @ new_trees
-            | _ -> taxa, characters, matrix, trees
+                    mode, taxa, characters, matrix, trees @ new_trees
+            | _ -> mode, taxa, characters, matrix, trees
 
         let of_channel ch (file : string) =
             let parsed = 
@@ -3012,7 +3503,9 @@ module SC = struct
                 with
                 | HennigLexer.Eof -> List.rev !res
             in
-            List.fold_left (process_command file) ([||], [||], [||], []) parsed
+            let _, a, b, c, d = List.fold_left (process_command file) (None,
+            [||], [||], [||], []) parsed in
+            a, b, c, d
 
     end
 
