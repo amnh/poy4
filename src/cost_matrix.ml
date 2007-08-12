@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2087 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2090 $"
 
 
 exception Illegal_Cm_Format;;
@@ -31,6 +31,10 @@ type cost_model =
 external init : unit -> unit = "cm_CAML_initialize"
 
 let debug = false
+
+(* We override the value of max_int to avoid clashes in 64 bits environments 
+and our internal C representation of a matrix with 32 bit integers. *)
+let max_int = (Int32.to_int Int32.max_int) lsr 1
 
 let _ =
     init ()
@@ -778,13 +782,10 @@ module Three_D = struct
         let has_shared_bit x y =
             if 0 <> x land y then 1 else 0 
         in
-        let large_int = 
-            Int32.to_int Int32.max_int 
-        in
         for i = 1 to alph do
             for j = 1 to alph do
                 for k = 1 to alph do
-                    set_cost i j k nm large_int;
+                    set_cost i j k nm max_int;
                     for l = 0 to lcm - 1 do
                         let inter = 1 lsl l in
                         let cost = 
@@ -795,7 +796,7 @@ module Three_D = struct
                                 (Two_D.cost inter i m) + 
                                 (Two_D.cost inter j m) +
                                 (Two_D.cost inter k m) 
-                            else large_int
+                            else max_int
                         and old_cost = cost i j k nm in
                         if (cost < old_cost) then begin
                             set_cost i j k nm cost;
@@ -806,7 +807,6 @@ module Three_D = struct
                         end;
                     done;
                     (* We pick only one median ammong all options *)
-                    assert (0 <> median i j k nm);
                     set_median i j k nm (pick_bit 1 (median i j k nm));
                 done;
             done;
