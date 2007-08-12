@@ -13,12 +13,12 @@ function generate_binary {
         echo "Failed in the configuration step for $1 $2 $3 target $4"
         exit 1
     fi
+    echo "Make Clean"
+    if ! PATH=$5:$PATH make clean >> distro.log; then
+        echo "Failed in the clean step for $1 $2 $3 target $4"
+        exit 1
+    fi
     if [ ! $8 = "" ]; then
-        echo "Make Clean"
-        if ! PATH=$5:$PATH make clean >> distro.log; then
-            echo "Failed in the clean step for $1 $2 $3 target $4"
-            exit 1
-        fi
         echo "Make OcamlMPI"
         PATH=$5:$PATH make ocamlmpi >> distro.log
         echo "Make Depend"
