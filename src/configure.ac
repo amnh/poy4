@@ -103,6 +103,14 @@ case `../gnu/config.guess` in
         ;;
 esac
 
+case `../gnu/config.guess` in
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h float.h limits.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h unistd.h])

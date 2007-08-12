@@ -3888,6 +3888,14 @@ case `../gnu/config.guess` in
         ;;
 esac
 
+case `../gnu/config.guess` in
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
 # Checks for header files.
 echo "$as_me:$LINENO: checking for ANSI C header files" >&5
 echo $ECHO_N "checking for ANSI C header files... $ECHO_C" >&6

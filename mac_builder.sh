@@ -9,31 +9,37 @@ UNIVERSAL_DIRECTORY=universal
 function generate_binary {
     echo "Configurating for $1 - $2 - $3 for target $4" >> distro.log
     echo "Configure for $1 - $2 - $3 for target $4" 
-    if ! PATH=$5:$PATH CFLAGS="-O3 -I/usr/include/malloc -arch $2 -isysroot $1 $6" CC="$7" ./configure $3 >> distro.log; then
+    if ! PATH=$5:$PATH CFLAGS="-O3 -arch $2 -isysroot $1 $6" CC="$7" ./configure $3 >> distro.log; then
         echo "Failed in the configuration step for $1 $2 $3 target $4"
         exit 1
     fi
-    echo "Make Clean"
-    if ! PATH=$5:$PATH make clean >> distro.log; then
-        echo "Failed in the clean step for $1 $2 $3 target $4"
-        exit 1
+    if [ ! $8 = "" ]; then
+        echo "Make Clean"
+        if ! PATH=$5:$PATH make clean >> distro.log; then
+            echo "Failed in the clean step for $1 $2 $3 target $4"
+            exit 1
+        fi
+        echo "Make OcamlMPI"
+        PATH=$5:$PATH make ocamlmpi >> distro.log
+        echo "Make Depend"
+        if ! PATH=$5:$PATH make depend >> distro.log; then
+            echo "Failed in the depend step for $1 $2 $3 target $4"
+            exit 1
+        fi
+        echo "Make $8"
+        cd src
     fi
-    echo "Make OcamlMPI"
-    PATH=$5:$PATH make ocamlmpi >> distro.log
-    echo "Make Depend"
-    if ! PATH=$5:$PATH make depend >> distro.log; then
-        echo "Failed in the depend step for $1 $2 $3 target $4"
-        exit 1
-    fi
-    echo "Make $8"
-    cd src
     if ! PATH=$5:$PATH make $8 >> distro.log; then
         echo "Failed in the make step for $1 $2 $3 target $4"
         cd ../
         exit 1
     fi
-    cd ../
-    mv -f src/$8 $4
+    if [ ! $8 = "" ]; then
+        cd ../
+        mv -f src/$8 $4
+    else
+        mv -f src/poy $4
+    fi
 }
 
 OCAMLROOT=/opt/ocaml
@@ -46,13 +52,13 @@ function panther_distribution {
     rm -f ./panther/ncurses_poy_panther.command
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
         "--enable-interface=html" ./panther/seq_poy_panther.command \
-        ${OCAML_PATH}/panther/bin "" gcc poy; then
+        ${OCAML_PATH}/panther/bin "" gcc ""; then
         exit 1
     fi
 
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
         "--enable-interface=ncurses" ./panther/ncurses_poy_panther.command \
-        ${OCAML_PATH}/panther/bin  "" gcc poy; then
+        ${OCAML_PATH}/panther/bin  "" gcc ""; then
         exit 1
     fi
 }
@@ -76,30 +82,30 @@ function make_universals {
 }
 
 function tiger_distribution {
-    if ! generate_ppc "--enable-interface=html" gcc seq_poy_ppc poy; then
+    if ! generate_ppc "--enable-interface=html" gcc seq_poy_ppc ""; then
         exit 1
     fi
 
-    if ! generate_ppc "--enable-interface=ncurses" gcc ncurses_poy_ppc poy; then
+    if ! generate_ppc "--enable-interface=ncurses" gcc ncurses_poy_ppc ""; then
         exit 1
     fi
 
     if ! generate_ppc "--enable-interface=html --enable-mpi=mpich" \
-        /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc poy; then 
+        /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc ""; then 
         exit 1
     fi
 
-    if ! generate_intel "--enable-interface=html" gcc seq_poy_intel poy; then
+    if ! generate_intel "--enable-interface=html" gcc seq_poy_intel ""; then
         exit 1
     fi
 
-    if ! generate_intel "--enable-interface=ncurses" gcc ncurses_poy_intel poy; then
+    if ! generate_intel "--enable-interface=ncurses" gcc ncurses_poy_intel ""; then
         exit 1
     fi
 
     if ! generate_intel "--enable-interface=html --enable-mpi=mpich" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc \
-        par_poy_intel poy; then
+        par_poy_intel ""; then
         exit 1
     fi
 
