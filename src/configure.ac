@@ -25,7 +25,9 @@ AC_SUBST(OCAMLTOP)
 AC_SUBST(OCAMLLEX)
 AC_SUBST(OCAMLYACC)
 AC_SUBST(LIBS)
+AC_SUBST(OCAMLFLAGS)
 
+INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
 AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
               [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
@@ -33,7 +35,7 @@ AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
 AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
               [Force POY's user interface. Valid options are ncurses, readline, and html. The default is ncurses.])],
               [USEINTERFACE=$enableval],
-              [USEINTERFACE=ncurses])
+              [USEINTERFACE=ncurses; INTERFACE_SELECTED=false])
 
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi=libname], 
               [Turns on parallel support using MPI, with the library name libname. When using MPI remember to set CC to mpicc.])], 
@@ -54,14 +56,22 @@ AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
               [USE_LARGE_ALPHABETS=false])
 
 # Checking for libraries according to the user's options.
-AS_IF([test $USEINTERFACE = "ncurses"], [AC_CHECK_LIB([ncurses], [scrollok],
-      [LIBS="-lncurses $LIBS"; AC_DEFINE(HAVE_LIBNCURSES)], [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.])])])
+AS_IF([test $USEINTERFACE = "ncurses"], 
+      [AC_CHECK_LIB([ncurses], [scrollok], [LIBS="-lncurses $LIBS"; AC_DEFINE(HAVE_LIBNCURSES)], 
+      [AS_IF([test $INTERFACE_SELECTED = "true"], 
+             [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or configure with --enable-interface=readline interface. See ./configure --help for more information.])], 
+             [USEINTERFACE="readline"])])],[])
+
+AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[LIBS="-ltermcap $LIBS"], [AC_CHECK_LIB([curses],[tgetent],[LIBS="-lcurses $LIBS"], [AC_CHECK_LIB([ncurses],[tgetent],[LIBS="-lncurses $LIBS"], [AC_MSG_FAILURE([The readline interface requires one of the following: termcap, curses, or ncurses.])])])])],[])
 
 AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([readline], [readline],
       [LIBS="-lreadline $LIBS"; AC_DEFINE(HAVE_LIBREADLINE)], [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.])])])
 
 AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
       [LIBS="-l$MPILNAME $LIBS"], [AC_MSG_FAILURE([In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.])])])
+
+# Check for malloc, if not there, this is most likely a Mac OS X.
+AC_CHECK_HEADER(malloc.h,[],[AC_CHECK_HEADER(/usr/include/malloc/malloc.h,[CFLAGS="-I /usr/include/malloc/ $CFLAGS"], [AC_MSG_FAILURE([Could not find malloc.h])])])
 
 AC_CHECK_PROGS([OCAML], [ocaml])
 AC_CHECK_PROGS([OCAMLC], [ocamlc.opt ocamlc])
@@ -71,19 +81,31 @@ AC_CHECK_PROGS([OCAMLOPT], [ocamlopt.opt ocamlopt])
 AC_CHECK_PROGS([OCAMLDEP], [ocamldep])
 AC_CHECK_PROGS([OCAMLTOP], [ocamlmktop])
 
+# Check the version of OCaml
+AC_MSG_CHECKING([for OCaml version])
+OCAMLVERSION=`$OCAMLOPT -version`
+AC_MSG_RESULT([$OCAMLVERSION])
+
+case $OCAMLVERSION in 
+    3.10.*)
+    ;;
+    *)
+    AC_MSG_RESULT([no])
+    AC_MSG_FAILURE([POY requires OCaml version 3.10.0 or later to compile. Please upgrade to the latest version.])
+    ;;
+esac
 
 case `../gnu/config.guess` in
     x86_64*)
-        OCAMLOPT="${OCAMLOPT} -fno-PIC"
+        OCAMLFLAGS="-fno-PIC"
         ;;
     *)
-        OCAMLOPT=${OCAMLOPT}
         ;;
 esac
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h float.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h float.h limits.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

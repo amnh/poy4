@@ -52,6 +52,8 @@ type seg_t = {
 }
 type chrom_t = {
   chrom_id : int ref;
+  main_chrom1_id : int;
+  main_chrom2_id : int;
   chrom_ref_code : int;
   map : seg_t list;
   seq : Sequence.s;
@@ -81,6 +83,10 @@ val ref_genome : med_t ref
 val assign_hom_chrom :
   med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> unit
 val init : Sequence.s Data.dyna_data -> med_t
+
+val create_med_from_seq : Sequence.s array ->med_t
+
+
 val find_conserved_areas :
   Sequence.s ->
   Sequence.s -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> Block.block_t list

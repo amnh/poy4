@@ -137,7 +137,19 @@ let leaf_sequences (a : t) =
                    in
                    Array.map (fun seqt -> seqt.AnnchromAli.seq) seqt_arr
               ) a.AnnchromCS.meds
-    | _ -> failwith_todo "sequences in DynamicCS.ml"
+
+
+    | GenomeCS a ->
+          IntMap.map 
+              (fun med  -> 
+                   let seq_arr = Array.map 
+                       (fun chromt -> 
+                            chromt.GenomeAli.seq
+                       ) (List.hd med.Genome.med_ls).GenomeAli.chrom_arr 
+                   in
+                   seq_arr
+              ) a.GenomeCS.meds
+
 
 let unions (a : u) = 
     match a with 
@@ -412,7 +424,8 @@ let encoding enc x =
 
 let readjust to_adjust modified ch1 ch2 parent mine =
     match ch1, ch2, parent, mine with
-    | SeqCS ch1, SeqCS ch2, SeqCS parent, SeqCS mine -> 
+    | SeqCS ch1, SeqCS ch2, SeqCS parent, SeqCS mine when ch1.SeqCS.alph =
+        Alphabet.nucleotides -> 
             let modified, new_cost, nc = 
                 SeqCS.readjust to_adjust modified ch1 ch2 parent mine in
             let prev_cost = SeqCS.distance ch1 mine +. SeqCS.distance ch2 mine in

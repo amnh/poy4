@@ -19,17 +19,30 @@ CFLAGS = $(CPPFLAGS) @CFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 INSTALL = @INSTALL@
+USEPARALLEL := @USEPARALLEL@
 
 SUBDIRS = ocamlmpi src doc
 
-.PHONY:	subdirs $(SUBDIRS) clean driver
+all: 
+ifeq ($(USEPARALLEL), true)
+	cd ocamlmpi; $(MAKE) ocamlmpi
+	$(MAKE) depend
+	cd ../src/; $(MAKE) poy
+else
+	$(MAKE) depend
+	cd ./src/; $(MAKE) poy
+endif
+
+.PHONY:	subdirs $(SUBDIRS) clean driver install
 subdirs:	$(SUBDIRS)
 
-all: poy
-	cp ./src/poy ./
+transform = @program_transform_name@
 
-install: all
-	$(INSTALL) ./src/poy $(bindir)
+install:
+	$(INSTALL) ./src/poy $(bindir)/`echo poy | sed -e '$(transform)'`
+
+uninstall:
+	rm -f $(bindir)/`echo poy | sed '$(transform)'`
 
 MAKEOCAMLMPI :=
 ifeq ($(USEPARALLEL), true)

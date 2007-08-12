@@ -1,4 +1,5 @@
 val infinity : int
+val max_seq_len : int
 val fprintf : out_channel -> ('a, out_channel, unit) format -> 'a
 val gen_chrom_ref_code : int ref
 val gen_seq_ref_code : int ref

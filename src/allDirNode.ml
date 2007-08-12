@@ -154,6 +154,9 @@ module OneDirF :
     let get_dynamic_preliminary code n = 
         apply_single_f_on_lazy (Node.Standard.get_dynamic_preliminary code) n
 
+    let get_dynamic_adjusted code n =
+        apply_single_f_on_lazy (Node.Standard.get_dynamic_adjusted code) n
+
     let edge_distance a b = 
         apply_f_on_lazy Node.Standard.edge_distance a b
 
@@ -435,6 +438,9 @@ type nad8 = Node.Standard.nad8 = struct
 
     let get_dynamic_preliminary code n =
         get_something OneDirF.get_dynamic_preliminary code n.unadjusted
+
+    let get_dynamic_adjusted code n =
+        get_something OneDirF.get_dynamic_preliminary code n.adjusted
 
     let edge_distance a b =
         let acode = taxon_code a

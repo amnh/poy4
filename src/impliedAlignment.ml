@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2049 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2080 $"
 
 exception NotASequence of int
 
@@ -123,14 +123,17 @@ let print_debug a' b' a b m =
 let print_algn_debug = false
 let print_anc_debug = false
 
-(** [ancestor a b cm m] creates a common ancestor for sequences [a] and [b]
+(** [ancestor calc_m a b cm m] creates a common ancestor for sequences [a] and [b]
  * using the cost matrix [cm] and the alignment matrix [m] 
  * The resulting common ancestor holds the homology
  * relationships of the codes assigned in [a] and [b]. 
- * state indicate the type of sequence, i.e., Sequence, Chromosome, Annotated,
+ * state indicates the type of sequence, i.e., Sequence, Chromosome, Annotated,
  * Genome, Breakinv....
+ * [calc_m] if true, will ask the function to automatically calculate the median
+ * between the two input sequences as the ancestor, otherwise, it will assume
+ * that [a] is the ancestor of [b].
 *)
-let ancestor state prealigned all_minus_gap a b cm m = 
+let ancestor calculate_median state prealigned all_minus_gap a b cm m = 
 (*
     print_endline "start ancestor";
     Utl.printIntArr (Sequence.to_array a.seq);
@@ -144,16 +147,16 @@ let ancestor state prealigned all_minus_gap a b cm m =
     Hashtbl.iter (fun p c -> fprintf stdout "p: %i, c: %i\n" p c) b.codes;
     print_newline ();
 *)
-
-
     let codea = a.cannonic_code
     and codeb = b.cannonic_code in
     if print_anc_debug then
         Status.user_message Status.Information
         ("The ancestors of " ^ string_of_int codea ^ " and " ^ string_of_int codeb);
     let a, b, mincode = 
-        if codea < codeb then a, b, codea
-        else b, a, codeb
+        if calculate_median then
+            if codea < codeb then a, b, codea
+            else b, a, codeb
+        else a, b, codea
     in
     let lena = Sequence.length a.seq
     and lenb = Sequence.length b.seq 
@@ -161,43 +164,46 @@ let ancestor state prealigned all_minus_gap a b cm m =
     let create_gaps len = Sequence.init (fun _ -> gap) len 
     and aempty = Sequence.is_empty a.seq gap
     and bempty = Sequence.is_empty b.seq gap in
-    let a', b', _, nogap = 
-        if aempty && bempty then
-            if lena > lenb then a.seq, a.seq, 0, `A
-            else b.seq, b.seq, 0, `B
-        else if aempty then
-            (create_gaps lenb), b.seq, 0, `A
-        else if bempty then
-            a.seq, (create_gaps lena), 0, `B
-        else 
-            if prealigned then a.seq, b.seq, 0, `Both
-            else
-                let a, b, c = Sequence.Align.align_2 a.seq b.seq cm m in
-                a, b, c, `Both
+    let a', b', nogap = 
+        let a', b', _, nogap =
+            if aempty && bempty then
+                if lena > lenb then a.seq, a.seq, 0, `A
+                else b.seq, b.seq, 0, `B
+                else if aempty then
+                    (create_gaps lenb), b.seq, 0, `A
+                else if bempty then
+                    a.seq, (create_gaps lena), 0, `B
+                else 
+                    if prealigned then a.seq, b.seq, 0, `Both
+                    else
+                        let a, b, c = Sequence.Align.align_2 a.seq b.seq cm m in
+                        a, b, c, `Both
+        in
+        let nogap = 
+            (* if we are not calculating the median, we better always
+            *  pick whatever is assigned to the true ancestor *)
+            if calculate_median then nogap
+            else `B 
+        in
+        a', b', nogap
     in
     if print_algn_debug then print_debug a' b' a b m;
     let lena' = Sequence.length a' in
     let anc = Sequence.create (lena' + 1) 
     and a_ord = a.order
     and b_ord = b.order in
-
-    let gap_code = Cost_matrix.Two_D.gap cm in  
-    let a, lena = match state with 
-    | `Chromosome | `Annotated | `Breakinv -> 
-          let gap_code = Cost_matrix.Two_D.gap cm in 
-          let gapless_seqa = UtlPoy.delete_gap ~gap_code:gap_code a.seq in 
-          {a with seq = gapless_seqa}, Sequence.length gapless_seqa
-    | _ -> a, lena
+    let correct_gaps_in_sequences a =
+        (* For some of the sequence classes we really don't use the leading gap.
+        * So we better clean that up when required *)
+        match state with 
+        | `Chromosome | `Annotated | `Breakinv | `Genome -> 
+                let gapless_seqa = UtlPoy.delete_gap ~gap_code:gap a.seq in 
+                {a with seq = gapless_seqa}, Sequence.length gapless_seqa
+        | _ -> a, Sequence.length a.seq
     in 
-
-    let b, lenb = match state with 
-    | `Chromosome | `Annotated | `Breakinv -> 
-          let gapless_seqb = UtlPoy.delete_gap ~gap_code:gap_code b.seq in 
-          {b with seq = gapless_seqb}, Sequence.length gapless_seqb
-    | _ -> b, lenb
-    in 
-    
-   let rec builder = 
+    let a, lena = correct_gaps_in_sequences a in
+    let b, lenb = correct_gaps_in_sequences b in
+    let rec builder = 
         fun position a_pos b_pos anc_pos codes hom a_hom b_hom a_or b_or res_or ->
         if position > (-1) then begin
             let it_a = Sequence.get a' position
@@ -218,7 +224,6 @@ let ancestor state prealigned all_minus_gap a b cm m =
                     (all_minus_gap it_b) cm)) || (med = gap))
                 else (med = gap)
             in
-
             let code, hom, n_a_pos, n_b_pos, na_hom, nb_hom, a_or, b_or, res_or =
                 match is_gap_median, it_a = gap, it_b = gap with
                 | false, false, false ->
@@ -229,7 +234,6 @@ let ancestor state prealigned all_minus_gap a b cm m =
                                       (Printf.sprintf "Could not find %d with gap
                                      %d and it_a %d and it_b %d\n" a_pos gap it_a it_b)
                         in
-
                         let codeb = Hashtbl.find b.codes b_pos in
                         let hom_a = Hashtbl.find a_hom codea 
                         and hom_b = Hashtbl.find b_hom codeb in
@@ -238,10 +242,8 @@ let ancestor state prealigned all_minus_gap a b cm m =
                         let new_ab = `Set [hom_a; hom_b] in
                         let new_res_or, new_a_or = 
                             prepend_until_shared res_or a_or codea in
-
                         let new_res_or, new_b_or = 
                             prepend_until_shared new_res_or b_or codeb in
-
                         Hashtbl.replace hom codea new_ab;
                         codea, hom, a_pos - 1, b_pos - 1, a_hom, 
                         b_hom, new_a_or, new_b_or, (codea :: new_res_or)
@@ -333,36 +335,257 @@ let ancestor state prealigned all_minus_gap a b cm m =
     order = order }
 
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
-let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) cm chrom_pam m = 
-    let a_ls = List.map (fun seqs -> seqs.(0)) a_ls in 
-    let b_ls = List.map (fun seqs -> seqs.(0)) b_ls in 
 
+
+(*====================================================================*)
+(*====================================================================*)
+let get_best_pair state (a_ls : ias_arr list) (b_ls : ias_arr list) cm chrom_pam m = 
     let first_a = List.hd a_ls in  
     let first_b = List.hd b_ls in 
     let a_ls, b_ls, min_can_code = 
-        if first_a.cannonic_code < first_b.cannonic_code then a_ls, b_ls, first_a.cannonic_code
-        else b_ls, a_ls, first_b.cannonic_code
+        if first_a.(0).cannonic_code < first_b.(0).cannonic_code then 
+            a_ls, b_ls, first_a.(0).cannonic_code
+        else b_ls, a_ls, first_b.(0).cannonic_code
     in
 
-    let cmp_chrom_cost isa1 isa2 c2 chrom_pam = 
-            let med1 = ChromAli.create_med isa1.seq in 
-            let med2 = ChromAli.create_med isa2.seq in
-            let cost, _ = ChromAli.cmp_cost med1 med2 c2 chrom_pam in 
-            cost
+    let cmp_annchrom_cost iasa_arr iasb_arr =
+        let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) iasa_arr in
+        let seqb_arr = Array.map (fun ias -> (ias.seq, -1)) iasb_arr in
+        let ana = AnnchromAli.init seqa_arr in 
+        let anb = AnnchromAli.init seqb_arr in 
+        let cost, _ = AnnchromAli.cmp_cost ana anb cm Alphabet.nucleotides chrom_pam in
+        cost
     in 
+
+    let cmp_chrom_cost isa1_arr isa2_arr =
+        let med1 = ChromAli.create_med isa1_arr.(0).seq in 
+        let med2 = ChromAli.create_med isa2_arr.(0).seq in
+        let cost, _ = ChromAli.cmp_cost med1 med2 cm chrom_pam in 
+        cost
+    in 
+
     let _, a, b = 
         List.fold_left 
             (fun (min_cost, best_a, best_b) isa_a -> 
                  List.fold_left 
                      (fun (min_cost, best_a, best_b) isa_b -> 
-                          let cost = cmp_chrom_cost isa_a isa_b cm chrom_pam in 
+                          let cost = 
+                              match state with 
+                              | `Chromosome -> cmp_chrom_cost isa_a isa_b 
+                              | `Annotated -> cmp_annchrom_cost isa_a isa_b 
+                          in 
                           if cost < min_cost then cost, isa_a, isa_b
                           else min_cost, best_a, best_b
                      ) (min_cost, best_a, best_b) b_ls                  
             ) (max_int, first_a, first_b) a_ls  
     in 
+    a, b, min_can_code
+
+
+let assign_act_order sta en codes ord_arr act_ord_arr =
+    if sta != -1 then begin
+        let sta_code = Hashtbl.find codes sta in 
+        let en_code = Hashtbl.find codes en in 
+        let sta = Utl.find_index ord_arr sta_code compare in 
+        let en = Utl.find_index ord_arr en_code compare in 
+        Array.fill act_ord_arr sta (en - sta + 1) true;
+    end else ()
+        
+
+let get_suborder is_main_chrom sta en codes ord_arr act_ord_arr =
+    if sta = -1 then [||] 
+    else  begin
+        let sta_code = Hashtbl.find codes sta in 
+        let en_code = Hashtbl.find codes en in 
+        let sta = Utl.find_index ord_arr sta_code compare in 
+        let en = Utl.find_index ord_arr en_code compare in 
+
+        let sta = ref sta in
+        while is_main_chrom &&(!sta > 0) && (act_ord_arr.(!sta - 1) = false) do
+            act_ord_arr.(!sta - 1) <- true;
+            sta := !sta - 1;
+        done;
+        
+        let num_ord = Array.length ord_arr in 
+        let en = ref en in
+        while is_main_chrom && (!en + 1 < num_ord) && (act_ord_arr.(!en + 1) = false) do
+            act_ord_arr.(!en + 1) <- true;
+            en := !en + 1;
+        done;
+        
+        let sub_ord_arr = Array.sub ord_arr !sta (!en - !sta + 1) in 
+        sub_ord_arr
+    end 
+
+
+
+
+(* Merge the implied alignments of two clades and their respective roots into
+* one common ancestor *)
+let ancestor_genome all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) 
+        cm chrom_pam m = 
+
+    let first_a = List.hd a_ls in  
+    let first_b = List.hd b_ls in 
+    let ias1_arr, ias2_arr, min_can_code, max_can_code =
+        if first_a.(0).cannonic_code < first_b.(0).cannonic_code then 
+            first_a, first_b, first_a.(0).cannonic_code, first_b.(0).cannonic_code
+        else first_b, first_a, first_b.(0).cannonic_code, first_a.(0).cannonic_code
+    in
+
+
+    let chroma_arr = Array.map (fun ias -> ias.seq) ias1_arr in
+    let chromb_arr = Array.map (fun ias -> ias.seq) ias2_arr in
+    let med1 = GenomeAli.create_med_from_seq chroma_arr in 
+    let med2 = GenomeAli.create_med_from_seq chromb_arr in
+    let _, _, _, med_ls = GenomeAli.find_med2_ls med1 med2 cm chrom_pam in 
+    let med = List.hd med_ls in 
+    
+
+
+    
+    let order1_mat = Array.map (fun ias1 -> Array.of_list (List.rev ias1.order) ) ias1_arr in  
+    let order2_mat = Array.map (fun ias2 -> Array.of_list (List.rev ias2.order) ) ias2_arr in  
+    let act_ord1 = Array.map (fun ord_arr -> Array.map (fun _ -> false) ord_arr) order1_mat in
+    let act_ord2 = Array.map (fun ord_arr -> Array.map (fun _ -> false) ord_arr) order2_mat in
+
+    
+    let id_to_index chrom_id med = 
+        let chrom_id_arr = Array.map (fun chrom -> !(chrom.GenomeAli.chrom_id)) 
+            med.GenomeAli.chrom_arr
+        in 
+        Utl.find_index chrom_id_arr chrom_id compare
+    in 
+
+    Array.iter 
+        (fun chrom -> 
+             List.iter 
+                 (fun seg -> 
+                      let sta1 = seg.GenomeAli.sta1 in 
+                      let en1 = seg.GenomeAli.en1 in 
+                      let idx1 = id_to_index seg.GenomeAli.chi1_chrom_id med1 in 
+
+                      (if idx1 != -1 then 
+                          assign_act_order sta1 en1 ias1_arr.(idx1).codes order1_mat.(idx1) act_ord1.(idx1));
+
+                      let sta2 = seg.GenomeAli.sta2 in 
+                      let en2 = seg.GenomeAli.en2 in 
+                      let idx2 = id_to_index seg.GenomeAli.chi2_chrom_id med2 in 
+
+
+                      (if idx2 != -1 then 
+                          assign_act_order sta2 en2 ias2_arr.(idx2).codes order2_mat.(idx2) act_ord2.(idx2));
+                 ) chrom.GenomeAli.map
+        ) med.GenomeAli.chrom_arr; 
+    
+
+
+
+    let new_ias_arr = Array.map 
+        (fun chrom ->
+             let init_ias = {seq = chrom.GenomeAli.seq; 
+                             codes = Hashtbl.create 1667;
+                             homologous = Hashtbl.create 1667;
+                             cannonic_code = min_can_code;
+                             order = []}
+             in 
+             let main_idx1 = id_to_index chrom.GenomeAli.main_chrom1_id med1 in 
+             let main_idx2 = id_to_index chrom.GenomeAli.main_chrom2_id med2 in 
+
+             let new_ias = List.fold_left 
+                 ( fun nascent_ias seg ->
+                       let sta = seg.GenomeAli.sta in 
+
+                       let sta1 = seg.GenomeAli.sta1 in 
+                       let en1 = seg.GenomeAli.en1 in 
+                       let idx1 = id_to_index seg.GenomeAli.chi1_chrom_id med1 in 
+                       let sub_ord1_arr = match idx1 = -1 with
+                       | true -> [||]
+                       | false ->
+                             get_suborder (idx1 = main_idx1) sta1 en1 
+                                 ias1_arr.(idx1).codes order1_mat.(idx1) act_ord1.(idx1)
+                       in 
+                       
+                       let sta2 = seg.GenomeAli.sta2 in 
+                       let en2 = seg.GenomeAli.en2 in 
+                       let idx2 = id_to_index seg.GenomeAli.chi2_chrom_id med2 in 
+                       let sub_ord2_arr = match idx2 = -1 with
+                       | true -> [||]
+                       | false ->
+                             get_suborder (idx2 = main_idx2) sta2 en2 
+                                 ias2_arr.(idx2).codes order2_mat.(idx2) act_ord2.(idx2)
+                       in 
+                       
+                       let sub_codes1 = Hashtbl.create 1667 in
+                       (if sta1 != -1 then 
+                            for p = sta1 to en1 do
+                                let code = Hashtbl.find ias1_arr.(idx1).codes p in 
+                                Hashtbl.add sub_codes1 (p - sta1) code;
+                            done);
+
+                       let sub_codes2 = Hashtbl.create 1667 in
+                       (if sta2 != -1 then 
+                            for p = sta2 to en2 do
+                                let code = Hashtbl.find ias2_arr.(idx2).codes p in 
+                                Hashtbl.add sub_codes2 (p - sta2) code;
+                            done);
+
+                       let hom1 = match idx1 = -1 with
+                       | true -> Hashtbl.create 1668 
+                       | false -> ias1_arr.(idx1).homologous
+                       in 
+
+                       let hom2 = match idx2 = -1 with
+                       | true -> Hashtbl.create 1668 
+                       | false -> ias2_arr.(idx2).homologous
+                       in 
+                       
+                       let sub1 = {
+                           seq = seg.GenomeAli.alied_seq1;
+                           codes = sub_codes1;
+                           order = List.rev (Array.to_list sub_ord1_arr);                                  
+                           homologous = hom1;
+                           cannonic_code = min_can_code}  
+                       in 
+
+
+                       let sub2 = {
+                           seq = seg.GenomeAli.alied_seq2;
+                           codes = sub_codes2;
+                           order = List.rev (Array.to_list sub_ord2_arr);                                  
+                           homologous = hom2;
+                           cannonic_code = max_can_code}  
+                       in  
+                       
+                       let ans_ias = ancestor true `Genome true all_minus_gap sub1 sub2 cm m in 
+                       
+                       (if (sta != -1) then 
+                            Hashtbl.iter 
+                                (fun p code -> 
+                                     Hashtbl.add nascent_ias.codes (p + sta - 1) code
+                                ) ans_ias.codes); 
+
+                       Hashtbl.iter 
+                           (fun code hom -> 
+                                Hashtbl.replace nascent_ias.homologous code hom
+                           ) ans_ias.homologous; 
+
+                       {nascent_ias with order = 
+                               List.append nascent_ias.order (List.rev ans_ias.order)}                 
+                 ) init_ias chrom.GenomeAli.map
+             in 
+             {new_ias with order = List.rev new_ias.order}
+        ) med.GenomeAli.chrom_arr
+    in 
+    [new_ias_arr]
+
+(* Merge the implied alignments of two clades and their respective roots into
+* one common ancestor *)
+let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) 
+        cm chrom_pam m = 
+    let a, b, min_can_code = get_best_pair `Chromosome a_ls b_ls cm chrom_pam m in 
+    let a = a.(0) and b = b.(0) in 
+
     let lena = Sequence.length a.seq
     and lenb = Sequence.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
@@ -386,43 +609,7 @@ let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) cm 
     let ordera_arr = Array.of_list (List.rev a.order) in 
     let orderb_arr = Array.of_list (List.rev b.order) in 
 
-    let assign_act_order sta en codes ord_arr act_ord_arr =
-        if sta != -1 then begin
-            let sta_code = Hashtbl.find codes sta in 
-            let en_code = Hashtbl.find codes en in 
-            let sta = Utl.find_index ord_arr sta_code compare in 
-            let en = Utl.find_index ord_arr en_code compare in 
-            for p = sta to en do
-                act_ord_arr.(p) <- true;
-            done;
-        end 
-    in 
 
-    let get_order sta en codes ord_arr act_ord_arr =
-        if sta = -1 then [||] 
-        else  begin
-            let sta_code = Hashtbl.find codes sta in 
-            let en_code = Hashtbl.find codes en in 
-            let sta = Utl.find_index ord_arr sta_code compare in 
-            let en = Utl.find_index ord_arr en_code compare in 
-
-            let sta = ref sta in
-            while (!sta > 0) && (act_ord_arr.(!sta - 1) = false) do
-                act_ord_arr.(!sta - 1) <- true;
-                sta := !sta - 1;
-            done;
-
-            let num_ord = Array.length ord_arr in 
-            let en = ref en in
-            while (!en + 1 < num_ord) && (act_ord_arr.(!en + 1) = false) do
-                act_ord_arr.(!en + 1) <- true;
-                en := !en + 1;
-            done;
-
-            let sub_ord_arr = Array.sub ord_arr !sta (!en - !sta + 1) in 
-            sub_ord_arr
-        end 
-    in 
     let builder_med ias_ls med =
         let act_orda_arr = Array.map (fun _ -> false) ordera_arr in
         let act_ordb_arr = Array.map (fun _ -> false) orderb_arr in        
@@ -451,12 +638,11 @@ let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) cm 
 
                  let staa = seg.ChromAli.sta1 in 
                  let ena = seg.ChromAli.en1 in 
-                 let sub_orda_arr = get_order staa ena a.codes ordera_arr act_orda_arr in 
+                 let sub_orda_arr = get_suborder true staa ena a.codes ordera_arr act_orda_arr in 
 
                  let stab = seg.ChromAli.sta2 in 
                  let enb = seg.ChromAli.en2 in 
-                 let sub_ordb_arr = get_order stab enb b.codes orderb_arr
-                 act_ordb_arr in 
+                 let sub_ordb_arr = get_suborder true stab enb b.codes orderb_arr act_ordb_arr in 
 
                  let sub_codes_a = Hashtbl.create 1667 in
                  (if staa != -1 then 
@@ -485,11 +671,7 @@ let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) cm 
                                   order = List.rev (Array.to_list sub_ordb_arr);
                              } 
                  in  
-                 let ans = ancestor `Chromosome true all_minus_gap sub_a sub_b cm m in 
-(*
-                 Hashtbl.iter (fun p code -> fprintf stdout "%i -> %i\n" p code) ans.codes;
-                 print_newline ();
-*)
+                 let ans = ancestor true `Chromosome true all_minus_gap sub_a sub_b cm m in 
                  (if (sta != -1) then 
                      Hashtbl.iter (fun p code -> 
                                        Hashtbl.add nascent_ias.codes (p + sta - 1) code) ans.codes);
@@ -507,40 +689,12 @@ let ancestor_chrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list) cm 
 
 
 
-
-
 (* Merge the implied alignments of two clades and their respective roots into
 * one common ancestor *)
 let ancestor_annchrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list)
         cm annchrom_pam m = 
 
-    let first_a = List.hd a_ls in  
-    let first_b = List.hd b_ls in 
-    let a_ls, b_ls, min_can_code = 
-        if first_a.(0).cannonic_code < first_b.(0).cannonic_code then 
-            a_ls, b_ls, first_a.(0).cannonic_code
-        else b_ls, a_ls, first_b.(0).cannonic_code
-    in
-    let cmp_chrom_cost iasa_arr iasb_arr =
-        let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) iasa_arr in
-        let seqb_arr = Array.map (fun ias -> (ias.seq, -1)) iasb_arr in
-        let ana = AnnchromAli.init seqa_arr in 
-        let anb = AnnchromAli.init seqb_arr in 
-        let cost, _ = AnnchromAli.cmp_cost ana anb cm Alphabet.nucleotides annchrom_pam in
-        cost
-    in 
-
-    let _, a, b = 
-        List.fold_left 
-            (fun (min_cost, best_a, best_b) isa_a -> 
-                 List.fold_left 
-                     (fun (min_cost, best_a, best_b) isa_b -> 
-                          let cost = cmp_chrom_cost isa_a isa_b in
-                          if cost < min_cost then cost, isa_a, isa_b
-                          else min_cost, best_a, best_b
-                     ) (min_cost, best_a, best_b) b_ls                  
-            ) (max_int, first_a, first_b) a_ls  
-    in 
+    let a, b, min_can_code = get_best_pair `Annotated a_ls b_ls cm annchrom_pam m in
 
 
     let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) a in
@@ -581,7 +735,7 @@ let ancestor_annchrom all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list)
 
 (*        UtlPoy.printDNA isa.seq;
         UtlPoy.printDNA isb.seq;*)
-        let ans = ancestor `Annotated true all_minus_gap isa isb cm m in
+        let ans = ancestor true `Annotated true all_minus_gap isa isb cm m in
         let new_codes = Hashtbl.create 1667 in 
         Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
 
@@ -617,17 +771,10 @@ let ancestor_breakinv all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list)
     let _, _, med_ls = BreakinvAli.find_med2_ls meda medb cm pure_cm alpha breakinv_pam in
     let med = List.hd med_ls in
 
-
-
     
     let seqb_arr = Sequence.to_array b.seq in 
     let gap_code = Cost_matrix.Two_D.gap cm in 
     let re_seqb = UtlPoy.delete_gap ~gap_code:gap_code med.BreakinvAli.alied_seq2 in
-
-
-
-
-
 
     let new_codes_b = Hashtbl.create 1667 in 
     Array.iteri (fun re_pos re_base -> 
@@ -671,7 +818,7 @@ let ancestor_breakinv all_minus_gap (a_ls : ias_arr list) (b_ls : ias_arr list)
 
 
 
-    let ans = ancestor `Breakinv true all_minus_gap isa isb cm m in
+    let ans = ancestor true `Breakinv true all_minus_gap isa isb cm m in
     let new_codes = Hashtbl.create 1667 in 
     Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
 
@@ -983,12 +1130,20 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     (** return (taxon_id, character_ls) list (of taxa) * (final ias for each
         character set) list (of characters) *)
     let of_tree_handle all_minus_gap cg handle ptree =
+        let calculate_median =
+            match !Methods.cost with
+            | `Normal | `Exact -> true
+            | `Iterative -> false
+        in
+        let get_dynamic_data = 
+            if calculate_median then Node.get_dynamic_preliminary 
+            else Node.get_dynamic_adjusted 
+        in
         let vertices = 
             try
                 let root = Ptree.get_component_root handle ptree in
                 match root.Ptree.root_median with
-                | Some (_, v) -> 
-                        Some (((Node.num_otus None v) * 2) - 1)
+                | Some (_, v) -> Some (((Node.num_otus None v) * 2) - 1)
                 | None -> None
             with
             | Not_found -> None
@@ -996,49 +1151,48 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         let st = 
             Status.create "Implied Alignments" vertices "vertices calculated"
         in
+        let convert_data taxon_id data =
+            let data = 
+                List.map 
+                (fun dyn ->
+                    let sequences = DynamicCS.leaf_sequences dyn in
+                    let state = DynamicCS.state dyn in 
+                    let new_sequences = 
+                        Codes.fold 
+                        (fun code seq_arr acc ->
+                            let ias_arr = 
+                                Array.map 
+                                (fun seq -> create_ias state seq taxon_id cg) 
+                                seq_arr
+                    in
+                    Codes.add code [ias_arr] acc) 
+                        sequences Codes.empty  
+                            in                                   
+                            {sequences = new_sequences;   
+                            c2 = DynamicCS.c2 dyn;   
+                            chrom_pam = DynamicCS.chrom_pam dyn;  
+                            state = DynamicCS.state dyn; 
+                            alpha = DynamicCS.alpha dyn;
+                            code = DynamicCS.code dyn; }) 
+                data
+            in
+            AssList.singleton (taxon_id, data), data
+        in
         let convert_node parent ptree _ id _ =
-
             let data = Ptree.get_node_data id ptree in
             let taxon_id = Node.taxon_code data in
             let data = 
                 let par =                     
                     match parent with
                     | Some _ -> parent
-                    | None ->
-                            Some (Ptree.get_parent taxon_id ptree)
+                    | None -> Some (Ptree.get_parent taxon_id ptree)
                 in
-                let nd = Node.get_dynamic_preliminary par data in 
-                nd 
+                get_dynamic_data par data
             in
-
-            let data = List.map 
-                (fun dyn ->
-                     let sequences = DynamicCS.leaf_sequences dyn in      
-                     let state = DynamicCS.state dyn in 
-
-                     let new_sequences = 
-                         match state with
-                         | `Seq | `Chromosome | `Annotated | `Breakinv -> 
-                               Codes.fold 
-                                   (fun code seq_arr acc ->
-                                        let ias_arr = Array.map 
-                                            (fun seq -> create_ias state seq taxon_id cg) seq_arr
-                                        in
-                                        Codes.add code ([ias_arr]) acc
-                                   ) sequences Codes.empty  
-                         | _ -> failwith "create_new_sequences in Impliedalignment"
-                     in                                   
-                     {sequences = new_sequences;   
-                      c2 = DynamicCS.c2 dyn;   
-                      chrom_pam = DynamicCS.chrom_pam dyn;  
-                      state = DynamicCS.state dyn; 
-                      alpha = DynamicCS.alpha dyn;
-                      code = DynamicCS.code dyn; }   
-                ) data   
-            in
+            let data = convert_data taxon_id data in
             let did = Status.get_achieved st in
             Status.full_report ~adv:(did + 1) st;
-            AssList.singleton (taxon_id, data), data 
+            data
         in
         let join_2_nodes _ _ (ac, a) (bc, b) =
             let t_ancestor x y =
@@ -1047,27 +1201,25 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 let homs = Codes.find u y.sequences in
                                 let anc = match state with 
                                 | `Seq ->
-                                      let anc = List.map2 
-                                          (fun a_v hom ->
-                                               Array.mapi 
-                                                   (fun idx v_ias ->                                                                         
-                                                        ancestor `Seq false all_minus_gap v_ias hom.(idx) x.c2 Matrix.default
-                                                   ) a_v
-                                          ) v homs  
-                                      in 
-                                      anc
+                                        List.map2 
+                                        (fun a_v hom ->
+                                            Array.mapi 
+                                            (fun idx v_ias ->
+                                                ancestor calculate_median
+                                                `Seq false all_minus_gap
+                                                v_ias hom.(idx) x.c2
+                                                Matrix.default) a_v)
+                                        v homs  
                                 | `Chromosome ->
                                       ancestor_chrom all_minus_gap v homs x.c2
                                           x.chrom_pam Matrix.default 
-
+                                | `Genome ->
+                                      ancestor_genome all_minus_gap v homs x.c2
+                                          x.chrom_pam Matrix.default 
                                 | `Annotated ->  ancestor_annchrom all_minus_gap v
                                         homs x.c2 x.chrom_pam Matrix.default
-
-
                                 | `Breakinv ->  ancestor_breakinv all_minus_gap v
                                       homs x.c2 x.alpha x.chrom_pam Matrix.default
-
-                                | _ -> failwith "Only implied alignment for Seq and Chrom"
                                 in 
                                 Codes.add u anc acc 
                            ) x.sequences Codes.empty
@@ -1094,40 +1246,90 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     | Some ((`Edge (a, b)), the_root) -> a, b
                     | _ -> failwith "no root?"
                 in
-                let a, b = 
-                    Ptree.post_order_node_with_edge_visit 
-                    (convert_node None ptree) join_2_nodes (Tree.Edge (self, other)) ptree
-                    (AssList.empty, [])
-                in 
-
-                let a' = 
-                    let new_ptree = 
-                        let self_data = Ptree.get_node_data self ptree 
-                        and other_data = Ptree.get_node_data other ptree in
-
-                        let single = 
-                            Node.to_single ~is_root:true (Some self) other_data (Some other) self_data 
+                let x, y =
+                    if calculate_median then
+                        let a, b = 
+                            Ptree.post_order_node_with_edge_visit 
+                            (convert_node None ptree) join_2_nodes 
+                            (Tree.Edge (self, other)) ptree
+                            (AssList.empty, [])
+                        in 
+                        let a' = 
+                            let new_ptree = 
+                                let self_data = Ptree.get_node_data self ptree 
+                                and other_data = Ptree.get_node_data other ptree in
+                                let single = 
+                                    Node.to_single ~is_root:true (Some self) 
+                                    other_data (Some other) self_data 
+                                in
+                                (*
+                                Status.user_message Status.Information
+                                ("The assigned root in the implied alignment is " ^
+                                Node.to_string single);
+                                *)
+                                Ptree.add_node_data self single ptree
+                            in
+                            convert_node (Some other) new_ptree () self ([], []) 
                         in
-
-                        (*
-                        Status.user_message Status.Information
-                        ("The assigned root in the implied alignment is " ^
-                        Node.to_string single);
-                        *)
-                        Ptree.add_node_data self single ptree
-                    in
-                    convert_node (Some other) new_ptree () self ([], []) 
+                        let a = join_2_nodes () () a a' in
+                        join_2_nodes () () a b
+                    else 
+                        (* We will do a different tree traversal, converting each
+                        interior vertex as we move down the tree starting with the
+                        actual root *)
+                        let rec tree_traverser parent_ia parent_code my_code =
+                            let my_ia =
+                                let my_ia = 
+                                    convert_node parent_code ptree () my_code
+                                    ([], [])
+                                in
+                                match Ptree.get_node my_code ptree with
+                                | (Tree.Interior _) as n -> 
+                                        let parent_code = 
+                                            match parent_code with
+                                            | Some parent_code -> parent_code
+                                            | None -> assert false
+                                        in
+                                        let a, b = Tree.other_two_nbrs parent_code n in
+                                        let my_ia = 
+                                            tree_traverser my_ia (Some my_code) a 
+                                        in
+                                        tree_traverser my_ia (Some my_code) b 
+                                | _ -> my_ia
+                            in
+                            join_2_nodes () () parent_ia my_ia
+                        in
+                        match Ptree.get_node self ptree with
+                        | Tree.Interior (_, a, b, c) ->
+                                let myd = Ptree.get_node_data  self ptree in
+                                let my_ia = 
+                                    convert_data self
+                                    (get_dynamic_data (Some other) myd)
+                                in
+                                let self = Some self in
+                                let my_ia = tree_traverser my_ia self a in
+                                let my_ia = tree_traverser my_ia self b in
+                                tree_traverser my_ia self c
+                        | Tree.Leaf (_, b) ->
+                                let myd = Ptree.get_node_data self ptree in
+                                let my_ia = 
+                                    convert_data self (get_dynamic_data (Some b) myd)
+                                in
+                                tree_traverser my_ia (Some self) b
+                        | Tree.Single _ ->
+                                let data = Ptree.get_node_data self ptree in
+                                convert_data (Node.taxon_code data) 
+                                (get_dynamic_data None data)
                 in
-
-                let a = join_2_nodes () () a a' in
-
-                let x, y = join_2_nodes () () a b in
-                Status.finished st;
-                (if Tree.is_leaf self ptree.Ptree.tree then
-                    AssList.elements x
-                else List.remove_assoc self (AssList.elements x)), y
-
-
+                let _ = Status.finished st in
+                let cleanedup = 
+                    List.fold_left (fun acc ((code, y) as assoc) ->
+                        if Tree.is_leaf code ptree.Ptree.tree then
+                            assoc :: acc
+                        else acc) []
+                        (AssList.elements x)
+                in
+                cleanedup, y
 
     (** t is a final ias for a character set   
         =>
@@ -1188,7 +1390,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
               in
               add_result ias;
               [|results|], [|pos_results|]
-        | _ -> (** that is for annotated chromosome *)
+        | _ -> (** that is for annotated or multiple chromosomes *)
               let pos_mat = Array.map 
                   (fun (len, _, _) -> Array.make (len + 1) (-1)) fi_ias_arr 
               in 
@@ -1197,19 +1399,23 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
               in 
               let adder fi_ias pos_arr base_arr = 
                   let len, remap, recode = fi_ias in 
-                  Array.iter 
-                      (fun tax_ias -> 
-                           if Codes.mem (List.hd tax_ias.order) recode then begin
-                               let seq = Sequence.to_array tax_ias.seq in                                
-                               Array.iteri 
-                                   (fun (pos : int) (base : int) ->
-                                        let code = Hashtbl.find tax_ias.codes pos in
-                                        let com_hom_code = Codes.find code recode in 
+                  Array.iteri 
+                      (fun chrom_idx tax_ias -> 
+                           let seq = Sequence.to_array tax_ias.seq in                                
+                           Array.iteri 
+                               (fun (pos : int) (base : int) ->
+                                    let code = Hashtbl.find tax_ias.codes pos in
+                                    let com_hom_code = 
+                                        try 
+                                            Codes.find code recode 
+                                        with  Not_found -> (-1)
+                                    in 
+                                    if (com_hom_code != -1) then begin
                                         let col = Codes.find com_hom_code remap in
                                         base_arr.(len - col) <- base;
-                                        pos_arr.(len-col) <- pos;
-                                   ) seq;                               
-                           end                                    
+                                        pos_arr.(len-col) <- Utl.max_seq_len * chrom_idx + pos;
+                                    end 
+                               ) seq;                               
                       ) tax_ias_arr;
               in 
 
@@ -1263,9 +1469,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                               char_states := (Codes.add char_code state !char_states);
                                               let seqs = Codes.find char_code hb.sequences in 
                                               let seq_arr = List.hd seqs in 
-                                              let bases, pos = convert_a_taxon
-                                                  fi_hom seq_arr
-                                              in 
+                                              let bases, pos = convert_a_taxon fi_hom seq_arr in 
                                               (Codes.add char_code bases acc_bases),
                                               (Codes.add char_code pos acc_pos)
                                          ) ha (Codes.empty, Codes.empty)
@@ -1277,17 +1481,16 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                            tc, builder inv_codes_b tit 
                       ) a 
                  in 
+
                  let get_ali_pos looking_char_code = 
                      List.fold_left 
                          (fun alied_seq_ls (tx_code, ali) ->
                               List.fold_left 
                                   (fun alied_seq_ls (_, alied_pos) ->
-                                       Codes.fold 
-                                           (fun char_code alied_seq alied_seq_ls ->
-                                                if char_code = looking_char_code
-                                                then alied_seq::alied_seq_ls
-                                                else alied_seq_ls
-                                           ) alied_pos alied_seq_ls
+                                       let alied_seq = Codes.find
+                                           looking_char_code alied_pos 
+                                       in        
+                                       alied_seq::alied_seq_ls
                                   ) alied_seq_ls ali
                          ) [] new_a
                  in 
@@ -1296,14 +1499,26 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                      Codes.fold 
                          (fun char_code state break_pos_map ->
                               let ali_pos_ls = get_ali_pos char_code in
+                              
                               let ali_pos_ls = List.map 
-                                  (fun ali_pos_mat -> ali_pos_mat.(0)) ali_pos_ls
+                                  (fun ali_pos_mat -> 
+
+                                       for idx = 1 to Array.length ali_pos_mat - 1 do
+                                           (if ali_pos_mat.(idx).(0) = -1 then  
+                                               ali_pos_mat.(idx) <- 
+                                                   Array.sub ali_pos_mat.(idx) 1 
+                                                   (Array.length ali_pos_mat.(idx) - 1));
+                                       done;
+
+                                       let pos_arr = Array.concat (Array.to_list ali_pos_mat) in
+                                       pos_arr
+                                  ) ali_pos_ls
                               in 
 
                               let alied_pos_mat = Array.of_list ali_pos_ls in 
                               let num_taxa = Array.length alied_pos_mat in 
-                              let num_col = Array.length (alied_pos_mat.(1)) in
-                              let break_ls = ref [] in 
+                              let num_col = Array.length (alied_pos_mat.(0)) in
+                              let break_ls = ref [] in                               
                               let sta = ref 0 in 
                               let cur_pos_arr = Array.init num_taxa (fun ti -> alied_pos_mat.(ti).(0)) in 
 
@@ -1342,18 +1557,24 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                         let char_state = Codes.find char_code !char_states in 
                                         match char_state with 
                                         | `Seq | `Annotated | `Breakinv -> alied_seq
-                                        | `Chromosome ->
+                                        | `Chromosome | `Genome ->
                                             let break_map = find_break_map () in 
+
+                                            for idx = 1 to (Array.length alied_seq) - 1 do
+                                                alied_seq.(idx) <- 
+                                                    Array.sub alied_seq.(idx) 1 (Array.length alied_seq.(idx) - 1)
+                                            done;
+
+                                            let alied_seq = Array.concat (Array.to_list alied_seq) in
+
                                             let break_ls = Codes.find char_code break_map in 
-                                            let seg_ls = Utl.break_array alied_seq.(0) break_ls in 
+                                            let seg_ls = Utl.break_array alied_seq break_ls in 
+
                                             let seg_arr = Array.of_list seg_ls in 
                                             for idx = 1 to (Array.length seg_arr) - 1 do
                                                 seg_arr.(idx) <- Array.of_list(0::(Array.to_list seg_arr.(idx)))
                                             done;
                                             seg_arr
-                                        | _ -> 
-                                              failwith "Implied alignment for this character type is not available"
-
                                    ) base_map
                               ) new_a_taxa
                           in 
@@ -1573,22 +1794,22 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
     let concat_alignment ia =
         let ia = List.map   
-            (fun ia ->  List.map  
-                 (fun (taxa_code, ia) ->
-                      let ia = List.map 
-                          (fun ali_map ->
-                               Codes.map (fun (ali_ls : int array array) -> 
-                                              let ali = Array.concat (Array.to_list ali_ls) in
-                                              Utl.printIntArr ali;
-                                              ali 
-                                         ) ali_map
-                          ) ia
-                                   in 
-                      taxa_code, ia
-                 ) ia
-            ) ia
-        in 
-        ia
+        (fun ia ->  List.map  
+        (fun (taxa_code, ia) ->
+            let ia = List.map 
+            (fun ali_map ->
+                Codes.map (fun (ali_ls : int array array) -> 
+                    let ali = Array.concat (Array.to_list ali_ls) in
+                    Utl.printIntArr ali;
+                    ali 
+                    ) ali_map
+                ) ia
+                    in 
+                    taxa_code, ia
+        ) ia
+        ) ia
+            in 
+            ia
 
 
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character

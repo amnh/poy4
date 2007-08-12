@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2019 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2080 $"
 
 module Pool = struct
     type p
@@ -934,27 +934,11 @@ module Align = struct
         let a, b, c, cost = align_3_powell s1 s2 s3 mm go ge in
         let len = length a in
         let median = create_same_pool a (len + 1) in
-        let add a b c d = 
-            let cost a b = Cost_matrix.Two_D.cost a b cm in
-            (cost a b) + (cost a c) + (cost a d) 
-        in
         for i = len - 1 downto 0 do
             let a = get a i in
             let b = get b i in
             let c = get c i in
-            let to_prepend = 
-                if (0 <> a land b) || (0 <> a land c) then a 
-                else if (0 <> b land c) then b 
-                else 
-                    let pickb = add b a b c
-                    and pickc = add c a b c 
-                    and picka = add a a b c in
-                    if pickb <= picka then
-                        if pickb <= pickc then b
-                        else c
-                    else if picka <= pickc then a
-                    else c
-            in
+            let to_prepend = Cost_matrix.Three_D.median a b c cm3 in
             if to_prepend <> gap then prepend median to_prepend
             else ();
         done;

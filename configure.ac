@@ -8,14 +8,17 @@ AC_INIT([POY], [4.0 Beta], poy4@groups.google.com)
 AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_INSTALL
+AC_ARG_PROGRAM
 
 AC_SUBST(USEGRAPHICS)
+AC_SUBST(USEPARALLEL)
+
 AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
-              [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
+              [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none.])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
 
 AC_SUBST(USEINTERFACE)
-AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
-              [Force POY's user interface. Valid options are ncurses, readline, and html. The default is ncurses.])],
+AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
+              [Force POY's user interface. Valid options are ncurses, readline, and html. The default is ncurses, if ncurses is not found, then the readline interface is used.])],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 

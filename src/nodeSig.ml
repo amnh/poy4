@@ -111,9 +111,16 @@ module type S = sig
             (int * Sequence.s * 
             Cost_matrix.Two_D.m * Cost_matrix.Three_D.m * Alphabet.a) list
 
-    (** [get_dynamic_preliminary n] returns a list with all the dynamic homology
-    * characters contained in the node [n]. *)
+    (** [get_dynamic_preliminary par n] returns a list with all the dynamic homology
+    * characters contained in the node [n] in the preliminary field, in the
+    * direction specified by the parental [par] . *)
     val get_dynamic_preliminary : int option -> n -> DynamicCS.t list
+
+    (** [get_dynamic_adjusted n] is the same as [get_dynamic_preliminary] but
+    * returning all the dynamic homology characters contained in the node in the
+    * single assignment (if available). If not available, a failure is raised.
+    * *)
+    val get_dynamic_adjusted : int option -> n -> DynamicCS.t list
 
     (** [edge_distance m n] calculates the maximum distance between the vertices
     * [m] and [n]. *)

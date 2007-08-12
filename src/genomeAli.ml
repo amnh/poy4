@@ -62,6 +62,9 @@ type seg_t = {
 
 type chrom_t = {
     chrom_id : int ref;
+    main_chrom1_id : int;
+    main_chrom2_id : int;
+
     chrom_ref_code : int;
     map : seg_t list;    
     seq : Sequence.s;
@@ -237,6 +240,8 @@ let assign_hom_chrom med cost_mat user_chrom_pams =
 let init (genome  : Sequence.s Data.dyna_data) = 
     let chrom_arr = Array.map 
         (fun chrom -> {chrom_ref_code = chrom.Data.code; 
+                       main_chrom1_id = -1;
+                       main_chrom2_id = -1;
                        chrom_id = ref (-1);
                        map = [];
                        seq = chrom.Data.seq}
@@ -259,6 +264,30 @@ let init (genome  : Sequence.s Data.dyna_data) =
 (*    print_genome med; *)
     med
 
+
+
+let create_med_from_seq chrom_arr = 
+    let chrom_arr = Array.map (fun chrom -> 
+                                   {chrom_ref_code = -1;
+                                    main_chrom1_id = -1;
+                                    main_chrom2_id = -1;
+                                    chrom_id = ref (-1);
+                                    map = [];
+                                    seq = chrom;
+                                   }
+                              ) chrom_arr
+    in 
+    let med = {chrom_arr = chrom_arr;
+               genome_ref_code = Utl.get_new_genome_ref_code ();
+               genome_ref_code1 = -1;
+               genome_ref_code2 = -1;
+               cost1 = 0;
+               recost1 = 0;
+               cost2 = 0;
+               recost2 = 0;
+              }
+    in 
+    med    
 
 
 
@@ -639,6 +668,8 @@ let create_chrom_med (genome1_ref_code, chrom1) (genome2_ref_code, chrom2) gb_ls
 
     let chrom_med = {
         chrom_id = ref chrom_id; 
+        main_chrom1_id = !(chrom1.chrom_id);
+        main_chrom2_id = !(chrom2.chrom_id);
         chrom_ref_code = chrom_ref_code; 
         seq = med; 
         map = seg_ls}
@@ -774,7 +805,6 @@ let create_med med1 med2 cost_mat user_chrom_pams =
               g_recost1 := !g_recost1 + recost1;
               g_recost2 := !g_recost2 + recost2;
         | Some chrom1, None -> 
-
               let med_seq = UtlPoy.create_median_gap chrom1.seq cost_mat in 
               let med_len = UtlPoy.cmp_num_not_gap med_seq in 
 
@@ -797,6 +827,8 @@ let create_med med1 med2 cost_mat user_chrom_pams =
               in  
 
               let chrom_med = {chrom_ref_code = Utl.get_new_chrom_ref_code ();
+                               main_chrom1_id = !(chrom1.chrom_id);
+                               main_chrom2_id = -1;
                                chrom_id = ref chrom_id; 
                                map = [seg];
                                seq = med_seq}
@@ -831,6 +863,8 @@ let create_med med1 med2 cost_mat user_chrom_pams =
               
 
               let chrom_med = {chrom_ref_code = Utl.get_new_chrom_ref_code ();
+                               main_chrom1_id = -1;
+                               main_chrom2_id = !(chrom2.chrom_id);
                                chrom_id = ref chrom_id; 
                                map = [seg];
                                seq = med_seq}

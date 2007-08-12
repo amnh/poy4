@@ -627,6 +627,7 @@ INSTALL_PROGRAM
 INSTALL_SCRIPT
 INSTALL_DATA
 USEGRAPHICS
+USEPARALLEL
 USEINTERFACE
 USESHAREDHD
 subdirs
@@ -1200,6 +1201,11 @@ Fine tuning of the installation directories:
 _ACEOF
 
   cat <<\_ACEOF
+
+Program names:
+  --program-prefix=PREFIX            prepend PREFIX to installed program names
+  --program-suffix=SUFFIX            append SUFFIX to installed program names
+  --program-transform-name=PROGRAM   run sed PROGRAM on installed program names
 _ACEOF
 fi
 
@@ -1214,9 +1220,12 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-graphics       Force POY to support graphical trees on screen.
                           Valid options are none, ocaml, and tk. The default
-                          is none
-  --enable-interface      Force POY's user interface. Valid options are
-                          ncurses, readline, and html. The default is ncurses.
+                          is none.
+  --enable-interface=interface
+                          Force POY's user interface. Valid options are
+                          ncurses, readline, and html. The default is ncurses,
+                          if ncurses is not found, then the readline interface
+                          is used.
   --enable-mpi=libname    Turns on parallel support using MPI, with the
                           library name libname. When using MPI remember to set
                           CC to mpicc.
@@ -2741,6 +2750,21 @@ test -z "$INSTALL_SCRIPT" && INSTALL_SCRIPT='${INSTALL}'
 
 test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
+test "$program_prefix" != NONE &&
+  program_transform_name="s&^&$program_prefix&;$program_transform_name"
+# Use a double $ so make ignores it.
+test "$program_suffix" != NONE &&
+  program_transform_name="s&\$&$program_suffix&;$program_transform_name"
+# Double any \ or $.  echo might interpret backslashes.
+# By default was `s,x,x', remove it if useless.
+cat <<\_ACEOF >conftest.sed
+s/[\\$]/&&/g;s/;s,x,x,$//
+_ACEOF
+program_transform_name=`echo $program_transform_name | sed -f conftest.sed`
+rm -f conftest.sed
+
+
+
 
 
 # Check whether --enable-graphics was given.
@@ -3486,6 +3510,7 @@ INSTALL_PROGRAM!$INSTALL_PROGRAM$ac_delim
 INSTALL_SCRIPT!$INSTALL_SCRIPT$ac_delim
 INSTALL_DATA!$INSTALL_DATA$ac_delim
 USEGRAPHICS!$USEGRAPHICS$ac_delim
+USEPARALLEL!$USEPARALLEL$ac_delim
 USEINTERFACE!$USEINTERFACE$ac_delim
 USESHAREDHD!$USESHAREDHD$ac_delim
 subdirs!$subdirs$ac_delim
@@ -3493,7 +3518,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 54; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 55; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

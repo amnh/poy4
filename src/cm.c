@@ -277,12 +277,12 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
     }
     cm_set_affine (res, do_aff, gap_open);
     res->is_metric = is_metric;
-    size = (1 << (res->lcm * 2)) * sizeof(int);
+    size = (1 << (res->lcm * 2)) * (1 << (res->lcm * 2)) * sizeof(int);
     res->cost = (int *) malloc (size);
     res->worst = (int *) malloc (size);
     res->prepend_cost = (int *) malloc (size);
     res->tail_cost = (int *) malloc (size);
-    size = (1 << (res->lcm * 2)) * sizeof(SEQT);
+    size = (1 << (res->lcm + 1)) * (1 << (res->lcm + 1)) * sizeof(SEQT);
     res->median = (SEQT *) malloc (size);
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);
@@ -311,13 +311,19 @@ cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
         printf ("cost model: %d \n", do_aff);
         printf ("gap open cost: %d \n", gap_open);
     }
-    cm_set_gap_3d (res, 1 << (a_sz - 1));
-    cm_set_a_sz_3d (res, cm_combinations_of_alphabet (a_sz));
-    cm_set_lcm_3d (res, a_sz);
-    if (combinations) cm_set_combinations_3d (res);
-    else cm_unset_combinations_3d (res);
+    if (combinations != 0) {
+        cm_set_gap_3d (res, 1 << (a_sz - 1));
+        cm_set_a_sz_3d (res, cm_combinations_of_alphabet (a_sz));
+        cm_set_lcm_3d (res, a_sz);
+        cm_set_combinations_3d (res);
+    } else {
+        cm_set_gap_3d (res, a_sz);
+        cm_set_a_sz_3d (res, a_sz);
+        cm_set_lcm_3d (res, ceil_log_2 (a_sz + 1));
+        cm_unset_combinations_3d (res);
+    }
     cm_set_affine_3d (res, do_aff, gap_open);
-    size = (res->a_sz + 1) * (res->a_sz + 1) * (res->a_sz + 1);
+    size = (1 << (res->lcm + 1)) * (1 << (res->lcm + 1)) * (1 << (res->lcm + 1));
     res->cost = (int *) malloc (size * sizeof(int));
     res->median = (SEQT *) malloc (size * sizeof(SEQT));
     if ((res->cost == NULL) || (res->median == NULL)) {
@@ -958,7 +964,7 @@ cm_CAML_clone (value v) {
 value
 cm_CAML_clone_3d (value v) {
     CAMLparam1(v);
-    value clone;
+    CAMLlocal1(clone);
     cm_3dt clone2;
     cm_3dt c;
     int len;

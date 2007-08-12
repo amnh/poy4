@@ -46,7 +46,7 @@ OCAMLYACC := @OCAMLYACC@
 INCLUDE = `$(OCAMLC) -where`
 export DEPEND = .depend
 
-CCOPT := -cc $(CC) -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
+CCOPT := @OCAMLFLAGS@ -cc $(CC) -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
 
 DEPEND := .depend
 

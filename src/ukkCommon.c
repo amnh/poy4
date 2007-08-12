@@ -92,13 +92,13 @@ copySequence (struct seq *s, char *str) {
     len = seq_get_len (s);
     begin = seq_get_begin(s);
     for (i = 1; i < len; i++) {
-        if (begin[i] == 1) 
+        if (begin[i] & 1) 
             str[i - 1] = 'A';
-        else if (begin[i] == 2) 
+        else if (begin[i] & 2) 
             str[i - 1] = 'C';
-        else if (begin[i] == 4)
+        else if (begin[i] & 4)
             str[i - 1] = 'G';
-        else if (begin[i] == 8)
+        else if (begin[i] & 8)
             str[i - 1] = 'T';
         else
             failwith ("This is impossible!");

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2006 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2080 $"
 
 
 exception Illegal_Cm_Format;;
@@ -761,6 +761,16 @@ module Three_D = struct
     let of_two_dim_comb nm m = 
         let alph = Two_D.alphabet_size m
         and lcm = Two_D.lcm m in
+        let max = 1 lsl lcm in
+        let rec pick_bit cur item =
+            assert (cur < max);
+            if 0 <> cur land item then cur
+            else pick_bit (cur lsl 1) item
+        in
+        let is_metric = Two_D.is_metric m in
+        let has_shared_bit x y =
+            if 0 <> x land y then 1 else 0 
+        in
         for i = 1 to alph do
             for j = 1 to alph do
                 for k = 1 to alph do
@@ -768,9 +778,14 @@ module Three_D = struct
                     for l = 0 to lcm - 1 do
                         let inter = 1 lsl l in
                         let cost = 
-                            (Two_D.cost inter i m) + 
-                            (Two_D.cost inter j m) +
-                            (Two_D.cost inter k m) 
+                            if is_metric || 
+                            (2 <= ((has_shared_bit i inter) + 
+                            (has_shared_bit j inter) + (has_shared_bit k
+                            inter))) then
+                                (Two_D.cost inter i m) + 
+                                (Two_D.cost inter j m) +
+                                (Two_D.cost inter k m) 
+                            else max_int
                         and old_cost = cost i j k nm in
                         if (cost < old_cost) then begin
                             set_cost i j k nm cost;
@@ -780,6 +795,8 @@ module Three_D = struct
                             set_median i j k nm (v lor inter);
                         end;
                     done;
+                    (* We pick only one median ammong all options *)
+                    set_median i j k nm (pick_bit 1 (median i j k nm));
                 done;
             done;
         done;;

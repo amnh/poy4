@@ -17,11 +17,12 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Utl" "$Revision: 2033 $"
+let () = SadmanOutput.register "Utl" "$Revision: 2080 $"
 
 (** This module implements basic utilities *)
 
 let infinity = 100000000;;
+let max_seq_len = 50000000;;
 let fprintf = Printf.fprintf
 
 let gen_chrom_ref_code = ref 0
@@ -129,7 +130,8 @@ let binary_search (arr : int array) (looking_val : int) =
 
 
 (** Searching the index of looking item in the arr using the cmp_fun *)
-let find_index arr looking_item cmp_fun = 
+let find_index
+ arr looking_item cmp_fun = 
     let len = Array.length arr in 
     let rec find pos = 
         if pos = len then -1

@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 1952 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2080 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -239,6 +239,7 @@ let to_single_root parent =
 * between [ch1], [ch2], and [par] (the two children and parent of [mine]
 * respectively, and [a] is the new cost of [b] as parent of [ch1] and [ch2]. *)
 let readjust to_adjust modified ch1 ch2 parent mine =
+    assert (parent.alph = Alphabet.nucleotides);
     let empty = Codes.empty 
     and no_cost = { min = 0.0; max = 0.0 }
     and c2 = parent.c2 

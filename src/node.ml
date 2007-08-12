@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2049 $"
+let () = SadmanOutput.register "Node" "$Revision: 2080 $"
 
 let debug = false
 let debug_exclude = false
@@ -2454,8 +2454,6 @@ let get_dynamic_preliminary data =
             | _ -> failwith "Impossible")
         data
 
-
-
 let new_characters character_code acc taxa =
     let max_code = ref 0 in
     (* A function that takes a sequence code and a sequence and 
@@ -2563,6 +2561,8 @@ module Standard :
         let get_sequences = get_sequences
         let build_node = build_node
         let get_dynamic_preliminary _ = get_dynamic_preliminary
+        let get_dynamic_adjusted _ _ = 
+            failwith "No single assignment available"
         let edge_distance = edge_distance
         let support_chars = support_chars
         let load_data = load_data
