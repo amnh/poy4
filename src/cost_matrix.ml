@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2080 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2087 $"
 
 
 exception Illegal_Cm_Format;;
@@ -760,10 +760,17 @@ module Three_D = struct
 
     let of_two_dim_comb nm m = 
         let alph = Two_D.alphabet_size m
+        and gap = Two_D.gap m 
         and lcm = Two_D.lcm m in
         let max = 1 lsl lcm in
         let rec pick_bit cur item =
-            assert (cur < max);
+            assert (
+                if cur < max then true
+                else 
+                    let _ = Printf.printf 
+                    "Max is %d and lcm is %d while cur is %d\n%!" max
+                        lcm cur in
+                    false);
             if 0 <> cur land item then cur
             else pick_bit (cur lsl 1) item
         in
@@ -771,21 +778,24 @@ module Three_D = struct
         let has_shared_bit x y =
             if 0 <> x land y then 1 else 0 
         in
+        let large_int = 
+            Int32.to_int Int32.max_int 
+        in
         for i = 1 to alph do
             for j = 1 to alph do
                 for k = 1 to alph do
-                    set_cost i j k nm max_int;
+                    set_cost i j k nm large_int;
                     for l = 0 to lcm - 1 do
                         let inter = 1 lsl l in
                         let cost = 
                             if is_metric || 
                             (2 <= ((has_shared_bit i inter) + 
                             (has_shared_bit j inter) + (has_shared_bit k
-                            inter))) then
+                            inter))) || (inter <> gap) then
                                 (Two_D.cost inter i m) + 
                                 (Two_D.cost inter j m) +
                                 (Two_D.cost inter k m) 
-                            else max_int
+                            else large_int
                         and old_cost = cost i j k nm in
                         if (cost < old_cost) then begin
                             set_cost i j k nm cost;
@@ -796,6 +806,7 @@ module Three_D = struct
                         end;
                     done;
                     (* We pick only one median ammong all options *)
+                    assert (0 <> median i j k nm);
                     set_median i j k nm (pick_bit 1 (median i j k nm));
                 done;
             done;
