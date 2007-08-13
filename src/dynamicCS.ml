@@ -91,6 +91,9 @@ let c2 (a : t) =
 let chrom_pam (a : t) = 
     match a with 
     | ChromCS a -> a.ChromCS.chrom_pam
+    | GenomeCS a -> a.GenomeCS.chrom_pam
+    | AnnchromCS a -> a.AnnchromCS.annchrom_pam
+    | BreakinvCS a -> a.BreakinvCS.breakinv_pam
     | _ -> Data.dyna_pam_default 
 
 

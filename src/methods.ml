@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 2006 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2103 $"
 
 (** Data *)
 
@@ -178,10 +178,12 @@ type diagnosis = [
     | `AllRootsCost of string option
     | `Implied_Alignment of (string option * characters)]
 
+type summary_class = [ `Individual | `Consensus ]
+
 type support_output = [
     | `Bremer of filename option
-    | `Jackknife
-    | `Bootstrap
+    | `Jackknife of summary_class
+    | `Bootstrap of summary_class
 ]
 
 type report = [

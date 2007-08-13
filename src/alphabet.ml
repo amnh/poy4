@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 2060 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 2103 $"
 
-(* $Id: alphabet.ml 2060 2007-08-09 16:04:10Z andres $ *)
+(* $Id: alphabet.ml 2103 2007-08-13 21:32:45Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -38,6 +38,12 @@ type a = {
     size : int;
     kind : kind;
 }
+
+let print alpha = 
+    All_sets.IntegerMap.iter (fun code char -> 
+                       Printf.fprintf stdout "%6i %s\n" code char)
+    alpha.code_to_string;
+    print_newline ()
 
 let to_formatter alph : Tags.output =
     let element_to_tags string code acc =
@@ -63,6 +69,8 @@ let citosine = 2
 let guanine = 4
 let timine = 8 
 let gap = 16
+let gap_repr = "-"
+let elt_complement = "~"
 let uracile = timine
 
 (* Amino Acids. Each is assigned a unique number *)
@@ -101,7 +109,14 @@ let list_to_a lst gap all kind =
     let empty = All_sets.StringMap.empty, All_sets.IntegerMap.empty,
     All_sets.IntegerMap.empty, 0 in
     let s2c, c2s, cmp, cnt = List.fold_left add empty lst in
-    let gap_code = All_sets.StringMap.find gap s2c    
+    let gap_code = 
+        try All_sets.StringMap.find gap s2c with
+        | Not_found as err ->
+                List.iter (fun (x, _, _) -> 
+                    Status.user_message Status.Error x) lst;
+                Status.user_message Status.Error
+                ("could not find the gap " ^ gap);
+                raise err
     and all_code = 
         match all with
         | Some all -> Some (All_sets.StringMap.find all s2c)
@@ -119,9 +134,9 @@ let dna =
         ("C", citosine, Some guanine);
         ("G", guanine, Some citosine);
         ("T", timine, Some adenine);
-        ("_", gap, Some all);
+        (gap_repr, gap, Some all);
         ("X", all, Some all)
-    ] "_" (Some "X") Simple_Bit_Flags
+    ] gap_repr (Some "X") Simple_Bit_Flags
 
 (* The alphabet of accepted IUPAC codes (up to N), and other codes used in the
 * POY file format (_ up to |). *)
@@ -152,8 +167,7 @@ let nucleotides =
         Some (timine lor guanine lor adenine lor citosine)); 
         ("X", adenine lor citosine lor timine lor guanine, 
         Some (timine lor guanine lor adenine lor citosine)); 
-        ("_", gap, Some all); 
-        ("-", gap, Some all); 
+        (gap_repr, gap, Some all); 
         ("1", 17, Some (all land (lnot 17)));
         ("2", 18, Some (all land (lnot 18)));
         ("3", 19, Some (all land (lnot 19)));
@@ -170,7 +184,7 @@ let nucleotides =
         ("#", 30, Some (all land (lnot 30)));
         ("*", 31, Some (all land (lnot 31)));
         ("?", 31, Some (all land (lnot 31)));
-    ] "_" (Some "*") Extended_Bit_Flags
+    ] gap_repr (Some "*") Extended_Bit_Flags
 
 (* The list of aminoacids *)
 let aminoacids =
@@ -197,9 +211,8 @@ let aminoacids =
         ("Y", tyrosine, None); 
         ("V", valine, None); 
         ("X", all_aminoacids, None); 
-        ("_", aa_gap, None);
-        ("-", aa_gap, None);
-    ] "_" (Some "X") Sequential
+        (gap_repr, aa_gap, None);
+    ] gap_repr (Some "X") Sequential
 
 let match_base x alph =
     try
@@ -252,7 +265,11 @@ let get_all a = a.all
 let get_gap a = a.gap
 
 let to_list a =
-    All_sets.StringMap.fold (fun a b acc -> (a, b) :: acc) a.string_to_code []
+    let res =
+        All_sets.StringMap.fold (fun a b acc -> (a, b) :: acc) a.string_to_code 
+        []
+    in
+    List.sort (fun (_, a) (_, b) -> a - b) res
 
 module Lexer = struct
     (** A module to make a stream processor for a given alphabet type *)
@@ -404,15 +421,9 @@ module Lexer = struct
 end
 
 
-let print alpha = 
-    All_sets.IntegerMap.iter (fun code char -> 
-                       Printf.fprintf stdout "%6i %s\n" code char)
-    alpha.code_to_string;
-    print_newline ()
-
 let kind alpha = alpha.kind
 
-let simplified_alphabet alph =
+let simplify alph =
     match alph.kind with
     | Simple_Bit_Flags
     | Sequential -> alph
@@ -445,6 +456,60 @@ let simplified_alphabet alph =
             in
             list_to_a list (find_code gap alph) 
             (Some (try find_code all alph with _ -> "*")) Simple_Bit_Flags
+
+let rec to_sequential alph =
+    match alph.kind with
+    | Sequential -> 
+            alph
+    | Extended_Bit_Flags -> 
+            to_sequential (simplify alph) 
+    | Simple_Bit_Flags -> 
+            (* We only really need to handle this case *)
+            let all_code = 
+                match get_all alph with
+                | None -> max_int
+                | Some x -> x 
+            in
+            let bit_to_code_position x = 
+                let rec aux cnt x =
+                    if x = 0 then (cnt - 1)
+                    else aux (cnt + 1) (x lsr 1)
+                in
+                aux 0 x
+            in
+            let new_string_to_code =
+                All_sets.StringMap.fold (fun a b acc ->
+                    if b = all_code then acc
+                    else All_sets.StringMap.add a (bit_to_code_position b) acc) 
+                alph.string_to_code All_sets.StringMap.empty
+            in
+            let res = 
+                { string_to_code = new_string_to_code;
+                code_to_string =
+                    All_sets.IntegerMap.fold (fun a b acc ->
+                        if a = all_code then acc
+                        else All_sets.IntegerMap.add (bit_to_code_position a) b acc) 
+                    alph.code_to_string All_sets.IntegerMap.empty;
+                complement =
+                    All_sets.IntegerMap.fold (fun a b acc ->
+                        if a = all_code then acc
+                        else 
+                            let to_add =
+                                match b with
+                                | None -> None
+                                | Some x -> Some (bit_to_code_position x)
+                            in
+                            All_sets.IntegerMap.add (bit_to_code_position a)
+                            to_add acc) alph.complement
+                            All_sets.IntegerMap.empty;
+                gap = All_sets.StringMap.find gap_repr new_string_to_code;
+                all = None;
+                size = 
+                    All_sets.StringMap.fold (fun _ _ acc -> acc + 1)
+                    new_string_to_code 0;
+                    kind = Sequential }
+            in
+            res
 
 let distinct_size alph =
     All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1) alph.code_to_string 0

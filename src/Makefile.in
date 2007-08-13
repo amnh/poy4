@@ -37,7 +37,7 @@ USESHAREDHD := @USESHAREDHD@
 MPILNAME := @MPILNAME@
 OCAML := @OCAML@
 OCAMLC := @OCAMLC@
-OCAMLOPT := @OCAMLOPT@
+OCAMLOPT := @OCAMLOPT@ @OCAMLFLAGS@
 OCAMLDEP := @OCAMLDEP@
 OCAMLTOP := @OCAMLTOP@
 OCAMLLEX := @OCAMLLEX@
@@ -46,7 +46,7 @@ OCAMLYACC := @OCAMLYACC@
 INCLUDE = `$(OCAMLC) -where`
 export DEPEND = .depend
 
-CCOPT := @OCAMLFLAGS@ -cc $(CC) -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
+CCOPT :=  -cc $(CC) -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
 
 DEPEND := .depend
 
@@ -292,7 +292,7 @@ compileFlags.ml: ./config.log
 	echo "let ccopt = \"\"" >> $@
 	echo "let ocamlc = \"" `which $(OCAMLC)` `$(OCAMLC) -version` "\"" \
 	>> $@
-	echo "let ocamlopt = \"" `which $(OCAMLOPT)` `$(OCAMLOPT) -version` \
+	echo "let ocamlopt = \"" `which $(OCAMLOPT:-fno-PIC=)` `$(OCAMLOPT:-fno-PIC=) -version` \
 	"\"" >> $@
 	echo "let time = \"" `date -r` "\"" >> $@
 	echo "let str_parallel = \"" `grep USEPARALLEL ./config.log` "\"" >> $@

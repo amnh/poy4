@@ -1586,8 +1586,19 @@ let create_expr () =
             [
                 [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some (`Local x)) ] |
                 [ LIDENT "bremer" -> `Bremer None ] |
-                [ LIDENT "jackknife" -> `Jackknife ] |
-                [ LIDENT "bootstrap" -> `Bootstrap ] 
+                [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
+                    match y with
+                    | None -> `Jackknife `Individual
+                    | Some y -> `Jackknife y] |
+                [ LIDENT "bootstrap"; y = OPT [ x = summary_class -> x ] -> 
+                    match y with
+                    | None -> `Bootstrap `Individual
+                    | Some y -> `Bootstrap y]
+            ];
+        summary_class:
+            [ 
+                [ ":"; LIDENT "individual" -> `Individual ] | 
+                [ ":"; LIDENT "consensus" -> `Consensus ]
             ];
         list_of_jackknifea:
             [

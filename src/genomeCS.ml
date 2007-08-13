@@ -44,6 +44,7 @@ type t = {
     c3 : Cost_matrix.Three_D.m;     (** The three dimensional cost matrix to be 
                                     used in the character set *)
     alph : Alphabet.a;              (** The alphabet of the sequence set *)
+    chrom_pam : Data.dyna_pam_t; 
     code : int;                     (** The set code *)
 }
 
@@ -71,6 +72,7 @@ let of_array spec arr code taxon num_taxa =
         c2 = spec.Data.tcm2d;
         c3 = spec.Data.tcm3d;
         alph = spec.Data.alph;
+        chrom_pam = spec.Data.pam;
         code = code;
     }
 
@@ -230,23 +232,20 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                            IntSet.mem med.GenomeAli.genome_ref_code ref_codes 
                       ) parent_med.Genome.med_ls
                   in                 
-                  if state = "Single" then 0, 0, None 
-                  else begin
-                      let cost, recost, map = 
+                  let cost, recost, map = 
                       match state with
                       | "Preliminary" ->
                             GenomeAli.create_map parent_med med.GenomeAli.genome_ref_code  
                       | "Final" ->
                             GenomeAli.create_map med parent_med.GenomeAli.genome_ref_code   
-                      | _ -> failwith "To_formatter is available only for preliminary and final states"
-(*                            let _, _, map = GenomeAli.create_map parent_med med.GebineAli.genome_ref_code in 
+                      | "Single" -> 
+                            let _, _, map = GenomeAli.create_map parent_med med.GenomeAli.genome_ref_code in 
                             let cost = IntMap.find code t.costs in 
-                              let recost = IntMap.find code t.recosts in 
-                              (int_of_float cost), (int_of_float recost), map *)
-
-                      in 
-                      cost, recost, Some map
-                  end 
+                            let recost = IntMap.find code t.recosts in 
+                            (int_of_float cost), (int_of_float recost), map 
+                      | _ -> failwith "Fucking up at the to_formatter in GenomeCS.ml"
+                  in 
+                  cost, recost, Some map
               end 
    
         in 
@@ -266,10 +265,16 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
             | _ -> "0 - " ^ (string_of_int cost)
         in 
 
+        let definite_str = 
+            if cost > 0 then  "true"
+            else "false"
+        in 
+
         let attributes =  
             (Tags.Characters.name, name) ::                     
                 (Tags.Characters.cost, cost_str) :: 
                 (Tags.Characters.recost, string_of_int recost) :: 
+                (Tags.Characters.definite, definite_str) :: 
                 (Tags.Characters.ref_code, string_of_int med.GenomeAli.genome_ref_code):: 
                 attr 
         in 

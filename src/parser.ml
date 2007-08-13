@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2060 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2103 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -1175,6 +1175,25 @@ module OldHennig = struct
             read_verb ~act ~add ~w ~acc
         in read_verb ~act:`None ~add:`None ~w:`None ~acc:[]
                 
+    let is_unordered_matrix matrix =
+        let height = Array.length matrix in
+        if height = 0 then true
+        else 
+            let width = Array.length matrix.(0) in
+            if width = 0 then true
+            else 
+                try
+                    for x = 0 to height - 1 do
+                        for y = 0 to width - 1 do
+                            if x = y && matrix.(x).(y) <> 0 then raise Exit
+                            else if x <> y && matrix.(x).(y) <> 1 then raise Exit
+                            else ()
+                        done;
+                    done;
+                    true
+                with
+                | Exit -> false
+
    
     let process_single_command taxa_data x characters =
         try
@@ -1191,7 +1210,11 @@ module OldHennig = struct
                 let matrix_list = load_all_integers matrix_string [] in
                 let matrix = convert_list_to_matrix size matrix_list in 
                 let res = process_an_option res characters [] in 
-                List.map (fun x -> Sankoff (matrix, x)) res
+                let processor =
+                    if is_unordered_matrix matrix then (fun x -> Unordered x)
+                    else (fun x -> Sankoff (matrix, x))
+                in
+                List.map processor res
             end
             else if Str.string_match tree_re x 0 then begin
                 let tree = Str.matched_group 1 x in
@@ -1964,15 +1987,6 @@ module OldHennig = struct
                                | 3 -> acc + 8 
                                | _ -> acc + 16) 0 state_ls 
                       in
-(*
-                      if List.length state_ls = 1 then 
-                          Printf.fprintf stdout "%i"  (List.hd state_ls)
-                      else begin
-                          Printf.fprintf stdout "[";
-                          List.iter (Printf.fprintf stdout "%i") state_ls;
-                          Printf.fprintf stdout "]";
-                      end;
-*)
                       let new_dna_code = 
                           match dna_code > 16 with
                           | true -> dna_code - 16
@@ -3331,10 +3345,10 @@ module SC = struct
               st_labels = [];
               st_weight = 1.0;
               st_type = STOrdered;
-              st_equivalents = equates @ [("-", [])];
+              st_equivalents = equates @ [(Alphabet.gap_repr, [])];
               st_missing = "?"; 
               st_matchstate = None;
-              st_gap = ""; (* Someting that can't come from the input *)
+              st_gap = Alphabet.gap_repr; (* Someting that can't come from the input *)
               st_eliminate = false;
               st_case = true;
               st_used_observed = None;
@@ -3521,8 +3535,9 @@ module SC = struct
                 | None ->
                         List.map string_of_int
                         (All_sets.Integers.elements spec.OldHennig.set),
-                        ""
+                        Alphabet.gap_repr
                 | Some alph ->
+                        let alph = Alphabet.to_sequential alph in
                         fst (List.split (Alphabet.to_list alph)), 
                         Alphabet.match_code (Alphabet.get_gap alph) alph
             in
@@ -3530,8 +3545,8 @@ module SC = struct
             (filename ^ ":" ^ string_of_int pos)
         in
         let newspec =
-            if not spec.OldHennig.active then { newspec with st_eliminate =
-                true }
+            if not spec.OldHennig.active then 
+                { newspec with st_eliminate = true }
             else newspec
         in
         let newspec = 
@@ -3545,7 +3560,8 @@ module SC = struct
                 { newspec with 
                 st_type = STSankoff spec.OldHennig.cost_matrix }
 
-    let of_old_atom newspec oldspec data : static_state =
+    let of_old_atom (newspec : static_spec) (oldspec : OldHennig.encoding_spec)  
+    data : static_state =
         match data with
         | Ordered_Character (_, _, true)
         | Unordered_Character (_, true)
@@ -3622,7 +3638,7 @@ module PAlphabet = struct
     let of_file fn orientation init3D = 
         let file = FileStream.Pervasives.open_in fn in
         let alph = FileStream.Pervasives.input_line file in
-        let default_gap = "_" in
+        let default_gap = Alphabet.gap_repr in
         let elts = ((Str.split (Str.regexp " +") alph) @ [default_gap]) in
         let alph = Alphabet.of_string ~orientation:orientation
             elts default_gap None in

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 2049 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2103 $"
 
 let fprintf = Printf.fprintf
 
@@ -267,10 +267,11 @@ let create_subalign2 (seq1 : Sequence.s) (seq2 : Sequence.s)
 
 
 
+let dna_gap = Alphabet.get_gap Alphabet.nucleotides 
+
 let get_num_base (seq : Sequence.s) = 
-	let gap_code = Alphabet.match_base "_" Alphabet.nucleotides in 
 	Sequence.fold (fun num_code code -> 
-                       if code != gap_code then num_code + 1 
+                       if code != dna_gap then num_code + 1 
                        else num_code) 0 seq
 	
 	
@@ -285,7 +286,7 @@ let reverse_subseq (seq : Sequence.s) (start_pos : int) (end_pos : int) =
 	end
 		
 
-let delete_gap ?(gap_code = Alphabet.match_base "_" Alphabet.nucleotides) seq = 
+let delete_gap ?(gap_code = dna_gap) seq = 
 	let new_len = Sequence.fold 
         (fun len code -> 
              if code = gap_code then len 

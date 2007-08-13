@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 1915 $"
+let () = SadmanOutput.register "Block" "$Revision: 2103 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -268,7 +268,7 @@ let cmp_ali_cost (seq1 : Sequence.s) (seq2 : Sequence.s)
     let gap_opening_cost = ali_pam.ChromPam.gap_opening_cost in 
     let gap_ext_cost = ali_pam.ChromPam.gap_ext_cost in 
     
-    let gap_code = Alphabet.match_base "_" Alphabet.nucleotides in 
+    let gap_code = Alphabet.get_gap Alphabet.nucleotides in 
     let rec count pos cost = 
         match pos >= len with
         | true -> cost

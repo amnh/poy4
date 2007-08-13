@@ -1819,15 +1819,15 @@ let create_alpha_c2_breakinvs (data : d) chcode =
         let char =  
             match code mod 2  with 
             | 1 -> string_of_int ( (code + 1)  / 2)  
-            | 0 -> "~" ^ ( string_of_int (code / 2) ) 
+            | 0 -> Alphabet.elt_complement ^ ( string_of_int (code / 2) ) 
             | _ -> failwith "compiler is error" 
         in  
         gen_alpha := (char, code, None)::!gen_alpha;         
     done;  
 
     let gen_gap_code = max_code + 2 in  
-    gen_alpha := ("_", gen_gap_code, None)::!gen_alpha;  
-    gen_alpha := ("~_", (gen_gap_code + 1), None)::!gen_alpha;     
+    gen_alpha := (Alphabet.gap_repr, gen_gap_code, None)::!gen_alpha;  
+    gen_alpha := (Alphabet.elt_complement ^ Alphabet.gap_repr, (gen_gap_code + 1), None)::!gen_alpha;     
 
     let gen_com_code = gen_gap_code + 2 in  
     gen_alpha := ("*", gen_com_code, None)::!gen_alpha;  
@@ -1835,7 +1835,7 @@ let create_alpha_c2_breakinvs (data : d) chcode =
 
     let max_code = gen_com_code + 1 in  
     let gen_alpha = 
-        Alphabet.list_to_a (List.rev !gen_alpha) "_" (Some "*")
+        Alphabet.list_to_a (List.rev !gen_alpha) Alphabet.gap_repr (Some "*")
         Alphabet.Sequential
     in 
     (** Finish creating alphabet*)      
@@ -2554,7 +2554,7 @@ let classify_characters_by_alphabet_size data chars =
         let size = 
             data 
             --> get_sequence_alphabet char
-            --> Alphabet.simplified_alphabet 
+            --> Alphabet.simplify 
             --> (fun x ->
                     match Alphabet.kind x with
                     | Alphabet.Sequential -> Alphabet.distinct_size x
@@ -3158,10 +3158,10 @@ let lexicographic_taxon_codes data =
 
 (* A function to produce the alignment of prealigned data *)
 let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) =
+    let alph = get_sequence_alphabet code data in
     let character_name = code_character code data in
     let _, do_states, do_encoding = 
-        let cm = get_sequence_tcm code data
-        and alph = get_sequence_alphabet code data in
+        let cm = get_sequence_tcm code data in
         analyze_tcm cm alph
     in
     let process_taxon a b ((enc, names, acc) as res)=
@@ -3178,10 +3178,9 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
                                     (* We have to generate the encoding *)
                                     let res = 
                                         Sequence.fold_right (fun acc base ->
-                                        do_encoding base acc) []
-                                        v.seq
+                                        do_encoding base acc) [] v.seq
                                     in
-                                    Array.of_list res    
+                                    Array.of_list (snd (List.split res))
                             | _ -> enc
                         and seq = 
                             Sequence.fold_right 
@@ -3197,8 +3196,10 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
     let enc, names, matrix = 
         Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
     in
-    let newenc = Array.init (Array.length enc) (fun pos ->
-        Parser.SC.of_old_spec character_name None enc.(pos) pos) 
+    let newenc = 
+        let alph = Alphabet.to_sequential alph in
+        Array.init (Array.length enc) (fun pos ->
+        Parser.SC.of_old_spec character_name (Some alph) enc.(pos) pos) 
     in
     let matrix = 
         let matrix = Array.of_list matrix in

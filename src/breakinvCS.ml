@@ -46,6 +46,7 @@ type t = {
     c3 : Cost_matrix.Three_D.m;     (** The three dimensional cost matrix to be 
                                     used in the character set *)
     alph : Alphabet.a;              (** The alphabet of the sequence set *)
+    breakinv_pam : Data.dyna_pam_t; 
     code : int;                     (** The set code *)
 }
 
@@ -75,6 +76,7 @@ let of_array spec arr code =
         c2 = spec.Data.tcm2d;
         c3 = spec.Data.tcm3d;
         alph = spec.Data.alph;
+        breakinv_pam = spec.Data.pam;
         code = code;
     }
 
@@ -258,10 +260,17 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
 
         let seq = Sequence.to_formater med.BreakinvAli.seq t.alph in
         let name = Data.code_character code d in 
+
+        let definite_str = 
+            if cost > 0 then  "true"
+            else "false"
+        in 
+
         let attributes = 
             (Tags.Characters.name, name) ::                    
             (Tags.Characters.cost, string_of_int cost) ::
             (Tags.Characters.recost, string_of_int recost) :: 
+            (Tags.Characters.definite, definite_str) :: 
             attr
         in
         let contents = `String seq in

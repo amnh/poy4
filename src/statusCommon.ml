@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2006 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2103 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -109,6 +109,7 @@ module CommandCompletion = struct
         "history";
         "ia";
         "implied_alignments";
+        "individual";
         "info";
         "init3D";
         "inspect";

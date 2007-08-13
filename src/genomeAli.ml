@@ -1177,6 +1177,7 @@ let to_single single_parent med c2 pam =
         | true -> single_parent.recost1
         | false -> single_parent.recost2
     in 
+    
 
     (!total_cost + recost), recost, single_genome
 
@@ -1185,25 +1186,11 @@ let to_single single_parent med c2 pam =
 
 let change_to_single med single_genome = 
     let gap = Alphabet.gap in 
-
-
-
-
     let new_chrom_arr = Array.mapi 
         (fun idx chromt -> 
 
              let single_seq = single_genome.(idx) in 
              let num_dna = ref 0 in  
-(*        
-             print_endline "Single_seq";
-             UtlPoy.printDNA single_seq; 
-             UtlPoy.printDNA chromt.seq; 
-             print_endline "alied_med"; 
-             List.iter (fun seg -> 
-                            UtlPoy.printDNA seg.alied_med; 
-                       ) chromt.map;
-             print_newline ();
-*)
 
              let new_map = List.map 
                  (fun seg ->

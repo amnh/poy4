@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: alphabet.mli 2049 2007-08-06 19:06:02Z andres $ *)
+(* $Id: alphabet.mli 2103 2007-08-13 21:32:45Z andres $ *)
 (* Alphabet.
 *
 * Description and handling of different kinds of alphabets for the analysis of
@@ -73,6 +73,12 @@ val match_base : string -> a -> int
 
 val gap : int
 
+(** The obligatory representation of a gap for any alphabet *)
+val gap_repr : string
+
+(** The obligatory representation of the complement of an alphabet element. *)
+val elt_complement : string
+
 (** Same as [match_base] *)
 val find_base : string -> a -> int
 
@@ -122,11 +128,15 @@ code [g] and all code [a], to create * an alphabet of kind [k] *)
 val list_to_a :
   (string * int * int option) list -> string -> string option -> kind -> a
 
-(** [simplified_alphabet a] return an alphabet with the following conditions:
+(** [simplify a] return an alphabet with the following conditions:
 * If the kind of [a] is [Sequential] or [Simple_Bit_Flags], then the same 
 * alphabet is returned, otherwise, only the bit flags, and the all elements are
 * returned in a fresh alphabet, of type [Simple_Bit_Flags]. *)
-val simplified_alphabet : a -> a 
+val simplify : a -> a 
+
+(** [to_sequential a] returns an alphabet of any kind, with its elements
+* represented in the simplified Sequential kind representation. *)
+val to_sequential : a -> a
 
 val to_list : a -> (string * int) list
 

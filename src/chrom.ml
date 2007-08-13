@@ -44,11 +44,10 @@ type meds_t = {
 let init_med (seq : Sequence.s) chrom_pam tcode num_taxa =  
 
     let seq = 
-        match Sequence.to_string seq Alphabet.nucleotides with
-        | "_" | "-" -> UtlPoy.get_empty_seq ()
-        | _ -> seq
-    in 
-
+        if Sequence.is_empty seq (Alphabet.get_gap Alphabet.nucleotides) then
+            UtlPoy.get_empty_seq ()
+        else seq
+    in
     let med = ChromAli.init_med seq in
 
     { 

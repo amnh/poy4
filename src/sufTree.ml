@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SufTree" "$Revision: 1644 $"
+let () = SadmanOutput.register "SufTree" "$Revision: 2103 $"
 (** The implementation of suffix tree *)
 
 let deref = Utl.deref
@@ -331,7 +331,7 @@ let create_k_mer_tree (code_arr : int array) (k : int) =
     
 (* find the stop node for this k_mer *) 
 let find_stop_node (tree : sufTree_t) (k_mer : int list) =
-    let gap_code = Alphabet.match_base "_" Alphabet.nucleotides in
+    let gap_code = Alphabet.get_gap Alphabet.nucleotides in
     let gapless_k_mer = List.map (fun ch -> ch land (gap_code - 1) ) k_mer in 
 
     let node, rest_k_mer = SufNode.find_stop_node ~exact:false tree.root

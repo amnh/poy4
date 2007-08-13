@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2013 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2103 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -2030,6 +2030,13 @@ let consensus is_collapsable to_string maj trees root =
     --> List.fold_left (fun acc (x, y) ->
         add_tree_to_counters y acc x) Tree.CladeFPMap.empty 
     --> make_tree maj coder tree_builder
+
+let preprocessed_consensus to_string maj num_trees map =
+    let coder = ref 0 in
+    let tree_builder = 
+        build_a_tree to_string (float_of_int num_trees) true coder 
+    in
+    make_tree maj coder tree_builder map
 
 let extract_counters sets set =
     Tree.CladeFPMap.fold (fun a b acc ->

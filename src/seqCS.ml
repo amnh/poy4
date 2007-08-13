@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2080 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2103 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -555,9 +555,15 @@ let to_formatter attr t d : Tags.output list =
         let costb = 
             (string_of_float cost.min) ^ " - " ^ (string_of_float cost.max)
         in
+        let definite_str = 
+            if cost.max > 0. then  "true"
+            else "false"
+        in 
+
         let attributes = 
             (Tags.Characters.name, (Data.code_character code d)) ::
-                (Tags.Characters.cost, costb) :: attr
+                (Tags.Characters.cost, costb) ::
+                (Tags.Characters.definite, definite_str) :: attr
         in
         let contents = `String seq in
         (Tags.Characters.sequence, attributes, contents) :: acc

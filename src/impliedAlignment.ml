@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2080 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2103 $"
 
 exception NotASequence of int
 
@@ -845,9 +845,14 @@ type matrix_class =
 * a state into a list of character states, and g converts a state into it's
 * appropriate Parser.Hennig.Encoding.s *)
 let analyze_tcm tcm alph =
+    let present_absent_alph = 
+        Alphabet.list_to_a 
+        [("present", 1, None); ("absent", 2, None)] 
+        "absent" None Alphabet.Sequential
+    in
     let gap = Alphabet.get_gap alph 
     and all = Alphabet.get_all alph in
-    let alph = Alphabet.simplified_alphabet alph in
+    let alph = Alphabet.simplify alph in
     let single_compare (_, a) res (_, b) =
         match res with
         | None -> 
@@ -934,8 +939,9 @@ let analyze_tcm tcm alph =
             (* We assume that we have dna sequences *)
             let all = extract_all all in
             let encoding = 
-                Parser.OldHennig.Encoding.set_weight
-                Parser.OldHennig.Encoding.dna_encoding weight
+                alph,
+                (Parser.OldHennig.Encoding.set_weight
+                Parser.OldHennig.Encoding.dna_encoding weight)
             in
             let to_parser is_missing states acc = 
                 match is_missing, states with
@@ -947,10 +953,12 @@ let analyze_tcm tcm alph =
             get_case, to_parser, to_encoding
     | AllOneGapSame (subsc, gapcost) ->
             let present_absent = 
-                Parser.OldHennig.Encoding.gap_encoding gapcost
+                present_absent_alph,
+                (Parser.OldHennig.Encoding.gap_encoding gapcost)
             and subs = 
-                Parser.OldHennig.Encoding.set_weight Parser.OldHennig.Encoding.dna_encoding
-                subsc
+                alph,
+                (Parser.OldHennig.Encoding.set_weight
+                Parser.OldHennig.Encoding.dna_encoding subsc)
             in
             let notgap = lnot gap in
             (* We assume we have dna sequences *)
@@ -983,12 +991,17 @@ let analyze_tcm tcm alph =
             * We will have to filter out columns that are not gap opening
             * but only extension.
             * *)
-            let gap_opening = Parser.OldHennig.Encoding.gap_encoding gapopening
-            and gap_extension = Parser.OldHennig.Encoding.gap_encoding gapcost
+            let gap_opening = 
+                present_absent_alph, 
+                Parser.OldHennig.Encoding.gap_encoding gapopening
+            and gap_extension = 
+                present_absent_alph,
+                Parser.OldHennig.Encoding.gap_encoding gapcost
             and subs = 
-                Parser.OldHennig.Encoding.set_weight
+                alph,
+                (Parser.OldHennig.Encoding.set_weight
                 Parser.OldHennig.Encoding.dna_encoding
-                subsc
+                subsc)
             in
             let notgap = lnot gap in
             let all = notgap land (extract_all all) in
@@ -1043,6 +1056,7 @@ let analyze_tcm tcm alph =
                         failwith "Impliedalignment.make_tcm"
             in
             let enc = 
+                let alph = Alphabet.to_sequential alph in
                 let res = Parser.OldHennig.Encoding.default () in
                 let res = Parser.OldHennig.Encoding.set_min res 0 in
                 let res = Parser.OldHennig.Encoding.set_max res (size - 1) in
@@ -1056,7 +1070,7 @@ let analyze_tcm tcm alph =
                     add_consecutive_integers 0 size All_sets.Integers.empty
                 in
                 let res = Parser.OldHennig.Encoding.set_set res set in
-                Parser.OldHennig.Encoding.set_sankoff res (make_tcm ())
+                alph, Parser.OldHennig.Encoding.set_sankoff res (make_tcm ())
             in
             let rec generate_all acc size = 
                 if size < 0 then acc
@@ -1644,8 +1658,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     * function that will convert an observed state into it's
                     * appropriate Parser.t *)
                     let sequence, transform_functions = 
-                        List.fold_left (fun acc s -> 
-                            All_sets.IntegerMap.fold 
+                        List.fold_left (fun acc s ->
+                            All_sets.IntegerMap.fold
                                 (fun c (s_arr : int array array) (acc, funs) -> 
                                     let alph = Data.get_alphabet data c in
                                     let funs =
@@ -1656,13 +1670,14 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                             All_sets.IntegerMap.add c (mc, f, g) funs
                                         end 
                                     in
-                                    let s_arr' = Array.map (fun s ->
-                                                   let res = preprocess_sequence alph s in                                                   
-                                                   c, (res, s)
-                                              ) s_arr 
+                                    let s_arr' = 
+                                        Array.map (fun s ->
+                                            let res = preprocess_sequence alph s in                                                   
+                                            c, (res, s)) 
+                                        s_arr 
                                     in 
                                     List.append (Array.to_list s_arr') acc, funs)  
-                                s acc)  
+                                s acc)
                         ([], All_sets.IntegerMap.empty) sequence 
                     in
                     let clas, res, encf = 
@@ -1687,13 +1702,13 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                                 | AllSankoff -> 0, 0
                                             in 
                                             let pam = Data.get_pam data code in 
-                                            let op, ex = match pam.Data.locus_indel_cost with
-                                            | Some (op, ex) -> op, ex 
-                                            | None -> ChromPam.locus_indel_cost_default 
-                                            in 
+                                            let op, ex = 
+                                                match pam.Data.locus_indel_cost with
+                                                | Some (op, ex) -> op, ex 
+                                                | None -> ChromPam.locus_indel_cost_default 
+                                            in
                                             let locus_indel_cost = op + ex * seq_len / 100 in 
                                             let num_gaps = (locus_indel_cost - seq_op)/seq_ex in
-(*                                            fprintf stdout "Number gaps: %i\n" num_gaps; *)
                                             let alph = Data.get_alphabet data code in 
                                             let all = Utl.deref (Alphabet.get_all alph) in 
                                             for p = 0 to seq_len - num_gaps - 1 do
@@ -1764,15 +1779,15 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         in
         let arr = Array.of_list species in
         let arr = Array.map (fun (a, _) -> a) arr in
-        let updater pos enc = 
+        let updater pos (alph, enc) = 
             if Parser.OldHennig.Encoding.is_sankoff enc ||
-                Parser.OldHennig.Encoding.is_ordered enc then enc
+                Parser.OldHennig.Encoding.is_ordered enc then alph, enc
             else 
                 let ns = Array.fold_left (fun acc taxon ->
                     add_states taxon.(pos) acc) All_sets.Integers.empty 
                     arr 
                 in
-                Parser.OldHennig.Encoding.set_set enc ns
+                alph, Parser.OldHennig.Encoding.set_set enc ns
         in
         let arr = Array.mapi updater encs in
         arr, species, trees
@@ -1783,11 +1798,15 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             "Converting implied alignments to static characters"
         in
         let res = (ia_to_parser_compatible data iamtx) in
-        let res = 
+        let (a, b, c) = 
             if remove_non_informative then update_ia_encodings res 
             else res
         in
-        let res = Parser.SC.of_old_parser character None res in
+        let alphabets = Array.map fst a
+        and encodings = Array.map snd a in
+        let res = 
+            Parser.SC.of_old_parser character (Some alphabets) (encodings, b, c)
+        in
         Status.finished st;
         character, res
 

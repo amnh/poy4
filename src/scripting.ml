@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2049 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2103 $"
 
 module IntSet = All_sets.Integers
 
@@ -890,19 +890,28 @@ let warn_if_no_trees_in_memory trees =
     else ()
 
 let get_trees_for_support support_class run =
-    let do_support support_set = 
+    let do_support support_set x = 
         match support_set with
         | None -> `Empty
         | Some (iterations, fs) ->
-                Sexpr.map 
-                (fun tree ->
-                    Ptree.supports 
-                    (fun x -> Data.code_taxon x run.data)
-                    0
-                    (float_of_int iterations)
-                    tree.Ptree.tree
-                    fs)
-                run.trees
+                match x with
+                | `Individual ->
+                        Sexpr.map 
+                        (fun tree ->
+                            Ptree.supports 
+                            (fun x -> Data.code_taxon x run.data)
+                            0
+                            (float_of_int iterations)
+                            tree.Ptree.tree
+                            fs)
+                        run.trees
+                | `Consensus ->
+                        `Single 
+                        (Ptree.preprocessed_consensus 
+                        (fun code -> Data.code_taxon code run.data) 
+                        (iterations / 2)
+                        iterations
+                        fs)
     in
     match support_class with
     | `Bremer (Some input_file) ->
@@ -917,11 +926,11 @@ let get_trees_for_support support_class run =
     | `Bremer None ->
             Sexpr.map (S.support_to_string_tree run.data)
             run.bremer_support, "Bremer"
-    | `Jackknife ->
-            let res = do_support run.jackknife_support in
+    | `Jackknife x ->
+            let res = do_support run.jackknife_support x in
             res, "Jackknife"
-    | `Bootstrap ->
-            let res = do_support run.bootstrap_support in
+    | `Bootstrap x ->
+            let res = do_support run.bootstrap_support x in
             res, "Bootstrap"
 
 let rec handle_support_output run meth =
@@ -943,8 +952,8 @@ let rec handle_support_output run meth =
                 Status.user_message fo "@,%!@]";
             | None ->
                     let a = Some (`Bremer None)
-                    and b = Some `Jackknife
-                    and c = Some `Bootstrap in
+                    and b = Some (`Jackknife `Individual)
+                    and c = Some (`Bootstrap `Individual) in
                     handle_support_output run (`Supports (a, filename));
                     handle_support_output run (`Supports (b, filename));
                     handle_support_output run (`Supports (c, filename));)
@@ -972,8 +981,8 @@ let rec handle_support_output run meth =
                             trees;)
                 | None ->
                     let a = Some (`Bremer None)
-                    and b = Some `Jackknife
-                    and c = Some `Bootstrap in
+                    and b = Some (`Jackknife `Individual)
+                    and c = Some (`Bootstrap `Individual) in
                     handle_support_output run (`GraphicSupports (a, filename));
                     handle_support_output run (`GraphicSupports (b, filename));
                     handle_support_output run (`GraphicSupports (c, filename));)

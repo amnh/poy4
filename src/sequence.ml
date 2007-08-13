@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2080 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2103 $"
 
 module Pool = struct
     type p
@@ -73,7 +73,7 @@ external prepend : s -> int -> unit = "seq_CAML_prepend";;
 
 let make_empty a =
     let s = create 1 in
-    prepend s (Alphabet.match_base "_" a);
+    prepend s (Alphabet.get_gap a);
     s
 
 let map_to_array f s = 

@@ -76,6 +76,7 @@ type t = {
   c2 : Cost_matrix.Two_D.m;
   c3 : Cost_matrix.Three_D.m;
   alph : Alphabet.a;
+  annchrom_pam : Data.dyna_pam_t;
   code : int;
 }
 val cardinal : t -> int

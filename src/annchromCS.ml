@@ -41,6 +41,7 @@ type t = {
     c3 : Cost_matrix.Three_D.m;     (** The three dimensional cost matrix to be 
                                     used in the character set *)
     alph : Alphabet.a;              (** The alphabet of the sequence set *)
+    annchrom_pam : Data.dyna_pam_t;
     code : int;                     (** The set code *)
 }
 
@@ -70,6 +71,7 @@ let of_array spec arr chcode tcode num_taxa =
         c2 = spec.Data.tcm2d;
         c3 = spec.Data.tcm3d;
         alph = spec.Data.alph;
+        annchrom_pam = spec.Data.pam;
         code = chcode;
     }
 
@@ -261,10 +263,16 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
             | _ -> "0 - " ^ (string_of_int cost)
         in 
 
+        let definite_str = 
+            if cost > 0 then  "true"
+            else "false"
+        in 
+
         let attributes =  
             (Tags.Characters.name, name) ::                     
                 (Tags.Characters.cost, cost_str) :: 
                 (Tags.Characters.recost, string_of_int recost) :: 
+                (Tags.Characters.definite, definite_str) :: 
                 (Tags.Characters.ref_code, string_of_int med.AnnchromAli.ref_code):: 
                 attr 
         in 

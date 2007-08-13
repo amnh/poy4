@@ -490,8 +490,8 @@ val prealigned_characters :
     (Cost_matrix.Two_D.m -> Alphabet.a ->
               'a * ([> `Exists ] -> int -> Parser.t list -> 
                   Parser.t list) *
-                 (int -> Parser.OldHennig.Encoding.s list ->
-                     Parser.OldHennig.Encoding.s list)) ->
+                 (int -> (Alphabet.a * Parser.OldHennig.Encoding.s) list ->
+                     (Alphabet.a * Parser.OldHennig.Encoding.s) list)) ->
                            d -> bool_characters -> d
 
 (** [compare_all_pairs a b c d] compare for each taxon the characters with code

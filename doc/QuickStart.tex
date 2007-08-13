@@ -130,17 +130,9 @@ The following detailed step-by-step instruction will guide you through downloadi
 	\end{minipage}
             Download the
             \href{http://research.amnh.org/scicomp/projects/poy.php}{disk
-            image} file to the desktop. There are versions for single
-            processor and multiple processor machines. If you have more than
-            one processor in your computer, download \emph{both}; the
-            single processor version of \poy provides a more user-friendly
-            environment and allows for interruption of jobs. The
-            multiprocessor version, on the other hand, runs as many times faster as
-            there are processors available.
-
-            To install, simply double click on the icon. The program will appear
-            in the \emph{Applications} folder.
-
+            image} file to the desktop and open it. A disk named poy4 will be
+            mounted.  To install, simply drag and drop \poy application in the
+            dist poy4 to your Applications folder. 
 	\begin{minipage}[c]{0.074\textwidth}
    		\includegraphics[width=\textwidth]{figures/figLogoLinux.jpg}
 	\end{minipage}
@@ -162,74 +154,29 @@ In order to compile \poy the following tools are required:
 
 \begin{enumerate}
     \item \href{http://www.gnu.org/software/make/}{The GNU Make tool.}
-    \item \href{http://www.ocaml.org}{OCaml version 3.09.3. or later.}
+    \item \href{http://www.ocaml.org}{OCaml version 3.10.0. or later.}
     \item \href{http://gcc.gnu.org/}{The GNU Compiler Collection version 3.4 or
         later}.
     \item \href{http://www.gnu.org/software/ncurses/}{The ncurses library} if
         you want the nice interactive console, thought this one is
         \emph{not obligatory}.
+    \item \href{http://tiswww.case.edu/php/chet/readline/rltop.html}{The
+        readline library} if you want
+        to compile POY without interactive console. This is the typical
+        selection when compiling POY for parallel environments under MPI.
 \end{enumerate}
 
 Download, ungzip, and untar the
 \href{http://research.amnh.org/scicomp/projects/poy.php}{\poy source code};
-change the relevant paths and desired options in the \texttt{config} file. Then just run \texttt{make clean; make
-depend; make mpoy.opt}. The executable \texttt{mpoy.opt} can be found in the \texttt{src}
-directory.
+In order to compile under default setting just do:
+\begin{verbatim}
+./configure
+make
+make install
+\end{verbatim}
+All the configuration options can be found in {\tt ./configure --help}.
 
-The (most relevant) options available in the config file are:
-\begin{description}
-    \item[USEINTERFACE] specifies the preferred user interface. There are four
-        supported interfaces, though 2 of them are only in early development
-        stages and are not recommended. The valid options are:
-        \begin{description}
-            \item[ncurses] (default) provides a nice terminal based environment for
-                interactive experimentation with \poy. This is the most desirable
-                environment when \poy is running as a standalone program in a
-                personal computer, or remotely in a server but with the user
-                issuing commands interactively. Users can use the tab to auto-complete both 
-                commands and filenames This interface is particularly
-                useful while learning \poy's commands. Requires an
-                ncurses-compatible library.
-            \item[flat] provides an environment with minimal requirements and
-                functionality. This is the most desirable interface for parallel
-                runs, as there is no terminal requirements and a process output
-                can easily be redirected from the standard error and standard
-                output to files using regular shell facilities. The tab and arrow keys are readline
-                 functional to allow the user to autocomplete filenames and navigate the interface.
-            \item[gtk2] provides a pre-alpha, extremely bad looking graphical
-                user interface that \emph{mimics} the ncurses interface. It is
-                intended for use in Windows and Linux environments in the near
-                future. It's not recommended for current use. Requires GTK+ and
-                lablgtk.
-            \item[cocoa] provides a pre-alpha, extremely bad looking graphical
-                user interface using Mac OS X's native cocoa environment. Well,
-                it's bad looking, but how bad can it look in a Mac?. It's not
-                recommented for current use. Requires Mac OS X.
-        \end{description}
-    \item [USEPARALLEL] specifies that \poy should be compiled with support for
-        parallel environments using the Message Passing Interface. It can be set
-        to true or false (default). For further instructions see below.
-    \item[USEGRAPHICS] specifies that \poy should be compiled with support for
-        on-screen tree graphical output. The output is crappy right now, use it
-        if you want to explore a dataset. The valid options are:
-        \begin{description}
-            \item[none] (default) specifies that the program should not have
-                on-screen graphical output support.
-            \item[ocaml] specifies that the program should have on-screen
-                graphical output support. In Unix and Linux systems (including
-                Mac OS X), requires X11.
-            \item[tk] specifies that the program should have on-screen graphical
-                output support. This version drops the X11 requirement in Mac OS
-                X (though this was an experiment and is not recommended).
-        \end{description}
-    \item [USEWIN32] ensures that compilation is prepared for Microsoft Windows
-        environments. The valid options are false (default) or true. Note that
-        compiling for Windows is tricky! specially because the ncurses interface
-        needs to be installed (this is easy if you have cygwin). If you want to
-        run \poy in windows you are better off downloading the binaries.
-\end{description}
-
-\poy can be run in parallel environments using the
+\poy can also be run in parallel environments using the
 \href{http://www-unix.mcs.anl.gov/mpi/}{Message Passing Interface}. There are
 multiple implementations, and if you have a parallel environment, most likely
 your system administrator has already installed one. Ask him for the proper

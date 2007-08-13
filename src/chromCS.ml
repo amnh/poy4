@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 2049 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 2103 $"
 
 let fprintf = Printf.fprintf
 
@@ -258,11 +258,17 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
             | "Single" -> (string_of_int cost) ^ " - " ^ (string_of_int cost)
             | _ -> "0 - " ^ (string_of_int cost)
         in 
-
+        
+        let definite_str = 
+            if cost > 0 then  "true"
+            else "false"
+        in 
+        
         let attributes =  
             (Tags.Characters.name, name) ::                     
                 (Tags.Characters.cost, cost_str) :: 
                 (Tags.Characters.recost, string_of_int recost) :: 
+                (Tags.Characters.definite, definite_str) :: 
                 (Tags.Characters.ref_code, string_of_int med.ChromAli.ref_code):: 
                 attr 
         in 

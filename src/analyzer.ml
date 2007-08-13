@@ -332,8 +332,8 @@ let dependency_relations (init : Methods.script) =
                             match suppoutput with
                             | None -> [([JackBoot; Bremer; Trees; Data], fn, init,
                             NonComposable)]
-                            | Some `Jackknife
-                            | Some `Bootstrap ->
+                            | Some `Jackknife _
+                            | Some `Bootstrap _ ->
                                     [([JackBoot; Trees; Data], fn, init,
                                     Linnearizable)]
                             | Some (`Bremer _)->

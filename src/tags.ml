@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 2049 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2103 $"
 
 type tag = string
 type value = tag
@@ -74,9 +74,10 @@ module Characters = struct
     let set = "Set" ^ suffix
 
     (* Their attributes *)
-    let name = "Name"
+    let name = "Name"    
     let cost = "Cost"
     let recost = "Rearrangment Cost"
+    let definite = "Definite"
     let weight = "Weight"
     let cclass = "Class"
     let alphabet = "Alphabet"

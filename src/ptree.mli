@@ -542,3 +542,6 @@ val bremer :
               ((string Parser.Tree.t * string) -> (int * Tree.CladeFP.CladeSet.t)) ->
           Parser.filename -> 
               string Parser.Tree.t
+val preprocessed_consensus :
+  (All_sets.Integers.elt -> string) ->
+  int -> int -> int Tree.CladeFPMap.t -> string Parser.Tree.t
