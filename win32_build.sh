@@ -23,7 +23,7 @@ if ! make poy; then
     exit 1
 fi
 
-if ! scp poy.exe newlila2:poy_distro/distro_generation_scripts/; then
+if ! scp poy.exe samson:poy_distro/distro_generation_scripts/; then
     echo "I could not copy the resulting executable in newlila2!"
     exit 1
 fi
