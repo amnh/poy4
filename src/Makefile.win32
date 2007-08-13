@@ -175,7 +175,7 @@ CHARACTER = $(READLINE) sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
 	dynamicCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
 	characterScripting.cmo  metric.cmo
 
-PARSER = parser.cmo $(LANGUAGE) 
+PARSER = nexus.cmo hennig.cmo hennigLexer.cmo hennigParser.cmo nexusLexer.cmo nexusParser.cmo parser.cmo $(LANGUAGE) 
 
 ifeq ($(USEGRAPHICS), tk)
       TREEOUTPUT = asciiTree.cmo graphTree.cmo graphicTK.cmo graphicsPs.cmo
@@ -530,6 +530,25 @@ ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlc -v -g ultrametric.ml -package ocamlgraph -linkpkg
 ultrametric.cmx: status.cmx ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlopt -v ultrametric.ml -package ocamlgraph -linkpkg
+
+hennigParser.cmi: hennig.cmo hennigParser.mly
+	$(OCAMLYACC) hennigParser.mly
+	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) hennigParser.mli
+
+hennigParser.ml: hennigParser.cmi
+
+hennigLexer.ml: hennig.cmo hennigParser.cmi hennigLexer.mll
+	$(OCAMLLEX) hennigLexer.mll
+
+nexusParser.cmi: nexus.cmo nexusParser.mly
+	$(OCAMLYACC) nexusParser.mly
+	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) nexusParser.mli
+
+nexusParser.ml: nexusParser.cmi
+
+nexusLexer.ml: nexus.cmo nexusParser.cmi nexusLexer.mll
+	$(OCAMLLEX) nexusLexer.mll
+
 
 .ml.cmo:
 	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) $<
