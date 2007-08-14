@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2103 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2110 $"
 
 module IntSet = All_sets.Integers
 
@@ -248,7 +248,7 @@ let process_transform (run : r) (meth : Methods.transform) =
 
 let load_data (meth : Methods.input) data nodes =
     let prealigned_files = ref [] in
-    let rec reader is_prealigned data (meth : Methods.simple_input) = 
+    let rec reader annotated is_prealigned data (meth : Methods.simple_input) = 
         match meth with
         | `Poyfile files ->
                 let files = PoyParser.explode_filenames files in
@@ -266,29 +266,35 @@ let load_data (meth : Methods.input) data nodes =
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
                 List.fold_left 
-                (fun d f -> Data.process_molecular_file is_prealigned `Seq d f) 
+                (fun d f -> Data.process_molecular_file "Default"
+                Cost_matrix.Two_D.default Cost_matrix.Three_D.default
+                annotated Alphabet.nucleotides is_prealigned `Seq d f) 
                 data files
         | `Chromosome files ->
                 List.fold_left (fun d f ->
-                    Data.process_molecular_file false `Chromosome d f) 
+                    Data.process_molecular_file "Default"
+                    Cost_matrix.Two_D.default Cost_matrix.Three_D.default
+                    annotated Alphabet.nucleotides false `Chromosome d f) 
                 data (explode_filenames files)
         | `Genome files ->
                 let data = List.fold_left (fun d f ->
-                    Data.process_molecular_file false `Genome d f) 
+                    Data.process_molecular_file "Default"
+                    Cost_matrix.Two_D.default Cost_matrix.Three_D.default
+                    annotated Alphabet.nucleotides false `Genome d f) 
                 data (explode_filenames files)
                 in 
                 data
         | `Aminoacids files ->
-                let data = Data.set_sequence_defaults Data.Aminoacids data in
                 let files = explode_filenames files in
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
-                let data = 
-                    List.fold_left 
-                    (fun d f -> Data.process_molecular_file is_prealigned `Seq d f) 
-                    data files
-                in
-                Data.set_sequence_defaults Data.Nucleotides data 
+                List.fold_left 
+                (fun d f -> 
+                    Data.process_molecular_file 
+                    "Default" Cost_matrix.Two_D.default_aminoacids
+                    (Lazy.force Cost_matrix.Three_D.default_aminoacids)
+                    annotated Alphabet.aminoacids is_prealigned `Seq d f) 
+                data files
         | `GeneralAlphabetSeq (seq, alph, read_options) ->
                 let orientation = 
                     not 
@@ -299,14 +305,11 @@ let load_data (meth : Methods.input) data nodes =
                 (* read the alphabet and tcm *)
                 let alphabet, twod, threed =
                     Parser.PAlphabet.of_file alph orientation init3D in
-                let data = 
-                    Data.set_sequence_defaults (Data.GeneralAlphabet 
-                    (FileStream.filename alph, twod, threed, alphabet)) data 
-                in
                 if is_prealigned then prealigned_files := [seq] ::
                     !prealigned_files;
-                let data = Data.process_molecular_file is_prealigned `Seq data seq in
-                Data.set_sequence_defaults Data.Nucleotides data
+                let tcmfile = FileStream.filename alph in
+                Data.process_molecular_file 
+                tcmfile twod threed annotated alphabet is_prealigned `Seq data seq 
         | `Breakinv (seq, alph, read_options) ->
                 let orientation = 
                     not 
@@ -316,24 +319,19 @@ let load_data (meth : Methods.input) data nodes =
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
                 let alphabet, twod, threed =
-                    Parser.PAlphabet.of_file alph orientation init3D in
-                let data = 
-                    Data.set_sequence_defaults 
-                    (Data.GeneralAlphabet (FileStream.filename alph, twod, 
-                    threed, alphabet)) data 
-                in
-                let data = Data.process_molecular_file is_prealigned `Breakinv data seq 
-                in 
-                Data.set_sequence_defaults Data.Nucleotides data
+                    Parser.PAlphabet.of_file alph orientation init3D 
+                and tcmfile = FileStream.filename alph in
+                Data.process_molecular_file tcmfile twod threed
+                annotated alphabet is_prealigned `Breakinv data seq
         | `ComplexTerminals files ->
                 List.fold_left Data.process_complex_terminals data 
                 (explode_filenames files)
     and annotated_reader data (meth : Methods.input) =
         match meth with
-        | #Methods.simple_input as meth -> reader false data meth
+        | #Methods.simple_input as meth -> reader false false data meth
         | `Prealigned (meth, tcm) ->
                 prealigned_files := [];
-                let data = reader true data meth in
+                let data = reader false true data meth in
                 let files = List.flatten !prealigned_files in
                 let chars = `Names (true, (List.rev_map (function 
                     `Local x | `Remote x -> (x ^ ":.*")) files)) in
@@ -350,9 +348,7 @@ let load_data (meth : Methods.input) data nodes =
                 Data.prealigned_characters ImpliedAlignment.analyze_tcm data
                 chars
         | `AnnotatedFiles files ->
-                let data = Data.annotated_sequences true data in
-                let data = List.fold_left (reader false) data files in
-                Data.annotated_sequences false data
+                List.fold_left (reader true false) data files
     in
     let data = annotated_reader data meth in
     let data = Data.categorize (Data.remove_taxa_to_ignore data) in

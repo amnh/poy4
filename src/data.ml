@@ -31,8 +31,6 @@ let output_error = Status.user_message Status.Error
 
 type dynhom_opts = 
     | Tcm of string     (* A transformation cost matrix to be used *)
-    | Fixed of string option  (* A fixed states list to be used, could be a filename 
-                        or a sequence directly typed in the input. *)
 
 (** The valid types of contents of a file *)
 type contents = Characters | CostMatrix | Trees 
@@ -226,18 +224,6 @@ type d = {
     (* The name of the fixed states file that contained the contents of
     * current_fs. *)
     current_fs_file : string;
-    (* The transformation cost matrix to be used in the alignments of
-    * whatever sequence is loaded next in the dataset *)
-    current_tcm : Cost_matrix.Two_D.m;
-    (* The three dimentional cost matrix to be used in the alignments of
-    * whatever sequence is loaded next in the dataset. This is built based
-    * on the [current_tcm3]. *)
-    current_tcm3 : Cost_matrix.Three_D.m;
-    (* The name of the file containing the [current_tcm] being used. *)
-    current_tcm_file : string;
-    current_alphabet_file : string;
-    current_alphabet : alph;
-    use_annotated_sequences : bool;
     (* A function to generate codes for character *)
     character_code_gen : int ref;
     (* A function to generate codes for segments in chromosomes *)
@@ -323,12 +309,6 @@ let empty () =
     do_fs = false;
     current_fs = [];
     current_fs_file = "";
-    current_tcm = Cost_matrix.Two_D.default;
-    current_tcm3 = Cost_matrix.Three_D.default;
-    current_tcm_file = "Substitutions: 1, Indels: 2";
-    current_alphabet_file = "";
-    current_alphabet = Nucleotides;
-    use_annotated_sequences = false;
     character_code_gen = ref (-1);
     seg_code_gen = ref 0;
     taxon_names = All_sets.StringMap.empty;
@@ -374,6 +354,7 @@ let duplicate data =
 
 let set_dyna_data seq_arr  = {seq_arr = seq_arr}
 
+(*
 let set_sequence_defaults seq_alph data = 
     match seq_alph with
     | Nucleotides ->
@@ -407,7 +388,7 @@ let set_sequence_defaults seq_alph data =
                 current_alphabet_file = alph;
                 current_alphabet = seq_alph; 
             }
-
+*)
 
 let get_empty_seq alph = 
     let seq = Sequence.create 1 in
@@ -459,8 +440,10 @@ let print (data : d) =
     Hashtbl.iter print_specs data.character_specs 
 
 
+    (*
 let annotated_sequences bool data =
     { data with use_annotated_sequences = bool }
+    *)
 
 let get_weight c data = 
     match Hashtbl.find data.character_specs c with
@@ -589,7 +572,7 @@ let process_trees data file =
             output_error msg;
             data
 
-let process_tcm data file = 
+let process_tcm file = 
     try
         let file = FileStream.filename file
         and ch = new FileStream.file_reader file in
@@ -602,10 +585,7 @@ let process_tcm data file =
             ^ "for@ an@ alphabet@ of@ size@ " ^ string_of_int alph ^ ".@]"
         in
         Status.user_message Status.Information msg;
-        { data with 
-            current_tcm = tcm; 
-            current_tcm3 = tcm3;
-            current_tcm_file = file }
+        tcm, tcm3, file
     with
     | Sys_error err ->
             let file = FileStream.filename file in
@@ -613,8 +593,7 @@ let process_tcm data file =
             "transformation@ cost@ matrix.@ @ The@ system@ error@ message@ is@ "
                 ^ err ^
             ".@]" in
-            output_error msg;
-            data
+            failwith msg
 
 let process_fixed_states data file = 
         match file with
@@ -744,7 +723,7 @@ let add_static_character_spec data (code, spec) =
     Hashtbl.replace data.character_names spec.Parser.SC.st_name code;
     Hashtbl.replace data.character_codes code spec.Parser.SC.st_name
 
-let report_static_input file (taxa, characters, matrix, tree) =
+let report_static_input file (taxa, characters, matrix, tree, _) =
     let characters = Array.length characters 
     and taxa = Array.length taxa in
     let msg =
@@ -753,89 +732,8 @@ let report_static_input file (taxa, characters, matrix, tree) =
     in
     Status.user_message Status.Information msg
 
-let gen_add_static_parsed_file do_duplicate data file ((taxa, characters,
-matrix, trees) : Parser.SC.file_output) =
-    let data = 
-        if do_duplicate then duplicate data 
-        else data
-    in
-    (* A function to report the taxa loading *)
-    let len_taxa = Array.length taxa in
-    let st = Status.create "Loading Characters" (Some len_taxa) "taxa" in
-    (* [codes] contain the character speecification for the sequences in
-    * this file *)
-    let codes = 
-        let builder x = 
-            incr data.character_code_gen;
-            (!(data.character_code_gen)), x
-        in
-        Array.map ~f:builder characters
-    in
-    Status.full_report ~msg:"Storing the character specifications" st;
-    (* Now we add the codes to the data *)
-    Array.iter ~f:(add_static_character_spec data) codes;
-    (* And now a function to add one taxon at a time to the data *)
-    let data = Array.fold_left ~f:(fun data name ->
-        match name with
-        | Some name ->
-                let data, _ = process_taxon_code data name file in
-                data
-        | None -> data) ~init:data taxa 
-    in
-    for row = 0 to len_taxa - 1 do
-        (* We ignore the data because we already processed the names *)
-        match taxa.(row) with
-        | None -> ()
-        | Some tname ->
-                let _, tcode = process_taxon_code data tname file in
-                let tl = get_taxon_characters data tcode in
-                let add_character column it =
-                    let chcode, _ = codes.(column) in
-                    let specified = 
-                        match it with
-                        | Some _ -> `Specified
-                        | None -> `Unknown
-                    in
-                    Hashtbl.replace tl chcode ((Stat (chcode, it)), specified);
-                    (column + 1)
-                in
-                let _ = Array.fold_left ~f:add_character ~init:0 matrix.(row) in
-                Hashtbl.replace data.taxon_characters tcode tl;
-                let did = Status.get_achieved st in
-                Status.full_report ~adv:(did + 1) st;
-    done;
-    Status.finished st;
-    { data with trees = data.trees @ trees }
-
-let add_static_parsed_file data file triple =
-    gen_add_static_parsed_file true data file triple 
-
-
-let add_multiple_static_parsed_file data list =
-    let data = duplicate data in
-    List.fold_left ~f:(fun acc (file, triple) ->
-        gen_add_static_parsed_file false acc file triple)
-    ~init:data list
-
-
-let add_static_file ?(report = true) style data file = 
-    try
-        let ch, file = FileStream.channel_n_filename file in
-        let r = Parser.SC.of_channel style ch file in
-        if report then report_static_input file r;
-        close_in ch;
-        add_static_parsed_file data file r
-    with
-    | Sys_error err ->
-            let file = FileStream.filename file in
-            let msg = "Couldn't@ open@ file@ " ^ file ^ "@ to@ load@ the@ " ^
-            "data.@ @ The@ system@ error@ message@ is@ "
-                ^ err ^
-            "." in
-            output_error msg;
-            data
-
-let process_parsed_sequences alphabet file dyna_state data res =
+let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet file 
+dyna_state data res =
     let data = duplicate data in
     let res = 
         (* Place a single sequence together with its taxon *)
@@ -860,7 +758,7 @@ let process_parsed_sequences alphabet file dyna_state data res =
             ) ~init:0 arr 
         in
         (* Check for errors *)
-        (if (data.use_annotated_sequences = false) && (dyna_state != `Genome) then 
+        (if (annotated = false) && (dyna_state != `Genome) then 
             match Array.length arr with
             | 0 -> ()
             | n ->
@@ -906,13 +804,13 @@ let process_parsed_sequences alphabet file dyna_state data res =
             file ^ ":" ^ string_of_int !c
     in
     let dyna_state = 
-        match data.use_annotated_sequences with
+        match annotated with
         | true -> `Annotated
         | false -> dyna_state
     in 
     let add_character items max_len data = 
         let file = 
-            match data.use_annotated_sequences or (dyna_state = `Chromosome) with 
+            match annotated or (dyna_state = `Chromosome) with 
             | false -> locus_name () 
             | true -> original_filename
         in
@@ -921,9 +819,9 @@ let process_parsed_sequences alphabet file dyna_state data res =
         let dspec = {
             filename = file;
             fs = data.current_fs_file;
-            tcm = data.current_tcm_file;
-            tcm2d = data.current_tcm;
-            tcm3d = data.current_tcm3;
+            tcm = tcmfile;
+            tcm2d = tcm;
+            tcm3d = tcm3;
             alph = alphabet;
             pool = Sequence.Pool.create ((max_len * 5) / 4) items;
             state = dyna_state;
@@ -1029,7 +927,6 @@ let process_parsed_sequences alphabet file dyna_state data res =
     let process_genome data = 
         let num_genome = List.length (List.hd res) in 
         let num_chrom = List.length res in 
-
         let max_chrom_len = ref 0 in 
         let genome_arr = Array.init num_genome 
             (fun ti -> Array.init num_chrom 
@@ -1040,12 +937,9 @@ let process_parsed_sequences alphabet file dyna_state data res =
                  )
             )
         in 
-
         let chcode, data =  add_character num_genome !max_chrom_len data in 
-        
         Array.fold_left 
             ~f:(fun data chrom_arr ->
-
                  let chrom_ls = Array.fold_left 
                      ~f:(fun chrom_ls (chrom, _) ->
                           let chrom_len = Sequence.length chrom in 
@@ -1058,9 +952,7 @@ let process_parsed_sequences alphabet file dyna_state data res =
                                 {seq = clean_chrom; code = !code}::chrom_ls
                      ) ~init:[] chrom_arr 
                  in 
-
                  let genome_data = {seq_arr = Array.of_list (List.rev chrom_ls)} in
-                 
                  let _, taxon_name = chrom_arr.(0) in 
                  let data, tcode = 
                      process_taxon_code data taxon_name original_filename 
@@ -1076,13 +968,113 @@ let process_parsed_sequences alphabet file dyna_state data res =
             ) ~init:data genome_arr
     in 
     let data = 
-        match data.use_annotated_sequences with  
+        match annotated with  
         | false -> 
               if dyna_state = `Genome then process_genome data
               else List.fold_left ~f:single_loci_processor ~init:data res 
         | true ->  process_annotated_chrom data 
     in 
     data
+
+let gen_add_static_parsed_file do_duplicate data file ((taxa, characters,
+matrix, trees, sequences) : Parser.SC.file_output) =
+    let data = 
+        if do_duplicate then duplicate data 
+        else data
+    in
+    (* A function to report the taxa loading *)
+    let len_taxa = Array.length taxa in
+    let st = Status.create "Loading Characters" (Some len_taxa) "taxa" in
+    (* [codes] contain the character speecification for the sequences in
+    * this file *)
+    let codes = 
+        let builder x = 
+            incr data.character_code_gen;
+            (!(data.character_code_gen)), x
+        in
+        Array.map ~f:builder characters
+    in
+    Status.full_report ~msg:"Storing the character specifications" st;
+    (* Now we add the codes to the data *)
+    Array.iter ~f:(add_static_character_spec data) codes;
+    (* And now a function to add one taxon at a time to the data *)
+    let data = Array.fold_left ~f:(fun data name ->
+        match name with
+        | Some name ->
+                let data, _ = process_taxon_code data name file in
+                data
+        | None -> data) ~init:data taxa 
+    in
+    for row = 0 to len_taxa - 1 do
+        (* We ignore the data because we already processed the names *)
+        match taxa.(row) with
+        | None -> ()
+        | Some tname ->
+                let _, tcode = process_taxon_code data tname file in
+                let tl = get_taxon_characters data tcode in
+                let add_character column it =
+                    let chcode, _ = codes.(column) in
+                    let specified = 
+                        match it with
+                        | Some _ -> `Specified
+                        | None -> `Unknown
+                    in
+                    Hashtbl.replace tl chcode ((Stat (chcode, it)), specified);
+                    (column + 1)
+                in
+                let _ = Array.fold_left ~f:add_character ~init:0 matrix.(row) in
+                Hashtbl.replace data.taxon_characters tcode tl;
+                let did = Status.get_achieved st in
+                Status.full_report ~adv:(did + 1) st;
+    done;
+    (* We add the trees *)
+    let data = { data with trees = data.trees @ trees } in
+    (* Now time to add the molecular sequences *)
+    let data = 
+        let single_sequence_adder data (alphabet, sequences) =
+            let size = 
+                Alphabet.distinct_size (Alphabet.to_sequential alphabet) 
+            in
+            let tcm = 
+                Cost_matrix.Two_D.of_transformations_and_gaps (size < 7)
+                size 1 1
+            in
+            let tcm3d = Cost_matrix.Three_D.of_two_dim tcm in
+            process_parsed_sequences "Default" tcm tcm3d false alphabet file
+            `Seq data sequences
+        in
+        List.fold_left ~f:single_sequence_adder ~init:data sequences
+    in
+    Status.finished st;
+    data
+
+let add_static_parsed_file data file triple =
+    gen_add_static_parsed_file true data file triple 
+
+
+let add_multiple_static_parsed_file data list =
+    let data = duplicate data in
+    List.fold_left ~f:(fun acc (file, triple) ->
+        gen_add_static_parsed_file false acc file triple)
+    ~init:data list
+
+
+let add_static_file ?(report = true) style data file = 
+    try
+        let ch, file = FileStream.channel_n_filename file in
+        let r = Parser.SC.of_channel style ch file in
+        if report then report_static_input file r;
+        close_in ch;
+        add_static_parsed_file data file r
+    with
+    | Sys_error err ->
+            let file = FileStream.filename file in
+            let msg = "Couldn't@ open@ file@ " ^ file ^ "@ to@ load@ the@ " ^
+            "data.@ @ The@ system@ error@ message@ is@ "
+                ^ err ^
+            "." in
+            output_error msg;
+            data
 
 
 let dna_lexer = Alphabet.Lexer.make_lexer false Alphabet.nucleotides
@@ -1155,16 +1147,7 @@ let check_if_taxa_are_ok file taxa =
     in
     second
 
-let aux_process_molecular_file processor builder dyna_state data file = 
-    let alphabet = 
-        let alphabet = 
-            match data.current_alphabet with
-            | Nucleotides -> Alphabet.nucleotides
-            | Aminoacids -> Alphabet.aminoacids
-            | GeneralAlphabet (_, _, _, a) -> a
-        in
-        alphabet
-    in
+let aux_process_molecular_file tcmfile tcm tcm3 alphabet processor builder dyna_state data file = 
     begin try
         let ch = Parser.molecular_to_fasta file in
         let res = 
@@ -1220,37 +1203,18 @@ let aux_process_molecular_file processor builder dyna_state data file =
             data
     end
 
-let process_molecular_file is_prealigned dyna_state data file = 
+let process_molecular_file tcmfile tcm tcm3 annotated alphabet is_prealigned dyna_state data file = 
     aux_process_molecular_file 
+    tcmfile tcm tcm3 alphabet
     (fun alph parsed -> 
-        process_parsed_sequences alph (FileStream.filename file) dyna_state data
-        parsed)
+        process_parsed_sequences tcmfile tcm tcm3 annotated 
+        alph (FileStream.filename file) dyna_state data parsed)
     (fun x -> 
         if not is_prealigned then Parser.AlphSeq x
         else Parser.Prealigned_Alphabet x) 
     dyna_state 
     data 
     file
-
-let process_dna_sequences data (file_list, options) =
-    let process_options data = function
-        | Tcm a -> process_tcm data (`Remote a)
-        | Fixed a -> 
-                let a = 
-                    match a with
-                    | Some a -> Some (`Remote a)
-                    | None -> None 
-                in
-                process_fixed_states data a
-    in
-    (* We set the options to whatever is required in the data *)
-    let data = 
-        match options with
-        | None -> data 
-        | Some a -> List.fold_left ~f:process_options ~init:data a
-    in
-    let f a b = process_molecular_file false `Seq a b  in
-    List.fold_left ~f ~init:data file_list
 
 let process_ignore_taxon data taxon =
     let res = All_sets.Strings.add taxon data.ignore_taxa_set in
@@ -1623,7 +1587,7 @@ let get_sequence_alphabet seqcode data =
         | Dynamic dspec -> dspec.alph
         | _ -> failwith "Data.get_sequence_alphabet: Not a dynamic character"
     with
-    | Not_found as err ->
+    | err ->
             let name = code_character seqcode data in
             let msg = "Could not find the code " ^ string_of_int seqcode ^ 
             " with name " ^ name in
@@ -2424,78 +2388,79 @@ let process_rename_characters data (a, b) =
 
 exception Invalid_Character of int
 
+let get_tcm2d data c =
+    match Hashtbl.find data.character_specs c with
+    | Dynamic dspec -> dspec.tcm2d
+    | _ -> failwith "Data.get_tcm2d"
 
+let get_tcm3d data c =
+    match Hashtbl.find data.character_specs c  with
+    | Dynamic dspec -> dspec.tcm3d
+    | _ -> failwith "Data.get_tcm3d"
+
+let get_tcmfile data c =
+    match Hashtbl.find data.character_specs c  with
+    | Dynamic dspec -> dspec.tcm
+    | _ -> failwith "Data.get_tcmfile"
+
+let get_alphabet data c =
+    match Hashtbl.find data.character_specs c  with
+    | Dynamic dspec -> dspec.alph
+    | _ -> failwith "Data.get_alphabet"
 
 (** transform all sequences whose codes are on the code_ls into chroms 
  * each ia for one character*)    
 let transform_chrom_to_rearranged_seq data meth tran_code_ls 
         (ia_ls : ((int * (int array array IntMap.t) list) list list) list) = 
     let data = duplicate data in
-
     let tran_code_ls, _ = get_tran_code_meth data meth in 
-
     let num_ia = ref 0 in  
     let t_ch_ia_map = List.fold_left 
-        ~f:(fun (t_ch_ia_map : int array array FullTupleMap.t) ia  ->
-             List.fold_left 
-                 ~f:(fun t_ch_ia_map handle_ia ->
-                      List.fold_left 
-                          ~f:(fun t_ch_ia_map (t_id, t_ia) ->
-                               List.fold_left 
-                                   ~f:(fun t_ch_ia_map (ch_set_ia : int array array IntMap.t)->
-                                           IntMap.fold  
-                                            (fun chcode (t_ch_ia : int array array) t_ch_ia_map ->
-                                                 num_ia := Array.length t_ch_ia;
-                                                 FullTupleMap.add (t_id,chcode) t_ch_ia t_ch_ia_map 
-                                               ) ch_set_ia t_ch_ia_map 
-                                   ) ~init:t_ch_ia_map t_ia
-                          ) ~init:t_ch_ia_map handle_ia
-                 ) ~init:t_ch_ia_map ia
-           ) ~init:FullTupleMap.empty ia_ls  
+    ~f:(fun (t_ch_ia_map : int array array FullTupleMap.t) ia  ->
+        List.fold_left 
+        ~f:(fun t_ch_ia_map handle_ia ->
+            List.fold_left 
+            ~f:(fun t_ch_ia_map (t_id, t_ia) ->
+                List.fold_left 
+                ~f:(fun t_ch_ia_map ch_set_ia -> 
+                    IntMap.fold  
+                    (fun chcode t_ch_ia t_ch_ia_map ->
+                        num_ia := Array.length t_ch_ia;
+                        FullTupleMap.add (t_id,chcode) t_ch_ia 
+                        t_ch_ia_map) 
+                    ch_set_ia t_ch_ia_map) 
+                ~init:t_ch_ia_map t_ia) 
+            ~init:t_ch_ia_map handle_ia) 
+        ~init:t_ch_ia_map ia) 
+    ~init:FullTupleMap.empty ia_ls  
     in  
-
-    let data = List.fold_left 
-        ~f:(fun data char_code ->
-             let char_name = Hashtbl.find data.character_codes char_code in             
-             let deled_data = process_ignore_characters true data (`Some [char_code]) in
-
-(*
-             print_endline "Deleted data";
-             print deled_data;
-*)   
-
-             let seqs = IntMap.fold  
-                 (fun (t_code : int) (t_name : string) seqs ->
-                      try
-                          let ia_arr= FullTupleMap.find (t_code, char_code) t_ch_ia_map in
-                          let ia_arr = Array.map 
-                              (fun ia ->
-                                   let seq = Sequence.of_code_arr ia Alphabet.gap in 
-                                   let seq = Sequence.prepend_char seq Alphabet.gap in 
-                                   seq
-                              ) ia_arr
-                          in 
-(*
-                          Printf.fprintf stdout "%s: " t_name;
-                          List.iter (fun seq ->
-                                         Sequence.print stdout seq Alphabet.nucleotides;
-                                         Printf.fprintf stdout " | ";
-                                    ) ia_ls; 
-                          print_newline (); 
-*)
-                          ([[Array.to_list ia_arr]], t_name)::seqs                              
-                      with Not_found -> seqs                              
-                 ) data.taxon_codes []
-             in                   
-             let added_data = process_parsed_sequences Alphabet.nucleotides
-                     char_name `Seq deled_data seqs;
-             in 
-                 
-
-             added_data
-           ) ~init:data tran_code_ls 
+    let data = List.fold_left ~f:(fun data char_code ->
+        let char_name = Hashtbl.find data.character_codes char_code in
+        let tcm = get_tcm2d data char_code 
+        and tcm3d = get_tcm3d data char_code 
+        and alph = get_alphabet data char_code
+        and tcmfile = get_tcmfile data char_code in
+        let data = 
+            process_ignore_characters true data (`Some [char_code]) 
+        in
+        let seqs = IntMap.fold (fun (t_code : int) (t_name : string) seqs ->
+            try
+                let ia_arr = FullTupleMap.find (t_code, char_code) t_ch_ia_map in
+                let ia_arr = 
+                    Array.map 
+                    (fun ia ->
+                        let seq = Sequence.of_code_arr ia Alphabet.gap in 
+                        Sequence.prepend_char seq Alphabet.gap)
+                    ia_arr
+                in 
+                ([[Array.to_list ia_arr]], t_name) :: seqs
+            with Not_found -> seqs) 
+            data.taxon_codes []
+        in                   
+        process_parsed_sequences tcmfile tcm tcm3d false alph
+        char_name `Seq data seqs) ~init:data 
+        tran_code_ls 
     in 
-    
     categorize data
 
 let assign_tcm_to_characters data chars file tcm =
@@ -2554,11 +2519,8 @@ let classify_characters_by_alphabet_size data chars =
         let size = 
             data 
             --> get_sequence_alphabet char
-            --> Alphabet.simplify 
-            --> (fun x ->
-                    match Alphabet.kind x with
-                    | Alphabet.Sequential -> Alphabet.distinct_size x
-                    | _ -> (Alphabet.distinct_size x) - 1)
+            --> Alphabet.to_sequential 
+            --> Alphabet.distinct_size
         in
         (char, size) :: acc
     in
@@ -2679,7 +2641,6 @@ let get_alphabet data c =
     match Hashtbl.find data.character_specs c  with
     | Dynamic dspec -> dspec.alph
     | _ -> failwith "Data.get_alphabet"
-
 
 let get_character_state data c =
     match Hashtbl.find data.character_specs c  with
@@ -3165,33 +3126,37 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
         analyze_tcm cm alph
     in
     let process_taxon a b ((enc, names, acc) as res)=
-        match Hashtbl.find b code with
-        | (Stat _), _
-        | _, `Unknown -> res
-        | (Dyna (_, d)), `Specified ->
-                match d.seq_arr with
-                | [|v|] -> 
-                        let name = code_taxon a data
-                        and enc =
-                            match enc with
-                            | [||] -> 
-                                    (* We have to generate the encoding *)
-                                    let res = 
-                                        Sequence.fold_right (fun acc base ->
-                                        do_encoding base acc) [] v.seq
-                                    in
-                                    Array.of_list (snd (List.split res))
-                            | _ -> enc
-                        and seq = 
-                            Sequence.fold_right 
-                            (fun acc base ->
-                                do_states `Exists base acc) 
-                            [] v.seq
-                        in
-                        enc, (Some name) :: names, (Array.of_list seq) :: acc
-                | _ -> 
-                        failwith 
-                        "Aren't sequences supposed to be just one?"
+        if Hashtbl.mem b code then
+            match Hashtbl.find b code with
+            | (Stat _), _
+            | _, `Unknown -> res
+            | (Dyna (_, d)), `Specified ->
+                    match d.seq_arr with
+                    | [|v|] -> 
+                            let name = code_taxon a data
+                            and enc =
+                                match enc with
+                                | [||] -> 
+                                        (* We have to generate the encoding *)
+                                        let res = 
+                                            Sequence.fold_right (fun acc base ->
+                                            do_encoding base acc) [] v.seq
+                                        in
+                                        Array.of_list (snd (List.split res))
+                                | _ -> enc
+                            and seq = 
+                                Sequence.fold_right 
+                                (fun acc base ->
+                                    do_states `Exists base acc) 
+                                [] v.seq
+                            in
+                            let seq = Array.of_list seq in
+                            assert (Array.length seq = Array.length enc);
+                            enc, (Some name) :: names, seq :: acc
+                    | _ -> 
+                            failwith 
+                            "Aren't sequences supposed to be just one?"
+        else res
     in
     let enc, names, matrix = 
         Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
@@ -3208,7 +3173,7 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
             (fun y -> 
                 Parser.SC.of_old_atom newenc.(y) enc.(y) matrix.(x).(y)))
     in
-    let res = (Array.of_list names, newenc, matrix, []) in
+    let res = (Array.of_list names, newenc, matrix, [], []) in
     Parser.SC.fill_observed res;
     character_name, res
 

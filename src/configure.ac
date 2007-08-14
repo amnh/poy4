@@ -2,12 +2,20 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(FULL-PACKAGE-NAME, VERSION, BUG-REPORT-ADDRESS)
+AC_INIT([POY 4 Beta], [see VERSION], [poy4@googlegroups.com])
 AC_CONFIG_SRCDIR([add.c])
 AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+
+#Check the version of gcc, required for preprocessing
+TMP_CC=gcc
+AC_CHECK_TOOL_PREFIX
+AC_CHECK_PROG_VER(TMP_CC, gcc, -v, 
+                  [version \([ egcygnustpi-]*[0-9.]*\)], [3.4.[2-9]* | 4.[0-9]* ],
+                  [AC_MSG_FAILURE([gcc version 3.4.2 or later required.])])
+
 
 # What are we going to substitute in the Makefile
 AC_SUBST(USEGRAPHICS)
@@ -91,7 +99,7 @@ case $OCAMLVERSION in
     ;;
     *)
     AC_MSG_RESULT([no])
-    AC_MSG_FAILURE([POY requires OCaml version 3.10.0 or later to compile. Please upgrade to the latest version.])
+    AC_MSG_FAILURE([POY requires OCaml version 3.10.0 or later to compile.  Please upgrade to the latest version. (You can get it from http://www.ocaml.org and follow their compilation instructions. It's really easy.)])
     ;;
 esac
 

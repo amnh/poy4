@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2049 2007-08-06 19:06:02Z andres $ *)
+(* $Id: charTransform.ml 2110 2007-08-14 18:30:31Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2049 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2110 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -675,20 +675,16 @@ insert_union parent union_node tmp
         let process_partitions data (sequences, character) =
             let name = Data.code_character character data in
             let tcm = Data.get_sequence_tcm character data in
-            let treed = Cost_matrix.Three_D.of_two_dim tcm in
+            let treed = Data.get_tcm3d data character 
+            and tcmfile = Data.get_tcmfile data character in
             let alph = Data.get_alphabet data character in
-            let data = Data.set_sequence_defaults (Data.GeneralAlphabet ("", tcm,
-            treed, alph)) data in
             let data = Data.process_ignore_characters false data (`Some [character]) in
             let new_data = 
                 List.map (fun (seqs, taxon) ->
                     ([[seqs]], Data.code_taxon taxon data)) sequences
             in
-            let data = 
-                Data.process_parsed_sequences Alphabet.nucleotides name `Seq data
-                new_data 
-            in
-            Data.set_sequence_defaults Data.Nucleotides data 
+            Data.process_parsed_sequences tcmfile tcm treed 
+            false alph name `Seq data new_data 
         in
         root 
         --> Node.get_sequences None

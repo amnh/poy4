@@ -23,8 +23,6 @@ exception Illegal_argument
  * valid options to perform a dynamic homology analysis. *)
 type dynhom_opts = 
     | Tcm of string     (** A transformation cost matrix to be used *)
-    | Fixed of string option  (** A fixed states list to be used, could be a filename 
-                        or a sequence directly typed in the input. *)
 
 (* The valid contents of an input file. These are not all of them, add others if
 * needed, these are all that we need for now. *)
@@ -234,22 +232,8 @@ type d = {
     (** The name of the fixed states file that contained the contents of
     * current_fs. *)
     current_fs_file : string;
-    (** The transformation cost matrix to be used in the alignments of
-    * whatever sequence is loaded next in the dataset *)
-    current_tcm : Cost_matrix.Two_D.m;
-    (** The three dimentional cost matrix to be used in the alignments of
-    * whatever sequence is loaded next in the dataset. This is built based
-    * on the [current_tcm]. *)
-    current_tcm3 : Cost_matrix.Three_D.m;
-    (** The name of the file containing the [current_tcm] being used. *)
-    current_tcm_file : string;
-    current_alphabet_file : string;
-    current_alphabet : alph;
-    use_annotated_sequences : bool;
-
     (** A function to generate codes for character *)
     character_code_gen : int ref;
-
     (* A function to generate codes for segments in chromosomes *)
     seg_code_gen : int ref;
     (* Set of files where each taxon appears *)
@@ -322,15 +306,19 @@ val get_weight : int -> d -> float
 val get_weights : d -> (int * float) list
 
 val process_parsed_sequences : 
+    string -> Cost_matrix.Two_D.m -> Cost_matrix.Three_D.m -> bool ->
     Alphabet.a -> string -> dyna_state_t -> d -> 
     (Sequence.s list list list * Parser.taxon) list -> d
             
 
-val process_molecular_file : bool -> dyna_state_t -> d -> Parser.filename -> d
+val process_molecular_file : string -> Cost_matrix.Two_D.m ->
+    Cost_matrix.Three_D.m -> bool -> Alphabet.a -> bool -> 
+        dyna_state_t -> d -> Parser.filename -> d
 
 val add_static_file : ?report:bool -> [`Hennig | `Nexus] -> d -> Parser.filename -> d
 
-val process_tcm : d -> Parser.filename -> d
+val process_tcm : Parser.filename -> 
+    Cost_matrix.Two_D.m * Cost_matrix.Three_D.m * string
 
 val process_trees : d -> Parser.filename -> d
 
@@ -339,8 +327,6 @@ val process_fixed_states : d -> Parser.filename option -> d
 val add_synonyms_file : d -> Parser.filename -> d
 
 val add_synonym : d -> (string * string) -> d
-
-val process_dna_sequences : d -> (Parser.filename list * dynhom_opts list option)  -> d
 
 val process_ignore_file : d -> Parser.filename -> d
 
@@ -358,6 +344,10 @@ val categorize : d -> d
 val remove_taxa_to_ignore : d -> d
 
 val get_sequence_tcm : int -> d -> Cost_matrix.Two_D.m
+
+val get_tcm2d : d -> int -> Cost_matrix.Two_D.m 
+val get_tcm3d : d -> int -> Cost_matrix.Three_D.m 
+val get_tcmfile : d -> int -> string
 
 val get_sequence_alphabet : int -> d -> Alphabet.a
 
@@ -450,10 +440,6 @@ val process_taxon_code :
     d -> All_sets.StringMap.key -> string -> d * int
 
 val set_dyna_data : 'a seq_t array -> 'a dyna_data
-
-val set_sequence_defaults : alph -> d -> d
-
-val annotated_sequences : bool -> d -> d
 
 val to_faswincladfile : d -> string option -> unit
 

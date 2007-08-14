@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2049 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2110 $"
 
 open StdLabels
 
@@ -50,7 +50,6 @@ type spec =
     | FProbability of distr
     | EProbability of string * (string * float) list
     | Character of string * ufuncs list * spec option
-    | Dna_Sequences of (string list * (Data.dynhom_opts list option)) list
     | Protein_Sequences of (string list * (Data.dynhom_opts list option)) list
     | Synonyms of string list
     | SynonymsList of (string * string) list 
@@ -371,22 +370,6 @@ let process_tree prev lst =
                 let files = List.map (fun x -> `Remote x) files in
                 (* Load a hennig or dpread file containing static characters *)
                 List.fold_left ~f:(Data.add_static_file `Hennig) ~init:data files 
-        | Dna_Sequences lst -> 
-                (* Load a list of files of DNA sequences *)
-                let lst = List.map (fun (x, y) -> 
-                    List.map (fun x -> `Remote x) x, y) lst in
-                let data = 
-                    List.fold_left ~f:Data.process_dna_sequences ~init:data lst 
-                in
-                (* Reset the fixed states and transformation cost matrices *)
-                { data with 
-                    Data.current_fs_file = "";
-                    current_tcm = Cost_matrix.Two_D.default;
-                    current_tcm3 = Cost_matrix.Three_D.default;
-                    do_fs = false;
-                    current_tcm_file = "";
-                    current_fs = [];
-                }
         | Ignore_files files ->
                 (* Load a file containing a list of taxa to be ignored in the
                 * analysis *)
@@ -467,7 +450,9 @@ let guess_class_and_add_file is_prealigned data filename =
             | Parser.Is_XML | Parser.Is_NewSeq ->
                     let data = add_file [Data.Characters] in
                     file_type_message "input@ sequences";
-                    Data.process_molecular_file is_prealigned `Seq data filename
+                    Data.process_molecular_file "Default" 
+                    Cost_matrix.Two_D.default Cost_matrix.Three_D.default 
+                    false Alphabet.nucleotides is_prealigned `Seq data filename
             | Parser.Is_Phylip | Parser.Is_Hennig -> 
                     let data = add_file [Data.Characters; Data.Trees] in
                     file_type_message "hennig86/Nona";
@@ -479,10 +464,6 @@ let guess_class_and_add_file is_prealigned data filename =
                     let fn = FileStream.filename filename in
                     let converted = Parser.SC.of_old_parser fn None parsed in
                     Data.add_static_parsed_file data fn converted
-            | Parser.Is_Transformation_Cost_Matrix ->
-                    let data = add_file [Data.CostMatrix] in
-                    file_type_message "Transformation@ Cost@ Matrix";
-                    Data.process_tcm data filename
             | Parser.Is_Fixed_States_Dictionary ->
                     let data = add_file [] in
                     file_type_message "Fixed@ States@ Dictionary";
@@ -504,7 +485,10 @@ let guess_class_and_add_file is_prealigned data filename =
                         Data.CostMatrix] 
                     in
                     file_type_message "input@ sequences@ (default)";
-                    Data.process_molecular_file false `Seq data filename
+                    Data.process_molecular_file 
+                    "Default"
+                    Cost_matrix.Two_D.default Cost_matrix.Three_D.default
+                    false Alphabet.nucleotides false `Seq data filename
             | Parser.Is_ComplexTerminals ->
                     let data = add_file [Data.Characters] in
                     file_type_message "Complex@ terminals@ definition@ file";

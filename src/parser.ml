@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2103 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2110 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -84,7 +84,6 @@ type ft =
     | Is_NewSeq 
     | Is_Dictionary
     | Is_Fixed_States_Dictionary
-    | Is_Transformation_Cost_Matrix
     | Is_Phylip
     | Is_Unknown 
     | Is_Trees
@@ -138,8 +137,6 @@ let test_file file =
     else if anywhere_match (Str.regexp "dpread") line then Is_Dpread
     else if anywhere_match poy_file_regex line then
         Is_Poy
-    else if anywhere_match (Str.regexp "^\\([0-9]+\\s*\\)+") line then
-        Is_Transformation_Cost_Matrix
     else if anywhere_match (Str.regexp "^>") line then 
         begin
             if anywhere_match (Str.regexp "[a-zA-Z]") line2 then
@@ -391,6 +388,9 @@ module Fasta = struct
 
     let of_channel t ch =
         of_channel_obj t (new FileStream.stream_reader ch)
+
+    let of_string t str =
+        of_channel_obj t (new FileStream.string_reader str)
 
     let output ch alp (seq, name) = 
         let str = Sequence.to_string seq alp in
@@ -2310,8 +2310,9 @@ module SC = struct
     type static_state = int list option
 
     type file_output =
-        (string option array * static_spec array * 
-        static_state array array * string Tree.t list list)
+        (string option array * static_spec array * static_state array array * 
+        string Tree.t list list * 
+        ((Alphabet.a * (Sequence.s list list list * taxon) list) list))
 
     let st_type_to_string = function
         | STOrdered -> "Additive"
@@ -2475,12 +2476,12 @@ module SC = struct
             (function Nexus.MatchChar x -> Some x | _ -> assert false)
             None
 
+        let get_datatype = 
+            get_something (function Nexus.Datatype x -> true | _ -> false)
+            (function Nexus.Datatype x -> x | _ -> assert false) 
+            Nexus.DStandard
+
         let make_symbol_alphabet gap symbols form =
-            let get_datatype = 
-                get_something (function Nexus.Datatype x -> true | _ -> false)
-                (function Nexus.Datatype x -> x | _ -> assert false) 
-                Nexus.DStandard
-            in
             match get_datatype form with
             | Nexus.Protein ->
                     Alphabet.list_to_a
@@ -2868,7 +2869,7 @@ module SC = struct
             Array.append taxa (Array.of_list new_taxa)
 
         let add_prealigned_characters file chars 
-        (txn_cntr, char_cntr, taxa, characters, matrix, trees) =
+        (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned) =
             let form = chars.Nexus.char_format in
             let start_position = !char_cntr in
             let taxa = 
@@ -3000,7 +3001,7 @@ module SC = struct
                         process_range x
             in
             (* Move on, we are done with this block *)
-            (txn_cntr, char_cntr, taxa, characters, matrix, trees)
+            (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned)
 
         let rec apply_on_character_set characters f x =
             let last = (Array.length characters) - 1 in
@@ -3088,8 +3089,8 @@ module SC = struct
             in 
             { character with st_type = STSankoff cost_matrix }
 
-        let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, matrix,
-        trees) item =
+        let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, 
+        matrix, trees, unaligned) item =
             match item with
             | Nexus.Options (default, polytcount, gapmode) ->
                     let _ =
@@ -3272,7 +3273,8 @@ module SC = struct
             [translate_branch tree]
 
         let process_parsed file 
-        ((txn_cntr, char_cntr, taxa, characters, matrix, trees) as acc) parsed =
+        ((txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned) as acc) 
+        parsed =
             match parsed with
             | Nexus.Taxa (number, taxa_list) ->
                     let cnt = int_of_string number in
@@ -3282,10 +3284,12 @@ module SC = struct
                             "not match the DIMENSIONS value of the TAXA block")
                         else add_all_taxa txn_cntr taxa taxa_list
                     in
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees)
+                    (txn_cntr, char_cntr, taxa, characters, matrix, trees,
+                    unaligned)
             | Nexus.Characters chars -> 
                     add_prealigned_characters file chars 
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees)
+                    (txn_cntr, char_cntr, taxa, characters, matrix, trees,
+                    unaligned)
             | Nexus.Ignore _ -> acc
             | Nexus.Error block ->
                     Status.user_message Status.Error
@@ -3303,8 +3307,30 @@ module SC = struct
                     in
                     let newtrees = List.map handle_tree newtrees in
                     (txn_cntr, char_cntr, taxa, characters, matrix, trees @
-                    newtrees)
-
+                    newtrees, unaligned)
+            | Nexus.Unaligned data ->
+                    let char_spec = 
+                        default_static char_cntr file data.Nexus.unal_format 0
+                    in
+                    let unal = 
+                        Str.global_replace (Str.regexp ",[ \t\n]*") "\n>"
+                        data.Nexus.unal
+                    in
+                    let alph = 
+                        (* We override whatever choice for the unaligned
+                        * sequences alphabet is, if we are dealing with our
+                        * core, known, alphabets *)
+                        match get_datatype data.Nexus.unal_format with
+                        | Nexus.Dna | Nexus.Rna | Nexus.Nucleotide ->
+                                Alphabet.nucleotides
+                        | Nexus.Protein -> Alphabet.aminoacids
+                        | Nexus.DStandard -> char_spec.st_alph
+                        | Nexus.Continuous -> 
+                                failwith "POY can't handle continuous types"
+                    in
+                    let res = Fasta.of_string (AlphSeq alph) unal in
+                    (txn_cntr, char_cntr, taxa, characters, matrix, trees, 
+                    ((alph, res) :: unaligned))
             | _ -> acc
 
         let of_channel ch file =
@@ -3327,11 +3353,11 @@ module SC = struct
             and taxa = [||]
             and characters = [||] 
             and matrix = [||] in
-            let _, _, taxa, characters, matrix, trees =
+            let _, _, taxa, characters, matrix, trees, unaligned =
                 List.fold_left (process_parsed file) 
-                (txn_cntr, char_cntr, taxa, characters, matrix, []) parsed
+                (txn_cntr, char_cntr, taxa, characters, matrix, [], []) parsed
             in
-            taxa, characters, matrix, trees
+            taxa, characters, matrix, trees, unaligned
 
     end
 
@@ -3519,7 +3545,7 @@ module SC = struct
             in
             let _, a, b, c, d = List.fold_left (process_command file) (None,
             [||], [||], [||], []) parsed in
-            a, b, c, d
+            a, b, c, d, []
 
     end
 
@@ -3610,9 +3636,9 @@ module SC = struct
                     of_old_atom new_specs.(y) specs.(y) data.(x).(y)))
         in
         Nexus.fill_observed new_specs new_data;
-        taxa, new_specs, new_data, trees
+        taxa, new_specs, new_data, trees, []
 
-    let fill_observed (taxa, specs, data, trees) =
+    let fill_observed (taxa, specs, data, trees, unaligned) =
         Nexus.fill_observed specs data
 
 

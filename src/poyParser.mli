@@ -65,9 +65,6 @@ type spec =
     | Character of string * ufuncs list * spec option
         (** A character specification, with [(name, functions, function
             * probabilit)]. *)
-    | Dna_Sequences of (filename list * (Data.dynhom_opts list option)) list
-        (** A dna sequence dataset specification with [(files to be loaded,
-        * options applied to the files being loaded)]. *)
     | Protein_Sequences of (filename list * (Data.dynhom_opts list option)) list
         (** A protein sequence dataset defined in the same way as Dna_Sequences.
         * *)
