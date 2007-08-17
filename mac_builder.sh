@@ -51,13 +51,13 @@ function panther_distribution {
     rm -f ./panther/seq_poy_panther.command
     rm -f ./panther/ncurses_poy_panther.command
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
-        "--enable-interface=html" ./panther/seq_poy_panther.command \
+        "--enable-xslt --enable-interface=html" ./panther/seq_poy_panther.command \
         ${OCAML_PATH}/panther/bin "" gcc ""; then
         exit 1
     fi
 
     if ! generate_binary /Developer/SDKs/MacOSX10.3.9.sdk ppc \
-        "--enable-interface=ncurses" ./panther/ncurses_poy_panther.command \
+        "--enable-xslt --enable-interface=ncurses" ./panther/ncurses_poy_panther.command \
         ${OCAML_PATH}/panther/bin  "" gcc ""; then
         exit 1
     fi
@@ -82,28 +82,28 @@ function make_universals {
 }
 
 function tiger_distribution {
-    if ! generate_ppc "--enable-interface=html" gcc seq_poy_ppc ""; then
+    if ! generate_ppc "--enable-xslt --enable-interface=html" gcc seq_poy_ppc ""; then
         exit 1
     fi
 
-    if ! generate_ppc "--enable-interface=ncurses" gcc ncurses_poy_ppc ""; then
+    if ! generate_ppc "--enable-xslt --enable-interface=ncurses" gcc ncurses_poy_ppc ""; then
         exit 1
     fi
 
-    if ! generate_ppc "--enable-interface=html --enable-mpi=mpich" \
+    if ! generate_ppc "--enable-xslt --enable-interface=html --enable-mpi=mpich" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc ""; then 
         exit 1
     fi
 
-    if ! generate_intel "--enable-interface=html" gcc seq_poy_intel ""; then
+    if ! generate_intel "--enable-xslt --enable-interface=html" gcc seq_poy_intel ""; then
         exit 1
     fi
 
-    if ! generate_intel "--enable-interface=ncurses" gcc ncurses_poy_intel ""; then
+    if ! generate_intel "--enable-xslt --enable-interface=ncurses" gcc ncurses_poy_intel ""; then
         exit 1
     fi
 
-    if ! generate_intel "--enable-interface=html --enable-mpi=mpich" \
+    if ! generate_intel "--enable-xslt --enable-interface=html --enable-mpi=mpich" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc \
         par_poy_intel ""; then
         exit 1

@@ -24,6 +24,7 @@ AC_SUBST(USESHAREDHD)
 AC_SUBST(USEPARALLEL)
 AC_SUBST(USE_LONG_SEQUENCES)
 AC_SUBST(USE_LARGE_ALPHABETS)
+AC_SUBST(USE_XSLT)
 AC_SUBST(MPILNAME)
 AC_SUBST(OCAML)
 AC_SUBST(OCAMLC)
@@ -58,6 +59,11 @@ AC_ARG_ENABLE([long-sequences], [AS_HELP_STRING([--enable-long-sequences],
               [USE_LONG_SEQUENCES=true], 
               [USE_LONG_SEQUENCES=false])
 
+AC_ARG_ENABLE([xslt], [AS_HELP_STRING([--enable-xslt],
+              [Enable the postprocessing of XML output using XSLT templates.  This option requires libxml2.])],
+               [USE_XSLT=true],
+               [USE_XSLT=false])
+
 AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
               [Enable the analysis of alphabets larger than 255 elements. When using this option, more memory will be needed to store each tree (4 or 8 times more for 32 and 64 bit computers respectively). This option is only needed for large alphabets if you use custom alphabets. Normal nucleotide, aminoacid, or morphological analyses are nor affected by this option.])],
               [USE_LARGE_ALPHABETS=true],
@@ -69,6 +75,29 @@ AS_IF([test $USEINTERFACE = "ncurses"],
       [AS_IF([test $INTERFACE_SELECTED = "true"], 
              [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or configure with --enable-interface=readline interface. See ./configure --help for more information.])], 
              [USEINTERFACE="readline"])])],[])
+
+
+# Time to verify if we can compile with xslt
+AC_ARG_WITH(xslt-config, [Select a different xslt-config program to detect the configuration options of libxslt.],
+            [XSLT_CONFIG=$withval], [AC_CHECK_PROGS([XSLT_CONFIG],
+                                                    [xslt-config])])
+
+oLIBS="$LIBS"
+NEWLIBS="`$XSLT_CONFIG --libs`"
+LIBS="$LIBS $NEWLIBS"
+oFLAGS="$CFLAGS"
+CFLAGS="`$XSLT_CONFIG --cflags` $CFLAGS"
+AS_IF([test $USE_XSLT = "true"],
+      [AC_CHECK_LIB([xml2], [xmlCreatePushParserCtxt], [
+       CFLAGS="$CFLAGS `$XSLT_CONFIG --cflags`"
+       AC_DEFINE(HAVE_XSLT)
+       USE_XSLT=true], [
+            LIBS="$oLIBS"
+            CFLAGS="$oFLAGS"
+            AC_WARN([I could not find XSLT. I will remove the its support.])
+        ])],[ LIBS="$oLIBS"
+             CFLAGS="$oFLAGS"
+             ])
 
 AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[LIBS="-ltermcap $LIBS"], [AC_CHECK_LIB([curses],[tgetent],[LIBS="-lcurses $LIBS"], [AC_CHECK_LIB([ncurses],[tgetent],[LIBS="-lncurses $LIBS"], [AC_MSG_FAILURE([The readline interface requires one of the following: termcap, curses, or ncurses.])])])])],[])
 

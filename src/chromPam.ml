@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 2006 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 2127 $"
 
 (** Chromosome parameters
  *
@@ -94,7 +94,7 @@ let chromPairAliPam_default = {
     k = 9; max_gap = 10; 
     sig_k = 12;
     sig_block_len = 100;
-    rearranged_len = 1000;
+    rearranged_len = 100;
     
     gap_opening_cost = 200;
     gap_ext_cost = 10;

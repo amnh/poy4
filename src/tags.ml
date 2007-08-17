@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 2103 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2127 $"
 
 type tag = string
 type value = tag
@@ -44,18 +44,19 @@ let to_xml fo item =
         fo (remove_non_alpha_numeric tag);
         fo " ";
         List.iter (output_attrs fo) attributes;
-        fo ">@\n";
+        fo ">@\n%!";
         begin match contents with
         | `String x -> 
               fo x; 
+              fo "@\n%!"
         | `Structured x ->
                 Sexpr.leaf_iter (to_xml fo) x;
         end;
-        fo ( " </" ^ (remove_non_alpha_numeric tag) ^ ">@\n")
+        fo ( " </" ^ (remove_non_alpha_numeric tag) ^ ">@\n%!")
     in
-    fo "@[<h>";
+    fo "";
     to_xml fo item;
-    fo "@]%!"
+    fo "%!"
 
 module Alphabet = struct
     let element = "Element"

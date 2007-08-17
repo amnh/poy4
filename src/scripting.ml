@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2110 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2127 $"
 
 module IntSet = All_sets.Integers
 
@@ -251,17 +251,20 @@ let load_data (meth : Methods.input) data nodes =
     let rec reader annotated is_prealigned data (meth : Methods.simple_input) = 
         match meth with
         | `Poyfile files ->
+
                 let files = PoyParser.explode_filenames files in
                 List.fold_left PoyParser.of_file data files
         | `AutoDetect files ->
+
                 let files = explode_filenames files in
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
                 List.fold_left 
-                (PoyParser.guess_class_and_add_file is_prealigned) 
+                    (PoyParser.guess_class_and_add_file annotated is_prealigned) 
                 data 
                 files
         | `Nucleotides files ->
+
                 let files = explode_filenames files in
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
@@ -271,12 +274,14 @@ let load_data (meth : Methods.input) data nodes =
                 annotated Alphabet.nucleotides is_prealigned `Seq d f) 
                 data files
         | `Chromosome files ->
+
                 List.fold_left (fun d f ->
                     Data.process_molecular_file "Default"
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides false `Chromosome d f) 
                 data (explode_filenames files)
         | `Genome files ->
+
                 let data = List.fold_left (fun d f ->
                     Data.process_molecular_file "Default"
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
@@ -285,6 +290,7 @@ let load_data (meth : Methods.input) data nodes =
                 in 
                 data
         | `Aminoacids files ->
+
                 let files = explode_filenames files in
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
@@ -296,6 +302,7 @@ let load_data (meth : Methods.input) data nodes =
                     annotated Alphabet.aminoacids is_prealigned `Seq d f) 
                 data files
         | `GeneralAlphabetSeq (seq, alph, read_options) ->
+
                 let orientation = 
                     not 
                     (List.mem (`Orientation false) read_options) 
@@ -311,6 +318,7 @@ let load_data (meth : Methods.input) data nodes =
                 Data.process_molecular_file 
                 tcmfile twod threed annotated alphabet is_prealigned `Seq data seq 
         | `Breakinv (seq, alph, read_options) ->
+
                 let orientation = 
                     not 
                     (List.mem (`Orientation false) read_options) 
@@ -326,10 +334,17 @@ let load_data (meth : Methods.input) data nodes =
         | `ComplexTerminals files ->
                 List.fold_left Data.process_complex_terminals data 
                 (explode_filenames files)
+
     and annotated_reader data (meth : Methods.input) =
         match meth with
-        | #Methods.simple_input as meth -> reader false false data meth
+        | `AnnotatedFiles files ->
+
+              List.fold_left (reader true false) data files
+        | #Methods.simple_input as meth -> 
+
+              reader false false data meth
         | `Prealigned (meth, tcm) ->
+
                 prealigned_files := [];
                 let data = reader false true data meth in
                 let files = List.flatten !prealigned_files in
@@ -347,8 +362,6 @@ let load_data (meth : Methods.input) data nodes =
                 in
                 Data.prealigned_characters ImpliedAlignment.analyze_tcm data
                 chars
-        | `AnnotatedFiles files ->
-                List.fold_left (reader true false) data files
     in
     let data = annotated_reader data meth in
     let data = Data.categorize (Data.remove_taxa_to_ignore data) in
@@ -1551,6 +1564,32 @@ let rec folder (run : r) meth =
                 (* Flush the formatter *)
                 Status.user_message (Status.Output (filename, false, [])) "%!"; 
                 run
+            | `Xslt (file, style) ->
+#ifdef USE_XSLT
+                    let filename, chout = Filename.open_temp_file "results" ".xml" in
+                    close_out chout;
+                    Status.user_message Status.Information 
+                    ("Generating xml file in " ^ filename);
+                    let ofilename = Some filename in
+                    let fmt = Data.to_formatter [] run.data in
+                    let trs = 
+                        Sexpr.map (TreeOps.to_formatter [] run.data)
+                        run.trees 
+                    in
+                    StatusCommon.Files.set_margin ofilename 0;
+                    Status.user_message (Status.Output (ofilename, false, []))
+                    " <Diagnosis>@\n";
+                    PoyFormaters.data_to_status ofilename fmt;
+                    Sexpr.leaf_iter (PoyFormaters.trees_to_formater ofilename [])
+                    trs;
+                    Status.user_message (Status.Output (ofilename, false, []))
+                    " </Diagnosis>@\n%!";
+                    Xslt.process filename style file;
+#else
+                    Status.user_message Status.Error 
+                    "This version of POY was not compiled with XSLT support.";
+#endif
+                    run
             | `Diagnosis filename ->                                    
                     let trees =                          
                         Sexpr.map (TreeOps.to_formatter [] run.data) run.trees  

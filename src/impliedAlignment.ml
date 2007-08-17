@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2103 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2127 $"
 
 exception NotASequence of int
 
@@ -1516,14 +1516,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                               
                               let ali_pos_ls = List.map 
                                   (fun ali_pos_mat -> 
-
-                                       for idx = 1 to Array.length ali_pos_mat - 1 do
-                                           (if ali_pos_mat.(idx).(0) = -1 then  
-                                               ali_pos_mat.(idx) <- 
-                                                   Array.sub ali_pos_mat.(idx) 1 
-                                                   (Array.length ali_pos_mat.(idx) - 1));
-                                       done;
-
                                        let pos_arr = Array.concat (Array.to_list ali_pos_mat) in
                                        pos_arr
                                   ) ali_pos_ls
@@ -1537,6 +1529,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                               let cur_pos_arr = Array.init num_taxa (fun ti -> alied_pos_mat.(ti).(0)) in 
 
                               for col = 1 to num_col - 1 do
+
                                   let continue = ref true in 
                                   for t = 0 to num_taxa - 1 do 
                                       let pre_pos = cur_pos_arr.(t) in 
@@ -1574,13 +1567,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                         | `Chromosome | `Genome ->
                                             let break_map = find_break_map () in 
 
-                                            for idx = 1 to (Array.length alied_seq) - 1 do
-                                                alied_seq.(idx) <- 
-                                                    Array.sub alied_seq.(idx) 1 (Array.length alied_seq.(idx) - 1)
-                                            done;
-
                                             let alied_seq = Array.concat (Array.to_list alied_seq) in
-
+                                            
+                                   
                                             let break_ls = Codes.find char_code break_map in 
                                             let seg_ls = Utl.break_array alied_seq break_ls in 
 

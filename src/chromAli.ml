@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 2033 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2127 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -362,9 +362,14 @@ let rec create_global_map (seq1 : Sequence.s) (seq2 : Sequence.s) cost_mat ali_p
         Seed.determine_seed seq1 seq2 ali_pam `BothDir
     in 
 
+    let ali_pam = {ali_pam with ChromPam.rearranged_len = 20} in 
     let pos_block_ls = Block.find_local_block pos_seed_ls ali_pam in
     let neg_block_ls = Block.find_local_block neg_seed_ls ali_pam in
-    
+(*    print_endline "Positive blocks";
+    List.iter Block.print pos_block_ls;
+    print_endline "Negative blocks";
+    List.iter Block.print neg_block_ls;
+*)    
 
     let min_pos2 = ali_pam.ChromPam.min_pos2 in 
     let max_pos2 = ali_pam.ChromPam.max_pos2 in
@@ -794,5 +799,6 @@ let test () =
             print_newline ();
         done
     done;
-    exit 1
+    failwith "Finish testing chromAli"
+        
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AddCS" "$Revision: 2060 $"
+let () = SadmanOutput.register "AddCS" "$Revision: 2127 $"
 
 (* Internal only exceptions *)
 exception Success
@@ -449,7 +449,8 @@ let to_formatter attr c parent d : Tags.output list =
             (Tags.Characters.name, 
             Data.code_character code d) ::
             (Tags.Characters.cost, string_of_float cost) ::
-                attr
+                (Tags.Characters.definite, if cost > 0.0 then "true" else
+                    "false") :: attr
         in
         let contents = `Set [
             `Single (Tags.Characters.min, [], 

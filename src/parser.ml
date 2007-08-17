@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2110 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2127 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2544,7 +2544,7 @@ module SC = struct
                     ("N", ["A"; "C"; "G"; "T"]);
                     ("X", ["A"; "C"; "G"; "T"])]
             | Nexus.DStandard ->
-                let cnt = ref 0 in
+                let cnt = ref (-1) in
                 let alph = List.map (fun x -> 
                     incr cnt;
                     x, !cnt, None) (symbols @ [gap])
@@ -3438,7 +3438,7 @@ module SC = struct
         let get_chars max chars = 
             List.flatten (List.map (fun char ->
                 let rec sequence a b acc =
-                    if a > b then acc
+                    if a > b || a >= max then acc
                     else sequence (a + 1) b (a :: acc)
                 in
                 match char with

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2103 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2127 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -329,16 +329,6 @@ module Files = struct
 
 
 
-    let set_margin filename margin = 
-        match filename with
-        | None -> ()
-        | Some filename ->
-              try 
-                  let _, fo = Hashtbl.find opened_files filename in  
-                  Format.pp_set_margin fo margin 
-              with Not_found -> ()
-
-
     let openf ?(mode = `Append) name fo_ls = 
         if Hashtbl.mem opened_files name then 
             let _, f = Hashtbl.find opened_files name in 
@@ -360,6 +350,14 @@ module Files = struct
             Hashtbl.add opened_files name (ch, f);
             f)
 
+    let set_margin filename margin = 
+        match filename with
+        | None -> ()
+        | Some filename ->
+                let _ = openf filename [Margin margin] in
+                ()
+
+
     let flush () = 
         Hashtbl.iter (fun _ (ch, f) -> 
             Format.pp_print_flush f ();
@@ -373,8 +371,17 @@ module Files = struct
             close_out ch)
         else ()
 
+    let rec channel name =
+        if Hashtbl.mem opened_files name then
+            let ch, _ = Hashtbl.find opened_files name in
+            ch
+        else 
+            let _ = openf name [] in
+            channel name
+
     let _ = 
-        at_exit close_all_opened_files;
+        at_exit close_all_opened_files
+
 end
 
 module Tables = struct

@@ -34,6 +34,7 @@ USE_LARGE_ALPHABETS := @USE_LARGE_ALPHABETS@
 USEINTERFACE := @USEINTERFACE@
 USEGRAPHICS := @USEGRAPHICS@
 USESHAREDHD := @USESHAREDHD@
+USE_XSLT := @USE_XSLT@
 MPILNAME := @MPILNAME@
 OCAML := @OCAML@
 OCAMLC := @OCAMLC@
@@ -60,7 +61,13 @@ endif
 
 -include $(PWD)/$(DEPEND)
 
-GRAPHICS :=
+DEFOPTS :=
+XSLT_COMPONENTS :=
+ifeq ($(USE_XSLT), true)
+	XSLT_COMPONENTS := mlxslt.o xslt.cmo
+	DEFOPTS := -DUSE_XSLT $(DEFOPTS)
+endif
+
 ifeq ($(USEINTERFACE), ncurses)
 	INTERFACE = status_ncurses.cma 
 endif
@@ -106,7 +113,6 @@ PREPROCESSOR = -pp 'camlp4orf pa_extend.cmo'
 
 
 # Encapsulate all the options
-DEFOPTS :=
 ifeq ($(USEPARALLEL), true)
 	DEFOPTS := $(DEFOPTS) -DUSEPARALLEL
 ifeq ($(USENOSHAREDHD), true)
@@ -226,13 +232,14 @@ ifeq ($(USEWIN32), false)
 	GETRUSAGE := getrusage.o
 endif
 
-BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
+BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) \
+	compileFlags.cmo buildNumber.cmo \
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
 	array_ops.cmo $(PARSER) distances.cma \
-	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) methods.cmo trees.cma \
-	diagnosis.cmo supports.cmo help.cmo helpIndex.cmo \
-	analyzer.cmo poyCommand.cmo poyFile.cmo scripting.cmo 
+	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) \
+	methods.cmo trees.cma diagnosis.cmo supports.cmo help.cmo helpIndex.cmo \
+	analyzer.cmo poyCommand.cmo poyFile.cmo $(XSLT_COMPONENTS) scripting.cmo 
 
 MAIN_OBJS = $(BASE_OBJS) arguments.cmo compileFlags.cmo main.cmo
 

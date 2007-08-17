@@ -311,7 +311,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC OBJEXT TMP_CC USEGRAPHICS USEINTERFACE USESHAREDHD USEPARALLEL USE_LONG_SEQUENCES USE_LARGE_ALPHABETS MPILNAME OCAML OCAMLC OCAMLOPT OCAMLDEP OCAMLTOP OCAMLLEX OCAMLYACC OCAMLFLAGS CPP EGREP LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC OBJEXT TMP_CC USEGRAPHICS USEINTERFACE USESHAREDHD USEPARALLEL USE_LONG_SEQUENCES USE_LARGE_ALPHABETS USE_XSLT MPILNAME OCAML OCAMLC OCAMLOPT OCAMLDEP OCAMLTOP OCAMLLEX OCAMLYACC OCAMLFLAGS XSLT_CONFIG CPP EGREP LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -861,6 +861,8 @@ Optional Features:
                           default search strategies. If you are analyzing
                           fragments shorted than, say 12.000 bp, you are
                           unlikely to need this option.
+  --enable-xslt           Enable the postprocessing of XML output using XSLT
+                          templates. This option requires libxml2.
   --enable-large-alphabets
                           Enable the analysis of alphabets larger than 255
                           elements. When using this option, more memory will
@@ -870,6 +872,11 @@ Optional Features:
                           alphabets. Normal nucleotide, aminoacid, or
                           morphological analyses are nor affected by this
                           option.
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+Select a different xslt-config program to detect the configuration options of libxslt.
 
 Some influential environment variables:
   CC          C compiler command
@@ -2203,6 +2210,7 @@ fi
 
 
 
+
 INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
 # Check whether --enable-graphics or --disable-graphics was given.
@@ -2243,6 +2251,14 @@ if test "${enable_long_sequences+set}" = set; then
   USE_LONG_SEQUENCES=true
 else
   USE_LONG_SEQUENCES=false
+fi;
+
+# Check whether --enable-xslt or --disable-xslt was given.
+if test "${enable_xslt+set}" = set; then
+  enableval="$enable_xslt"
+  USE_XSLT=true
+else
+  USE_XSLT=false
 fi;
 
 # Check whether --enable-large-alphabets or --disable-large-alphabets was given.
@@ -2337,6 +2353,150 @@ else
 fi
 
 fi
+
+fi
+
+
+
+# Time to verify if we can compile with xslt
+
+# Check whether --with-xslt-config or --without-xslt-config was given.
+if test "${with_xslt_config+set}" = set; then
+  withval="$with_xslt_config"
+  XSLT_CONFIG=$withval
+else
+  for ac_prog in xslt-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_XSLT_CONFIG+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$XSLT_CONFIG"; then
+  ac_cv_prog_XSLT_CONFIG="$XSLT_CONFIG" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_XSLT_CONFIG="$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+XSLT_CONFIG=$ac_cv_prog_XSLT_CONFIG
+if test -n "$XSLT_CONFIG"; then
+  echo "$as_me:$LINENO: result: $XSLT_CONFIG" >&5
+echo "${ECHO_T}$XSLT_CONFIG" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+  test -n "$XSLT_CONFIG" && break
+done
+
+fi;
+
+oLIBS="$LIBS"
+NEWLIBS="`$XSLT_CONFIG --libs`"
+LIBS="$LIBS $NEWLIBS"
+oFLAGS="$CFLAGS"
+CFLAGS="`$XSLT_CONFIG --cflags` $CFLAGS"
+if test $USE_XSLT = "true"; then
+  echo "$as_me:$LINENO: checking for xmlCreatePushParserCtxt in -lxml2" >&5
+echo $ECHO_N "checking for xmlCreatePushParserCtxt in -lxml2... $ECHO_C" >&6
+if test "${ac_cv_lib_xml2_xmlCreatePushParserCtxt+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lxml2  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char xmlCreatePushParserCtxt ();
+int
+main ()
+{
+xmlCreatePushParserCtxt ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_xml2_xmlCreatePushParserCtxt=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_xml2_xmlCreatePushParserCtxt=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_xml2_xmlCreatePushParserCtxt" >&5
+echo "${ECHO_T}$ac_cv_lib_xml2_xmlCreatePushParserCtxt" >&6
+if test $ac_cv_lib_xml2_xmlCreatePushParserCtxt = yes; then
+
+       CFLAGS="$CFLAGS `$XSLT_CONFIG --cflags`"
+       cat >>confdefs.h <<\_ACEOF
+#define HAVE_XSLT 1
+_ACEOF
+
+       USE_XSLT=true
+else
+
+            LIBS="$oLIBS"
+            CFLAGS="$oFLAGS"
+            { echo "$as_me:$LINENO: WARNING: I could not find XSLT. I will remove the its support." >&5
+echo "$as_me: WARNING: I could not find XSLT. I will remove the its support." >&2;}
+
+fi
+
+else
+   LIBS="$oLIBS"
+             CFLAGS="$oFLAGS"
 
 fi
 
@@ -6069,6 +6229,7 @@ s,@USESHAREDHD@,$USESHAREDHD,;t t
 s,@USEPARALLEL@,$USEPARALLEL,;t t
 s,@USE_LONG_SEQUENCES@,$USE_LONG_SEQUENCES,;t t
 s,@USE_LARGE_ALPHABETS@,$USE_LARGE_ALPHABETS,;t t
+s,@USE_XSLT@,$USE_XSLT,;t t
 s,@MPILNAME@,$MPILNAME,;t t
 s,@OCAML@,$OCAML,;t t
 s,@OCAMLC@,$OCAMLC,;t t
@@ -6078,6 +6239,7 @@ s,@OCAMLTOP@,$OCAMLTOP,;t t
 s,@OCAMLLEX@,$OCAMLLEX,;t t
 s,@OCAMLYACC@,$OCAMLYACC,;t t
 s,@OCAMLFLAGS@,$OCAMLFLAGS,;t t
+s,@XSLT_CONFIG@,$XSLT_CONFIG,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t

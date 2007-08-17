@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2049 2007-08-06 19:06:02Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2049 $"
+(* $Id: nonaddCS.ml 2127 2007-08-17 15:19:15Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2127 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -239,6 +239,8 @@ let to_formatter attrs c parent d : Tags.output list =
         let attributes =  
             (Tags.Characters.name, (Data.code_character code d)) :: 
                 (Tags.Characters.cost, string_of_float cost) ::  
+                    (Tags.Characters.definite, if cost > 0.0 then "true" else
+                        "false") ::
                 attrs 
         in 
         let to_sexp = fun x -> 

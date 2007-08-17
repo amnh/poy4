@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2110 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2127 $"
 
 open StdLabels
 
@@ -413,7 +413,7 @@ let of_file data file =
 let set_character_weight data (c, w) = Data.transform_weight (`ReWeight (`Some
 (true, [c]), w)) data
 
-let guess_class_and_add_file is_prealigned data filename =
+let guess_class_and_add_file annotated is_prealigned data filename =
     if Data.file_exists data filename then
         let _ =
             let filename = FileStream.filename filename in
@@ -452,7 +452,7 @@ let guess_class_and_add_file is_prealigned data filename =
                     file_type_message "input@ sequences";
                     Data.process_molecular_file "Default" 
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default 
-                    false Alphabet.nucleotides is_prealigned `Seq data filename
+                    annotated Alphabet.nucleotides is_prealigned `Seq data filename
             | Parser.Is_Phylip | Parser.Is_Hennig -> 
                     let data = add_file [Data.Characters; Data.Trees] in
                     file_type_message "hennig86/Nona";
@@ -488,7 +488,7 @@ let guess_class_and_add_file is_prealigned data filename =
                     Data.process_molecular_file 
                     "Default"
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
-                    false Alphabet.nucleotides false `Seq data filename
+                    annotated Alphabet.nucleotides false `Seq data filename
             | Parser.Is_ComplexTerminals ->
                     let data = add_file [Data.Characters] in
                     file_type_message "Complex@ terminals@ definition@ file";

@@ -325,6 +325,10 @@ let dependency_relations (init : Methods.script) =
                 | `CrossReferences (_, filename) ->
                         let fn = filename_to_list filename in
                         [(data, fn, init, Invariant)], filename, false
+                | `Xslt (filename, _) ->
+                        let filename = Some filename in
+                        let fn = filename_to_list filename in
+                        [(data, fn, init, Invariant)], filename, false
                 | `GraphicSupports (suppoutput, filename)
                 | `Supports (suppoutput, filename) ->
                         let fn = filename_to_list filename in
@@ -1451,6 +1455,8 @@ let script_to_string (init : Methods.script) =
                         "@[report the phastwinclad file@]"
                 | `Dataset _ ->
                         "@[report the current data under analysis@]"
+                | `Xslt _ ->
+                        "@[report the current data and trees under analysis@]"
                 | `Nodes _ ->
                         ""
                 | `TerminalsFiles _ ->
@@ -1691,6 +1697,7 @@ let is_master_only (init : Methods.script) =
     | `Logfile _ 
     | `SetSeed _ 
     | `Dataset _
+    | `Xslt _
     | `Nodes _
     | `TerminalsFiles _
     | `CrossReferences (_, _)

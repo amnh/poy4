@@ -247,6 +247,7 @@ type charoper = [
 type reporta = [
     | `File of string
     | `Data
+    | `Xslt of (string * string)
     | `Ascii of bool
     | `Memory
     | `Graph of bool
@@ -651,6 +652,7 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
     match item with
     | `File x -> (acc, Some x)
     | `Data -> (`Dataset file) :: acc, file
+    | `Xslt x -> (`Xslt x) :: acc, file
     | `Ascii x -> (`Ascii (file, x)) :: acc, file
     | `Memory -> (`Memory file) :: acc, file
     | `Graph x -> 
@@ -1156,6 +1158,8 @@ let create_expr () =
                     `GraphicSupports y ] |
                 [ LIDENT "diagnosis" -> `Diagnosis ] |
                 [ LIDENT "data" -> `Data ] |
+                [ LIDENT "xslt"; ":"; "("; a = STRING; ","; b = STRING; ")" ->
+                    `Xslt (a, b) ] |
                 [ LIDENT "implied_alignments"; ":"; x = identifiers ->
                     `Implied_Alignments x ] |
                 [ LIDENT "all_roots" -> `AllRootsCost ] |

@@ -95,6 +95,6 @@ val of_file : Data.d -> string -> Data.d
 * The output is valid input for [process_tree]. *)
 val of_channel : Pervasives.in_channel -> spec list
 
-val guess_class_and_add_file : bool -> Data.d -> Parser.filename -> Data.d
+val guess_class_and_add_file : bool -> bool -> Data.d -> Parser.filename -> Data.d
 
 val explode_filenames : [`Local of string | `Remote of string ] list -> string list

@@ -28,7 +28,7 @@
  * handle unrooted trees for this kind of operations (remember the tree module has
  * a handle for "Unrooted" trees, meaning that we can safely keep this meaning
  * properly. *)
-let () = SadmanOutput.register "SankCS" "$Revision: 2049 $"
+let () = SadmanOutput.register "SankCS" "$Revision: 2127 $"
 
 
 type cost =
@@ -484,7 +484,9 @@ let elt_to_formatter attr d tcm elt elt_parent : Tags.output =
     let attributes = 
         let cost = elt_distance tcm elt elt_parent in
         (Tags.Characters.name, (Data.code_character elt.ecode d)) ::
-        (Tags.Characters.cost, string_of_float cost) :: attr
+        (Tags.Characters.cost, string_of_float cost) :: 
+        (Tags.Characters.definite, if cost > 0. then "true" else "false") :: 
+            attr
     in
     let create = fun x ->
         `Single (Tags.Characters.value, [], `String x)
