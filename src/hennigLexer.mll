@@ -69,7 +69,11 @@ and characters_names = parse
 and raw = parse
      [^ ';']* as d      { DATA d }
 and rawtree = parse
-     [^ ';']* as d      { TREES d }
+      [ ' ' '\t' '\n' '\010' '\013' '\012' ]    { rawtree lexbuf }
+    | [ '\'' ]  { ignore_quote2 lexbuf }
+    | [^ '\'' ';']* as d      { TREES d }
+and ignore_quote2 = parse
+    | [^ '\'']+['\'']   { rawtree lexbuf }
 and ignore_quote = parse
     | [^ '\'']+['\'']   { xread lexbuf }
 and xread = parse 

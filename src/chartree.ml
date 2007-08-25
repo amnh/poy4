@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 2013 2007-07-27 20:25:21Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 2013 $"
+(* $Id: chartree.ml 2145 2007-08-25 16:28:42Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 2145 $"
 
 
 (** chartree.ml *)
@@ -166,8 +166,7 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
     let get_parent myid id tree =
         match !virt_root with
         | Some (`Edge (rid, rchid), rnode) ->
-              if rid = id && rchid = myid
-              then rnode
+              if rid = id && rchid = myid then rnode
               else Ptree.get_node_data id tree
         | None -> failwith "Out-of-sequence uppass"
         | Some (`Single node, rnode) ->
@@ -190,17 +189,10 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
                              Ptree.get_node_data selfid ptree in
                          let otherdata =
                              Ptree.get_node_data otherid ptree in
-                         
                          let median3 =
-                             Node.median_3
-                                 otherdata
-                                 mydata
-                                 mydata
-                                 mydata 
+                             Node.median_3 otherdata mydata mydata mydata 
                          in
-                         let ptree =
-                             Ptree.add_node_data selfid median3 ptree in
-                         
+                         let ptree = Ptree.add_node_data selfid median3 ptree in
                          (Tree.Continue, ptree) (* OTU *)
                    | None -> begin
                          (* We're dealing with a handle node that's also a leaf.
@@ -213,15 +205,11 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
                              Node.Standard.median None None None mydata otherdata in
                          virt_root := Some (`Edge (selfid, otherid), root_prelim);
                          let tree_cost = Node.Standard.root_cost root_prelim in
-
                          if debug_uppass_which_handle
                          then odebug "uppass: handle is leaf";
                          let mydata =
-                             Node.median_3
-                                 root_prelim
-                                 mydata
-                                 mydata
-                                 mydata in
+                             Node.median_3 root_prelim mydata mydata mydata 
+                         in
                          let ptree = Ptree.add_node_data selfid mydata ptree in
                          let ptree = 
                              Ptree.set_component_cost tree_cost None
@@ -241,32 +229,25 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
                          let pardata = get_node ch1id ptree in
                          let ch1data = get_node ch2id ptree in
                          let ch2data = get_node ch3id ptree in
-
                          if debug_uppass_which_handle
                          then odebug "uppass: handle is internal";
-
                          let root_prelim =
                              Node.Standard.median None None None mydata pardata in
                          let tree_cost = Node.Standard.root_cost root_prelim in
-
                          virt_root := Some (`Edge (nid, ch1id), root_prelim);
-
                          let median3 = Node.median_3
                              root_prelim
                              mydata
                              ch1data
                              ch2data   in
-
                          let ptree =
                              Ptree.add_node_data nid median3 ptree in
-
                          let ptree = 
                              Ptree.set_component_cost tree_cost None !virt_root 
                              self_id ptree
                          in
                          (Tree.Continue, ptree)
                      end
-
                    | Some parent_id -> begin
                          (* We should treat the case of the node which is the
                             handle's parent separately; we now do this. *)
@@ -278,13 +259,11 @@ let uppass_handle handle ({Ptree.tree=tree} as ptree) =
                          let pardata = get_parent nid parent_id ptree in
                          let ch1data = get_node ch1id ptree in
                          let ch2data = get_node ch2id ptree in
-
                          let median3 = Node.median_3
                              pardata
                              mydata
                              ch1data
                              ch2data in
-
                              (Tree.Continue,
                               Ptree.add_node_data nid median3 ptree)
                      end)
@@ -1148,38 +1127,31 @@ let rec get_active_ref_code_node tree node_id =
           let pre, _, fi, _ = Node.get_active_ref_code node_data in 
           pre, fi
 
-    
-
 let get_active_ref_code tree = 
-
     let handles = All_sets.Integers.elements tree.Ptree.tree.Tree.handles in
-    let pre_act, fi_act = List.fold_left 
+    let pre_act, fi_act = List.fold_left
         (fun (acc_pre_act, acc_fi_act) handle_id ->
-             let pre, fi = 
+             let pre, fi =
                  match Ptree.get_node handle_id tree with
-                 | Tree.Interior (_, parent, _, _) 
+                 | Tree.Interior (_, parent, _, _)
                  | Tree.Leaf (_, parent) ->
-                       let pre, fi = get_active_ref_code_node tree handle_id in  
-                       let pre2, fi2 = get_active_ref_code_node tree parent in  
-                       IntSet.union pre pre2, IntSet.union fi fi2 
+                       let pre, fi = get_active_ref_code_node tree handle_id in
+                       let pre2, fi2 = get_active_ref_code_node tree parent in
+                       IntSet.union pre pre2, IntSet.union fi fi2
                  | Tree.Single _ -> IntSet.empty, IntSet.empty
-             in 
-
-             let fi = IntSet.filter   
-                 (fun fi_code -> not (IntSet.mem fi_code pre)  
-                 ) fi   
-             in   
-
-             let root = Ptree.get_component_root handle_id tree in              
+             in
+             let fi = IntSet.filter (fun fi_code -> not (IntSet.mem fi_code pre)) fi
+             in
+             let root = Ptree.get_component_root handle_id tree in
              match root.Ptree.root_median with  
              | None -> pre, fi 
              | Some (_, root_data) ->  
-                   let r_pre, r_pre_child, r_fi, _ = Node.get_active_ref_code root_data in 
+                   let r_pre, r_pre_child, r_fi, _ = 
+                       Node.get_active_ref_code root_data 
+                   in
                    IntSet.union (IntSet.union pre r_pre_child) r_pre,
-                   IntSet.union fi r_fi                   
-        ) (IntSet.empty, IntSet.empty) handles
+                   IntSet.union fi r_fi) (IntSet.empty, IntSet.empty) handles
     in 
-
     pre_act, fi_act
 
 
@@ -1193,13 +1165,10 @@ let rec subtree_to_formatter (pre_ref_codes, fi_ref_codes)
             let node_data = Ptree.get_node_data node_id tree
             and child1_node_data = Ptree.get_node_data c1 tree
             and child2_node_data = Ptree.get_node_data c2 tree
-            and parent_node_data, single_parent  = 
-                match parent_data with 
-                | Some root_data -> root_data
-                | None -> failwith "How can we have none here?"
-            in                     
+            and parent_node_data, single_parent  = Utl.deref parent_data 
+            in 
             let my_single_assignment = Node.to_single (pre_ref_codes, fi_ref_codes) 
-                single_parent single_parent node_data 
+                None single_parent node_data 
             in
             (* We recursively call for the current vertex, then the two children
             * *)
@@ -1207,7 +1176,8 @@ let rec subtree_to_formatter (pre_ref_codes, fi_ref_codes)
                 try
                     let node_formatter = 
                         Node.to_formatter_subtree (pre_ref_codes, fi_ref_codes) [] 
-                        data node_data
+                        data (node_data, node_data (* TODO: possible bug, but
+                        this feature is not used  in this branch of the code *) )
                         node_id (c1, child1_node_data) (c2, child2_node_data)
                         (Some (parent_node_data, single_parent))
                     in
@@ -1234,7 +1204,7 @@ let rec subtree_to_formatter (pre_ref_codes, fi_ref_codes)
                     let node_formatter = 
                         Node.to_formatter_single
                         (pre_ref_codes, fi_ref_codes) []  
-                        data node_data node_id parent_data
+                        data (node_data, node_data (* TODO Bug *)) node_id parent_data
                     in
                     `Single node_formatter
                 with Not_found -> `Empty
@@ -1245,7 +1215,7 @@ let rec subtree_to_formatter (pre_ref_codes, fi_ref_codes)
               let node_data = Ptree.get_node_data node_id tree in 
               let node_formatter = 
                   Node.to_formatter_single (pre_ref_codes, fi_ref_codes) 
-                  [] data node_data node_id None 
+                  [] data (node_data, node_data (* TODO: Bug *)) node_id None 
               in
               `Single node_formatter
           in 
@@ -1263,23 +1233,17 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
                   | Some ((`Edge (handle_id, parent)), root) -> 
                           let handle_node_data = Ptree.get_node_data handle_id tree
                           and parent_node_data = Ptree.get_node_data parent tree in
-
                           let root_single = 
-                              Node.to_single ~is_root:true (pre_ref_codes, fi_ref_codes) 
-                                  root parent_node_data handle_node_data
+                              Node.to_single (pre_ref_codes, fi_ref_codes) 
+                                  (Some root) parent_node_data handle_node_data
                           in
-
                           let root_f = 
-                              Node.to_formatter_subtree ~is_root:true (pre_ref_codes, fi_ref_codes) 
-                                  [] data  root  handle_id (handle_id,  handle_node_data) 
-                                  (parent, parent_node_data) 
-                                  (Some (root_single, root_single))
+                              Node.to_formatter_subtree (pre_ref_codes, fi_ref_codes) 
+                                  [] data  (root, root_single (* TODO: Bug *))  handle_id (handle_id,  handle_node_data) 
+                                  (parent, parent_node_data) None
                           in 
-
                           root_f, Some (root_single, root_single)
-                  | _ -> 
-                          failwith "How is it possible we have no root?"
-                          (*(Tags.Nodes.node, [], `Structured `Empty)*)
+                  | _ -> failwith "How is it possible we have no root?"
               in               
               let handle_f = 
                   subtree_to_formatter (pre_ref_codes, fi_ref_codes) 
@@ -1292,11 +1256,10 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
               let c1 = `Single handle_f and c2 = `Single parent_f in 
               let root = `Single root_formatter in 
               `Structured (`Set [root; c1; c2])
-    
         | Tree.Single _ ->
                 let node_single = 
                     let nd = Ptree.get_node_data handle_id tree in
-                    Some (nd, Node.to_single (pre_ref_codes, fi_ref_codes) nd nd nd)
+                    Some (nd, Node.to_single (pre_ref_codes, fi_ref_codes) None nd nd)
                 in
                 let c1 = 
                     subtree_to_formatter (pre_ref_codes, fi_ref_codes) 
@@ -1309,10 +1272,10 @@ let handle_to_formatter (pre_ref_codes, fi_ref_codes)
     in
     (Tags.Trees.tree, attr, data)
 
-let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) 
-    atr data tree : Tags.output =
+let to_formatter atr data tree : Tags.output =
         (* We don't include the cost of the tree because it comes from the three
         * directional tree attributes. *)
+    let (pre_ref_codes, fi_ref_codes) = get_active_ref_code tree in
     let tag = Tags.Trees.forest in
     let handles = All_sets.Integers.elements tree.Ptree.tree.Tree.handles in
     let root_recost = ref 0. in 

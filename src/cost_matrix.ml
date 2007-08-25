@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2090 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2145 $"
 
 
 exception Illegal_Cm_Format;;
@@ -528,34 +528,35 @@ module Two_D = struct
         m
 
     let of_channel ?(orientation=false) ?(use_comb = true) ch =
-        let l = load_file_as_list ch in
-        let w = calculate_alphabet_size l in
-        let m = 
-            match orientation with 
-            | false ->
-                  fill_cost_matrix ~use_comb:use_comb l w 
-            | true ->
-                  let l_arr = Array.of_list l in          
-                  let w2 = w * 2 - 1 in  
-                  let l2 = ref [] in 
-                  for code1 = 1 to w2 do 
-                      for code2 = 1 to w2 do 
-                          let index = 
-                              ((((code1 + 1) / 2) - 1)  * w)  + 
-                              (((code2 + 1) / 2) - 1) in 
-                          l2 := l_arr.(index)::!l2 
-                      done;  
-                  done; 
-                  let l2 = List.rev !l2 in 
-                  fill_cost_matrix ~use_comb:use_comb l2 w2
-        in  
-        m;;
+        match load_file_as_list ch with
+        | [] -> failwith "No Alphabet"
+        | l ->
+                let w = calculate_alphabet_size l in
+                let m = 
+                    match orientation with 
+                    | false ->
+                          fill_cost_matrix ~use_comb:use_comb l w 
+                    | true ->
+                          let l_arr = Array.of_list l in          
+                          let w2 = w * 2 - 1 in  
+                          let l2 = ref [] in 
+                          for code1 = 1 to w2 do 
+                              for code2 = 1 to w2 do 
+                                  let index = 
+                                      ((((code1 + 1) / 2) - 1)  * w)  + 
+                                      (((code2 + 1) / 2) - 1) in 
+                                  l2 := l_arr.(index)::!l2 
+                              done;  
+                          done; 
+                          let l2 = List.rev !l2 in 
+                          fill_cost_matrix ~use_comb:use_comb l2 w2
+                in  
+                m;;
 
 
     let of_list ?(use_comb=true) l =
         (* This function assumes that the list is a square matrix, list of
         * lists, all of the same size *)
-        
         let w = List.length l in
         let l = List.flatten l in 
         fill_cost_matrix ~use_comb:use_comb l w

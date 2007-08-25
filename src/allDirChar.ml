@@ -310,7 +310,7 @@ with type b = AllDirNode.OneDirF.n = struct
                 current_d.AllDirNode.lazy_node
                 --> Lazy.force_val 
                     --> fun x -> Node.to_single (pre_ref_codes, fi_ref_codes)
-                        parentd parentd x, x
+                        None parentd x, x
             in
             let nnd = 
                 { current_d with AllDirNode.lazy_node = Lazy.lazy_from_val nd }
@@ -356,8 +356,8 @@ with type b = AllDirNode.OneDirF.n = struct
                     --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
                 in
                 let root = 
-                    Node.to_single ~is_root:true (pre_ref_codes, fi_ref_codes)
-                    root other_node handle_node in
+                    Node.to_single  (pre_ref_codes, fi_ref_codes)
+                        (Some root) other_node handle_node in
                 (*
                 Status.user_message Status.Information
                 ("My assignment for the root is " ^ Node.to_string root);
@@ -539,7 +539,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     let new_root_p = 
                         { new_root with 
                               Node.characters = (Node.to_single (pre_ref_codes, fi_ref_codes) 
-                                                     new_root new_root new_root).Node.characters }
+                                                     (Some new_root) new_root new_root).Node.characters }
                         --> fun x -> [{ 
                             AllDirNode.lazy_node = lazy x;
                             dir = Some (a, b);
@@ -1146,16 +1146,230 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let incremental_uppass tree _ = tree
 
-    let to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) atr data tree = 
+
+    let assign_final_states ptree =
+        let assign_final_states_handle handle ptree =
+            try
+                let root_data, a, b = 
+                    let rt = Ptree.get_component_root handle ptree in
+                    match rt.Ptree.root_median with
+                    | Some ((`Edge (a, b)), root) -> root, a, b
+                    | Some _ -> failwith "Single vertex" (* Used down below *)
+                    | None -> failwith "No root?"
+                in
+                let root_data c = 
+                    (* We prepare a function to replace the taxon code for a
+                    * meaningful one to start the uppass with on each side *)
+                    match root_data.AllDirNode.unadjusted with
+                    | [x] -> 
+                            { root_data with 
+                            AllDirNode.unadjusted = 
+                                [{ x with AllDirNode.code = c }] }
+                    | _ -> assert false
+                in
+                (* We move recursively up on and b calculating their final 
+                * states *)
+                let rec uppass grandparent_code parent_code parent_final vertex
+                acc =
+                    let my_data = Ptree.get_node_data vertex ptree in
+                    match Ptree.get_node vertex acc with
+                    | (Tree.Interior _) as nd ->
+                            let a, b = Tree.other_two_nbrs parent_code nd in
+                            let nda = Ptree.get_node_data a ptree
+                            and ndb = Ptree.get_node_data b ptree in
+                            let my_data =
+                                AllDirNode.AllDirF.median_3 grandparent_code 
+                                parent_final my_data nda ndb 
+                            in
+                            acc
+                            --> Ptree.add_node_data vertex my_data 
+                            --> uppass (Some parent_code) vertex my_data a 
+                            --> uppass (Some parent_code) vertex my_data b
+                    | Tree.Leaf _ ->
+                            let my_data = 
+                                AllDirNode.AllDirF.median_3 grandparent_code 
+                                parent_final my_data my_data my_data 
+                            in
+                            Ptree.add_node_data vertex my_data acc
+                    | Tree.Single _ -> acc
+                in
+                ptree --> uppass None a (root_data a) b 
+                --> uppass None b (root_data b) a
+            with
+            | Failure "Single vertex" -> ptree
+        in
+        All_sets.Integers.fold assign_final_states_handle (Ptree.get_handles ptree) 
+        ptree
+
+    let get_single, get_unadjusted =
+        let general_get f parent node =
+            let nd = AllDirNode.not_with parent (f node) in
+            Lazy.force_val nd.AllDirNode.lazy_node
+        in
+        (general_get (fun x -> x.AllDirNode.adjusted)),
+        (general_get (fun x -> x.AllDirNode.unadjusted))
+
+    let get_active_ref_code tree =
+        let get_active_ref_code parent node = 
+            Node.get_active_ref_code (get_unadjusted parent node)
+        in
+        let get_active_ref_code_handle handle (pre, fi) =
+            let leaf_handler parent node _ =
+                let node_data = Ptree.get_node_data node tree in
+                let _, _, fi, fi_child = 
+                    get_active_ref_code parent node_data 
+                in
+                Some (IntSet.empty, (IntSet.union fi fi_child))
+            and node_handler par node a b =
+                let extract = function
+                    | Some x -> x
+                    | None -> assert false
+                in
+                let (apre, afi) = extract a 
+                and (bpre, bfi) = extract b in
+                let node_data = Ptree.get_node_data node tree in
+                let _, pre, _, fi = get_active_ref_code par node_data in
+                Some (IntSet.union (IntSet.union apre bpre) pre,
+                IntSet.union (IntSet.union afi bfi) fi)
+            in
+            let pre, fi, root =
+                match (Ptree.get_component_root handle tree).Ptree.root_median 
+                with
+                | None -> assert false
+                | Some ((`Single _), root) ->
+                        IntSet.empty, IntSet.empty, root
+                | Some ((`Edge (a, b)), root) ->
+                        match Ptree.post_order_node_with_edge_visit
+                        leaf_handler node_handler (Tree.Edge (a, b)) tree None
+                        with
+                        | Some (apre, afi), Some (bpre, bfi) -> 
+                                IntSet.union apre bpre, IntSet.union afi bfi,
+                                root
+                        | _ -> assert false
+            in
+            let fi = IntSet.filter (fun x -> not (IntSet.mem x pre)) fi in
+            let rpre, rprech, rfi, _ = get_active_ref_code (-1) root in
+            IntSet.union (IntSet.union pre rprech) rpre,
+            IntSet.union fi rfi
+        in
+        All_sets.Integers.fold
+        get_active_ref_code_handle
+        (Ptree.get_handles tree)
+        (All_sets.Integers.empty, All_sets.Integers.empty)
+
+    let to_formatter (atr : Tags.attributes) (data : Data.d) 
+            (tree : (a, b) Ptree.p_tree) : Tags.output =
+
+        let tree = assign_final_states tree in
+        let pre_ref_codes, fi_ref_codes = get_active_ref_code tree in 
+(*        Utl.printIntSet pre_ref_codes;
+        Utl.printIntSet fi_ref_codes;*)
+        let get_simplified parent x = 
+            let nd = Ptree.get_node_data x tree in
+            nd, get_unadjusted parent nd, get_single parent nd
+        in
+        let merger a b root = 
+            `Structured (`Set [`Single root; `Single a; `Single b]) 
+        and singler a = `Structured (`Single a) 
+        and splitter parent a = get_unadjusted parent a, get_single parent a in
+        (* Now we are ready to process the contents of the tree *)
+        let rec subtree_to_formatter (pre, fi) cur par 
+        ((node_parent, single_parent) as tmp2) : Tags.output =
+            match Ptree.get_node cur tree with
+            | (Tree.Interior _) as nd ->
+                    let cur_data = Ptree.get_node_data cur tree in
+                    let ch1, ch2 = Ptree.other_two_nbrs par nd in
+                    let ch1d, ch1u, ch1s = get_simplified cur ch1 
+                    and ch2d, ch2u, ch2s = get_simplified cur ch2 in
+                    let ((cur_data, cur_single) as tmp) = 
+                        splitter par cur_data 
+                    in 
+                    let mine = 
+                        Node.to_formatter_subtree (pre, fi) [] data tmp cur 
+                        (ch1, ch1u) (ch2, ch2u) (Some tmp2)
+                    in
+                    let ch1 = subtree_to_formatter (pre, fi) ch1 cur tmp in
+                    let ch2 = subtree_to_formatter (pre, fi) ch2 cur tmp in
+                    ((Tags.Trees.tree, [], merger ch1 ch2 mine) : Tags.output)
+            | (Tree.Leaf (_, par)) ->
+                    let node_data = Ptree.get_node_data cur tree in
+                    let nodest = 
+                        Node.to_formatter_single
+                        (pre, fi) [] data 
+                        (splitter par node_data) cur (Some tmp2)
+                    in
+                    (Tags.Trees.tree, [], singler nodest)
+            | (Tree.Single _) ->
+                    let node_data = Ptree.get_node_data cur tree in
+                    let nodest = 
+                        Node.to_formatter_single
+                        (pre, fi) [] data (splitter (-1) node_data) cur None
+                    in
+                    (Tags.Trees.tree, [], singler nodest)
+        in
+        let handle_to_formatter (pre, fi) handle (recost, trees) =
+            let r = Ptree.get_component_root handle tree in
+            let recost, contents, attr =
+                match r.Ptree.root_median with
+                | Some ((`Edge (a, b)), root) -> 
+                        let recost = 
+                            let root = get_unadjusted (-1) root in
+                            (Node.cmp_subtree_recost root) +. recost 
+                        in
+                        (* We override the root now to continue using the single
+                        * assignment of the handle *)
+                        let sroot, sa = 
+                            let a = Ptree.get_node_data a tree in
+                            let s = get_single (-1) a in
+                            (s, s), s
+                        in
+                        let a : Tags.output = 
+                            subtree_to_formatter (pre, fi) a b sroot
+                        and b : Tags.output = 
+                            subtree_to_formatter (pre, fi) b a sroot
+                        and froot : Tags.output =
+                            let handle = Ptree.get_node_data a tree 
+                            and parent = Ptree.get_node_data b tree in
+                            Node.to_formatter_subtree 
+                            (pre, fi) [] data 
+                            ((get_unadjusted (-1) root), sa) a (a, get_unadjusted b handle)
+(*                            (b, get_unadjusted a parent) (Some sroot)*)
+                            (b, get_unadjusted a parent) None
+                        in
+                        recost, (merger a b froot), 
+                        [Tags.Trees.cost, string_of_float r.Ptree.component_cost]
+                | Some ((`Single a), root) ->
+                        let c1 : Tags.output = 
+                            let nd = splitter (-1) root in
+                            subtree_to_formatter (pre, fi) a a nd
+                        in
+                        recost, (`Structured (`Single c1)),
+                        [Tags.Trees.cost, string_of_float r.Ptree.component_cost]
+                | None -> assert false
+            in
+            recost, ((`Single ((Tags.Trees.tree, attr, contents) : Tags.output)) :: trees)
+        in
+        let recost, trees =
+            All_sets.Integers.fold 
+            (handle_to_formatter (pre_ref_codes, fi_ref_codes)) 
+            (Ptree.get_handles tree)
+            (0., [])
+        in
+        let atr = 
+            let cost = Ptree.get_cost `Adjusted tree in
+            (Tags.Trees.recost, string_of_float recost) ::
+            (Tags.Trees.cost, string_of_float cost) :: atr
+        in
+        (Tags.Trees.forest, atr, `Structured (`Set trees))
+
+    let av_to_formatter ?(pre_ref_codes=IntSet.empty) ?(fi_ref_codes=IntSet.empty) atr data tree = 
         (* We have to include the cost of the tree in the attributed and not get
         * it from the Chartree.to_formatter function. If the cost is adjusted,
         * it might not be the same in the one directional tree. *)
         let cost = Ptree.get_cost `Adjusted tree in
         let atr = (Tags.Trees.cost, string_of_float cost) :: atr in
         let tree = convert_three_to_one_dir tree in
-        let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in
-        Chartree.to_formatter ~pre_ref_codes:pre_ref_codes
-          ~fi_ref_codes:fi_ref_codes atr data tree 
+        Chartree.to_formatter atr data tree 
 
 end
 

@@ -354,29 +354,31 @@ let rec compare_union a b =
 
 let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list = 
     match t, parent_t with 
-    | SeqCS t, _ -> SeqCS.to_formatter attr t d 
+    | SeqCS t, _ -> begin
+            match parent_t with
+            | None -> SeqCS.to_formatter attr t None d 
+            | Some (SeqCS parent_t) ->  
+                    SeqCS.to_formatter attr t (Some parent_t) d
+            | _ -> failwith "to_formatter in dynamicCS"
+    end
     | ChromCS t, _  -> begin 
           match parent_t with 
           | None ->  ChromCS.to_formatter ref_codes attr t None d
           | Some (ChromCS parent_t) -> ChromCS.to_formatter ref_codes attr t (Some parent_t) d
           | _ -> failwith "to_formatter in dynamicCS"
       end 
-
-    | AnnchromCS t, __ -> begin
+    | AnnchromCS t, _ -> begin
           match parent_t with 
           | None ->  AnnchromCS.to_formatter ref_codes attr t None d
           | Some (AnnchromCS parent_t) -> AnnchromCS.to_formatter ref_codes attr t (Some parent_t) d
           | _ -> failwith "to_formatter in dynamicCS"
       end 
-
     | BreakinvCS t, __ -> begin
           match parent_t with 
           | None ->  BreakinvCS.to_formatter ref_codes attr t None d
           | Some (BreakinvCS parent_t) ->BreakinvCS.to_formatter ref_codes attr t (Some parent_t) d
           | _ -> failwith "to_formatter in dynamicCS"
       end 
- 
-
     | GenomeCS t,  _ -> begin
           match parent_t with
           | None -> GenomeCS.to_formatter ref_codes attr t None d
@@ -438,41 +440,56 @@ let readjust to_adjust modified ch1 ch2 parent mine =
             modified, prev_cost, prev_cost, mine
 
 
-let to_single ?(is_root=false) ref_codes alied_map parent mine = 
-    match parent, mine, alied_map with
-    | SeqCS parent, SeqCS mine, _ -> 
-            let prev_cost, new_cost, median = SeqCS.to_single parent mine in
-            prev_cost, new_cost, SeqCS median
+let to_single ref_codes root parent mine = 
+    match parent, mine with
+    | SeqCS parent, SeqCS mine -> 
+          let prev_cost, new_cost, median = SeqCS.to_single parent mine in
+          prev_cost, new_cost, SeqCS median
 
-    | ChromCS parent, ChromCS mine, ChromCS alied_map ->
-            let prev_cost, new_cost, median =
-                ChromCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
-            in
-            prev_cost, new_cost, ChromCS median          
-
-
-    | BreakinvCS parent, BreakinvCS mine, BreakinvCS alied_map ->
-            let prev_cost, new_cost, median = 
-                BreakinvCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
-            in
-            prev_cost, new_cost, BreakinvCS median          
+    | ChromCS parent, ChromCS mine -> 
+          let root = match root with 
+          | Some (ChromCS root) -> Some root
+          | _ -> None
+          in 
+          let prev_cost, new_cost, median =
+              ChromCS.to_single ref_codes root parent mine 
+          in
+          prev_cost, new_cost, ChromCS median          
 
 
-    | AnnchromCS parent, AnnchromCS mine, AnnchromCS alied_map ->
+    | BreakinvCS parent, BreakinvCS mine ->
+          let root = match root with 
+          | Some (BreakinvCS root) -> Some root
+          | _ -> None
+          in 
           let prev_cost, new_cost, median = 
-              AnnchromCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+              BreakinvCS.to_single ref_codes root parent mine 
+          in
+          prev_cost, new_cost, BreakinvCS median          
+
+
+    | AnnchromCS parent, AnnchromCS mine ->
+          let root = match root with 
+          | Some (AnnchromCS root) -> Some root
+          | _ -> None
+          in 
+          let prev_cost, new_cost, median = 
+              AnnchromCS.to_single ref_codes root parent mine 
           in
           prev_cost, new_cost, AnnchromCS median          
 
-    | GenomeCS parent, GenomeCS mine, GenomeCS alied_map ->
+    | GenomeCS parent, GenomeCS mine ->
+          let root = match root with 
+          | Some (GenomeCS root) -> Some root
+          | _ -> None
+          in 
           let prev_cost, new_cost, median = 
-              GenomeCS.to_single ~is_root:is_root ref_codes alied_map parent mine 
+              GenomeCS.to_single ref_codes root parent mine 
           in
           prev_cost, new_cost, GenomeCS median          
-
-    | _, mine, _ -> 
+    | _, mine ->
 
             let cst = total_cost mine in
             cst, cst, mine
 
-let to_single_root ref_codes mine = to_single ref_codes mine mine mine
+let to_single_root ref_codes mine = to_single ref_codes (Some mine) mine mine

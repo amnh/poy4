@@ -31,7 +31,7 @@ type meds_t = {
   code : int;
   chrom_pam : Data.dyna_pam_t;
 }
-val init_med : Sequence.s -> Data.dyna_pam_t -> int -> int -> meds_t
+val init_med : Sequence.s -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int -> int -> meds_t
 val update_approx_mat : meds_t -> meds_t -> unit
 val find_meds2 : meds_t -> meds_t -> meds_t
 val find_meds3 : meds_t -> meds_t -> meds_t -> meds_t

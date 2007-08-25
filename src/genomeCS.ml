@@ -308,11 +308,11 @@ let get_active_ref_code t =
 
 
 
-let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+let to_single ref_codes (root : t option) single_parent mine = 
     let single_parent, mine = 
-        match is_root with 
-        | true ->  alied_map, alied_map
-        | false -> single_parent, mine
+        match root with 
+        | Some root -> root, root
+        | None -> single_parent, mine
     in 
 
 
@@ -343,18 +343,17 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
 
 
 
-            match is_root with
-            | false -> 
+            match root with
+            | Some root -> 
                   GenomeAli.to_single aparent_med amed c2  med.Genome.chrom_pam
-            | true ->
+            | None ->
                   let single_root = Array.map 
                       (fun chromt ->  
                            let single_seq = UtlPoy.get_single_seq
                                chromt.GenomeAli.seq c2 in 
                            single_seq
                       ) amed.GenomeAli.chrom_arr
-                  in 
-                  
+                  in                   
                   0, 0, single_root
         in 
 

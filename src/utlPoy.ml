@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 2103 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2145 $"
 
 let fprintf = Printf.fprintf
 
@@ -495,11 +495,4 @@ let test_general_ali  () =
 
 
         
-let get_single_seq seq c2 = 
-    let gap = Cost_matrix.Two_D.gap c2 in 
-    let single =  Sequence.map (fun code -> 
-                                    let code = max code (code - gap) in 
-                                    Cost_matrix.Two_D.get_closest c2 code code
-                               ) seq
-    in 
-    single
+let get_single_seq seq c2 = Sequence.select_one seq c2

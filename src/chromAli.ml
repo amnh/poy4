@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 2127 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2145 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -649,7 +649,6 @@ let cmp_cost med1 med2 cost_mat chrom_pams =
 
 
 let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam = 
-(*    print_endline "find_med2_ls"; flush stdout; *)
     if debug = true then begin
         let len1 = Sequence.length med1.seq in 
         let len2 = Sequence.length med2.seq in 
@@ -671,6 +670,14 @@ let find_med2_ls (med1 : med_t) (med2 : med_t) cost_mat user_chrom_pam =
 
     
     let ali_pam = ChromPam.get_chrom_pam user_chrom_pam in 
+(*    
+    let o,e = ali_pam.ChromPam.locus_indel_cost in 
+    let s = Cost_matrix.Two_D.cost 1 2 cost_mat in 
+    let d = Cost_matrix.Two_D.cost 1 16 cost_mat in 
+    fprintf stdout "gap_opening_cost: %i, gap_ext_cost: %i\n" o e;
+    fprintf stdout "substitution_cost: %i, indel_: %i\n" s d;
+    flush stdout;
+*)
     let ali_pam = {ali_pam with 
                        ChromPam.min_pos1 = 0;
                        ChromPam.max_pos1 = len1 - 1;

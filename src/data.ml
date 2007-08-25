@@ -2406,6 +2406,7 @@ let get_tcmfile data c =
 let get_alphabet data c =
     match Hashtbl.find data.character_specs c  with
     | Dynamic dspec -> dspec.alph
+    | Static  sspec -> sspec.Parser.SC.st_alph
     | _ -> failwith "Data.get_alphabet"
 
 (** transform all sequences whose codes are on the code_ls into chroms 
@@ -2654,14 +2655,6 @@ let get_pam data c =
     | _ -> failwith "Data.get_alphabet"
 
 let to_faswincladfile data filename =
-    ()
-    (*
-    let by_name data x y = 
-        let namex = Hashtbl.find data.character_codes x 
-        and namey = Hashtbl.find data.character_codes y in
-        String.compare namex namey 
-    in
-    TODO
     let has_sankoff =
         match data.sankoff with
         | [] -> false
@@ -2669,57 +2662,29 @@ let to_faswincladfile data filename =
     in
     let fo = Status.user_message (Status.Output (filename, false,
     [StatusCommon.Margin 0])) in
-    let all_chars = 
-        [data.non_additive_8; data.non_additive_16; data.non_additive_32; 
-        data.additive; (List.flatten data.sankoff)] 
+    let all_of_all = 
+        List.sort ~cmp:( - )
+        (Hashtbl.fold (fun c s acc ->
+            match s with
+            | Static _ -> c :: acc
+            | _ -> acc) data.character_specs [])
     in
-    let all_of_all = List.flatten all_chars in
-    let all_of_all = List.sort (compare) all_of_all in
     let number_of_characters = List.length all_of_all in
     let number_of_taxa = 
         Hashtbl.fold (fun _ _ x -> x + 1) data.taxon_characters 0 
     in
-    let int_list_to_set code data x = 
-        (List.fold_left ~f:(fun acc x -> 
-            let x = 
-                try 
-                    let used_observed = get_used_observed code data in
-                    Hashtbl.find used_observed x 
-                with
-                | _ -> x
-            in
-            acc ^ string_of_int x ^ if has_sankoff then "." else "") ~init:"[" x) ^
-        "]"
-    in
-    let get_bits elt =
-        let rec elt_iter acc elt c =
-            if elt = 0 then acc 
-            else if (elt land 1) <> 0 then 
-                elt_iter (c :: acc) (elt lsr 1) (c * 2)
-            else elt_iter acc (elt lsr 1)  (c * 2)
-        in
-        elt_iter [] elt 1
+    let sep =
+        if has_sankoff then " "
+        else "" 
     in
     let state_to_string code t =
         match t with
-        | Parser.Ordered_Character (a, b, c) ->
-                let used_observed = get_used_observed code data in
-                if c then "?" 
-                else if a = b then string_of_int (Hashtbl.find used_observed a)
-                else int_list_to_set code data [a; b]
-        | Parser.Unordered_Character (a, b) ->
-                if b then "?"
-                else 
-                    let used_observed = get_used_observed code data in
-                    let bits = get_bits a in
-                    if 1 = List.length bits then 
-                        string_of_int 
-                        (Hashtbl.find used_observed (List.hd bits))
-                    else int_list_to_set code data bits
-        | Parser.Sankoff_Character (a, b) ->
-                if 1 = List.length a then string_of_int (List.hd a)
-                else int_list_to_set code data a
-        | _ -> failwith "Fastwinclad files do not support sequences"
+        | None -> "?"
+        | Some [] -> "-"
+        | Some [item] -> string_of_int item
+        | Some lst ->
+                let lst = List.sort ~cmp:( - ) lst in
+                "[" ^ String.concat sep (List.map string_of_int lst) ^ "]"
     in
     let produce_character fo taxon charset code =
         let _ =
@@ -2741,7 +2706,7 @@ let to_faswincladfile data filename =
                     "report@ it@ to@ Andres...");
                     fo "?"
         in
-        fo " "
+        fo sep
     in
     let output_taxon tid name = 
         if All_sets.Strings.mem name data.ignore_taxa_set then
@@ -2768,7 +2733,7 @@ let to_faswincladfile data filename =
         fo (string_of_int number_of_taxa);
         fo "@\n";
     in
-    let get_tcm = get_tcm data in
+    let get_tcm x = get_tcm x data in
     let output_weights (acc, pos) code = 
         match Hashtbl.find data.character_specs code with
         | Static enc ->
@@ -2822,14 +2787,43 @@ let to_faswincladfile data filename =
             ()
         else ()
     in
+    let output_character_names () =
+        let output_name position code =
+            let name = Hashtbl.find data.character_codes code in
+            fo ("{" ^ string_of_int position ^ " " ^ name ^ " ");
+            let labels = 
+                match Hashtbl.find data.character_specs code with
+                | Dynamic _
+                | Set -> assert false
+                | Static spec ->
+                        match spec.Parser.SC.st_labels with
+                        | [] ->
+                                (Alphabet.to_list (get_alphabet data code))
+                                --> List.sort ~cmp:(fun (_, a) (_, b) -> a - b)
+                                --> List.map ~f:fst
+                        | lst -> lst
+            in
+            List.iter ~f:(fun x -> fo x; fo " ") labels;
+            fo ";@\n";
+            position + 1
+        in
+        (* The misterious commands for old programs *)
+        fo "#@\n";
+        fo "$@\n";
+        fo ";@\n";
+        fo "cn ";
+        let _ = List.fold_left ~f:output_name ~init:0 all_of_all in
+        fo ";@\n"
+    in
     fo "@[<v 0>";
     output_header ();
     output_all_taxa ();
     output_character_types ();
     fo weights;
+    output_character_names ();
     fo "@\n";
     fo "@]"
-    *)
+
 let report_taxon_file_cross_reference chars data filename =
     let files_arr, taxa = 
         match chars with

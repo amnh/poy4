@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2103 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2145 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -158,10 +158,9 @@ module type Tree_Operations =
 
 
         val to_formatter :  
-            ?pre_ref_codes:All_sets.Integers.t ->
-            ?fi_ref_codes:All_sets.Integers.t ->
             Tags.attributes -> Data.d -> (a, b) p_tree ->
             Tags.output
+
         val root_costs : (a, b) p_tree -> (Tree.edge * float) list
         val unadjust : (a, b) p_tree -> (a, b) p_tree
     end 
@@ -1364,7 +1363,7 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
             List.fold_left (fun m tree -> max m (get_cost `Adjusted tree)) 0. trees
         in
         let rec rem lst = match lst with
-        | tree :: trees -> if get_cost `Unadjusted tree = maxcost then trees
+        | tree :: trees -> if get_cost `Adjusted tree = maxcost then trees
           else tree :: rem trees
         | [] -> assert false in
         rem trees
@@ -1381,9 +1380,9 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
           let old_trees = source :: target :: trees' in
           limit_num (List.rev_append new_trees old_trees)
     | `Better ->
-          let target_cost = get_cost `Unadjusted target in
+          let target_cost = get_cost `Adjusted target in
           let new_trees =
-              List.filter (fun t -> target_cost >= get_cost `Unadjusted t) new_trees in
+              List.filter (fun t -> target_cost >= get_cost `Adjusted t) new_trees in
           match new_trees with
           | [] -> source :: target :: trees'
           | new_trees ->
@@ -1442,9 +1441,9 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
             choose_remove (Random.float wsum) weights trees' in
 
         let msg = ("tree #" ^ string_of_int snum
-                   ^ " [" ^ string_of_float (get_cost `Unadjusted source) ^ "]"
+                   ^ " [" ^ string_of_float (get_cost `Adjusted source) ^ "]"
                    ^ " -> " ^ "tree #" ^ string_of_int tnum
-                   ^ " [" ^ string_of_float (get_cost `Unadjusted target) ^ "]") in
+                   ^ " [" ^ string_of_float (get_cost `Adjusted target) ^ "]") in
 
         let locations = fuse_all_locations ~min:cmin ~max:cmax [source; target] in
         let location = Sexpr.choose_random locations in
@@ -1460,7 +1459,7 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
                   | _ -> assert false in
               let new_tree = fuse t1 t2 in
               Status.full_report ~msg:(msg ^ ": tree with cost "
-                                       ^ string_of_float (get_cost `Unadjusted new_tree))
+                                       ^ string_of_float (get_cost `Adjusted new_tree))
                   status;
               let new_trees = process new_tree in
 

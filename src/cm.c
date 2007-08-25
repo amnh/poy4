@@ -277,12 +277,16 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
     }
     cm_set_affine (res, do_aff, gap_open);
     res->is_metric = is_metric;
-    size = (1 << (res->lcm * 2)) * (1 << (res->lcm * 2)) * sizeof(int);
+    size = 2 * (1 << (res->lcm)) * (1 << (res->lcm)) * sizeof(int);
+    if (0 == size)
+        failwith ("Your cost matrix is too large to fit in your memory. I can't continue with your data loading.");
     res->cost = (int *) malloc (size);
     res->worst = (int *) malloc (size);
     res->prepend_cost = (int *) malloc (size);
     res->tail_cost = (int *) malloc (size);
-    size = (1 << (res->lcm + 1)) * (1 << (res->lcm + 1)) * sizeof(SEQT);
+    size = 2 * (1 << (res->lcm)) * (1 << (res->lcm)) * sizeof(SEQT);
+    if (0 == size)
+        failwith ("Your cost matrix is too large to fit in your memory. I can't continue with your data loading.");
     res->median = (SEQT *) malloc (size);
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);

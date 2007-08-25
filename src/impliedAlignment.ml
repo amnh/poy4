@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2127 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2145 $"
 
 exception NotASequence of int
 
@@ -203,6 +203,7 @@ let ancestor calculate_median state prealigned all_minus_gap a b cm m =
     in 
     let a, lena = correct_gaps_in_sequences a in
     let b, lenb = correct_gaps_in_sequences b in
+
     let rec builder = 
         fun position a_pos b_pos anc_pos codes hom a_hom b_hom a_or b_or res_or ->
         if position > (-1) then begin
@@ -853,6 +854,7 @@ let analyze_tcm tcm alph =
     let gap = Alphabet.get_gap alph 
     and all = Alphabet.get_all alph in
     let alph = Alphabet.simplify alph in
+
     let single_compare (_, a) res (_, b) =
         match res with
         | None -> 
@@ -1040,7 +1042,8 @@ let analyze_tcm tcm alph =
                 (* We remove one from the all elements representation *)
                 match Alphabet.get_all alph with
                 | Some _ -> (Alphabet.distinct_size alph) - 1 
-                | None -> Alphabet.distinct_size alph
+                | None -> 
+                      Alphabet.distinct_size alph
             in
             let make_tcm () =
                 match Alphabet.kind alph with
@@ -1049,12 +1052,19 @@ let analyze_tcm tcm alph =
                         (fun y -> 
                             Cost_matrix.Two_D.cost (1 lsl x) (1 lsl y) tcm)) 
                 | Alphabet.Sequential ->
-                        Array.init size (fun x -> 
-                            Array.init size (fun y ->
-                                Cost_matrix.Two_D.cost (x + 1) (y  + 1) tcm))
+                      let tcm_size = Cost_matrix.Two_D.alphabet_size tcm in                          
+                      Array.init size 
+                          (fun x -> 
+                               Array.init size 
+                                   (fun y -> 
+                                        let x = min (x + 1) tcm_size in 
+                                        let y = min (y + 1) tcm_size in
+                                        Cost_matrix.Two_D.cost x y tcm))
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.make_tcm"
             in
+
+
             let enc = 
                 let alph = Alphabet.to_sequential alph in
                 let res = Parser.OldHennig.Encoding.default () in
@@ -1076,7 +1086,7 @@ let analyze_tcm tcm alph =
                 if size < 0 then acc
                 else generate_all (size :: acc) (size - 1)
             in
-            let convert_to_list x =
+            let convert_to_list x =                
                 match Alphabet.kind alph with
                 | Alphabet.Simple_Bit_Flags ->
                         let rec match_bit v pos mask acc = 
@@ -1254,28 +1264,32 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 Status.finished st;
                 AssList.elements a, b
         | _ ->
-                let self, other = 
-                    let root = Ptree.get_component_root handle ptree in
-                    match root.Ptree.root_median with
-                    | Some ((`Edge (a, b)), the_root) -> a, b
-                    | _ -> failwith "no root?"
-                in
-                let x, y =
-                    if calculate_median then
+
+              let self, other, root  =      
+                  let root = Ptree.get_component_root handle ptree in  
+                  match root.Ptree.root_median with
+                  | Some ((`Edge (a, b)), the_root) -> a, b, the_root
+                  | _ -> failwith "no root?"
+              in
+     
+              let x, y =
+                  if calculate_median then begin
                         let a, b = 
                             Ptree.post_order_node_with_edge_visit 
                             (convert_node None ptree) join_2_nodes 
                             (Tree.Edge (self, other)) ptree
                             (AssList.empty, [])
                         in 
-                        let a' = 
+                        let  a' = 
                             let new_ptree = 
                                 let self_data = Ptree.get_node_data self ptree 
-                                and other_data = Ptree.get_node_data other ptree in
+                                and other_data = Ptree.get_node_data other ptree
+                                in
                                 let single = 
-                                    Node.to_single ~is_root:true (Some self) 
+                                    Node.to_single (Some root) (Some self) 
                                     other_data (Some other) self_data 
                                 in
+
                                 (*
                                 Status.user_message Status.Information
                                 ("The assigned root in the implied alignment is " ^
@@ -1285,9 +1299,12 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                             in
                             convert_node (Some other) new_ptree () self ([], []) 
                         in
+
                         let a = join_2_nodes () () a a' in
-                        join_2_nodes () () a b
-                    else 
+                        let tmp = join_2_nodes () () a b in
+                        tmp
+                  end 
+                  else 
                         (* We will do a different tree traversal, converting each
                         interior vertex as we move down the tree starting with the
                         actual root *)
@@ -1334,9 +1351,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 let data = Ptree.get_node_data self ptree in
                                 convert_data (Node.taxon_code data) 
                                 (get_dynamic_data None data)
-                in
-                let _ = Status.finished st in
-                let cleanedup = 
+              in
+              let _ = Status.finished st in
+              let cleanedup = 
                     List.fold_left (fun acc ((code, y) as assoc) ->
                         if Tree.is_leaf code ptree.Ptree.tree then
                             assoc :: acc
@@ -1593,8 +1610,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
 
 
-
-
     let post_process_affine_gap_cost subs gapcost gapopening (enc, taxa) =
         let process_position chars pos = 
             let v_pos npos = 
@@ -1625,7 +1640,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     let ia_to_parser_compatible data (imtx : (int * int array array All_sets.IntegerMap.t list) list list) =
         match imtx with
         | [all_taxa] ->
-                let process_each = fun (acc, enc, clas) (taxcode, sequence) ->
+              let process_each = fun (acc, enc, clas) (taxcode, sequence) ->
                     let preprocess_sequence alph x =
                         let len = Array.length x in
                         let rec check it =
@@ -1669,6 +1684,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 s acc)
                         ([], All_sets.IntegerMap.empty) sequence 
                     in
+
                     let clas, res, encf = 
                         List.fold_left 
                         (fun (_, acc, acc2) (code, (is_missing, s)) -> 
@@ -1800,24 +1816,25 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         character, res
 
 
+
     let concat_alignment ia =
         let ia = List.map   
         (fun ia ->  List.map  
-        (fun (taxa_code, ia) ->
-            let ia = List.map 
-            (fun ali_map ->
-                Codes.map (fun (ali_ls : int array array) -> 
-                    let ali = Array.concat (Array.to_list ali_ls) in
-                    Utl.printIntArr ali;
-                    ali 
-                    ) ali_map
-                ) ia
-                    in 
-                    taxa_code, ia
+             (fun (taxa_code, ia) ->
+                  let ia = List.map 
+                      (fun ali_map ->
+                           Codes.map (fun (ali_ls : int array array) -> 
+                                          let ali = Array.concat (Array.to_list ali_ls) in
+                                          Utl.printIntArr ali;
+                                          ali 
+                                     ) ali_map
+                      ) ia
+                  in 
+                  taxa_code, ia
+             ) ia
         ) ia
-        ) ia
-            in 
-            ia
+        in 
+        ia
 
 
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character
@@ -1846,6 +1863,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         codes, operate_on_tree tree
 
 
+
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character
        set) list (of characters) ) list (of taxa) ) of list (of trees) *)
     let create filter_fn codes data tree = 
@@ -1861,8 +1879,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     false
                 end) codes
         in
-        let _, x = aux_create_implied_alignment filter_fn codes data tree in
-        x
+        let _, ia = aux_create_implied_alignment filter_fn codes data tree in
+(*        let _ = concat_alignment (List.hd ia) in  *)
+        ia
 
     let get_char_codes (chars : Methods.characters)  data =
         let codes = 
@@ -1902,6 +1921,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 let _, ia = 
                     aux_create_implied_alignment filter_fn [code] data tree 
                 in
+(*                let _ = concat_alignment (List.hd ia) in *)
+
                 assert (1 = List.length ia);
                 let ia = List.hd ia in
 

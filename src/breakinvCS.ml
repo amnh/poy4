@@ -281,12 +281,12 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
 
 
 
-let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+let to_single ref_codes (root : t option) single_parent mine = 
 
     let single_parent, mine = 
-        match is_root with 
-        | true ->  alied_map, alied_map
-        | false -> single_parent, mine
+        match root with 
+        | Some root ->  root, root
+        | None -> single_parent, mine
     in 
 
     let previous_total_cost = mine.total_cost in 
@@ -301,10 +301,12 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
         let aparent_med = List.hd parent_med.Breakinv.med_ls in
                 
         let cost, (recost1, recost2) = 
-            if is_root then 0,(0, 0) 
-            else BreakinvAli.cmp_cost amed aparent_med 
-                med.Breakinv.gen_cost_mat med.Breakinv.pure_gen_cost_mat med.Breakinv.alpha
-                med.Breakinv.breakinv_pam
+            match root with 
+            | Some root -> 0,(0, 0) 
+            | None ->
+                  BreakinvAli.cmp_cost amed aparent_med 
+                      med.Breakinv.gen_cost_mat med.Breakinv.pure_gen_cost_mat med.Breakinv.alpha
+                      med.Breakinv.breakinv_pam
         in 
         
         let single_med = {med with Breakinv.med_ls = [amed]} in 

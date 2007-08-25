@@ -302,12 +302,12 @@ let get_active_ref_code t =
         ) t.meds (IntSet.empty, IntSet.empty)
 
 
-let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+let to_single ref_codes (root : t option) single_parent mine = 
 
     let single_parent, mine = 
-        match is_root with 
-        | true ->  alied_map, alied_map
-        | false -> single_parent, mine
+        match root with 
+        | Some root ->  root, root
+        | None -> single_parent, mine
     in 
 
 
@@ -333,8 +333,8 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                     ) parent_med.Annchrom.med_ls
                 with Not_found -> List.hd parent_med.Annchrom.med_ls
             in            
-            match is_root with
-            | true ->
+            match root with
+            | Some root ->
                   let single_root = 
                       Array.map (fun seq -> 
                                      Sequence.map (fun code -> 
@@ -343,7 +343,7 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                                 ) amed.AnnchromAli.seq_arr
                   in 
                   0, 0, single_root
-            | false ->
+            | None ->
                   AnnchromAli.to_single aparent_med amed.AnnchromAli.ref_code c2  med.Annchrom.annchrom_pam
         in 
         let single_med = AnnchromAli.change_to_single amed single_seq_arr in

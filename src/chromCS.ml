@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 2103 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 2145 $"
 
 let fprintf = Printf.fprintf
 
@@ -54,14 +54,15 @@ let cardinal x = IntMap.fold (fun _ _ x -> x + 1) x.meds 0
 
 let of_array spec arr chcode tcode num_taxa = 
     let adder (meds, costs, recosts) (seq, key) = 
-        let med = Chrom.init_med seq spec.Data.pam tcode num_taxa in 
+        let med = Chrom.init_med  seq spec.Data.tcm2d spec.Data.pam tcode num_taxa in 
         (IntMap.add key med meds), 
         (IntMap.add key 0.0 costs), 
         (IntMap.add key 0.0 recosts)
     in
     let meds, costs, recosts = 
         let empty = IntMap.empty in
-        Array.fold_left adder (empty, empty, empty) arr in
+        Array.fold_left adder (empty, empty, empty) arr 
+    in
     {
         meds = meds;
         costs = costs;
@@ -227,11 +228,14 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
             | None -> 0, 0, None
             | Some parent -> begin 
                   let parent_med = IntMap.find code parent.meds in  
+(*                  Utl.printIntSet ref_codes;
+                    fprintf stdout "looking codes: "; *)
                   let parent_med = List.find 
                       (fun med -> 
                            IntSet.mem med.ChromAli.ref_code ref_codes 
                       ) parent_med.Chrom.med_ls
-                  in                                                                  
+                  in                                                  
+                  print_newline ();
                   let cost, recost, map = 
                       match state with
                       | "Preliminary" ->
@@ -286,12 +290,12 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
     IntMap.fold output_chrom t.meds []
 
 
-let to_single ?(is_root=false) ref_codes alied_map single_parent mine = 
+let to_single ref_codes (root : t option) single_parent mine = 
 
     let single_parent, mine = 
-        match is_root with 
-        | true ->  alied_map, alied_map
-        | false -> single_parent, mine
+        match root with 
+        | Some root ->  root, root
+        | None -> single_parent, mine
     in 
 
 
@@ -326,12 +330,10 @@ let to_single ?(is_root=false) ref_codes alied_map single_parent mine =
                 end 
             in            
 
-
-
-            match is_root with
-            | false -> 
+            match root with
+            | None -> 
                   ChromAli.to_single aparent_med amed.ChromAli.ref_code c2  med.Chrom.chrom_pam
-            | true ->              
+            | Some root ->              
                   let single_root = UtlPoy.get_single_seq amed.ChromAli.seq c2
                   in 
                   0, 0, single_root

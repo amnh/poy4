@@ -167,8 +167,6 @@ val handle_to_formatter :
             int -> Tags.output
 
 val to_formatter :
-        ?pre_ref_codes:All_sets.Integers.t ->
-        ?fi_ref_codes:All_sets.Integers.t ->
         Tags.attributes ->
         Data.d -> (Node.node_data, 'a) Ptree.p_tree -> Tags.output
 

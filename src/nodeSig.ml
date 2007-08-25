@@ -46,6 +46,12 @@ module type S = sig
     * for heuristic or speedup purposes). *)
     val median : int option -> int option -> n option -> n -> n -> n
 
+    (** [median_3 granpa par cur a b] updates creates a fresh node starting with [cur] 
+     * which has parent [par], and children [a] and [b]. The median is not a
+     * three dimensional median, but only updates the final assignment
+     * information. [granpa] is the parental code of [par]. *)
+    val median_3 : int option -> n -> n -> n -> n -> n
+
     (** [to_string n] produces a string representation of the node. This is used
     * for debugging purposes. There is no particular format requirement. *)
     val to_string : n -> string
@@ -246,8 +252,8 @@ module type S = sig
     val for_support : 
         int -> (int * n) list -> int list -> int list -> n list
 
-    val root_cost : n -> float
-    val to_single : ?is_root:bool -> int option -> n -> int option -> n -> n
+    val root_cost : n -> float    
+    val to_single : n option -> int option -> n -> int option -> n -> n
 end
 
 

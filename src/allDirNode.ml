@@ -119,6 +119,12 @@ module OneDirF :
         (fun () -> apply_f_on_lazy 
         (Node.Standard.median None my_code None) a b)
 
+    let median_3 x par cur a b = 
+        Lazy.lazy_from_val
+        (apply_f_on_lazy
+        (Node.Standard.median_3 x (Lazy.force_val par) (Lazy.force_val cur))
+        a b)
+
     let to_string v = Node.Standard.to_string (Lazy.force_val v)
 
     let apply_single_f_on_lazy f a = 
@@ -259,8 +265,14 @@ module OneDirF :
     let root_cost a = 
         Node.Standard.root_cost (Lazy.force_val a)
 
-    let to_single ?(is_root=false) a b c d =
-        lazy (Node.Standard.to_single ~is_root:is_root a (Lazy.force_val b) c (Lazy.force_val d))
+    let to_single root a b c d =       
+        let root' = match root with
+        | Some root -> Some (Lazy.force_val root) 
+        | None -> None
+        in
+        let b' = (Lazy.force_val b) in
+        let d' = (Lazy.force_val d) in
+        lazy (Node.Standard.to_single root' a b' c d')
 end
 
 module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
@@ -291,7 +303,7 @@ type nad8 = Node.Standard.nad8 = struct
 
     let fix_preliminary x = x
 
-    let to_single ?(is_root=false) a b c d =
+    let to_single root a b c d =
         let get_code x = 
             match x with
             | Some x -> x
@@ -301,7 +313,15 @@ type nad8 = Node.Standard.nad8 = struct
         and c' = get_code c in
         let b' = not_with a' b.unadjusted
         and d' = not_with c' d.unadjusted in
-        let lazy_node = OneDirF.to_single ~is_root:is_root a b'.lazy_node c d'.lazy_node in
+
+        let root = match root with 
+        | Some root ->
+              let root' = List.hd root.unadjusted in
+              Some root'.lazy_node
+        | None -> None
+        in  
+
+        let lazy_node = OneDirF.to_single root a b'.lazy_node c d'.lazy_node in
         let node = { d' with lazy_node = lazy_node } in
         { d with unadjusted = [node] }
 
@@ -354,6 +374,40 @@ type nad8 = Node.Standard.nad8 = struct
         in
         { unadjusted = [node]; adjusted = [node] }
 
+    let taxon_code n = 
+        match n.unadjusted with
+        | h :: _ -> (** All the elements in the list have the same code *)
+                h.code
+        | [] -> failwith "AllDirNode.taxon_code"
+
+    (* The median_3 is calculated with the unadjusted component of the vertex *)
+    let median_3 grandcode par cur a b =
+        let get_desired_dir par x = not_with (taxon_code par) x.unadjusted in
+        let na = get_desired_dir cur a
+        and nb = get_desired_dir cur b 
+        and ncur = get_desired_dir par cur 
+        and npar = 
+            match grandcode with
+            | Some x -> not_with x par.unadjusted
+            | None ->
+                    match par.unadjusted with
+                    | [par] -> par
+                    | _ -> failwith "AllDirNode.median_3"
+        in
+        let node = {
+            lazy_node = 
+                OneDirF.median_3 None npar.lazy_node ncur.lazy_node
+                na.lazy_node nb.lazy_node;
+            dir = Some (na.code, nb.code);
+            code = taxon_code cur;
+        }
+        in
+        match cur.unadjusted with
+        | [_] -> { cur with unadjusted = [node] }
+        | _ ->
+                let x, y = yes_with (taxon_code par) cur.unadjusted in
+                { cur with unadjusted = [x; y; node] }
+
     let to_string nodes = 
         let res = 
             List.map (fun x -> OneDirF.to_string x.lazy_node)
@@ -382,12 +436,6 @@ type nad8 = Node.Standard.nad8 = struct
                 | _ -> failwith "AllDirNode.node_cost"
 
     let update_leaf x = x
-
-    let taxon_code n = 
-        match n.unadjusted with
-        | h :: _ -> (** All the elements in the list have the same code *)
-                h.code
-        | [] -> failwith "AllDirNode.taxon_code"
 
     let union_distance _ _ = 0.0
 

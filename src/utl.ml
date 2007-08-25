@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Utl" "$Revision: 2080 $"
+let () = SadmanOutput.register "Utl" "$Revision: 2145 $"
 
 (** This module implements basic utilities *)
 
@@ -176,7 +176,7 @@ let swap_item pos1 pos2 arr =
 
 
 let printIntArr (arr : int array) = 
-    Array.iter (fprintf stdout "%12i") arr;
+    Array.iter (fprintf stdout "%3i") arr;
     print_newline ()
 
 

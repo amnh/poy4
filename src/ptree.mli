@@ -136,8 +136,6 @@ module type Tree_Operations =
     val uppass : (a, b) p_tree -> (a, b) p_tree
     val incremental_uppass : (a, b) p_tree -> incremental list -> (a, b) p_tree
     val to_formatter :  
-        ?pre_ref_codes:All_sets.Integers.t ->
-        ?fi_ref_codes:All_sets.Integers.t ->
         Tags.attributes -> Data.d -> (a, b) p_tree -> Tags.output 
     (** [root_costs t] returns all possible roots in a tree (eg. every edge)
     * and the respective tree cost associated with it. *)

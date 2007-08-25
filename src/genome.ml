@@ -39,20 +39,24 @@ type meds_t = {
     chrom_pam : Data.dyna_pam_t
 }
 
+let max_taxa_id = ref 0 
 
 let init_med (genome : Sequence.s Data.dyna_data) chrom_pam tcode num_taxa
         =  
     let med = GenomeAli.init genome in 
+     max_taxa_id := max !max_taxa_id num_taxa;
+   
     { 
         med_ls = [med]; 
     
         total_cost = 0; 
         total_recost = 0; 
         c2 = Cost_matrix.Two_D.default; 
-
-        approx_cost_arr = (Array.make num_taxa max_int);
-        approx_recost_arr = (Array.make num_taxa max_int);
-        code = tcode;
+ 
+        approx_cost_arr = (Array.make !max_taxa_id max_int);
+        approx_recost_arr = (Array.make !max_taxa_id max_int);
+ 
+       code = tcode;
 
         chrom_pam = chrom_pam 
     } 

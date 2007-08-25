@@ -59,13 +59,12 @@ type t = {
   chrom_pam : Data.dyna_pam_t;
   alph : Alphabet.a;
   code : int;
-}
-val cardinal : t -> int
+}val cardinal : t -> int
 val of_array :
-    Data.dynamic_hom_spec ->
+  Data.dynamic_hom_spec ->
   (Sequence.s * IntMap.key) array -> int -> int -> int -> t
 val of_list :
-    Data.dynamic_hom_spec ->
+  Data.dynamic_hom_spec ->
   (Sequence.s * IntMap.key) list -> int -> int -> int -> t
 val to_list : t -> (meds_t * IntMap.key) list
 val same_codes : 'a IntMap.t -> 'b IntMap.t -> bool
@@ -81,9 +80,5 @@ val compare_data : t -> t -> int
 val to_formatter :
   IntSet.t ->
   Tags.attribute list -> t -> t option -> Data.d -> Tags.output list
-
-
-val to_single :
-    ?is_root:bool -> IntSet.t -> t -> t -> t -> float * float * t
-
+val to_single : IntSet.t -> t option -> t -> t -> float * float * t
 val get_active_ref_code : t -> IntSet.t * IntSet.t

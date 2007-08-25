@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2103 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2145 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -548,18 +548,28 @@ let compare_data a b =
 
 let ( --> ) a b = b a 
 
-let to_formatter attr t d : Tags.output list = 
+let to_formatter attr t to_single d : Tags.output list = 
     let output_sequence code seq acc =
-        let seq = Sequence.to_formater seq t.alph in
         let cost = Codes.find code t.costs in
-        let costb = 
-            (string_of_float cost.min) ^ " - " ^ (string_of_float cost.max)
+        let costb, max = 
+            match to_single with
+            | None -> 
+                    (string_of_float cost.min) ^ " - " ^ (string_of_float
+                    cost.max), cost.max
+            | Some par ->
+                    let par = Codes.find code par.sequences in
+                    let s1, s2, min = 
+                        Sequence.Align.align_2 seq par t.c2 Matrix.default
+                    in
+                    let max = Sequence.Align.max_cost_2 s1 s2 t.c2 in
+                    (string_of_int min) ^ " - " ^ (string_of_int max), 
+                    float_of_int max
         in
         let definite_str = 
-            if cost.max > 0. then  "true"
+            if max > 0. then  "true"
             else "false"
         in 
-
+        let seq = Sequence.to_formater seq t.alph in
         let attributes = 
             (Tags.Characters.name, (Data.code_character code d)) ::
                 (Tags.Characters.cost, costb) ::

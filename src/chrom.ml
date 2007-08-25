@@ -40,25 +40,28 @@ type meds_t = {
     chrom_pam : Data.dyna_pam_t 
 }
 
+let max_taxa_id = ref 0 
 
-let init_med (seq : Sequence.s) chrom_pam tcode num_taxa =  
+let init_med (seq : Sequence.s) c2 chrom_pam tcode num_taxa =  
 
     let seq = 
         if Sequence.is_empty seq (Alphabet.get_gap Alphabet.nucleotides) then
             UtlPoy.get_empty_seq ()
         else seq
     in
+
     let med = ChromAli.init_med seq in
+    max_taxa_id := max !max_taxa_id num_taxa;
 
     { 
         med_ls = [med]; 
     
         total_cost = 0; 
         total_recost = 0;
-        c2 = Cost_matrix.Two_D.default; 
-        approx_med_arr = (Array.make num_taxa med);
-        approx_cost_arr = (Array.make num_taxa max_int);
-        approx_recost_arr = (Array.make num_taxa max_int);
+        c2 = c2;
+        approx_med_arr = (Array.make !max_taxa_id med);
+        approx_cost_arr = (Array.make !max_taxa_id max_int);
+        approx_recost_arr = (Array.make !max_taxa_id max_int);
         code = tcode;
 
         chrom_pam = chrom_pam 
@@ -69,6 +72,7 @@ let update_approx_mat meds1 meds2 =
     let med1 = List.hd meds1.med_ls in  
     let med2 = List.hd meds2.med_ls in  
     let code2 = meds2.code in
+
     (if meds1.approx_cost_arr.(code2) = max_int then begin 
         let cost, recost, med2_ls = ChromAli.find_med2_ls med1 med2 meds1.c2 meds1.chrom_pam in  
         meds1.approx_med_arr.(code2) <- List.hd med2_ls;
@@ -200,7 +204,7 @@ let get_active_ref_code meds =
 (*
     List.iter (fun med -> fprintf stdout "%i -> %i %i\n " med.ChromAli.ref_code
                    med.ChromAli.ref_code1 med.ChromAli.ref_code2) meds.med_ls;
-  flush stdout; 
+    flush stdout;  
 *)  
     let med = List.hd meds.med_ls in
     med.ChromAli.ref_code, med.ChromAli.ref_code1, med.ChromAli.ref_code2

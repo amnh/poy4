@@ -48,13 +48,14 @@ type meds_t = {
 
 }
 
+let max_taxa_id = ref 0 
 
 let init_med (seq_arr : (Sequence.s Data.seq_t) array) 
         cost_mat alpha annchrom_pam tcode num_taxa = 
 
     let med = AnnchromAli.init 
         (Array.map (fun s -> s.Data.seq, s.Data.code) seq_arr) in 
-
+    max_taxa_id := max !max_taxa_id num_taxa;
     {
         med_ls = [med];
         num_med = 1;
@@ -64,9 +65,9 @@ let init_med (seq_arr : (Sequence.s Data.seq_t) array)
         cost_mat = cost_mat;
         alpha = alpha;
 
-        approx_med_arr = (Array.make num_taxa med);
-        approx_cost_arr = (Array.make num_taxa max_int);
-        approx_recost_arr = (Array.make num_taxa max_int);
+        approx_med_arr = (Array.make !max_taxa_id med);
+        approx_cost_arr = (Array.make !max_taxa_id max_int);
+        approx_recost_arr = (Array.make !max_taxa_id max_int);
         code = tcode;
     }
 
