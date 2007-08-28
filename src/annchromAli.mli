@@ -79,3 +79,4 @@ val to_single :
   Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s array
 val change_to_single : annchrom_t -> Sequence.s array -> annchrom_t
 val to_formater : annchrom_t -> Alphabet.a -> string
+val copy_chrom_map : annchrom_t -> annchrom_t -> annchrom_t

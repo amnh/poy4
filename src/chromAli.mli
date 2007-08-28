@@ -66,3 +66,5 @@ val find_med2_ls :
 val test : unit -> 'a
 val change_to_single : med_t -> Sequence.s -> med_t
 val find_approx_med2 : med_t -> med_t -> med_t -> med_t 
+val print : med_t -> unit
+val copy_chrom_map : med_t -> med_t -> med_t

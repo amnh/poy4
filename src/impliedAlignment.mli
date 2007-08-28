@@ -33,8 +33,9 @@ type ias = {
     homologous: (int, int Sexpr.t) Hashtbl.t;
     (** The other assigned codes that are homologous to a particular code 
     * assigned to [seq] or to other sequences. *)
-    cannonic_code : int; (* The code of the implied alignment, to keep left and
-    right relationships.*)
+    indels: (int * string * int * [`Insertion | `Deletion] * int Sexpr.t)
+    Sexpr.t; 
+        (* The location and contents of an insertion block *)
     order : int list; (* The order of the codes stored in homologous *)
 }
 
@@ -48,14 +49,14 @@ type dyna_state_t = Data.dyna_state_t
    optimal medians in case of chromosomes   
 *)
 
-type ias_arr = ias array
-
 type t = {
-    sequences : ias_arr list All_sets.IntegerMap.t;
+    sequences : ias array list All_sets.IntegerMap.t;
     c2 : Cost_matrix.Two_D.m;
     chrom_pam : Data.dyna_pam_t;
     state : dyna_state_t;
     code : int;
+    children : int Sexpr.t;
+    cannonic_code : int;
     alpha : Alphabet.a;
 }
 
@@ -100,10 +101,6 @@ module type S = sig
     * gap from the alphabet set of the sequences contained in tree (it implies
     * that [t] only has one sequence). *)
     val of_tree : ((int -> int) * tree) -> Methods.implied_alignment
-
-    val concat_alignment :
-          (int * int array array All_sets.IntegerMap.t list) list list ->
-          (int * int array All_sets.IntegerMap.t list) list list
 
     val create : (tree -> int list -> tree) ->
         int list -> Data.d ->

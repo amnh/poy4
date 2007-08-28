@@ -114,6 +114,24 @@ let code (a : t) =
     | BreakinvCS a -> a.BreakinvCS.code
     | AnnchromCS a -> a.AnnchromCS.code
 
+let print dyn = 
+    match dyn with
+    | ChromCS ch ->
+          ChromCS.print ch
+    | _ -> print_endline "Do not print non-chromosome characters"
+
+
+let copy_chrom_map s_ch d_ch =
+    match s_ch, d_ch with
+    | ChromCS s_ch, ChromCS d_ch ->
+          ChromCS (ChromCS.copy_chrom_map s_ch d_ch)
+    | AnnchromCS s_ch, AnnchromCS d_ch ->
+          AnnchromCS (AnnchromCS.copy_chrom_map s_ch d_ch)
+    | GenomeCS s_ch, GenomeCS d_ch ->
+          GenomeCS (GenomeCS.copy_chrom_map s_ch d_ch) 
+    | _, _ -> d_ch
+
+    
 
 let leaf_sequences (a : t) = 
     match a with 

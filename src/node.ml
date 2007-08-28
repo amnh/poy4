@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2145 $"
+let () = SadmanOutput.register "Node" "$Revision: 2157 $"
 
 let debug = false
 let debug_exclude = false
@@ -180,6 +180,21 @@ let empty () = {
     exclude_sets = [];
     exclude_info = [];
 }
+
+let print nd = 
+    List.iter 
+        (fun a_cs ->
+             match a_cs with
+             | Dynamic a_dyn ->
+                   print_endline "Preliminary state";
+                   DynamicCS.print a_dyn.preliminary;
+                   print_endline "Final state";
+                   DynamicCS.print a_dyn.final
+             | _ -> print_endline "Do not print non-dynamic characters"
+        ) nd.characters
+    
+    
+
 
 let to_string {characters=chs; total_cost=cost; taxon_code=tax_code} =
     ("[[NODE tax_code=" ^ string_of_int tax_code
@@ -1668,7 +1683,6 @@ let get_active_ref_code node_data =
 
         ) (IntSet.empty, IntSet.empty, IntSet.empty, IntSet.empty) node_data.characters 
 
-
 let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d 
     (cs , cs_single) (parent_cs : (cs * cs) option) : Tags.output list = 
     match cs,  parent_cs, cs_single with
@@ -1732,20 +1746,6 @@ let rec cs_to_formatter (pre_ref_codes, fi_ref_codes) d
                 cs_single.preliminary None d)
 
           | Some ((Dynamic parent_cs), (Dynamic parent_cs_single)) ->
-(*
-                let cs_single = 
-                    let prev_cost, new_cost, res = 
-                        DynamicCS.to_single pre_ref_codes
-                            None
-                            parent_cs_single.preliminary
-                            cs.preliminary
-                    in
-                    { cs with preliminary = res; final = res;
-                    cost = cs.cost -. (cs.weight *. prev_cost) +. (cs.weight *. new_cost);
-                    sum_cost = cs.sum_cost -. (cs.weight *. prev_cost) +.
-                    (cs.weight *. new_cost) }
-                in
-*)
                 (DynamicCS.to_formatter pre_ref_codes pre cs.preliminary
                 (Some parent_cs.preliminary) d) 
                 @ 
@@ -1829,6 +1829,26 @@ let to_formatter_single (pre_ref_codes, fi_ref_codes)
     in
     (Tags.Nodes.node, attr, `Structured (`Set children))
 
+
+let copy_chrom_map source des =
+    let s_ch_arr = Array.of_list source.characters in 
+    let d_ch_arr = Array.of_list des.characters in 
+    let d_ch_arr = 
+        Array.mapi 
+            (fun idx d_ch ->
+                 match s_ch_arr.(idx), d_ch with 
+                 | Dynamic s_ch, Dynamic d_ch ->
+                       let pre  = DynamicCS.copy_chrom_map s_ch.preliminary
+                           d_ch.preliminary in 
+                       let fi = DynamicCS.copy_chrom_map s_ch.final
+                           d_ch.final in
+
+                       Dynamic {d_ch with preliminary = pre; final = fi}
+                 | _, _ -> d_ch
+            ) d_ch_arr
+    in 
+    {des with characters = Array.to_list d_ch_arr}
+
 let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
         acc d (node_data, node_single) node_id (child1_id,  child1_node_data)
         (child2_id,  child2_node_data) (parent_node_data_opt : (node_data * node_data) option) : Tags.output =
@@ -1871,7 +1891,8 @@ let to_formatter_subtree (pre_ref_codes, fi_ref_codes)
                  match parent_node_data_opt with 
                  | Some (parent_node_data, single_parent_node_data) -> 
                          let pn = List.nth parent_node_data.characters idx 
-                         and pnsingle = List.nth single_parent_node_data.characters idx
+                         and pnsingle = List.nth
+                             single_parent_node_data.characters idx
                          in 
                          Some (pn, pnsingle)
                  | _ -> None

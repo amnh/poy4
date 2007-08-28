@@ -2412,14 +2412,14 @@ let get_alphabet data c =
 (** transform all sequences whose codes are on the code_ls into chroms 
  * each ia for one character*)    
 let transform_chrom_to_rearranged_seq data meth tran_code_ls 
-        (ia_ls : ((int * (int array array IntMap.t) list) list list) list) = 
+        (ia_ls : Methods.implied_alignment list) = 
     let data = duplicate data in
     let tran_code_ls, _ = get_tran_code_meth data meth in 
     let num_ia = ref 0 in  
     let t_ch_ia_map = List.fold_left 
-    ~f:(fun (t_ch_ia_map : int array array FullTupleMap.t) ia  ->
+    ~f:(fun (t_ch_ia_map) ia  ->
         List.fold_left 
-        ~f:(fun t_ch_ia_map handle_ia ->
+        ~f:(fun t_ch_ia_map (handle_ia, _) ->
             List.fold_left 
             ~f:(fun t_ch_ia_map (t_id, t_ia) ->
                 List.fold_left 
@@ -2748,11 +2748,15 @@ let to_faswincladfile data filename =
     in
     let output_character_types () =
         (* We first output the non additive character types *)
-        let unolen = 
-            (List.length data.non_additive_8) + 
-            (List.length data.non_additive_16) +
-            (List.length data.non_additive_32) 
-        and olen = List.length data.additive in
+        let unolen, olen = 
+        (Hashtbl.fold (fun c s ((unolen, olen) as acc) ->
+            match s with
+            | Static st when st.Parser.SC.st_type = Parser.SC.STUnordered -> 
+                    unolen + 1, olen
+            | Static st when st.Parser.SC.st_type = Parser.SC.STOrdered -> 
+                    unolen, olen + 1
+            | _ -> acc) data.character_specs (0, 0))
+        in
         fo ((if unolen > 0 then "cc - 0." ^ string_of_int (unolen - 1) ^ 
         ";@\n" else "") ^ (if olen > 0 then 
             ("cc + " ^ string_of_int unolen ^ "." ^ 

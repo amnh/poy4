@@ -244,3 +244,17 @@ let get_active_ref_code meds =
 *)  
     let med = List.hd meds.med_ls in
     med.GenomeAli.genome_ref_code, med.GenomeAli.genome_ref_code1, med.GenomeAli.genome_ref_code2
+
+
+
+let copy_chrom_map s_ch d_ch =
+    let copied_med_ls = List.map (fun ad_med -> 
+                  let as_med = List.find 
+                      (fun as_med -> as_med.GenomeAli.genome_ref_code1 = ad_med.GenomeAli.genome_ref_code  || 
+                              as_med.GenomeAli.genome_ref_code2 = ad_med.GenomeAli.genome_ref_code
+                      ) s_ch.med_ls
+                  in 
+                  GenomeAli.copy_chrom_map ad_med as_med
+             ) d_ch.med_ls
+    in 
+    {d_ch with med_ls = copied_med_ls}

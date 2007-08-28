@@ -364,3 +364,13 @@ let to_single ref_codes (root : t option) single_parent mine =
          costs = costs;
          recosts = recosts;
          total_cost = float_of_int total_cost}
+
+let copy_chrom_map s_ch d_ch =
+    let copied_meds = IntMap.mapi 
+        (fun code ad_ch ->
+             let as_ch = IntMap.find code s_ch.meds in 
+             let copied_ad = Annchrom.copy_chrom_map as_ch ad_ch in 
+             copied_ad
+        ) d_ch.meds
+    in 
+    {d_ch with meds = copied_meds}

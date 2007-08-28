@@ -128,3 +128,4 @@ val to_single :
   med_t ->
   Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s array
 val change_to_single : med_t -> Sequence.s array -> med_t
+val copy_chrom_map : med_t -> med_t -> med_t

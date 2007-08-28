@@ -684,3 +684,8 @@ let to_formater med alph =
         Array.map (fun seg -> Sequence.to_formater seg.seq alph) med.seq_arr 
     in 
     String.concat "|" (Array.to_list seq_str_arr)
+
+let copy_chrom_map s d = {d with ref_code = s.ref_code; 
+                              ref_code1 = s.ref_code1;
+                              ref_code2 = s.ref_code2;
+                              seq_arr = s.seq_arr}

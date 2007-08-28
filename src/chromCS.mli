@@ -82,3 +82,6 @@ val to_formatter :
   Tags.attribute list -> t -> t option -> Data.d -> Tags.output list
 val to_single : IntSet.t -> t option -> t -> t -> float * float * t
 val get_active_ref_code : t -> IntSet.t * IntSet.t
+val print : t -> unit
+val copy_chrom_map : t -> t -> t
+

@@ -221,3 +221,15 @@ let to_string (med : annchrom_t) alpha =
 let get_active_ref_code meds = 
     let med = List.hd meds.med_ls in
     med.AnnchromAli.ref_code, med.AnnchromAli.ref_code1, med.AnnchromAli.ref_code2
+
+let copy_chrom_map s_ch d_ch =
+    let copied_med_ls = List.map (fun ad_med -> 
+                  let as_med = List.find 
+                      (fun as_med -> as_med.AnnchromAli.ref_code1 = ad_med.AnnchromAli.ref_code  || 
+                              as_med.AnnchromAli.ref_code2 = ad_med.AnnchromAli.ref_code
+                      ) s_ch.med_ls
+                  in 
+                  AnnchromAli.copy_chrom_map ad_med as_med   
+                                 ) d_ch.med_ls
+    in 
+    {d_ch with med_ls = copied_med_ls}

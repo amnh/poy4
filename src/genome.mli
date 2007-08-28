@@ -40,3 +40,4 @@ val cmp_max_pair_cost : meds_t -> meds_t -> int * int
 val compare : meds_t -> meds_t -> int
 val clean_median : 'a -> 'b -> 'a * 'b
 val get_active_ref_code : meds_t -> int * int * int
+val copy_chrom_map : meds_t -> meds_t -> meds_t

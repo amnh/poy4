@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 2145 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2157 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -120,6 +120,11 @@ let clone_med m = {
     recost2 = m.recost2;
     chrom_map = List.map clone_seg m.chrom_map
 }
+
+let print med =
+    fprintf stdout "%i -> %i %i\n " med.ref_code
+        med.ref_code1 med.ref_code2;
+    flush stdout  
 
 
 let print_map map = 
@@ -421,7 +426,7 @@ let rec create_global_map (seq1 : Sequence.s) (seq2 : Sequence.s) cost_mat ali_p
 let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) global_map 
         ali_mat alied_gen_seq1 alied_gen_seq2 
         (order2_arr, total_cost, recost1, recost2) cost_mat ali_pam = 
-        
+
     let approx = ali_pam.ChromPam.approx in
 
 
@@ -809,3 +814,10 @@ let test () =
     failwith "Finish testing chromAli"
         
 
+
+let copy_chrom_map s d = 
+    {d with ref_code = s.ref_code; 
+         ref_code1 = s.ref_code1;
+         ref_code2 = s.ref_code2;
+         chrom_map = s.chrom_map}
+        

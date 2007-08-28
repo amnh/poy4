@@ -67,6 +67,13 @@ let init_med (seq : Sequence.s) c2 chrom_pam tcode num_taxa =
         chrom_pam = chrom_pam 
     } 
 
+let print meds =
+       List.iter (fun med -> fprintf stdout "%i -> %i %i\n " med.ChromAli.ref_code
+                      med.ChromAli.ref_code1 med.ChromAli.ref_code2;
+                      ChromAli.print_map med.ChromAli.chrom_map;
+                 ) meds.med_ls;
+    flush stdout
+
 
 let update_approx_mat meds1 meds2 =     
     let med1 = List.hd meds1.med_ls in  
@@ -202,9 +209,21 @@ let compare (meds1 : meds_t) (meds2 : meds_t) =
 (** ============================================================== **)
 let get_active_ref_code meds = 
 (*
-    List.iter (fun med -> fprintf stdout "%i -> %i %i\n " med.ChromAli.ref_code
-                   med.ChromAli.ref_code1 med.ChromAli.ref_code2) meds.med_ls;
+    List.iter ChromAli.print  meds.med_ls;
     flush stdout;  
-*)  
+*)
+  
     let med = List.hd meds.med_ls in
     med.ChromAli.ref_code, med.ChromAli.ref_code1, med.ChromAli.ref_code2
+
+let copy_chrom_map s_ch d_ch =
+    let copied_med_ls = List.map (fun ad_med -> 
+                  let as_med = List.find 
+                      (fun as_med -> as_med.ChromAli.ref_code1 = ad_med.ChromAli.ref_code  || 
+                              as_med.ChromAli.ref_code2 = ad_med.ChromAli.ref_code
+                      ) s_ch.med_ls
+                  in 
+                  ChromAli.copy_chrom_map ad_med as_med
+             ) d_ch.med_ls
+    in 
+    {d_ch with med_ls = copied_med_ls}

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 2006 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 2157 $"
 
 let debug = true
 
@@ -46,7 +46,7 @@ let output_implied_alignment (tree, seqname) filename data to_process =
 
     (* This function expects only one element *)
     match to_process with
-    | [all_taxa] ->
+    | [all_taxa, _] ->
             let all_taxa = sort_using_tree tree all_taxa in
             let process_each acc (taxcode, sequence) =
                 let name = 
@@ -179,7 +179,6 @@ module Make
                     List.map (fun code -> Sexpr.map (fun x -> 
                         let seqname = Data.code_character code data in
                         let ia = IA.create CT.filter_characters [code] data x in
-(*                        let ia = List.map IA.concat_alignment ia in *)
                         (x.Ptree.tree, seqname) , ia) trees) char_codes  
                 in
                 List.iter (fun res ->
@@ -187,7 +186,7 @@ module Make
                     (Status.Output (filename, false, [])) "@[<v>@,@,@{<b>Implied \
                     Alignments@}@,";
                     Sexpr.leaf_iter 
-                    (fun (x,y) -> List.iter (output_implied_alignment x filename
+                    (fun (x, y) -> List.iter (output_implied_alignment x filename
                     data) y) res;
                     Status.user_message 
                     (Status.Output (filename, false, [])) "@]%!")

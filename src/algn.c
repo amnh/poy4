@@ -2320,9 +2320,46 @@ algn_nw_3d (const seqt s1, const seqt s2, const seqt s3,
 
 int
 algn_worst_2 (seqt s1, seqt s2, cmt c) {
-    int i, res = 0;
+    int i, res = 0, gap_opening, gap_row = 0;
+    SEQT gap, s1b, s2b;
+    gap = cm_get_gap (c);
+    /* We initialize i to the proper location */
+    if ((gap == (seq_get (s1, 0))) && (gap == (seq_get (s2, 0))))
+        i = 1;
+    else i = 0;
+    gap_opening = cm_get_gap_opening_parameter (c);
     assert ((seq_get_len (s1)) == (seq_get_len (s2)));
-    for (i = 0; i < seq_get_len (s1); i++) {
+    for (; i < seq_get_len (s1); i++) {
+        s1b = seq_get (s1, i);
+        s2b = seq_get (s2, i);
+        if (0 == gap_row) { /* We have no gaps */
+            if (s1b == gap) {
+                res += gap_opening;
+                gap_row = 1;
+            } else if (s2b == gap) {
+                res += gap_opening;
+                gap_row = 2;
+            }
+        }
+        else if (1 == gap_row) { /* We are in s1's block of gaps */
+            if (s1b != gap) {
+                if (s2b == gap) {
+                    res += gap_opening;
+                    gap_row = 2;
+                }
+                else gap_row = 0;
+            }
+        } 
+        else { /* We are in s2's block of gaps */
+            assert (2 == gap_row);
+            if (s2b != gap) {
+                if (s1b == gap) {
+                    res += gap_opening;
+                    gap_row = 1;
+                }
+                else gap_row = 0;
+            }
+        }
         res += (cm_calc_cost (c->worst, seq_get (s1, i), seq_get (s2, i), c->lcm));
     }
     return (res);

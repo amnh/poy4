@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 2127 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2157 $"
 
 (** Data *)
 
@@ -247,7 +247,10 @@ type ('c, 'd) character_input_output = [
 
 (* Note: there are a list of alignments coresponding to a character
  * if the character is a chromosome and broken into diffrent segments *)
-type implied_alignment = (int * (int array array All_sets.IntegerMap.t) list) list list
+type implied_alignment = 
+  ((int * int array array All_sets.IntegerMap.t list) list *
+   (int * string * int * [ `Deletion | `Insertion ] * int Sexpr.t) Sexpr.t
+   list list) list
 
 type ('a, 'b, 'c, 'd) parallel_input = [ 
     | `Trees of 'a 

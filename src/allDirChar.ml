@@ -1247,8 +1247,10 @@ with type b = AllDirNode.OneDirF.n = struct
                                 root
                         | _ -> assert false
             in
+
             let fi = IntSet.filter (fun x -> not (IntSet.mem x pre)) fi in
             let rpre, rprech, rfi, _ = get_active_ref_code (-1) root in
+
             IntSet.union (IntSet.union pre rprech) rpre,
             IntSet.union fi rfi
         in
@@ -1262,8 +1264,10 @@ with type b = AllDirNode.OneDirF.n = struct
 
         let tree = assign_final_states tree in
         let pre_ref_codes, fi_ref_codes = get_active_ref_code tree in 
-(*        Utl.printIntSet pre_ref_codes;
-        Utl.printIntSet fi_ref_codes;*)
+(*
+        Utl.printIntSet pre_ref_codes;
+        Utl.printIntSet fi_ref_codes;
+*)
         let get_simplified parent x = 
             let nd = Ptree.get_node_data x tree in
             nd, get_unadjusted parent nd, get_single parent nd
@@ -1274,7 +1278,7 @@ with type b = AllDirNode.OneDirF.n = struct
         and splitter parent a = get_unadjusted parent a, get_single parent a in
         (* Now we are ready to process the contents of the tree *)
         let rec subtree_to_formatter (pre, fi) cur par 
-        ((node_parent, single_parent) as tmp2) : Tags.output =
+                ((node_parent, single_parent) as tmp2) : Tags.output =
             match Ptree.get_node cur tree with
             | (Tree.Interior _) as nd ->
                     let cur_data = Ptree.get_node_data cur tree in
@@ -1321,7 +1325,9 @@ with type b = AllDirNode.OneDirF.n = struct
                         let sroot, sa = 
                             let a = Ptree.get_node_data a tree in
                             let s = get_single (-1) a in
-                            (s, s), s
+                            let root = get_unadjusted (-1) root in 
+                            let s_root = Node.copy_chrom_map root s in 
+                            (root, s_root), s
                         in
                         let a : Tags.output = 
                             subtree_to_formatter (pre, fi) a b sroot

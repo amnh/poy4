@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2110 2007-08-14 18:30:31Z andres $ *)
+(* $Id: charTransform.ml 2157 2007-08-28 14:32:51Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2110 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2157 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -370,35 +370,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 done;
                 Status.finished st;
                 !trees
-
-    let static_approximation data tree chars =
-        let tree = reroot_in_component tree in
-        let status = 
-            Status.create "Static Approximation" None "Transforming \
-            molecular data to static approximations." 
-        in
-        (* The list of characters that we will process *)
-        let chars = 
-            Data.get_code_from_characters_restricted 
-            `Dynamic data chars 
-        in
-        let process_tree tree = 
-            let ia = IA.create filter_characters chars data tree in
-            let ia = List.map IA.concat_alignment ia in 
-            match ia with
-            | [all] ->
-                    let new_chars = 
-                        List.fold_left (Node.new_characters
-                        !(data.Data.character_code_gen)) All_sets.IntegerMap.empty
-                        all 
-                    in
-                    transform_tree (Node.build_node new_chars chars) tree
-            | [] -> tree
-            | _ -> failwith "Unexpected CharTransform.process_tree"
-        in
-        let tree = process_tree tree in
-        Status.finished status;
-        tree
 
     let replace_nodes nodes tree =
         let filter node = 
@@ -760,7 +731,6 @@ insert_union parent union_node tmp
 
     let process_static_approx remove chars remove_non_informative data filter tree =
         tree
-        --> reroot_in_component
         --> 
             IA.to_static_homologies remove filter_characters remove_non_informative 
             chars data 
@@ -982,71 +952,6 @@ insert_union parent union_node tmp
               Status.finished status;              
               load_transformed_data new_data 
           end 
-
-    let rec transform_tree_characters (tree : IA.tree) data nodes meth = 
-        let replacer nodes nd = List.find 
-            (fun x -> (Node.taxon_code x) = (Node.taxon_code nd))
-            nodes
-        in
-        match meth with
-        | `MultiStatic_Aprox (chars, _) -> static_approximation data tree chars
-        | `Static_Aprox (chars, _) -> static_approximation data tree chars
-        | `Assign_Transformation_Cost_Matrix _ 
-        | `Create_Transformation_Cost_Matrix _ 
-        | `Assign_Affine_Gap_Cost _
-        | `Seq_to_Chrom _ 
-        | `Seq_to_Breakinv _ 
-        | `Annchrom_to_Breakinv _ 
-        | `Change_Dyn_Pam _ 
-        | `Fixed_States _
-        | `Breakinv_to_Seq _ as meth ->
-              let data, nodes = transform_node_characters `Empty (data, nodes) meth in
-              transform_tree (replacer nodes) tree 
-        | `Chrom_to_Seq (chars, _) as meth ->
-              let data, nodes = transform_node_characters (`Single tree) (data, nodes) meth in
-              transform_tree (replacer nodes) tree 
-
-
-        | `Exact _ 
-        | `Approximate _
-        | `Search_Based _ as meth ->
-                unsupported_character_messages meth;
-                tree
-        | `Automatic_Static_Aprox sensible ->
-                let chars = analyze_sequences sensible data (`Single tree) in
-                (match chars with
-                | [] -> tree
-                | chars ->
-                        transform_tree_characters tree data nodes 
-                        (`Static_Aprox ((`Some chars), true)))
-        | `Automatic_Sequence_Partition (chars, sensible) ->
-                let chars = 
-                    Data.get_code_from_characters_restricted
-                    `Dynamic data chars 
-                in
-                (match chars with
-                | [] -> tree
-                | chars ->
-                    let chars = 
-                        List.fold_left 
-                        (fun acc x -> All_sets.Integers.add x acc)
-                        All_sets.Integers.empty
-                        chars
-                    in
-                    let new_data = partition_sequences sensible chars
-                    (to_tupled_tree tree) data in
-                    let new_data = Data.categorize new_data in
-                    let nc = List.map Node.taxon_code nodes in
-                    let data, nodes = Node.load_data ~taxa:nc new_data in
-                    transform_tree (replacer nodes) tree)
-        | `Prioritize ->
-                prioritize tree
-
-
-    let transform_trees trees data nodes trans =
-        let tt = transform_tree_characters in
-        Sexpr.map_status "Transforming trees" (fun x -> 
-            List.fold_left (fun acc t -> tt acc data nodes t) x trans) trees
 
 
     let transform_nodes trees data nodes (trans : Methods.char_transform list) = 

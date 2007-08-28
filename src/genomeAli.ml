@@ -1307,3 +1307,12 @@ let change_to_single med single_genome =
     in 
     
     {med with chrom_arr = new_chrom_arr}
+
+
+
+let copy_chrom_map s d = 
+    {d with genome_ref_code = s.genome_ref_code; 
+         genome_ref_code1 = s.genome_ref_code1;
+         genome_ref_code2 = s.genome_ref_code2;
+         chrom_arr = s.chrom_arr}
+        

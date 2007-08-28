@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 2145 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 2157 $"
 
 let fprintf = Printf.fprintf
 
@@ -87,6 +87,10 @@ let to_list t =
 let same_codes a b =
     let checker x _ res = res && (IntMap.mem x b) in
     IntMap.fold checker a true
+
+let print ch =
+    IntMap.iter (fun _ med -> Chrom.print med) ch.meds
+
 
 let median2 (a : t) (b : t) =
     (* We will use imperative style for this function *)
@@ -215,7 +219,6 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
     let _, state = List.hd attr in   
 
     let output_chrom code med acc =
-
         let med = 
             try
                 List.find (fun med ->                     
@@ -223,19 +226,18 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                           ) med.Chrom.med_ls
             with Not_found -> failwith "Not found med -> to_formatter -> ChromCS"
         in         
+
         let cost, recost,  map = 
             match parent_t with  
             | None -> 0, 0, None
             | Some parent -> begin 
                   let parent_med = IntMap.find code parent.meds in  
-(*                  Utl.printIntSet ref_codes;
-                    fprintf stdout "looking codes: "; *)
                   let parent_med = List.find 
                       (fun med -> 
                            IntSet.mem med.ChromAli.ref_code ref_codes 
                       ) parent_med.Chrom.med_ls
                   in                                                  
-                  print_newline ();
+
                   let cost, recost, map = 
                       match state with
                       | "Preliminary" ->
@@ -374,4 +376,15 @@ let get_active_ref_code t =
 
 
 
+
+
+let copy_chrom_map s_ch d_ch =
+    let copied_meds = IntMap.mapi 
+        (fun code ad_ch ->
+             let as_ch = IntMap.find code s_ch.meds in 
+             let copied_ad = Chrom.copy_chrom_map as_ch ad_ch in 
+             copied_ad
+        ) d_ch.meds
+    in 
+    {d_ch with meds = copied_meds}
 

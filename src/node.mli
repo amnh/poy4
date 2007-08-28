@@ -186,3 +186,7 @@ val total_cost_of_type :
   node_data -> float
 
 val to_string : node_data -> string
+val print : node_data -> unit
+val copy_chrom_map : node_data -> node_data -> node_data
+
+
