@@ -56,25 +56,8 @@ class ['a, 'b] do_nothing : ['a, 'b] search_manager_sampler = object
     method init _ = ()
     method clone = ({<>} :> ('a, 'b) search_manager_sampler)
     method process _ _ _ _ _ _ _ _ = 
-#ifdef USEPARALLEL
-        let max = Mpi.comm_size Mpi.comm_world in
-        let rec check_for_message cnt =
-            if 0 = Mpi.comm_rank Mpi.comm_world && cnt < max then
-                let gotit, rank, tag = 
-                    Mpi.iprobe Mpi.any_source 3 Mpi.comm_world
-                in
-                if not gotit then ()
-                else
-                    let (t : Status.c), (msg : string) = 
-                        Mpi.receive rank tag Mpi.comm_world in
-                    let _ = Status.user_message t msg in
-                    check_for_message (cnt + 1)
-            else ()
-        in
-        check_for_message 0
-#else
-        ()
-#endif
+        StatusCommon.process_parallel_messages Status.user_message
+
     method any_trees _ = ()
     method next_tree _  = ()
     method evaluate _ = ()

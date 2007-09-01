@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: fileStream.ml 2060 2007-08-09 16:04:10Z andres $ *)
+(* $Id: fileStream.ml 2169 2007-09-01 22:49:51Z andres $ *)
 (* Created Thu Apr 20 16:41:14 2006 (Illya Bomash) *)
 
 (** simple input streams as objects, with helper functions for parsing *)
@@ -291,8 +291,7 @@ let open_in fn =
     match fn with
     | `Local file -> open_in file
     | `Remote file ->
-#ifdef USENOSHAREDHD
-#warning "Using no shared hard drive"
+IFDEF USENOSHAREDHD THEN
             let rank = Mpi.comm_rank Mpi.comm_world in
             let tmp = 
                 Filename.temp_file "POY" (".input_" ^ string_of_int rank) 
@@ -308,9 +307,9 @@ let open_in fn =
             flush output;
             close_out output;
             open_in tmp
-#else
+ELSE
             open_in file
-#endif
+END
 
 let channel_n_filename fn = 
     open_in fn, filename fn

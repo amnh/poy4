@@ -878,7 +878,9 @@ algn_fill_plane_2 (const seqt s1, int *prec, int s1_len, int s2_len, int *mm, \
     int start_row, final_row, start_column, length;
     unsigned char *to_go_dm;
     width = width + dwidth_height;
+    if (width > s2_len) width = s2_len;
     height = height + dwidth_height;
+    if (height > s1_len) height = s1_len;
     a = mm;
     b = mm + s2_len;
     gap_row = cm_get_precal_row (prec, 0, s2_len); /* We want the horizontal row */
@@ -1703,7 +1705,9 @@ algn_fill_plane_2_aff (const seqt s1, int *prec, int s1_len, int s2_len, int *mm
     unsigned char *to_go_dm;
     open_gap = cm_get_gap_opening_parameter (c);
     width = width + dwidth_height;
+    if (width > s2_len) width = s2_len;
     height = height + dwidth_height;
+    if (height > s1_len) height = s1_len;
     a = mm;
     b = mm + s2_len;
     d = dnmm;
@@ -2265,12 +2269,12 @@ algn_nw_limit (const seqt s1, const seqt s2, const cmt c, \
     cm_precalc_4algn (c, m, s2);
     if (cm_get_affine_flag (c))
         return 
-            (algn_fill_plane_2_aff (s1, prec, s1_len, s2_len, mm, dm, c, 3, \
-                (len_s1 - len_s2) + 3, deltawh, mm + (2 * s2_len), \
+            (algn_fill_plane_2_aff (s1, prec, s1_len, s2_len, mm, dm, c, 50, \
+                (len_s1 - len_s2) + 50, deltawh, mm + (2 * s2_len), \
                 mm + (4 * s2_len)));
     else
-    return (algn_fill_plane_2 (s1, prec, s1_len, s2_len, mm, dm, c, 3, 
-                (len_s1 - len_s2) + 3, deltawh));
+    return (algn_fill_plane_2 (s1, prec, s1_len, s2_len, mm, dm, c, 50, 
+                (len_s1 - len_s2) + 50, deltawh));
 }
 
 

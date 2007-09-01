@@ -147,7 +147,7 @@ ifeq ($(USEWIN32), true)
 	DEFOPTS := $(DEFOPTS) -DUSEWIN32
 endif
 
-CPREPROCESSOR := -pp 'gcc -x c -E $(DEFOPTS)'
+OPTIONSPREPROCESSOR := -pp 'camlp4orf $(DEFOPTS)'
 
 
 SUBDIRS = grappa graphps
@@ -486,54 +486,52 @@ poyParser.cma: poyParser.ml
 status_gtk2.cmo: status_gtk2.ml
 	$(OCAMLC) -g -I +lablgtk2 $(OCAML_INCLUDES) -c $(DEBUG) status_gtk2.ml
 main.cmo: arguments.cmo main.ml
-	$(OCAMLC) -g $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) main.ml
+	$(OCAMLC) -g $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) main.ml
 main.cmx: arguments.cmx main.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c main.ml
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c main.ml
 sadmanOutput.cmo: sadmanOutput.cmi sadmanOutput.ml
 	$(OCAMLC) -g $(OCAML_INCLUDES) -c $(DEBUG) sadmanOutput.ml
 sadmanOutput.cmx: sadmanOutput.cmi sadmanOutput.ml
 	$(OCAMLOPT) $(OCAML_INCLUDES) -c sadmanOutput.ml
 sequence.cmi: matrix.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi sequence.mli
-	$(OCAMLC) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.mli
+	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.mli
 sequence.cmo: sadmanOutput.cmi matrix.cmi fingerPrint.cmi cost_matrix.cmi \
     alphabet.cmi all_sets.cmi sequence.cmi sequence.ml
-	$(OCAMLC) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.ml
+	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.ml
 sequence.cmx: sadmanOutput.cmx matrix.cmx fingerPrint.cmx cost_matrix.cmx \
     alphabet.cmx all_sets.cmx sequence.cmi sequence.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
 scripting.cmo: scripting.cmi scripting.ml
-	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
+	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
 scripting.cmx: scripting.cmi scripting.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c scripting.ml
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c scripting.ml
 timer.cmo: timer.cmi timer.ml
-	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) timer.ml
+	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) timer.ml
 timer.cmx: timer.cmi timer.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c timer.ml
-sampler.cmo: tree.cmi timer.cmi sequence.cmi ptree.cmi nodeSig.cmo edge.cmi \
-    all_sets.cmi methods.cmi sampler.ml
-	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sampler.ml
-sampler.cmx: tree.cmx timer.cmx sequence.cmx ptree.cmx nodeSig.cmx edge.cmx \
-    all_sets.cmx methods.cmx sampler.ml
-	$(OCAMLOPT) $(CPREPROCESSOR) $(OCAML_INCLUDES) -c sampler.ml
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c timer.ml
 fileStream.cmo: fileStream.ml
-	$(OCAMLC)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) fileStream.ml
+	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) fileStream.ml
 fileStream.cmx: fileStream.ml
-	$(OCAMLOPT)   $(CPREPROCESSOR) $(OCAML_INCLUDES) -c fileStream.ml
+	$(OCAMLOPT)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c fileStream.ml
+statusCommon.cmo: statusCommon.ml
+	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) statusCommon.ml
+statusCommon.cmx: statusCommon.ml
+	$(OCAMLOPT)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c statusCommon.ml
 
 
 # Generics for all the builds
 
 .SUFFIXES: .ml .mli .cmo .cmx .cmi .c .o
 
-CPREPROCESSED = fileStream.ml sequence.ml sequence.mli sampler.ml timer.ml scripting.ml main.ml 
-DOCFILTER = $(CAMLP4PROCESSED) $(CPREPROCESSED)
+OPTIONPREPROCESSED = fileStream.ml statusCommon.ml sequence.ml sequence.mli timer.ml scripting.ml main.ml 
+DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 
 .depend: nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml *.ml *.mli *.c *.h
 	$(OCAMLDEP) $(OCAML_INCLUDES) \
 	$(filter-out $(DOCFILTER), $(wildcard *.ml)) \
 	$(filter-out $(DOCFILTER:.ml=.mli), $(wildcard *.mli)) > .depend 
 	$(OCAMLDEP) $(PREPROCESSOR) $(CAMLP4PROCESSED) $(CAMLP4PROCESSED:.ml=.mli) >> .depend
-	$(OCAMLDEP) $(CPREPROCESSOR) $(CPREPROCESSED) scripting.mli >> .depend
+	$(OCAMLDEP) $(OPTIONSPREPROCESSOR) $(OPTIONPREPROCESSED) scripting.mli >> .depend
 	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c >> .depend
 
 ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml

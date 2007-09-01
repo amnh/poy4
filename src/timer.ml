@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-#ifdef USEWIN32
+IFDEF USEWIN32 THEN
 type rt = {
     utime : float;
     stime : float;
@@ -27,7 +27,7 @@ let c_start _ =
     let time = Unix.gettimeofday () in
     { utime = time; stime = time }
 
-#else
+ELSE
 type rt = {
     utime : float;
     stime : float;
@@ -49,7 +49,7 @@ type rt = {
 
 external c_start : int -> rt = "CAML_getrusage"
 
-#endif
+END
     
 
 type t = {

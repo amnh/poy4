@@ -19,7 +19,7 @@
 
 (** A Chromosome Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 2157 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 2169 $"
 
 let fprintf = Printf.fprintf
 
@@ -336,8 +336,7 @@ let to_single ref_codes (root : t option) single_parent mine =
             | None -> 
                   ChromAli.to_single aparent_med amed.ChromAli.ref_code c2  med.Chrom.chrom_pam
             | Some root ->              
-                  let single_root = UtlPoy.get_single_seq amed.ChromAli.seq c2
-                  in 
+                  let single_root = UtlPoy.get_single_seq amed.ChromAli.seq c2 in 
                   0, 0, single_root
         in 
         

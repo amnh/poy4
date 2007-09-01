@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2127 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2169 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -468,3 +468,24 @@ let output_status_to_formatter formatter maximum achieved header suffix =
             let f = Files.openf filename [] in
             output_to_formatter f
     | None -> ()
+
+let process_parallel_messages printer =
+IFDEF USEPARALLEL THEN
+        let max = Mpi.comm_size Mpi.comm_world in
+        let rec check_for_message cnt =
+            if 0 = Mpi.comm_rank Mpi.comm_world && cnt < max then
+                let gotit, rank, tag = 
+                    Mpi.iprobe Mpi.any_source 3 Mpi.comm_world
+                in
+                if not gotit then ()
+                else
+                    let (t : Status.c), (msg : string) = 
+                        Mpi.receive rank tag Mpi.comm_world in
+                    let () = printer t msg in
+                    check_for_message (cnt + 1)
+            else ()
+        in
+        check_for_message 0
+ELSE
+        ()
+END

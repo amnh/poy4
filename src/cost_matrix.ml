@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2145 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2169 $"
 
 
 exception Illegal_Cm_Format;;
@@ -71,7 +71,7 @@ module Two_D = struct
 
     let use_combinations = true
     and use_cost_model = Linnear
-    and use_gap_opening  = 1
+    and use_gap_opening  = 0
 
 
     let get_pure_cost_mat cost_mat = 
@@ -699,7 +699,7 @@ module Three_D = struct
 
     let use_combinations = true
     and use_cost_model = Linnear
-    and use_gap_opening  = 1
+    and use_gap_opening  = 0
 
     let set_affine m model = 
         match model with

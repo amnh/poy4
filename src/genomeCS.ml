@@ -344,9 +344,9 @@ let to_single ref_codes (root : t option) single_parent mine =
 
 
             match root with
-            | Some root -> 
+            | None  -> 
                   GenomeAli.to_single aparent_med amed c2  med.Genome.chrom_pam
-            | None ->
+            | Some root ->
                   let single_root = Array.map 
                       (fun chromt ->  
                            let single_seq = UtlPoy.get_single_seq

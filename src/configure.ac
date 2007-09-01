@@ -9,13 +9,6 @@ AC_CONFIG_HEADER([config.h])
 # Checks for programs.
 AC_PROG_CC
 
-#Check the version of gcc, required for preprocessing
-TMP_CC=gcc
-AC_CHECK_TOOL_PREFIX
-AC_CHECK_PROG_VER(TMP_CC, gcc, -v, 
-                  [version \([ egcygnustpi-]*[0-9.]*\)], [3.4.[2-9]* | 4.[0-9]* ],
-                  [AC_MSG_FAILURE([gcc version 3.4.2 or later required.])])
-
 
 # What are we going to substitute in the Makefile
 AC_SUBST(USEGRAPHICS)

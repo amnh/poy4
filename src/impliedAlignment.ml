@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2157 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2169 $"
 
 exception NotASequence of int
 
@@ -1219,7 +1219,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     | Some _ -> parent
                     | None -> Some (Ptree.get_parent taxon_id ptree)
                 in
-                get_dynamic_data par data
+                if Tree.is_leaf id ptree.Ptree.tree then
+                    Node.get_dynamic_preliminary par data
+                else get_dynamic_data par data
             in
             let data = convert_data taxon_id data in
             let did = Status.get_achieved st in

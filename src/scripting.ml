@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2127 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2169 $"
 
 module IntSet = All_sets.Integers
 
@@ -179,7 +179,7 @@ let report_memory () =
     --> fun x -> x ^ "@]@]%!"
 
 let explode_filenames files =
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
     let is_master = 0 = Mpi.comm_rank Mpi.comm_world in
     let files = 
         if is_master then
@@ -188,9 +188,9 @@ let explode_filenames files =
     in
     let files = Mpi.broadcast files 0 Mpi.comm_world in
     List.map (fun x -> `Remote x) files 
-#else
+ELSE
    List.map (fun x -> `Local x)  (PoyParser.explode_filenames files)
-#endif
+END
 
 
 let update_trees_to_data run =
@@ -694,6 +694,7 @@ let rec process_application run item =
                          run
                  | None ->
 
+                         (*
 #if (USEGRAPHICS==1)
                 GraphicsScreen.display trees;
                 run
@@ -701,11 +702,14 @@ let rec process_application run item =
                 GraphicTK.display trees;
                 run
 #else
+                         *)
              Status.user_message Status.Information 
              ("@[Interactive@ graphics@ are@ not@ supported@ in@ this@ " ^
              "compiled@ version@ of@ POY.@ Here@ is@ the@ ascii@ art@ though:@]");
              process_application run (`Ascii (None, collapse))
+             (*
 #endif
+             *)
 end
 
      | `Ascii (filename, collapse) ->
@@ -1110,7 +1114,7 @@ let emit_identifier =
     let decode_bremer set run = set
 
 
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
     let filter_my_trees run =
         let rank = (Mpi.comm_rank Mpi.comm_world) 
         and total = (Mpi.comm_size Mpi.comm_world) in
@@ -1120,7 +1124,7 @@ let emit_identifier =
                 else (pos + 1), trees) (0, []) run.trees
         in
         { run with trees = Sexpr.of_list trees }
-#endif
+END
 
     let add_something get adder run jck =
         let njck =
@@ -1168,7 +1172,7 @@ let emit_identifier =
         let res = List.map2 join2 prev newb in
         { run with bremer_support = Sexpr.of_list res }
 
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
     let args = Mpi.init Sys.argv
 
     let debug_parallel = false
@@ -1178,9 +1182,9 @@ let emit_identifier =
             print_endline (string_of_int my_rank ^ ":" ^ msg);
             flush stdout
         end else ()
-#else
+ELSE
     let args = Sys.argv
-#endif
+END
 
 let range_timer = ref (Timer.start ())
 
@@ -1188,8 +1192,8 @@ let rec folder (run : r) meth =
     check_ft_queue run;
     match meth with
     (* The following methods are only used by the parallel execution *)
-#ifdef USEPARALLEL
     | `Barrier -> (* Wait for synchronization with every other process *)
+IFDEF USEPARALLEL THEN
             let my_rank = Mpi.comm_rank Mpi.comm_world in
             if my_rank <> 0 then
                 let _ = Mpi.isend () 0 Methods.barrier Mpi.comm_world in
@@ -1228,7 +1232,11 @@ let rec folder (run : r) meth =
                         run
                 in
                 test ()
+ELSE 
+                run 
+END
     | `GatherTrees (joiner, continue) ->
+IFDEF USEPARALLEL THEN
             print_msg "Entering Gather Trees";
             let res = Mpi.allgather (encode_trees run) Mpi.comm_world in
             print_msg "Finished Gather Trees";
@@ -1242,7 +1250,11 @@ let rec folder (run : r) meth =
                 res
             in
             List.fold_left folder run continue
+ELSE 
+                run 
+END
     | `GatherJackknife ->
+IFDEF USEPARALLEL THEN
             let res = Mpi.allgather (encode_jackknife run) Mpi.comm_world in
             Array.fold_left 
             (fun run set ->
@@ -1250,7 +1262,11 @@ let rec folder (run : r) meth =
                 add_jackknifes run jckn)
             run
             res
+ELSE 
+                run 
+END
     | `GatherBremer ->
+IFDEF USEPARALLEL THEN
             let res = Mpi.allgather (encode_bremer run) Mpi.comm_world in
             Array.fold_left 
             (fun run set ->
@@ -1258,7 +1274,11 @@ let rec folder (run : r) meth =
                 add_bremers run bmr)
             run
             res
+ELSE 
+                run 
+END
     | `GatherBootstrap ->
+IFDEF USEPARALLEL THEN
             let res = Mpi.allgather (encode_bootstrap run) Mpi.comm_world in
             Array.fold_left 
             (fun run set ->
@@ -1266,15 +1286,15 @@ let rec folder (run : r) meth =
                 add_boostraps run bstp)
             run
             res
-    | `SelectYourTrees -> filter_my_trees run
-#else
-    | `Barrier 
-    | `GatherTrees _
-    | `GatherJackknife 
-    | `GatherBremer 
-    | `SelectYourTrees 
-    | `GatherBootstrap -> run
-#endif
+ELSE 
+                run 
+END
+    | `SelectYourTrees -> 
+IFDEF USEPARALLEL THEN
+            filter_my_trees run
+ELSE 
+                run 
+END
     | `Entry -> run
     | `StoreTrees -> 
             { run with trees = `Empty; stored_trees = run.trees }
@@ -1565,7 +1585,8 @@ let rec folder (run : r) meth =
                 Status.user_message (Status.Output (filename, false, [])) "%!"; 
                 run
             | `Xslt (file, style) ->
-#ifdef USE_XSLT
+                    let () =
+IFDEF USE_XSLT THEN
                     let filename, chout = Filename.open_temp_file "results" ".xml" in
                     close_out chout;
                     Status.user_message Status.Information 
@@ -1585,10 +1606,11 @@ let rec folder (run : r) meth =
                     Status.user_message (Status.Output (ofilename, false, []))
                     " </Diagnosis>@\n%!";
                     Xslt.process filename style file;
-#else
+ELSE
                     Status.user_message Status.Error 
                     "This version of POY was not compiled with XSLT support.";
-#endif
+END
+                    in
                     run
             | `Diagnosis filename ->                                    
                     let trees =                          

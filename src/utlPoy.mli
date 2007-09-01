@@ -32,8 +32,7 @@ val create_median_gap :
   ?start_pos:int -> ?end_pos:int -> Cost_matrix.Two_D.m -> Sequence.s
 val create_median_seq :
     ?approx:bool -> Sequence.s -> Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s * int
-val create_median_deled_seq :
-    ?approx:bool -> Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s 
+val create_median_deled_seq : Sequence.s -> Cost_matrix.Two_D.m -> Sequence.s 
 val create_median :
     ?approx: bool ->  
   Sequence.s ->

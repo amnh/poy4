@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2103 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2169 $"
 
 module Pool = struct
     type p
@@ -466,8 +466,12 @@ module Align = struct
             int -> int -> int -> int = "algn_CAML_limit_2_bc" "algn_CAML_limit_2"
 
     let max_cost_2 a b c =
-        assert ((length a) = (length b));
-        c_max_cost_2 a b c
+        let gap = Cost_matrix.Two_D.gap c in
+        if is_empty a gap || is_empty b gap then 0
+        else begin
+            assert ((length a) = (length b));
+            c_max_cost_2 a b c
+        end
 
     let default_length_calculation w h c d =
         let default_length = 
@@ -1399,21 +1403,21 @@ module Unions = struct
     * ATTENTION, WARNING: The following structure is used AS IS in the C side,
     * don't change it unless you change also the C side (union.c and union.h). 
     * *)
-#ifdef USE_LONG_SEQUENCES
+IFDEF USE_LONG_SEQUENCES THEN
         type off_type = 
             (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
         let zero = Int32.zero
         let to_int = Int32.to_int
         let of_int = Int32.of_int
         let constructor = Bigarray.int32
-#else
+ELSE
         type off_type = 
             (int, Bigarray.int16_signed_elt, Bigarray.c_layout) Bigarray.Array1.t
         let zero = 0
         let to_int x = x
         let of_int x = x
         let constructor = Bigarray.int16_signed
-#endif
+END
 
         type u = {
             seq : s;

@@ -39,10 +39,10 @@ let failed () =
     prerr_endline "FAILED";
     exit 1
 
-let test_tree_cost result run = 
+let test_tree_cost comparator result run = 
     assert (1 = Sexpr.length run.Scripting.trees);
     let nc = Ptree.get_cost `Adjusted (Sexpr.first run.Scripting.trees) in
-    nc = result 
+    comparator nc result
 
 let test_script verifier =
     try 
@@ -52,17 +52,26 @@ let test_script verifier =
     with
     | err -> failed ()
 
-let test_with_costs cost =  
-    test_script (test_tree_cost cost)
+let test_with_costs mode cost =  
+    let verifier = 
+        match mode with
+        | `Equal -> (fun a b -> a = b)
+        | `Less -> (fun a b -> a < b)
+    in
+    test_script (test_tree_cost verifier cost)
 
 let test_for_termination () = 
     test_script (fun _ -> true)
 
 let tree_cost : float option ref = ref None
+let tree_cost_less : float option ref = ref None
 
 let parse_list = [
     ("-c", Arg.Float (fun str -> tree_cost := Some str), 
-    "Verify that the cost of the tree at the end equals the specified value")
+    "Verify that the cost of the tree at the end equals the specified value");
+    ("-cl", Arg.Float (fun str -> tree_cost_less := Some str),
+    "Verify that the cost of the tree at the end is less than the specified \ 
+    value")
 ]
 
 let usage = 
@@ -74,6 +83,7 @@ let _ =
     Arg.parse parse_list anon_fun usage
 
 let _ = 
-    match !tree_cost with
-    | None -> test_for_termination ()
-    | Some v -> test_with_costs v
+    match !tree_cost, !tree_cost_less with
+    | None, None -> test_for_termination ()
+    | _, Some v -> test_with_costs `Less v
+    | Some v, _ -> test_with_costs `Equal v

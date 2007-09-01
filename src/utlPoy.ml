@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 2145 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2169 $"
 
 let fprintf = Printf.fprintf
 
@@ -345,16 +345,13 @@ let create_median_seq ?(approx=false) alied_seq1 alied_seq2 cost_mat =
 
 
 
-let create_median_deled_seq ?(approx=false) seq cost_mat =
+let create_median_deled_seq seq cost_mat =
     let len = Sequence.length seq in 
     let gap = Alphabet.gap in
     let get_median_code pos = 
         let code = Sequence.get seq pos in 
-        match approx with 
-        | true -> code
-        | false ->              
-              if code land gap = 0 then code
-              else gap
+        if code land gap = 0 then code
+        else gap
     in
 
     let median = Sequence.init (fun pos -> get_median_code pos) len in

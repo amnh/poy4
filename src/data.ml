@@ -2660,8 +2660,8 @@ let to_faswincladfile data filename =
         | [] -> false
         | _ -> true
     in
-    let fo = Status.user_message (Status.Output (filename, false,
-    [StatusCommon.Margin 0])) in
+    StatusCommon.Files.set_margin filename 100000;
+    let fo = Status.user_message (Status.Output (filename, false, [])) in
     let all_of_all = 
         List.sort ~cmp:( - )
         (Hashtbl.fold (fun c s acc ->
@@ -2712,26 +2712,25 @@ let to_faswincladfile data filename =
         if All_sets.Strings.mem name data.ignore_taxa_set then
             ()
         else begin
-            fo "@[";
             fo name;
             fo " ";
             let _ =
                 let charset = get_taxon_characters data tid in
                 List.iter (produce_character fo tid charset) all_of_all
             in
-            fo "@\n@]%!";
+            fo "\n";
         end
     in
     let output_all_taxa () = 
         All_sets.IntegerMap.iter output_taxon data.taxon_codes;
-        fo ";@\n";
+        fo ";\n";
     in
     let output_header () = 
-        fo (if has_sankoff then "dpread@\n" else "xread@\n");
+        fo (if has_sankoff then "dpread\n" else "xread\n");
         fo (string_of_int number_of_characters);
         fo " ";
         fo (string_of_int number_of_taxa);
-        fo "@\n";
+        fo "\n";
     in
     let get_tcm x = get_tcm x data in
     let output_weights (acc, pos) code = 
@@ -2740,7 +2739,7 @@ let to_faswincladfile data filename =
                 let weight = enc.Parser.SC.st_weight in 
                 if weight = 1. then (acc, pos + 1)
                 else (acc ^ "ccode /" ^ string_of_int (truncate weight) ^ " " ^ 
-                string_of_int pos ^ ";@\n", pos + 1)
+                string_of_int pos ^ ";\n", pos + 1)
         | _ -> failwith "Sequence characters are not supported in fastwinclad"
     in
     let weights, _ = 
@@ -2758,28 +2757,28 @@ let to_faswincladfile data filename =
             | _ -> acc) data.character_specs (0, 0))
         in
         fo ((if unolen > 0 then "cc - 0." ^ string_of_int (unolen - 1) ^ 
-        ";@\n" else "") ^ (if olen > 0 then 
+        ";\n" else "") ^ (if olen > 0 then 
             ("cc + " ^ string_of_int unolen ^ "." ^ 
-        string_of_int (unolen + olen - 1)) else "") ^ "@\n");
+        string_of_int (unolen + olen - 1)) else "") ^ "\n");
         (* Now we output the saknoff character types *)
         if has_sankoff then
             let output_matrix m = 
                 Array.iter (fun x ->
                     (Array.iter (fun y -> 
                         fo (string_of_int y);
-                        fo " ") x; fo "@\n")) m;
-                        fo ";@\n"
+                        fo " ") x; fo "\n")) m;
+                        fo ";\n"
             in
             let output_codes m =
                 Array.iteri (fun pos _ -> 
                     fo (string_of_int pos);
                     fo " ") m.(0);
-                fo "@\n"
+                fo "\n"
             in
             let output_element position code =
                 let tcm = get_tcm code in 
                 fo ("costs [ " ^ string_of_int position ^ " $" ^
-                string_of_int (Array.length tcm) ^ "@\n");
+                string_of_int (Array.length tcm) ^ "\n");
                 output_codes tcm;
                 output_matrix tcm;
                 position + 1
@@ -2808,16 +2807,16 @@ let to_faswincladfile data filename =
                         | lst -> lst
             in
             List.iter ~f:(fun x -> fo x; fo " ") labels;
-            fo ";@\n";
+            fo ";\n";
             position + 1
         in
         (* The misterious commands for old programs *)
-        fo "#@\n";
-        fo "$@\n";
-        fo ";@\n";
+        fo "#\n";
+        fo "$\n";
+        fo ";\n";
         fo "cn ";
         let _ = List.fold_left ~f:output_name ~init:0 all_of_all in
-        fo ";@\n"
+        fo ";\n"
     in
     fo "@[<v 0>";
     output_header ();
@@ -2825,8 +2824,8 @@ let to_faswincladfile data filename =
     output_character_types ();
     fo weights;
     output_character_names ();
-    fo "@\n";
-    fo "@]"
+    fo "\n";
+    fo "@]%!"
 
 let report_taxon_file_cross_reference chars data filename =
     let files_arr, taxa = 
@@ -3118,6 +3117,7 @@ let lexicographic_taxon_codes data =
 (* A function to produce the alignment of prealigned data *)
 let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) =
     let alph = get_sequence_alphabet code data in
+    let gap = Alphabet.get_gap alph in
     let character_name = code_character code data in
     let _, do_states, do_encoding = 
         let cm = get_sequence_tcm code data in
@@ -3140,11 +3140,15 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
                                             Sequence.fold_right (fun acc base ->
                                             do_encoding base acc) [] v.seq
                                         in
-                                        Array.of_list (snd (List.split res))
+                                        Array.of_list res
                                 | _ -> enc
                             and seq = 
                                 Sequence.fold_right 
                                 (fun acc base ->
+                                    let base = 
+                                        if base = gap then 0
+                                        else base 
+                                    in
                                     do_states `Exists base acc) 
                                 [] v.seq
                             in
@@ -3160,16 +3164,18 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
         Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
     in
     let newenc = 
-        let alph = Alphabet.to_sequential alph in
         Array.init (Array.length enc) (fun pos ->
-        Parser.SC.of_old_spec character_name (Some alph) enc.(pos) pos) 
+            let alph, enc = enc.(pos) in
+            let alph = Alphabet.to_sequential alph in
+            Parser.SC.of_old_spec character_name (Some alph) enc pos) 
     in
     let matrix = 
         let matrix = Array.of_list matrix in
         Array.init (Array.length matrix) 
             (fun x -> Array.init (Array.length enc)
             (fun y -> 
-                Parser.SC.of_old_atom newenc.(y) enc.(y) matrix.(x).(y)))
+                let _, enc = enc.(y) in
+                Parser.SC.of_old_atom newenc.(y) enc matrix.(x).(y)))
     in
     let res = (Array.of_list names, newenc, matrix, [], []) in
     Parser.SC.fill_observed res;

@@ -384,12 +384,12 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
                      | Some seq1, None -> 
                            let len1 = Sequence.length seq1 in 
                            let seq2 = UtlPoy.create_gap_seq len1 in 
-                           let med = UtlPoy.create_median_deled_seq ~approx:approx seq1 cost_mat in 
+                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in 
                            med, seq1, seq2
                      | None, Some seq2 -> 
                            let len2 = Sequence.length seq2 in 
                            let seq1 = UtlPoy.create_gap_seq len2 in 
-                           let med = UtlPoy.create_median_deled_seq ~approx:approx seq2 cost_mat in
+                           let med, _ = UtlPoy.create_median_seq ~approx:approx seq1 seq2 cost_mat in
                            med, seq1, seq2
                      | _, _ -> UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq (), UtlPoy.get_empty_seq ()
                  in 

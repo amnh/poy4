@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2026 $"
+let () = SadmanOutput.register "Main" "$Revision: 2169 $"
 
-(* $Id: main.ml 2026 2007-07-30 22:37:51Z andres $ *)
+(* $Id: main.ml 2169 2007-09-01 22:49:51Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -39,7 +39,7 @@ let seed = truncate (Unix.time ())
 
 let is_running_alone = ref false
 
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
 
 let my_rank = Mpi.comm_rank Mpi.comm_world
 
@@ -64,22 +64,20 @@ let _ =
             in
             Status.is_parallel (Some printer_function)
 
-#else
-
-#ifdef USEPARALLEL
 let () = 
     if my_rank <> 0 then SadmanOutput.do_sadman := false
     else ()
-#endif
+
+ELSE
 
 let args =
     let _ = Parsimony.process_random_seed_set (Parsimony.empty ()) seed in
     (* TODO: Fix the arguments preprocessing *)
     Sys.argv
 
-#endif
+END
 
-let () = SadmanOutput.register "Main" "$Revision: 2026 $"
+let () = SadmanOutput.register "Main" "$Revision: 2169 $"
 
 let () = Status.init ()
 
@@ -98,14 +96,14 @@ let () =
     out "";
     out "";
     out "";
-#ifdef USENCURSES
+IFDEF USENCURSES THEN
     out (rephrase "@[Type commands in the middle window, titled Interactive \
     Console.@\nJob status will appear below, and output will appear here.@\nA \
     summary of POY's current state will appear to the right of the \
     console.@\nFor help, type @{<u>help()@}.@\n@\nEnjoy!@]")
-#else
+ELSE
     out (rephrase "@[For help, type @{<u>help()@}.@\n@\nEnjoy!@]")
-#endif
+END
 
 let regen_and_save filename codestring regenfn =
     let data = regenfn () in
@@ -195,22 +193,22 @@ let safe_exit () =
                             ("execution-time", string_of_float time)] in
 
     SadmanOutput.output "</sadman>\n";
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
     Mpi.finalize ()
-#else
+ELSE
     ()
-#endif
+END
 
 
 let () = at_exit safe_exit
 
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
 let _ =
     let tsize = Mpi.comm_size Mpi.comm_world in
     let arr = Array.init tsize (fun x -> seed + x) in
     let seed = Mpi.scatter_int arr 0 Mpi.comm_world in
     Parsimony.process_random_seed_set (Parsimony.empty ()) seed
-#endif
+END
 
 
 let _ = 
@@ -221,9 +219,14 @@ let _ =
         let () = Sys.catch_break true in
         try
             let command = 
-#ifdef USEPARALLEL
-                if my_rank = 0 then
-#endif
+                let master =
+IFDEF USEPARALLEL THEN
+                my_rank = 0 
+ELSE
+                true
+END
+                in
+                if master then
                     let comm =
                         match !initial_script with
                         | Some comm -> 
@@ -236,24 +239,20 @@ let _ =
                         input := str;
                         comm @ (PoyCommand.of_string false str)
                     end
-#ifdef USEPARALLEL
                 else []
-#endif
             in
             let command =
-#ifdef USEPARALLEL
-                Analyzer.analyze command
-#else
+IFDEF USEPARALLEL THEN
+                let command = Analyzer.analyze command in
+                let command = Mpi.broadcast command 0 Mpi.comm_world in
+                let size = Mpi.comm_size Mpi.comm_world in
+                Analyzer.parallel_analysis my_rank size command
+ELSE
                 match command with
                 | [_] -> command
                 | x -> Analyzer.analyze command
-#endif
+END
             in
-#ifdef USEPARALLEL
-            let command = Mpi.broadcast command 0 Mpi.comm_world in
-            let size = Mpi.comm_size Mpi.comm_world in
-            let command = Analyzer.parallel_analysis my_rank size command in
-#endif
             let res = 
                 Parsimony.run 
                 ~output_file:(!(Arguments.dump_file)) 
@@ -301,13 +300,13 @@ let _ =
                 Status.user_message Status.Error msg;
                 exit 1
     in
-#ifdef USEPARALLEL
+IFDEF USEPARALLEL THEN
     if 0 = my_rank then
         Status.main_loop proc_command
     else 
         while true do
             proc_command ""
         done
-#else
+ELSE
     Status.main_loop proc_command
-#endif
+END

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ChromAli" "$Revision: 2157 $"
+let () = SadmanOutput.register "ChromAli" "$Revision: 2169 $"
 
 (** The implementation of funtions to calculate the cost, alignments and medians
     between chromosomes where both point mutations and rearrangement operations
@@ -243,6 +243,7 @@ let to_single single_parent child_ref c2 pam =
 
     let map = List.map 
         (fun seg -> 
+
              let alied_single_seq, cost, alied_child_seq = 
                  match child_ref = single_parent.ref_code1 with
                  | true ->
@@ -277,7 +278,6 @@ let to_single single_parent child_ref c2 pam =
                                UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq2
                            else cost 
                        in 
-
                        single, cost, seg.alied_seq2
              in 
              let sta = 
@@ -285,8 +285,7 @@ let to_single single_parent child_ref c2 pam =
                  | true -> seg.sta1
                  | false -> seg.sta2
              in 
-
-             let ungap_alied_med = Sequence.fold_righti 
+              let ungap_alied_med = Sequence.fold_righti  
                  (fun ungap_alied_med p code ->
                       match code = gap with
                       | false -> code::ungap_alied_med
@@ -306,6 +305,7 @@ let to_single single_parent child_ref c2 pam =
              ungap_alied_med, cost, sta
         ) single_parent.chrom_map 
     in  
+
     let sorted_map = List.sort 
         (fun seg1 seg2 ->
              let _, _, sta1 = seg1 in 
@@ -355,8 +355,8 @@ let change_to_single med single_seq =
 
         ) med.chrom_map
     in 
-
-    {med with seq = (UtlPoy.delete_gap single_seq); 
+    let gapless_single_seq = UtlPoy.delete_gap single_seq in 
+    {med with seq = gapless_single_seq;
          chrom_map = new_map}
 
 
@@ -421,6 +421,39 @@ let rec create_global_map (seq1 : Sequence.s) (seq2 : Sequence.s) cost_mat ali_p
     (List.rev sig_map_ls),  subseq1_ls, subseq2_ls
       
  
+let check_chrom_map seq1 seq2 chrom_map =
+    let len1 = Sequence.length seq1 in
+    let len2 = Sequence.length seq2 in 
+    let mark1_arr = Array.make len1 0 in 
+    let mark2_arr = Array.make len2 0 in 
+    List.iter (fun seg ->
+                   (if seg.sta1 >= 0 && seg.en1 >= 0 then 
+                       for p = seg.sta1 to seg.en1 do
+                           mark1_arr.(p) <- mark1_arr.(p) + 1
+                       done);
+
+                   (if seg.sta2 >= 0 && seg.en2 >= 0 then 
+                       for p = seg.sta2 to seg.en2 do
+                           mark2_arr.(p) <- mark2_arr.(p) + 1
+                       done)
+              ) chrom_map;
+ 
+    for p = 0 to len1 - 1 do
+        if mark1_arr.(p) != 1 then begin
+             fprintf stdout "The position %i in sequence1 is covered %i times" p mark1_arr.(p);
+             failwith "Create median in ChromAli"
+         end 
+    done; 
+
+    for p = 0 to len2 - 1 do
+        if mark2_arr.(p) != 1 then begin
+            fprintf stdout "The position %i in sequence2 is covered %i times" p mark2_arr.(p);
+             failwith "Create median in ChromAli"
+        end
+    done
+
+        
+   
 
 (** Create the median between two chromosomes which are divided into subseqs lists *)
 let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) global_map 
@@ -447,9 +480,7 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
               let len2 = en2 - sta2 + 1 in
               let subseq1 = UtlPoy.create_gap_seq len2 in 
               let subseq2 = Sequence.sub seq2 sta2 len2 in
-              let submed = UtlPoy.create_median_deled_seq
-                  ~approx:approx subseq2 cost_mat 
-              in
+              let submed, _ = UtlPoy.create_median_seq ~approx:approx subseq1 subseq2 cost_mat in
 
               let med_len = UtlPoy.cmp_num_not_gap submed in
               let sta, en, nascent_len = match med_len with
@@ -475,10 +506,7 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
 
               let subseq1 = Sequence.sub seq1 sta1 len1 in
               let subseq2 = UtlPoy.create_gap_seq len1 in 
-
-              let submed = UtlPoy.create_median_deled_seq
-                  ~approx:approx subseq1 cost_mat 
-              in
+              let submed, _ = UtlPoy.create_median_seq ~approx:approx subseq1 subseq2 cost_mat in
 
               let med_len = UtlPoy.cmp_num_not_gap submed in 
               let sta, en, new_nascent_len = match med_len with
@@ -595,7 +623,7 @@ let create_median subseq1_ls subseq2_ls (seq1, chrom1_id) (seq2, chrom2_id) glob
     let ref_code = Utl.get_new_chrom_ref_code() in 
 
     (if Sequence.length seq = 0 then  failwith "Sequence length is Zero");
-
+(*    check_chrom_map seq1 seq2 chrom_map; *)
     {seq = seq; ref_code = ref_code;
      ref_code1 = chrom1_id;
      ref_code2 = chrom2_id;
