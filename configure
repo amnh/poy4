@@ -1247,6 +1247,11 @@ Optional Features:
                           alphabets. Normal nucleotide, aminoacid, or
                           morphological analyses are nor affected by this
                           option.
+  --enable-cost-verification
+                          Check every pairwise sequence alignment cost. This
+                          is only intended for development and debugging
+                          purposes. This option will make the program run
+                          really slow.
 
 Some influential environment variables:
   CC          C compiler command
@@ -2815,6 +2820,14 @@ if test "${enable_large_alphabets+set}" = set; then
   enableval=$enable_large_alphabets; USE_LARGE_ALPHABETS=true
 else
   USE_LARGE_ALPHABETS=false
+fi
+
+
+# Check whether --enable-cost-verification was given.
+if test "${enable_cost_verification+set}" = set; then
+  enableval=$enable_cost_verification; USE_VERIFY_COSTS=true
+else
+  USE_VERIFY_COSTS=false
 fi
 
 

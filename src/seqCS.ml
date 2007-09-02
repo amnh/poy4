@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2145 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2177 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -441,16 +441,43 @@ let distance a b =
     let gap = Cost_matrix.Two_D.gap a.c2 in
     let single_distance code seqa acc =
         let seqb = Codes.find code b.sequences in
-        let deltaw = 
-            let tmp = (max (Sequence.length seqa) (Sequence.length seqb)) - (min
-            (Sequence.length seqa) (Sequence.length seqb)) in
-            if tmp > 8 then tmp 
-            else 8
-        in
         if Sequence.is_empty seqa gap || Sequence.is_empty seqb gap then
             acc
         else
-        acc + (Sequence.Align.cost_2 ~deltaw:deltaw seqa seqb a.c2 Matrix.default)
+            let cost =
+IFDEF USE_VERIFY_COSTS THEN
+                let seqa, seqb, cost = 
+                    Sequence.Align.align_2 seqa seqb a.c2 Matrix.default 
+                in
+                let () = 
+                    assert (
+                        let real_cost = Sequence.Align.verify_cost_2 cost seqa seqb
+                        a.c2 in
+                        if cost < real_cost then
+                            let () = 
+                                Printf.printf "Failed alignment between
+                                \n%s\nand\n%s\nwith claimed cost %d and real cost %d\n%!" 
+                                (Sequence.to_string seqa a.alph)
+                                (Sequence.to_string seqb b.alph)
+                                cost
+                                real_cost
+                            in
+                            false
+                        else true
+                ) 
+                in
+                cost
+ELSE 
+                let deltaw = 
+                    let tmp = (max (Sequence.length seqa) (Sequence.length seqb)) - (min
+                    (Sequence.length seqa) (Sequence.length seqb)) in
+                    if tmp > 8 then tmp 
+                    else 8
+                in
+                (Sequence.Align.cost_2 ~deltaw seqa seqb a.c2 Matrix.default)
+END
+            in
+            acc + cost
     in
     float_of_int (Codes.fold single_distance a.sequences 0)
 

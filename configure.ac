@@ -42,6 +42,11 @@ AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
               [USE_LARGE_ALPHABETS=true],
               [USE_LARGE_ALPHABETS=false])
 
+AC_ARG_ENABLE([cost-verification], [AS_HELP_STRING([--enable-cost-verification],
+              [Check every pairwise sequence alignment cost. This is only intended for development and debugging purposes. This option will make the program run really slow.])],
+              [USE_VERIFY_COSTS=true],
+              [USE_VERIFY_COSTS=false])
+
 # Checks for libraries.
 
 # Checks for header files.

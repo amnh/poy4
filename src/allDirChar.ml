@@ -138,7 +138,8 @@ with type b = AllDirNode.OneDirF.n = struct
             in
             let dist = Node.distance_of_type Node.has_to_single
                 (Lazy.force_val nda)
-                (Lazy.force_val ndb) in
+                (Lazy.force_val ndb) 
+            in
             (*
             Status.user_message Status.Information
             ("Dist between " ^ string_of_int a ^ " and " ^ 

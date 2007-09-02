@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.61)
 AC_INIT([POY 4 Beta], [see VERSION], [poy4@googlegroups.com])
 AC_CONFIG_SRCDIR([add.c])
 AC_CONFIG_HEADER([config.h])
@@ -18,6 +18,7 @@ AC_SUBST(USEPARALLEL)
 AC_SUBST(USE_LONG_SEQUENCES)
 AC_SUBST(USE_LARGE_ALPHABETS)
 AC_SUBST(USE_XSLT)
+AC_SUBST(USE_VERIFY_COSTS)
 AC_SUBST(MPILNAME)
 AC_SUBST(OCAML)
 AC_SUBST(OCAMLC)
@@ -61,6 +62,11 @@ AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
               [Enable the analysis of alphabets larger than 255 elements. When using this option, more memory will be needed to store each tree (4 or 8 times more for 32 and 64 bit computers respectively). This option is only needed for large alphabets if you use custom alphabets. Normal nucleotide, aminoacid, or morphological analyses are nor affected by this option.])],
               [USE_LARGE_ALPHABETS=true],
               [USE_LARGE_ALPHABETS=false])
+
+AC_ARG_ENABLE([cost-verification], [AS_HELP_STRING([--enable-cost-verification],
+              [Check every pairwise sequence alignment cost. This is only intended for development and debugging purposes.])],
+              [USE_VERIFY_COSTS=true],
+              [USE_VERIFY_COSTS=false])
 
 # Checking for libraries according to the user's options.
 AS_IF([test $USEINTERFACE = "ncurses"], 

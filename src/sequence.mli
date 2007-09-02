@@ -174,6 +174,7 @@ module Align : sig
     val cost_2 : ?deltaw:int -> s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int 
 
     val max_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int
+    val verify_cost_2 : int -> s -> s -> Cost_matrix.Two_D.m -> int
  
     external c_cost_2 :
         s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int -> int =

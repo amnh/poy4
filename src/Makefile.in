@@ -35,6 +35,7 @@ USEINTERFACE := @USEINTERFACE@
 USEGRAPHICS := @USEGRAPHICS@
 USESHAREDHD := @USESHAREDHD@
 USE_XSLT := @USE_XSLT@
+USE_VERIFY_COSTS := @USE_VERIFY_COSTS@
 MPILNAME := @MPILNAME@
 OCAML := @OCAML@
 OCAMLC := @OCAMLC@
@@ -128,7 +129,9 @@ ifeq ($(USE_LARGE_ALPHABETS), true)
 	DEFOPTS := $(DEFOPTS) -DUSE_LARGE_ALPHABETS
 endif
 
-
+ifeq ($(USE_VERIFY_COSTS), true)
+	DEFOPTS := $(DEFOPTS) -DUSE_VERIFY_COSTS
+endif
 
 ifeq ($(USEGRAPHICS), tk)
     DEFOPTS := $(DEFOPTS) -DUSEGRAPHICS=2
@@ -501,6 +504,12 @@ sequence.cmo: sadmanOutput.cmi matrix.cmi fingerPrint.cmi cost_matrix.cmi \
 sequence.cmx: sadmanOutput.cmx matrix.cmx fingerPrint.cmx cost_matrix.cmx \
     alphabet.cmx all_sets.cmx sequence.cmi sequence.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
+seqCS.cmo: tags.cmo status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) seqCS.ml
+seqCS.cmx: tags.cmx status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c seqCS.ml
 scripting.cmo: scripting.cmi scripting.ml
 	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
 scripting.cmx: scripting.cmi scripting.ml
@@ -523,7 +532,7 @@ statusCommon.cmx: statusCommon.ml
 
 .SUFFIXES: .ml .mli .cmo .cmx .cmi .c .o
 
-OPTIONPREPROCESSED = fileStream.ml statusCommon.ml sequence.ml sequence.mli timer.ml scripting.ml main.ml 
+OPTIONPREPROCESSED = seqCS.ml fileStream.ml statusCommon.ml sequence.ml sequence.mli timer.ml scripting.ml main.ml 
 DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 
 .depend: nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml *.ml *.mli *.c *.h

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2169 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2177 $"
 
 exception NotASequence of int
 
@@ -1588,7 +1588,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
 (** End of of_tree function *)
 
-    let post_process_affine_gap_cost subs gapcost gapopening (enc, taxa) data
+    let post_process_affine_gap_cost subs gapcost gapopening data (enc, taxa)
     all_blocks=
         let all_blocks = `Set all_blocks in
         let process_indel (enc, taxa) (loc, string, length, clas, taxa_list) =
@@ -1742,14 +1742,14 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 Array.of_list x, y) r)
                         in
                         let (a, b) = 
-                            match clas, all_blocks with
-                            | AffinePartition (subs, gapcost, gapopening), 
-                                [all_blocks] ->
+                            match clas with
+                            | AffinePartition (subs, gapcost, gapopening) ->
                                     (* We have to postprocess and check by
                                     * groups of three whether or not we have a
                                     * gap opening indeed *)
-                                    post_process_affine_gap_cost subs gapcost
-                                    gapopening arr data all_blocks
+                                    List.fold_left
+                                    (post_process_affine_gap_cost subs gapcost
+                                    gapopening data) arr all_blocks
                             | _ -> arr
                         in
                         a, b, []

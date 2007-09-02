@@ -2323,12 +2323,15 @@ algn_nw_3d (const seqt s1, const seqt s2, const seqt s3,
 }
 
 int
-algn_worst_2 (seqt s1, seqt s2, cmt c) {
+algn_calculate_from_2_aligned (seqt s1, seqt s2, cmt c, int *matrix) {
     int i, res = 0, gap_opening, gap_row = 0;
     SEQT gap, s1b, s2b;
     gap = cm_get_gap (c);
     /* We initialize i to the proper location */
-    if ((gap == (seq_get (s1, 0))) && (gap == (seq_get (s2, 0))))
+    s1b = seq_get (s1, 0);
+    s2b = seq_get (s2, 0);
+    if ((c->combinations && (gap & s1b) && (gap & s2b)) ||
+            (!c->combinations && (gap == s1b) && (gap == s2b)))
         i = 1;
     else i = 0;
     gap_opening = cm_get_gap_opening_parameter (c);
@@ -2337,17 +2340,22 @@ algn_worst_2 (seqt s1, seqt s2, cmt c) {
         s1b = seq_get (s1, i);
         s2b = seq_get (s2, i);
         if (0 == gap_row) { /* We have no gaps */
-            if (s1b == gap) {
+            if ((c->combinations && (s1b & gap) && !(s2b & gap)) || 
+                        ((!c->combinations) && (s1b == gap)))
+            {
                 res += gap_opening;
                 gap_row = 1;
-            } else if (s2b == gap) {
+            } else if ((c->combinations && (s2b & gap) && !(s1b & gap)) || 
+                        ((!c->combinations) && (s2b == gap))) {
                 res += gap_opening;
                 gap_row = 2;
             }
         }
         else if (1 == gap_row) { /* We are in s1's block of gaps */
-            if (s1b != gap) {
-                if (s2b == gap) {
+            if ((c->combinations && !(s1b & gap)) || 
+                        ((!c->combinations) && (s1b != gap))) {
+                if ((c->combinations && (s2b & gap) && !(s1b & gap)) || 
+                        ((!c->combinations) && (s2b == gap))) {
                     res += gap_opening;
                     gap_row = 2;
                 }
@@ -2356,17 +2364,29 @@ algn_worst_2 (seqt s1, seqt s2, cmt c) {
         } 
         else { /* We are in s2's block of gaps */
             assert (2 == gap_row);
-            if (s2b != gap) {
-                if (s1b == gap) {
+            if ((c->combinations && !(s2b & gap)) || 
+                        ((!c->combinations) && (s2b != gap))) {
+                if ((c->combinations && (s1b & gap)) || 
+                        ((!c->combinations) && (s1b == gap))) {
                     res += gap_opening;
                     gap_row = 1;
                 }
                 else gap_row = 0;
             }
         }
-        res += (cm_calc_cost (c->worst, seq_get (s1, i), seq_get (s2, i), c->lcm));
+        res += (cm_calc_cost (matrix, seq_get (s1, i), seq_get (s2, i), c->lcm));
     }
     return (res);
+}
+
+int
+algn_worst_2 (seqt s1, seqt s2, cmt c) {
+    return (algn_calculate_from_2_aligned (s1, s2, c, c->worst));
+}
+
+int
+algn_verify_2 (seqt s1, seqt s2, cmt c) {
+    return (algn_calculate_from_2_aligned (s1, s2, c, c->cost));
 }
 
 value
@@ -2379,6 +2399,19 @@ algn_CAML_worst_2 (value s1, value s2, value c) {
     s2p = Seq_struct(s2);
     tc = Cost_matrix_struct(c);
     res = algn_worst_2 (s1p, s2p, tc);
+    CAMLreturn(Val_int(res));
+}
+
+value 
+algn_CAML_verify_2 (value s1, value s2, value c) {
+    CAMLparam3(s1, s2, c);
+    cmt tc;
+    int res;
+    seqt s1p, s2p;
+    s1p = Seq_struct(s1);
+    s2p = Seq_struct(s2);
+    tc = Cost_matrix_struct(c);
+    res = algn_verify_2 (s1p, s2p, tc);
     CAMLreturn(Val_int(res));
 }
 

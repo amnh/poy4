@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2169 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2177 $"
 
 module Pool = struct
     type p
@@ -471,6 +471,88 @@ module Align = struct
         else begin
             assert ((length a) = (length b));
             c_max_cost_2 a b c
+        end
+
+    external c_verify_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int =
+        "algn_CAML_verify_2"
+
+    let verify_cost_2 a b c =
+        let gap = Cost_matrix.Two_D.gap c in
+        if is_empty a gap || is_empty b gap then 0
+        else begin
+            assert ((length a) = (length b));
+            c_verify_cost_2 a b c
+        end
+
+    type gap_side = NoGap | AGap | BGap
+
+    let verify_cost_2 expected_cost a b c =
+        let gap = Cost_matrix.Two_D.gap c in
+        let do_combine = 1 = Cost_matrix.Two_D.combine c in
+        if is_empty a gap || is_empty b gap then 0
+        else begin
+            let go = Cost_matrix.Two_D.gap_opening c in
+            let lena = length a 
+            and alph = Cost_matrix.Two_D.alphabet_size c in
+            assert (lena = (length b));
+            let rec verify_cost_recursively a b pos cur_best gap_block_side acc =
+                if cur_best < acc then cur_best
+                else if pos = lena then 
+                    if cur_best <= expected_cost then raise Exit
+                    else if cur_best <= acc then cur_best
+                    else acc
+                else 
+                    let get_list x =
+                        let base = get x pos in
+                        if do_combine then 
+                            Cost_matrix.Two_D.list_of_bits base alph
+                        else [base]
+                    in
+                    let basea_list = get_list a
+                    and baseb_list = get_list b in
+                    let process_pairwise basea baseb (acc, gap_block_side) =
+                        let cost = Cost_matrix.Two_D.cost basea baseb c in
+                        let acc = cost + acc in
+                        match gap_block_side with
+                        | NoGap -> 
+                                if basea = gap then
+                                    if baseb = gap then 
+                                        acc, NoGap
+                                    else 
+                                        (acc + go), AGap
+                                else if baseb = gap then
+                                    acc + go, BGap
+                                else 
+                                    acc, NoGap
+                        | AGap ->
+                                if basea = gap then
+                                    acc, AGap
+                                else if baseb = gap then
+                                    acc + go, BGap
+                                else acc, NoGap
+                        | BGap ->
+                                if baseb = gap then
+                                    acc, BGap
+                                else if basea = gap then
+                                     acc + go, AGap
+                                else acc, NoGap
+                    in
+                    let cur_best, _ =
+                        List.fold_left (fun acc basea ->
+                            List.fold_left (fun (cur_best, acc) baseb ->
+                                let nacc, gap_block_side = 
+                                    process_pairwise basea baseb 
+                                    (acc, gap_block_side) 
+                                in
+                                (verify_cost_recursively a b (pos + 1) cur_best
+                                gap_block_side nacc), acc) 
+                            acc baseb_list) 
+                        (cur_best, acc) basea_list
+                    in
+                    cur_best
+            in
+            try verify_cost_recursively a b 0 max_int NoGap 0 with
+            | Exit -> expected_cost
         end
 
     let default_length_calculation w h c d =

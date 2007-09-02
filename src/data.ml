@@ -2679,18 +2679,18 @@ let to_faswincladfile data filename =
     in
     let state_to_string code t =
         match t with
-        | None -> "?"
-        | Some [] -> "-"
-        | Some [item] -> string_of_int item
+        | None -> "?%!"
+        | Some [] -> "-%!"
+        | Some [item] -> (string_of_int item) ^ "%!"
         | Some lst ->
                 let lst = List.sort ~cmp:( - ) lst in
-                "[" ^ String.concat sep (List.map string_of_int lst) ^ "]"
+                "[" ^ String.concat sep (List.map string_of_int lst) ^ "]%!"
     in
     let produce_character fo taxon charset code =
         let _ =
             try
                 match Hashtbl.find charset code with
-                | (_, `Unknown) -> fo "?"
+                | (_, `Unknown) -> fo "?%!"
                 | (spec, _) ->
                         match spec with
                         | Stat (_, t) -> 
@@ -2704,7 +2704,7 @@ let to_faswincladfile data filename =
                     ("@[I@ could@ not@ find@ the@ character@ with@ code@ " ^ 
                     string_of_int code ^ ".@ This@ is@ a@ bug,@ so@ please@ " ^
                     "report@ it@ to@ Andres...");
-                    fo "?"
+                    fo "?%!"
         in
         fo sep
     in
@@ -2718,7 +2718,7 @@ let to_faswincladfile data filename =
                 let charset = get_taxon_characters data tid in
                 List.iter (produce_character fo tid charset) all_of_all
             in
-            fo "\n";
+            fo "\n%!";
         end
     in
     let output_all_taxa () = 
@@ -2730,7 +2730,7 @@ let to_faswincladfile data filename =
         fo (string_of_int number_of_characters);
         fo " ";
         fo (string_of_int number_of_taxa);
-        fo "\n";
+        fo "\n%!";
     in
     let get_tcm x = get_tcm x data in
     let output_weights (acc, pos) code = 
