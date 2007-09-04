@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2169 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2179 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -479,7 +479,7 @@ IFDEF USEPARALLEL THEN
                 in
                 if not gotit then ()
                 else
-                    let (t : Status.c), (msg : string) = 
+                    let t, (msg : string) = 
                         Mpi.receive rank tag Mpi.comm_world in
                     let () = printer t msg in
                     check_for_message (cnt + 1)
