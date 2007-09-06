@@ -18,6 +18,8 @@ export MPILNAME = mpich
 
 export USE_LARGE_ALPHABETS = false
 export USE_LONG_SEQUENCES = false
+export USE_XSLT = true
+export USE_VERIFY_COSTS = false
 
 # Compilers of choice
 export OCAML = ocaml
