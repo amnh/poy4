@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Arguments" "$Revision: 1966 $"
+let () = SadmanOutput.register "Arguments" "$Revision: 2194 $"
 
 let just_exit = ref false
 let only_run_argument_script = ref false
@@ -25,13 +25,20 @@ let dump_file = ref "ft_output.poy"
 let input : string list ref = ref []
 
 let change_working_directory str =
+    (* Row of guesses for windows ... what a pain! *)
     try Sys.chdir str with
     | err ->
-            prerr_endline 
-            ("Attemting to change to directory " ^ str ^ 
-            " failed misserably. I am cancelling this run, check your " ^
-            "path.\n");
-            exit 1
+        try Sys.chdir (Filename.quote str) with
+        | err ->
+            try Sys.chdir (Str.global_replace (Str.regexp " ") "\\ "
+                str) with
+                | err ->
+                prerr_endline 
+                ("Attemting to change to directory " ^ str 
+                ^ " or to " ^ (Filename.quote str) ^
+                " failed misserably. I am cancelling this " ^ 
+                "run, check your path.\n");
+                exit 1
 
 let parse_list = [
     ("-w", Arg.String change_working_directory,
