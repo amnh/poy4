@@ -4,6 +4,9 @@
 # respective libraries; the later requires lablgtk2 installed in the system.
 export USEINTERFACE = ncurses
 
+
+
+
 # Parallel options
 # do you want to run in parallel?
 export USEPARALLEL = false
@@ -41,7 +44,8 @@ export MKLIBOPT =
 # If you want to compile with USEPARALLEL = true, make sure you add -cc mpicc in
 # the CCOPT of your choice.
 # Intel Processors
-CCOPT := -ccopt -O3 -ccopt -msse2 -ccopt -mmmx -ccopt -march=pentium4
+XSLT = `xslt-config --libs` `xslt-config --cflags`
+CCOPT := -ccopt "-O3 ${XSLT}" -ccopt -msse2 -ccopt -mmmx -ccopt -march=pentium4
 
 # PowerPC G4 and G5
 #export CCOPT = -ccopt -O3 -ccopt -maltivec -ccopt -mpim-altivec -ccopt -I/usr/include/malloc/ -ccopt -mcpu=G4 -ccopt -g

@@ -29,11 +29,17 @@ CURSLIBOBJS = /home/andres/pdcurs28/addch.o /home/andres/pdcurs28/addchstr.o /ho
 /home/andres/pdcurs28/move.o /home/andres/pdcurs28/outopts.o /home/andres/pdcurs28/overlay.o /home/andres/pdcurs28/pad.o /home/andres/pdcurs28/printw.o /home/andres/pdcurs28/refresh.o /home/andres/pdcurs28/scanw.o /home/andres/pdcurs28/scr_dump.o \
 /home/andres/pdcurs28/scroll.o /home/andres/pdcurs28/slk.o /home/andres/pdcurs28/termattr.o /home/andres/pdcurs28/terminfo.o /home/andres/pdcurs28/touch.o /home/andres/pdcurs28/util.o /home/andres/pdcurs28/window.o 
 
+# The libxml and libxslt object files ...
+
+XMLOBJECTS=/home/andres/libxml2-2.6.30/DOCBparser.o /home/andres/libxml2-2.6.30/HTMLparser.o /home/andres/libxml2-2.6.30/HTMLtree.o /home/andres/libxml2-2.6.30/SAX.o /home/andres/libxml2-2.6.30/SAX2.o /home/andres/libxml2-2.6.30/c14n.o /home/andres/libxml2-2.6.30/catalog.o /home/andres/libxml2-2.6.30/chvalid.o /home/andres/libxml2-2.6.30/debugXML.o /home/andres/libxml2-2.6.30/dict.o /home/andres/libxml2-2.6.30/encoding.o /home/andres/libxml2-2.6.30/entities.o /home/andres/libxml2-2.6.30/error.o /home/andres/libxml2-2.6.30/globals.o /home/andres/libxml2-2.6.30/hash.o /home/andres/libxml2-2.6.30/legacy.o /home/andres/libxml2-2.6.30/list.o /home/andres/libxml2-2.6.30/nanoftp.o /home/andres/libxml2-2.6.30/nanohttp.o /home/andres/libxml2-2.6.30/parser.o /home/andres/libxml2-2.6.30/parserInternals.o /home/andres/libxml2-2.6.30/pattern.o /home/andres/libxml2-2.6.30/relaxng.o /home/andres/libxml2-2.6.30/schematron.o /home/andres/libxml2-2.6.30/threads.o /home/andres/libxml2-2.6.30/tree.o /home/andres/libxml2-2.6.30/uri.o /home/andres/libxml2-2.6.30/valid.o /home/andres/libxml2-2.6.30/xinclude.o /home/andres/libxml2-2.6.30/xlink.o /home/andres/libxml2-2.6.30/xmlIO.o /home/andres/libxml2-2.6.30/xmlmemory.o /home/andres/libxml2-2.6.30/xmlmodule.o /home/andres/libxml2-2.6.30/xmlreader.o /home/andres/libxml2-2.6.30/xmlregexp.o /home/andres/libxml2-2.6.30/xmlsave.o /home/andres/libxml2-2.6.30/xmlschemas.o /home/andres/libxml2-2.6.30/xmlschemastypes.o /home/andres/libxml2-2.6.30/xmlstring.o /home/andres/libxml2-2.6.30/xmlunicode.o /home/andres/libxml2-2.6.30/xmlwriter.o /home/andres/libxml2-2.6.30/xpath.o /home/andres/libxml2-2.6.30/xpointer.o
+
+XSLTOBJECTS= /home/andres/libxslt-1.1.22/libxslt/attributes.o /home/andres/libxslt-1.1.22/libxslt/attrvt.o /home/andres/libxslt-1.1.22/libxslt/documents.o /home/andres/libxslt-1.1.22/libxslt/extensions.o /home/andres/libxslt-1.1.22/libxslt/extra.o /home/andres/libxslt-1.1.22/libxslt/functions.o /home/andres/libxslt-1.1.22/libxslt/imports.o /home/andres/libxslt-1.1.22/libxslt/keys.o /home/andres/libxslt-1.1.22/libxslt/namespaces.o /home/andres/libxslt-1.1.22/libxslt/numbers.o /home/andres/libxslt-1.1.22/libxslt/pattern.o /home/andres/libxslt-1.1.22/libxslt/preproc.o /home/andres/libxslt-1.1.22/libxslt/security.o /home/andres/libxslt-1.1.22/libxslt/templates.o /home/andres/libxslt-1.1.22/libxslt/transform.o /home/andres/libxslt-1.1.22/libxslt/variables.o /home/andres/libxslt-1.1.22/libxslt/xslt.o /home/andres/libxslt-1.1.22/libxslt/xsltutils.o
+
 OCAMLMPI = ../ocamlmpi/
 OCAML_INCLUDES := -I $(OCAMLMPI) -I +camlp4 -I ./grappa -I ./graphps $(LABLTK)
 
 ifeq ($(USEWIN32), true)
-	CCOPT := -ccopt "-I /cygdrive/c/gnuwin32/include" -ccopt -mno-cygwin $(CCOPT)
+	CCOPT := -ccopt "-I /cygdrive/c/gnuwin32/include" -ccopt -mwin32 -ccopt -mno-cygwin $(CCOPT)
 endif
 
 -include $(PWD)/$(DEPEND)
@@ -199,7 +205,7 @@ endif
 
 TREE = enum.cmo bitSet.cmo tree.cmo rtree.cmo hash_tbl.cmo gen_rtree.cmo \
 	graphps/graphps.cmo $(TREEOUTPUT) ptree.cmo searchInformation.cmo \
-	methods.cmo chartree.cmo sparceMatrix.cmo unionTree.cmo allDirChar.cmo sampler.cmo \
+	chartree.cmo sparceMatrix.cmo unionTree.cmo allDirChar.cmo sampler.cmo \
 	queues.cmo tabus.cmo treeSearch.cmo impliedAlignment.cmo charTransform.cmo \
 	mst.cmo build.cmo 
 
@@ -600,13 +606,13 @@ poy: $(MAIN_OBJS_OPT)
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -cclib -L./grappa \
 	-cclib -L./graphps -cclib -L./ \
-	-cclib -L$(OCAMLMPI) $(CCOPT) $(NCURSES_LIBRARIES) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) \
+	-cclib -L$(OCAMLMPI) $(CCOPT) $(NCURSES_LIBRARIES) $(XSLTOBJECTS) $(XMLOBJECTS) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) \
 	-cclib -l$(MPILNAME) -cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa \
 	unix.cmxa str.cmxa bigarray.cmxa $^
 else
 	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -verbose -ccopt -v -cclib -L./grappa \
 	-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
-	$(CCOPT) -cclib -lcamlgrappa $(NCURSES_LIBRARIES) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) -o poy \
+	$(CCOPT) -cclib -lcamlgrappa $(NCURSES_LIBRARIES) $(XSLTOBJECTS) $(XMLOBJECTS) $(PDCOBJS) $(CURSLIBOBJS) $(PROFILE) -o poy \
 	$(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
 endif
 
