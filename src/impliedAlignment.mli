@@ -43,14 +43,13 @@ type dyna_state_t = Data.dyna_state_t
 
 (* t is the presentation of a dynamic set (DynamicCS) in order to create implied
    alignments.
-   Note: sequences : ias_arr list Codes.t where 
+   Note: sequences : ias_arr Codes.t where 
    isa_arr is an array of ias in the case of annotated chromosomes (ach ias
-   presents a locus); ias_arr list) is a list of equally
-   optimal medians in case of chromosomes   
+   presents a locus)
 *)
 
 type t = {
-    sequences : ias array list All_sets.IntegerMap.t;
+    sequences : ias array All_sets.IntegerMap.t;
     c2 : Cost_matrix.Two_D.m;
     chrom_pam : Data.dyna_pam_t;
     state : dyna_state_t;

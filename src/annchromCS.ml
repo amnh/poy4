@@ -242,7 +242,11 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                       | "Final" ->
                             AnnchromAli.create_map med parent_med.AnnchromAli.ref_code   
                       | _ ->
-                            let _, _, map = AnnchromAli.create_map parent_med med.AnnchromAli.ref_code in 
+                            let _, _, med_ls = AnnchromAli.find_med2_ls med
+                                parent_med t.c2 t.alph t.annchrom_pam in 
+                            let med = List.hd med_ls in 
+
+                            let map = AnnchromAli.create_single_map med in                                 
                             let cost = IntMap.find code t.costs in 
                             let recost = IntMap.find code t.recosts in 
                             (int_of_float cost), (int_of_float recost), map
@@ -303,14 +307,6 @@ let get_active_ref_code t =
 
 
 let to_single ref_codes (root : t option) single_parent mine = 
-
-    let single_parent, mine = 
-        match root with 
-        | Some root ->  root, root
-        | None -> single_parent, mine
-    in 
-
-
     let previous_total_cost = mine.total_cost in 
     let c2 = mine.c2 in 
 
@@ -323,29 +319,45 @@ let to_single ref_codes (root : t option) single_parent mine =
                           ) med.Annchrom.med_ls
             with Not_found -> List.hd med.Annchrom.med_ls
                 (*failwith "Not found med -> to_formatter -> AnnchromCS"*)
-        in         
-        let cost,  recost, single_seq_arr = 
-            let parent_med = IntMap.find code single_parent.meds in  
-            let aparent_med = 
-                try
-                    List.find (fun med -> 
-                         IntSet.mem med.AnnchromAli.ref_code ref_codes 
-                    ) parent_med.Annchrom.med_ls
-                with Not_found -> List.hd parent_med.Annchrom.med_ls
-            in            
+        in  
+
+        let parent_med = IntMap.find code single_parent.meds in  
+        let aparent_med = 
+            try
+                List.find (fun med -> 
+                               IntSet.mem med.AnnchromAli.ref_code ref_codes 
+                          ) parent_med.Annchrom.med_ls
+            with Not_found -> List.hd parent_med.Annchrom.med_ls
+        in            
+        
+
+        let cost,  recost, single_seq_arr =             
             match root with
             | Some root ->
-                  let single_root = 
-                      Array.map (fun seq -> 
-                                     Sequence.map (fun code -> 
-                                                       Cost_matrix.Two_D.get_closest c2 code code
-                                                  ) seq.AnnchromAli.seq
-                                ) amed.AnnchromAli.seq_arr
+                  let single_root = AnnchromAli.to_single_root amed
+                      aparent_med.AnnchromAli.ref_code c2 
                   in 
                   0, 0, single_root
             | None ->
-                  AnnchromAli.to_single aparent_med amed.AnnchromAli.ref_code c2  med.Annchrom.annchrom_pam
+                  let single_seq_arr = 
+                      AnnchromAli.to_single aparent_med amed.AnnchromAli.ref_code c2  
+                  in 
+                  let single_med = 
+                      {amed with 
+                           AnnchromAli.seq_arr = Array.mapi 
+                              (fun idx seqt -> 
+                                   {seqt with AnnchromAli.seq = single_seq_arr.(idx)}
+                              ) amed.AnnchromAli.seq_arr
+                      }
+                  in 
+                              
+                  let cost, recost = AnnchromAli.cmp_cost 
+                      single_med aparent_med c2 mine.alph
+                      med.Annchrom.annchrom_pam 
+                  in 
+                  cost, recost, single_seq_arr
         in 
+
         let single_med = AnnchromAli.change_to_single amed single_seq_arr in
         let single_med = {med with Annchrom.med_ls = [single_med]} in 
 
@@ -356,7 +368,11 @@ let to_single ref_codes (root : t option) single_parent mine =
     in
 
     let meds, costs,  recosts, total_cost = 
-        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        match root with
+        | Some root ->
+              IntMap.fold median root.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        | None ->
+              IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
     in 
 
     previous_total_cost, float_of_int total_cost, 
@@ -364,6 +380,10 @@ let to_single ref_codes (root : t option) single_parent mine =
          costs = costs;
          recosts = recosts;
          total_cost = float_of_int total_cost}
+
+
+
+
 
 let copy_chrom_map s_ch d_ch =
     let copied_meds = IntMap.mapi 

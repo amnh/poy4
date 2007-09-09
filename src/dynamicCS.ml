@@ -469,7 +469,7 @@ let to_single ref_codes root parent mine =
           | Some (ChromCS root) -> Some root
           | _ -> None
           in 
-          let prev_cost, new_cost, median =
+          let prev_cost, new_cost, median = 
               ChromCS.to_single ref_codes root parent mine 
           in
           prev_cost, new_cost, ChromCS median          

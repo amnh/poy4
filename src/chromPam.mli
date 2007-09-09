@@ -38,7 +38,7 @@ type chromPairAliPam_t = {
   chrom_breakpoint : int;
   keep_median : int;
   swap_med : int;
-  approx : bool;
+  approx : order_t;
   locus_indel_cost : int * int;
   chrom_indel_cost : int * int;
   chrom_hom : int;

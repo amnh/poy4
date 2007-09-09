@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 2103 $"
+let () = SadmanOutput.register "Block" "$Revision: 2198 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -194,7 +194,9 @@ let print (block :  block_t) =
         (block.en2 - block.sta2 + 1);
 
     fprintf stdout "num_seed: %i, subseq: (%i, %i), cost: %i, direction: %i \n" 
-        (List.length block.seed_ls) block.subseq1_id block.subseq2_id block.cost dir;
+        (List.length block.seed_ls) block.subseq1_id block.subseq2_id block.cost
+        dir;
+    List.iter Seed.print block.seed_ls;
     print_endline "-------------------------------------"
     
 
@@ -727,7 +729,7 @@ let create_subseq_id subseq_type (sep_block_ls : block_t list)
 
 
 
-let create_median ?(approx=false) (block : block_t) cost_mat = 
+let create_median ?(approx=`BothSeq) (block : block_t) cost_mat = 
     let alied_seq1 = Utl.deref block.alied_seq1 in 
     let alied_seq2 = Utl.deref block.alied_seq2 in 
 

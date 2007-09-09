@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2157 $"
+let () = SadmanOutput.register "Node" "$Revision: 2198 $"
 
 let debug = false
 let debug_exclude = false
@@ -811,7 +811,7 @@ let edge_distance nodea nodeb =
     distance_lists nodea.characters nodeb.characters 0.
 
 let has_to_single : [ `Add | `Annchrom | `Breakinv | `Chrom | `Genome 
-            | `Nonadd | `Sank | `Seq ] list = [`Seq]
+| `Nonadd | `Sank | `Seq ] list = [`Seq ; `Chrom]
 
 let distance_of_type ?(para=None) ?(parb=None) t
     ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =

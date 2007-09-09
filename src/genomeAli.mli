@@ -126,6 +126,8 @@ val create_map : med_t -> int -> int * int * Tags.output
 val to_single :
   med_t ->
   med_t ->
-  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s array
+  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> Sequence.s array
 val change_to_single : med_t -> Sequence.s array -> med_t
 val copy_chrom_map : med_t -> med_t -> med_t
+val to_single_root : med_t -> Cost_matrix.Two_D.m -> Sequence.s array
+val create_single_map : med_t -> Tags.output

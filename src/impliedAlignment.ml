@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2177 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2198 $"
 
 exception NotASequence of int
 
@@ -45,13 +45,12 @@ type ias = {
 
 (* t is the presentation of a dynamic set (DynamicCS) in order to create implied
    alignments.
-   Note: sequences : ias_arr list Codes.t where 
+   Note: sequences : ias_arr Codes.t where 
    isa_arr is an array of ias in the case of annotated chromosomes (ach ias
-   presents a locus); ias_arr list) is a list of equally
-   optimal medians in case of chromosomes   
+   presents a locus)
 *)
 type t = {
-    sequences : ias array list Codes.t;
+    sequences : ias array Codes.t;
     c2 : Cost_matrix.Two_D.m;
     chrom_pam : Data.dyna_pam_t;
     state : dyna_state_t;
@@ -238,8 +237,8 @@ codea codeb cm alph achld bchld =
     and lenb = Sequence.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
     let create_gaps len = Sequence.init (fun _ -> gap) len 
-    and aempty = Sequence.is_empty a.seq gap
-    and bempty = Sequence.is_empty b.seq gap in
+    and aempty = (Sequence.is_empty a.seq gap) && (state = `Seq)
+    and bempty = (Sequence.is_empty b.seq gap) && (state = `Seq) in
     let a', b', nogap, indels = 
         let anb_indels = `Set [a.indels; b.indels] in
         let a', b', _, nogap, indels =
@@ -250,12 +249,15 @@ codea codeb cm alph achld bchld =
                     (create_gaps lenb), b.seq, 0, `A, anb_indels
             else if bempty then
                 a.seq, (create_gaps lena), 0, `B, anb_indels
-            else 
-                if prealigned then 
-                    let inds = calculate_indels a.seq b.seq alph bchld in
+            else begin
+                if prealigned then  begin
+                    let inds = match lena with
+                    | 0 -> `Empty
+                    | _ -> calculate_indels a.seq b.seq alph bchld 
+                    in
                     a.seq, b.seq, 0, `Both, `Set [inds; anb_indels]
                 
-                else
+                end else
                     let a, b, c = 
                         Sequence.Align.align_2 a.seq b.seq cm
                         Matrix.default 
@@ -264,6 +266,7 @@ codea codeb cm alph achld bchld =
                         calculate_indels a b alph bchld 
                     in
                     a, b, c, `Both, `Set [inds; anb_indels]
+            end 
         in
         let nogap = 
             (* if we are not calculating the median, we better always
@@ -418,46 +421,6 @@ codea codeb cm alph achld bchld =
     let order = List.rev order in
     { seq = anc; codes = codes; homologous = hom; indels = indels; order = order }
 
-(*====================================================================*)
-(*====================================================================*)
-let get_best_pair state acode bcode a_ls b_ls cm chrom_pam = 
-    let first_a = List.hd a_ls in  
-    let first_b = List.hd b_ls in 
-    let a_ls, b_ls, min_can_code = 
-        if acode < bcode then a_ls, b_ls, acode
-        else b_ls, a_ls, bcode
-    in
-    let cmp_annchrom_cost iasa_arr iasb_arr =
-        let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) iasa_arr in
-        let seqb_arr = Array.map (fun ias -> (ias.seq, -1)) iasb_arr in
-        let ana = AnnchromAli.init seqa_arr in 
-        let anb = AnnchromAli.init seqb_arr in 
-        let cost, _ = AnnchromAli.cmp_cost ana anb cm Alphabet.nucleotides chrom_pam in
-        cost
-    in 
-    let cmp_chrom_cost isa1_arr isa2_arr =
-        let med1 = ChromAli.create_med isa1_arr.(0).seq in 
-        let med2 = ChromAli.create_med isa2_arr.(0).seq in
-        let cost, _ = ChromAli.cmp_cost med1 med2 cm chrom_pam in 
-        cost
-    in 
-    let _, a, b = 
-        List.fold_left 
-            (fun (min_cost, best_a, best_b) isa_a -> 
-                 List.fold_left 
-                     (fun (min_cost, best_a, best_b) isa_b -> 
-                          let cost = 
-                              match state with 
-                              | `Chromosome -> cmp_chrom_cost isa_a isa_b 
-                              | `Annotated -> cmp_annchrom_cost isa_a isa_b 
-                          in 
-                          if cost < min_cost then cost, isa_a, isa_b
-                          else min_cost, best_a, best_b) 
-                     (min_cost, best_a, best_b) b_ls) 
-            (max_int, first_a, first_b) a_ls  
-    in 
-    a, b, min_can_code
-
 
 let assign_act_order sta en codes ord_arr act_ord_arr =
     if sta != -1 then begin
@@ -494,28 +457,269 @@ let get_suborder is_main_chrom sta en codes ord_arr act_ord_arr =
         sub_ord_arr
     end 
 
-let ancestor_sequence prealigned calculate_median all_minus_gap acode 
-bcode achld bchld a_ls b_ls cm alpha chrom_pam =
+let ancestor_sequence prealigned calculate_median all_minus_gap 
+        acode bcode achld bchld a_ls b_ls cm alpha chrom_pam =
     let get_one x =
         match x with
-        | [[|x|]] -> x
+        | [|x|] -> x
         | _ -> assert false
     in
-    let res = 
-        ancestor calculate_median `Seq prealigned all_minus_gap 
+    let res =
+        ancestor calculate_median `Seq prealigned all_minus_gap
         (get_one a_ls) (get_one b_ls) acode bcode cm alpha achld bchld
     in
-    [[|res|]]
+    [|res|]
+
+
+(* Merge the implied alignments of two clades and their respective roots into
+* one common ancestor *)
+let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode 
+        achld bchld a b cm alpha chrom_pam = 
+    let a, b, min_can_code = 
+        if calculate_median then 
+            if acode < bcode then a, b, acode
+            else b, a, bcode
+        else a, b, acode
+    in 
+    let a = a.(0) and b = b.(0) in 
+    let lena = Sequence.length a.seq
+    and lenb = Sequence.length b.seq 
+    and gap = Cost_matrix.Two_D.gap cm in
+    let create_gaps len = Sequence.init (fun _ -> gap) len 
+    and aempty = Sequence.is_empty a.seq gap
+    and bempty = Sequence.is_empty b.seq gap in
+    let seq_a, seq_b =
+        if aempty && bempty then
+            if lena > lenb then a.seq, a.seq
+            else b.seq, b.seq
+        else if aempty then
+            (create_gaps lenb), b.seq
+        else if bempty then
+            a.seq, (create_gaps lena)
+        else a.seq, b.seq
+    in  
+    let med_a = ChromAli.create_med seq_a in 
+    let med_b = ChromAli.create_med seq_b in 
+    let chrom_pam = {chrom_pam with Data.approx = Some true} in 
+    let _, _, med_ls = ChromAli.find_med2_ls med_a med_b cm chrom_pam in 
+    let med = List.hd med_ls in 
+
+    let ordera_arr = Array.of_list (List.rev a.order) in 
+    let orderb_arr = Array.of_list (List.rev b.order) in 
+
+    let act_orda_arr = Array.map (fun _ -> false) ordera_arr in
+    let act_ordb_arr = Array.map (fun _ -> false) orderb_arr in        
+
+    List.iter 
+        (fun seg ->
+             let staa = seg.ChromAli.sta1 in 
+             let ena = seg.ChromAli.en1 in                  
+             let stab = seg.ChromAli.sta2 in 
+             let enb = seg.ChromAli.en2 in 
+             (if seg.ChromAli.dir2 = `Negative then 
+                  failwith 
+                      "The impliedAlignment function has 
+                       not handled the negative segment");
+             assign_act_order staa ena a.codes ordera_arr act_orda_arr;
+             assign_act_order stab enb b.codes orderb_arr act_ordb_arr
+        ) med.ChromAli.chrom_map;
+
+    let init_ias = {seq = med.ChromAli.seq; 
+                    codes = Hashtbl.create 1667;
+                    homologous = Hashtbl.create 1667;
+                    order = [];
+                    indels = `Empty;}
+    in 
+    let new_ias = List.fold_left 
+        (fun nascent_ias seg ->
+             let sta = seg.ChromAli.sta in 
+             let staa = seg.ChromAli.sta1 in 
+             let ena = seg.ChromAli.en1 in 
+             let sub_orda_arr = get_suborder true staa ena a.codes ordera_arr act_orda_arr in 
+             let stab = seg.ChromAli.sta2 in 
+             let enb = seg.ChromAli.en2 in 
+             let sub_ordb_arr = get_suborder true stab enb b.codes orderb_arr act_ordb_arr in 
+
+(*             fprintf stdout "sta:%i -> (%i, %i), (%i, %i)\n" sta staa ena stab enb; flush stdout;*)
+
+             let sub_codes_a = Hashtbl.create 1667 in
+             (if staa != -1 then 
+                  for p = staa to ena do
+                      let code = Hashtbl.find a.codes p in 
+                      Hashtbl.add sub_codes_a (p - staa) code;
+                  done);
+             let sub_codes_b = Hashtbl.create 1667 in
+             (if (stab != -1) then 
+                  for p = stab to enb do
+                      let code = Hashtbl.find b.codes p in 
+                      Hashtbl.add sub_codes_b (p - stab) code;
+                  done);
+                  
+             let sub_a = {a with 
+                              seq = seg.ChromAli.alied_seq1;
+                              codes = sub_codes_a;
+                              order = List.rev (Array.to_list sub_orda_arr);                                  
+                         } 
+             in 
+             let sub_b = {b with 
+                              seq =  seg.ChromAli.alied_seq2;
+                              codes = sub_codes_b;
+                              order = List.rev (Array.to_list sub_ordb_arr);
+                         } 
+             in  
+             let ans = 
+                 ancestor calculate_median `Chromosome prealigned all_minus_gap sub_a
+                     sub_b acode bcode cm alpha achld bchld
+             in 
+(*             UtlPoy.printDNA seg.ChromAli.alied_seq1;
+               UtlPoy.printDNA seg.ChromAli.alied_seq2; *)
+             (if (sta != -1) then 
+                  Hashtbl.iter (fun p code ->                                     
+                                    Hashtbl.add nascent_ias.codes (p + sta - 1) code) ans.codes);
+
+(*             UtlPoy.printDNA ans.seq;
+             print_newline ();*)
+
+             Hashtbl.iter (fun code hom -> 
+                               Hashtbl.replace nascent_ias.homologous code hom) ans.homologous; 
+             {nascent_ias with order = List.append nascent_ias.order (List.rev ans.order)}
+        ) init_ias med.ChromAli.chrom_map
+    in 
+    let new_ias = {new_ias with order = List.rev new_ias.order} in 
+
+    [|new_ias|]
+
+
+
+(* Merge the implied alignments of two clades and their respective roots into
+* one common ancestor *)
+let ancestor_annchrom prealigned calculate_median all_minus_gap acode bcode
+        achld bchld a b cm alpha annchrom_pam  = 
+
+    let a, b, min_can_code = 
+        if calculate_median then 
+            if acode < bcode then a, b, acode
+            else b, a, bcode
+        else a, b, acode
+    in 
+    let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) a in
+    let seqb_arr = Array.map (fun ias -> (ias.seq, -1)) b in
+    let ana = AnnchromAli.init seqa_arr in 
+    let anb = AnnchromAli.init seqb_arr in 
+    let annchrom_pam = {annchrom_pam with Data.approx = Some true} in 
+    let _, _, med_ls = 
+        AnnchromAli.find_med2_ls ana anb cm Alphabet.nucleotides annchrom_pam 
+    in
+    let med = List.hd med_ls in 
+
+    let merge_ias seqt = 
+        let orda = seqt.AnnchromAli.seq_ord1 in 
+        let ordb = seqt.AnnchromAli.seq_ord2 in 
+        let isa = 
+            match orda = -1 with
+            | false -> {a.(orda) with 
+                            seq = seqt.AnnchromAli.alied_seq1 }
+            | true -> 
+                    { seq = seqt.AnnchromAli.alied_seq1;
+                    codes = Hashtbl.create 1667;
+                    homologous = Hashtbl.create 1667;
+                    order = [];
+                    indels = `Empty;}
+        in 
+        let isb = 
+            match ordb = -1 with
+            | false -> {b.(ordb) with 
+                            seq = seqt.AnnchromAli.alied_seq2 }
+            | true -> {seq = seqt.AnnchromAli.alied_seq2;
+                       codes = Hashtbl.create 1667;
+                       homologous = Hashtbl.create 1667;
+                       order = []; indels = `Empty}
+        in 
+        let ans = 
+            ancestor calculate_median `Annotated prealigned
+            all_minus_gap isa isb acode bcode cm alpha achld bchld
+        in
+        let new_codes = Hashtbl.create 1667 in 
+        Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
+        {ans with seq = seqt.AnnchromAli.seq; codes = new_codes}
+    in 
+
+    let new_ias_arr = Array.map merge_ias med.AnnchromAli.seq_arr in 
+    new_ias_arr
+
+(* Merge the implied alignments of two clades and their respective roots into
+* one common ancestor *)
+let ancestor_breakinv prealigned calculate_median all_minus_gap acode bcode
+        achld bchld a b cm alpha breakinv_pam = 
+
+    let a, b, min_can_code = 
+        if calculate_median then 
+            if acode < bcode then a, b, acode
+            else b, a, bcode
+        else a, b, acode
+    in 
+
+    let a, b = a.(0), b.(0) in 
+    let meda = BreakinvAli.init a.seq in 
+    let medb = BreakinvAli.init b.seq in 
+    let pure_cm = Cost_matrix.Two_D.get_pure_cost_mat cm in 
+    let _, _, med_ls = BreakinvAli.find_med2_ls meda medb cm pure_cm alpha breakinv_pam in
+    let med = List.hd med_ls in
+
+    let seqb_arr = Sequence.to_array b.seq in 
+    let gap_code = Cost_matrix.Two_D.gap cm in 
+    let re_seqb = UtlPoy.delete_gap ~gap_code:gap_code med.BreakinvAli.alied_seq2 in
+    let new_codes_b = Hashtbl.create 1667 in 
+    Array.iteri 
+    (fun re_pos re_base -> 
+        let ori_pos = Utl.find_index seqb_arr re_base compare in 
+        let code = Hashtbl.find b.codes ori_pos in 
+        Hashtbl.add new_codes_b re_pos code;) 
+    (Sequence.to_array re_seqb);
+    let order_b_arr = Array.of_list (List.rev b.order) in 
+    let num_codes = Array.length order_b_arr in 
+    let exist_code_b = Hashtbl.fold 
+        (fun p code code_set -> IntSet.add code code_set) new_codes_b IntSet.empty
+    in 
+    let new_orders_b = ref [] in 
+    let rec add_deled_code pos = 
+        if pos < num_codes then begin
+            let code = order_b_arr.(pos) in 
+            if IntSet.mem code exist_code_b = false then begin
+                new_orders_b := List.append !new_orders_b [code];
+                add_deled_code (pos + 1)
+            end 
+        end            
+    in 
+    Array.iteri 
+    (fun pos _ -> 
+        let code = Hashtbl.find new_codes_b pos in 
+        let ori_pos = Utl.find_index order_b_arr code compare in 
+        new_orders_b := List.append !new_orders_b [code];                     
+        add_deled_code (ori_pos + 1)) 
+    seqb_arr;
+    add_deled_code 0;
+    let isa = {a with seq = med.BreakinvAli.alied_seq1} in 
+    let isb = {b with seq = med.BreakinvAli.alied_seq2;
+                   codes = new_codes_b;
+                   order = List.rev  !new_orders_b} in 
+    let ans = 
+        ancestor calculate_median `Breakinv prealigned all_minus_gap isa isb
+        acode bcode cm alpha achld bchld
+    in
+    let new_codes = Hashtbl.create 1667 in 
+    Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
+    [|{ans with seq = med.BreakinvAli.seq; codes = new_codes}|]
+
 
 (* Merge the implied alignments of two clades and their respective roots into
 * one common ancestor *)
 let ancestor_genome prealigned calculate_median all_minus_gap acode bcode achld
-bchld a_ls b_ls cm alpha chrom_pam = 
-    let first_a = List.hd a_ls in  
-    let first_b = List.hd b_ls in 
+        bchld a b cm alpha chrom_pam = 
+
     let ias1_arr, ias2_arr, min_can_code, max_can_code =
-        if acode < bcode then first_a, first_b, acode, bcode
-        else first_b, first_a, bcode, acode
+        if acode < bcode then a, b, acode, bcode
+        else b, a, bcode, acode
     in
     let chroma_arr = Array.map (fun ias -> ias.seq) ias1_arr in
     let chromb_arr = Array.map (fun ias -> ias.seq) ias2_arr in
@@ -523,6 +727,7 @@ bchld a_ls b_ls cm alpha chrom_pam =
     let med2 = GenomeAli.create_med_from_seq chromb_arr in
     let _, _, _, med_ls = GenomeAli.find_med2_ls med1 med2 cm chrom_pam in 
     let med = List.hd med_ls in 
+
     let order1_mat = Array.map (fun ias1 -> Array.of_list (List.rev ias1.order) ) ias1_arr in  
     let order2_mat = Array.map (fun ias2 -> Array.of_list (List.rev ias2.order) ) ias2_arr in  
     let act_ord1 = Array.map (fun ord_arr -> Array.map (fun _ -> false) ord_arr) order1_mat in
@@ -640,226 +845,8 @@ bchld a_ls b_ls cm alpha chrom_pam =
              {new_ias with order = List.rev new_ias.order}
         ) med.GenomeAli.chrom_arr
     in 
-    [new_ias_arr]
+    new_ias_arr
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
-let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode achld
-bchld a_ls b_ls cm alpha chrom_pam = 
-    let a, b, min_can_code = 
-        get_best_pair `Chromosome acode bcode a_ls b_ls cm chrom_pam 
-    in 
-    assert (1 = Array.length a);
-    assert (1 = Array.length b);
-    let a = a.(0) and b = b.(0) in 
-    let lena = Sequence.length a.seq
-    and lenb = Sequence.length b.seq 
-    and gap = Cost_matrix.Two_D.gap cm in
-    let create_gaps len = Sequence.init (fun _ -> gap) len 
-    and aempty = Sequence.is_empty a.seq gap
-    and bempty = Sequence.is_empty b.seq gap in
-    let seq_a, seq_b =
-        if aempty && bempty then
-            if lena > lenb then a.seq, a.seq
-            else b.seq, b.seq
-        else if aempty then
-            (create_gaps lenb), b.seq
-        else if bempty then
-            a.seq, (create_gaps lena)
-        else a.seq, b.seq
-    in  
-    let med_a = ChromAli.create_med seq_a in 
-    let med_b = ChromAli.create_med seq_b in 
-    let _, _, med_ls = ChromAli.find_med2_ls med_a med_b cm chrom_pam in 
-    let ordera_arr = Array.of_list (List.rev a.order) in 
-    let orderb_arr = Array.of_list (List.rev b.order) in 
-    let builder_med ias_ls med =
-        let act_orda_arr = Array.map (fun _ -> false) ordera_arr in
-        let act_ordb_arr = Array.map (fun _ -> false) orderb_arr in        
-        List.iter 
-            (fun seg ->
-                 let staa = seg.ChromAli.sta1 in 
-                 let ena = seg.ChromAli.en1 in                  
-                 let stab = seg.ChromAli.sta2 in 
-                 let enb = seg.ChromAli.en2 in 
-                 (if seg.ChromAli.dir2 = `Negative then 
-                      failwith 
-                      "The impliedAlignment function has 
-                      not handled the Negative segment");
-                 assign_act_order staa ena a.codes ordera_arr act_orda_arr;
-                 assign_act_order stab enb b.codes orderb_arr act_ordb_arr) 
-            med.ChromAli.chrom_map;
-        let init_ias = {seq = med.ChromAli.seq; 
-                        codes = Hashtbl.create 1667;
-                        homologous = Hashtbl.create 1667;
-                        order = [];
-                        indels = `Empty;}
-        in 
-        let new_ias = List.fold_left 
-            (fun nascent_ias seg ->
-                 let sta = seg.ChromAli.sta in 
-                 let staa = seg.ChromAli.sta1 in 
-                 let ena = seg.ChromAli.en1 in 
-                 let sub_orda_arr = get_suborder true staa ena a.codes ordera_arr act_orda_arr in 
-                 let stab = seg.ChromAli.sta2 in 
-                 let enb = seg.ChromAli.en2 in 
-                 let sub_ordb_arr = get_suborder true stab enb b.codes orderb_arr act_ordb_arr in 
-                 let sub_codes_a = Hashtbl.create 1667 in
-                 (if staa != -1 then 
-                      for p = staa to ena do
-                          let code = Hashtbl.find a.codes p in 
-                          Hashtbl.add sub_codes_a (p - staa) code;
-                      done);
-                 let sub_codes_b = Hashtbl.create 1667 in
-                 (if (stab != -1) then 
-                      for p = stab to enb do
-                          let code = Hashtbl.find b.codes p in 
-                          Hashtbl.add sub_codes_b (p - stab) code;
-                      done);
-                  
-                 let sub_a = {a with 
-                                  seq = seg.ChromAli.alied_seq1;
-                                  codes = sub_codes_a;
-                                  order = List.rev (Array.to_list sub_orda_arr);                                  
-                             } 
-                 in 
-                 let sub_b = {b with 
-                                  seq =  seg.ChromAli.alied_seq2;
-                                  codes = sub_codes_b;
-                                  order = List.rev (Array.to_list sub_ordb_arr);
-                             } 
-                 in  
-                 let ans = 
-                     ancestor calculate_median `Chromosome prealigned all_minus_gap sub_a
-                     sub_b acode bcode cm alpha achld bchld
-                 in 
-                 (if (sta != -1) then 
-                     Hashtbl.iter (fun p code -> 
-                                       Hashtbl.add nascent_ias.codes (p + sta - 1) code) ans.codes);
-                 Hashtbl.iter (fun code hom -> 
-                                   Hashtbl.replace nascent_ias.homologous code hom) ans.homologous; 
-                 {nascent_ias with order = List.append nascent_ias.order (List.rev ans.order)}
-            ) init_ias med.ChromAli.chrom_map
-        in 
-        let new_ias = {new_ias with order = List.rev new_ias.order} in 
-        new_ias::ias_ls
-    in 
-    let ias_ls = List.fold_left builder_med [] med_ls in 
-    List.map (fun a_ias -> [|a_ias|]) ias_ls
-
-
-
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
-let ancestor_annchrom prealigned calculate_median all_minus_gap acode bcode
-achld bchld a_ls b_ls cm alpha annchrom_pam  = 
-    let a, b, min_can_code = 
-        get_best_pair `Annotated acode bcode a_ls b_ls cm annchrom_pam in
-    let seqa_arr = Array.map (fun ias -> (ias.seq, -1)) a in
-    let seqb_arr = Array.map (fun ias -> (ias.seq, -1)) b in
-    let ana = AnnchromAli.init seqa_arr in 
-    let anb = AnnchromAli.init seqb_arr in 
-    let _, _, med_ls = 
-        AnnchromAli.find_med2_ls ana anb cm Alphabet.nucleotides annchrom_pam 
-    in
-    let merge_ias seqt = 
-        let orda = seqt.AnnchromAli.seq_ord1 in 
-        let ordb = seqt.AnnchromAli.seq_ord2 in 
-        let isa = 
-            match orda = -1 with
-            | false -> {a.(orda) with 
-                            seq = seqt.AnnchromAli.alied_seq1 }
-            | true -> 
-                    { seq = seqt.AnnchromAli.alied_seq1;
-                    codes = Hashtbl.create 1667;
-                    homologous = Hashtbl.create 1667;
-                    order = [];
-                    indels = `Empty;}
-        in 
-        let isb = 
-            match ordb = -1 with
-            | false -> {b.(ordb) with 
-                            seq = seqt.AnnchromAli.alied_seq2 }
-            | true -> {seq = seqt.AnnchromAli.alied_seq2;
-                       codes = Hashtbl.create 1667;
-                       homologous = Hashtbl.create 1667;
-                       order = []; indels = `Empty}
-        in 
-        let ans = 
-            ancestor calculate_median `Annotated calculate_median 
-            all_minus_gap isa isb acode bcode cm alpha achld bchld
-        in
-        let new_codes = Hashtbl.create 1667 in 
-        Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
-        {ans with seq = seqt.AnnchromAli.seq; codes = new_codes}
-    in 
-    let builder_med ias_ls med =
-        let new_ias_arr = Array.map merge_ias med.AnnchromAli.seq_arr in 
-        new_ias_arr::ias_ls
-    in 
-    let ias_ls = List.fold_left builder_med [] med_ls in 
-    ias_ls
-
-
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
-let ancestor_breakinv prealigned calculate_median all_minus_gap acode bcode
-achld bchld a_ls b_ls cm alpha breakinv_pam = 
-    let a_ls, b_ls, min_can_code = 
-        if acode < bcode then 
-            a_ls, b_ls, acode
-        else b_ls, a_ls, bcode
-    in
-    let a, b = (List.hd a_ls).(0), (List.hd b_ls).(0) in 
-    let meda = BreakinvAli.init a.seq in 
-    let medb = BreakinvAli.init b.seq in 
-    let pure_cm = Cost_matrix.Two_D.get_pure_cost_mat cm in 
-    let _, _, med_ls = BreakinvAli.find_med2_ls meda medb cm pure_cm alpha breakinv_pam in
-    let med = List.hd med_ls in
-    let seqb_arr = Sequence.to_array b.seq in 
-    let gap_code = Cost_matrix.Two_D.gap cm in 
-    let re_seqb = UtlPoy.delete_gap ~gap_code:gap_code med.BreakinvAli.alied_seq2 in
-    let new_codes_b = Hashtbl.create 1667 in 
-    Array.iteri 
-    (fun re_pos re_base -> 
-        let ori_pos = Utl.find_index seqb_arr re_base compare in 
-        let code = Hashtbl.find b.codes ori_pos in 
-        Hashtbl.add new_codes_b re_pos code;) 
-    (Sequence.to_array re_seqb);
-    let order_b_arr = Array.of_list (List.rev b.order) in 
-    let num_codes = Array.length order_b_arr in 
-    let exist_code_b = Hashtbl.fold 
-        (fun p code code_set -> IntSet.add code code_set) new_codes_b IntSet.empty
-    in 
-    let new_orders_b = ref [] in 
-    let rec add_deled_code pos = 
-        if pos < num_codes then begin
-            let code = order_b_arr.(pos) in 
-            if IntSet.mem code exist_code_b = false then begin
-                new_orders_b := List.append !new_orders_b [code];
-                add_deled_code (pos + 1)
-            end 
-        end            
-    in 
-    Array.iteri 
-    (fun pos _ -> 
-        let code = Hashtbl.find new_codes_b pos in 
-        let ori_pos = Utl.find_index order_b_arr code compare in 
-        new_orders_b := List.append !new_orders_b [code];                     
-        add_deled_code (ori_pos + 1)) 
-    seqb_arr;
-    add_deled_code 0;
-    let isa = {a with seq = med.BreakinvAli.alied_seq1} in 
-    let isb = {b with seq = med.BreakinvAli.alied_seq2;
-                   codes = new_codes_b;
-                   order = List.rev  !new_orders_b} in 
-    let ans = 
-        ancestor calculate_median `Breakinv prealigned all_minus_gap isa isb
-        acode bcode cm alpha achld bchld
-    in
-    let new_codes = Hashtbl.create 1667 in 
-    Hashtbl.iter (fun p code -> Hashtbl.add new_codes (p-1) code) ans.codes;
-    [[|{ans with seq = med.BreakinvAli.seq; codes = new_codes}|]]
 
 exception IsSankoff
 
@@ -1194,19 +1181,20 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 Array.map 
                                 (fun seq -> create_ias state seq taxon_id cg) 
                                 seq_arr
-                    in
-                    Codes.add code [ias_arr] acc) 
-                        sequences Codes.empty  
-                            in                                   
-                            {sequences = new_sequences;   
-                            c2 = DynamicCS.c2 dyn;   
-                            chrom_pam = DynamicCS.chrom_pam dyn;  
-                            state = DynamicCS.state dyn; 
-                            alpha = DynamicCS.alpha dyn;
-                            code = DynamicCS.code dyn; 
-                            cannonic_code = taxon_id;
-                            children = `Single taxon_id}) 
-                data
+                            in 
+                            Codes.add code ias_arr acc
+                        ) sequences Codes.empty  
+                    in                                   
+                    {sequences = new_sequences;   
+                     c2 = DynamicCS.c2 dyn;   
+                     chrom_pam = DynamicCS.chrom_pam dyn;  
+                     state = DynamicCS.state dyn; 
+                     alpha = DynamicCS.alpha dyn;
+                     code = DynamicCS.code dyn; 
+                     cannonic_code = taxon_id;
+                     children = `Single taxon_id}
+                ) 
+                    data  
             in
             AssList.singleton (taxon_id, data), data
         in
@@ -1235,9 +1223,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     match x.state with
                     | `Seq -> ancestor_sequence false
                     | `Chromosome -> ancestor_chrom true
-                    | `Genome -> ancestor_genome true
                     | `Annotated -> ancestor_annchrom true
                     | `Breakinv -> ancestor_breakinv true
+                    | `Genome -> ancestor_genome true
                 in
                 Codes.fold 
                 (fun u v acc ->
@@ -1357,8 +1345,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         (number columns, (com_hom_code -> column) map, (code -> com_hom_code) map) array map (a character set) *)
     let invert_codes t = 
         Codes.fold 
-            (fun char_code iat_ls acc ->
-                 let iat_arr = List.hd iat_ls in  
+            (fun char_code iat_arr acc ->
                  let res_arr = 
                      Array.map 
                      (fun iat ->
@@ -1457,10 +1444,9 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         let indel_blocks = 
             List.map (fun (_, x) -> 
                 (List.map (fun x -> 
-                    Codes.fold (fun _ lst acc ->
-                        List.fold_left 
-                        (fun acc y -> Array.fold_left (fun acc y -> y.indels ::
-                            acc) acc y) acc lst) x.sequences []) x)) res
+                    Codes.fold (fun _ arr acc ->
+                        Array.fold_left 
+                            (fun acc y ->  y.indels :: acc) acc arr) x.sequences []) x)) res
         in
    (** ((taxon_id * (aligned_code arrays for each character
       set) list (of characters) ) list (of taxa) ) of list (of handles)*)
@@ -1491,8 +1477,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                               let state = hb.state in
                                               char_states := 
                                                   (Codes.add char_code state !char_states);
-                                              let seqs = Codes.find char_code hb.sequences in 
-                                              let seq_arr = List.hd seqs in 
+                                              let seq_arr = Codes.find char_code hb.sequences in 
                                               let bases, pos = convert_a_taxon fi_hom seq_arr in 
                                               (Codes.add char_code bases acc_bases),
                                               (Codes.add char_code pos acc_pos)) 

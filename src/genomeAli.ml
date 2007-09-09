@@ -1125,6 +1125,50 @@ let create_map anc_med des_ref : (int * int * Tags.output) =
     | false -> anc_med.cost2, anc_med.recost2, genome_map
 
 
+let create_single_map med : Tags.output = 
+    let str = string_of_int in  
+ 
+    let create_chrom_map m =      
+        let a_chrom_id, a_sta, a_en, a_dir  = 
+            (str m.chi2_chrom_id), (str m.sta2), (str m.en2), (Utl.get_dir m.dir2)
+        in 
+        let d_chrom_id, d_sta, d_en, d_dir = 
+            (str m.chi1_chrom_id), (str m.sta1), (str m.en1), (Utl.get_dir m.dir1) 
+        in 
+        let attributes = [(Tags.GenomeMap.a_chrom_id, a_chrom_id);
+                          (Tags.GenomeMap.a_start_seg, a_sta);
+                          (Tags.GenomeMap.a_end_seg, a_en);
+                          (Tags.GenomeMap.a_dir_seg, a_dir);
+                          (Tags.GenomeMap.d_chrom_id, d_chrom_id);
+                          (Tags.GenomeMap.d_start_seg, d_sta);
+                          (Tags.GenomeMap.d_end_seg, d_en);
+                          (Tags.GenomeMap.d_dir_seg, d_dir)
+                         ] 
+        in 
+        let m : Tags.output = (Tags.GenomeMap.seg, attributes, `String "") in 
+        `Single m
+    in   
+    
+    let chrom_map_ls = List.map 
+        (fun chrom -> 
+             let seg_ls = List.map create_chrom_map chrom.map in
+             let chrom_map : Tags.output = 
+                 (Tags.GenomeMap.chrom, [], `Structured (`Set seg_ls))
+             in 
+             `Single chrom_map
+        ) (Array.to_list med.chrom_arr) 
+    in 
+
+    let attributes = [(Tags.GenomeMap.a_ref_code, str med.genome_ref_code2); 
+                      (Tags.GenomeMap.d_ref_code, str med.genome_ref_code1)] 
+    in 
+
+    let genome_map : Tags.output = 
+        (Tags.GenomeMap.genome, attributes, `Structured (`Set chrom_map_ls)) 
+    in 
+
+    genome_map 
+
 
 
 
@@ -1141,18 +1185,9 @@ let to_single single_parent med c2 pam =
 
     let is_first_child = single_parent.genome_ref_code1 = med.genome_ref_code in    
     let gap = Cost_matrix.Two_D.gap c2 in
-    let ali_pam = ChromPam.get_chrom_pam pam in     
-    let is_gap_seq seq = 
-        Sequence.fold (fun is_gap code -> if code = gap then is_gap else false)
-            true seq
-    in 
-    let total_cost = ref 0 in
+
     let single_genome = Array.map 
         (fun chromt -> 
-(*
-             fprintf stdout "Start make single for one chromosome: %i\n" !(chromt.chrom_id);
-             UtlPoy.printDNA chromt.seq;
-*)
              let seg_ls = Array.fold_left 
                  (fun seg_ls anc_chrom ->                  
                       List.fold_left 
@@ -1160,47 +1195,18 @@ let to_single single_parent med c2 pam =
                                match is_first_child with
                                | true ->
                                      if seg.chi1_chrom_id != !(chromt.chrom_id) then seg_ls
-                                     else begin
-                                         
-                                         let single, cost = UtlPoy.closest_alied_seq
+                                     else begin                                         
+                                         let single, _ = UtlPoy.closest_alied_seq
                                              seg.alied_med seg.alied_seq1 c2
                                          in  
-                                         let cost =  
-                                             if seg.sta1 = -1 then
-                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_med
-                                             else if is_gap_seq seg.alied_med then 
-                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq1
-                                             else cost 
-                                         in 
-                                         total_cost := !total_cost + cost;
-(*
-                                         print_endline "First Child: Segment to single";
-                                         UtlPoy.printDNA single;
-                                         UtlPoy.printDNA seg.alied_seq1;
-                                         print_newline (); 
-*)
                                          (single, seg.alied_seq1, seg.sta1, seg.en1)::seg_ls
                                      end   
                                | false  -> 
                                      if seg.chi2_chrom_id != !(chromt.chrom_id) then seg_ls
                                      else begin
-                                         let single, cost = UtlPoy.closest_alied_seq
+                                         let single, _ = UtlPoy.closest_alied_seq
                                              seg.alied_med seg.alied_seq2 c2
                                          in  
-                                         let cost =  
-                                             if seg.sta2 = -1 then
-                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_med
-                                             else if is_gap_seq seg.alied_med then 
-                                                 UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost seg.alied_seq2
-                                             else cost 
-                                         in 
-                                         total_cost := !total_cost + cost;
-(*
-                                         print_endline "Second Child:Segment to single";
-                                         UtlPoy.printDNA single;
-                                         UtlPoy.printDNA seg.alied_seq1;
-                                         print_newline (); 
-*)
                                          (single, seg.alied_seq2, seg.sta2, seg.en2)::seg_ls
                                      end 
                           ) seg_ls anc_chrom.map                           
@@ -1209,20 +1215,19 @@ let to_single single_parent med c2 pam =
 
              let sorted_seg_ls = List.sort 
                  (fun seg1 seg2 ->
-                      let _, _, sta1, _ = seg1 in 
-                      let _, _, sta2, _ = seg2 in
+                      let _,  _, sta1, _ = seg1 in 
+                      let _,  _, sta2, _ = seg2 in
                       sta1 - sta2 
-                 ) (List.filter (fun (_, _, sta, _) -> sta != -1) seg_ls)
+                 ) (List.filter (fun (_,  _, sta, _) -> sta != -1) seg_ls)
              in      
 
              let process_indel_locus sta en = 
                  match sta > en with
-                 | true -> UtlPoy.get_empty_seq (), 0 
+                 | true -> UtlPoy.get_empty_seq () 
                  | false ->                       
                        let ss = Sequence.sub chromt.seq sta (en - sta +1 ) in 
-                       let cost = UtlPoy.cmp_gap_cost ali_pam.ChromPam.locus_indel_cost ss in
                        let single = UtlPoy.get_single_seq ss c2 in 
-                       single, cost
+                       single
              in 
                  
              let seq_len = Sequence.length chromt.seq in 
@@ -1241,57 +1246,67 @@ let to_single single_parent med c2 pam =
                           in                       
                           let gapless_alied_single = UtlPoy.of_array (Array.of_list  gapless_alied_single) in
 
-                          let indel_single, cost = process_indel_locus (en + 1) last_p in 
-                          total_cost := !total_cost + cost;
- (* 
-                          fprintf stdout "sta: %i, en: %i\n" sta en;
-                          UtlPoy.printDNA alied_single;
-                          UtlPoy.printDNA alied_seq;
-                          UtlPoy.printDNA chromt.seq;
-                          print_newline (); flush stdout;
- *)
+                          let indel_single = process_indel_locus (en + 1) last_p in 
                           (indel_single::gapless_alied_single::seg_ls), sta - 1
                      ) sorted_seg_ls ([], seq_len - 1) 
              in 
              let seg_ls = match last_p >= 0 with
              | false -> seg_ls
              | true ->
-                   let indel_single, cost = process_indel_locus 0 last_p in 
-                   total_cost := !total_cost + cost;
+                   let indel_single = process_indel_locus 0 last_p in 
                    indel_single::seg_ls
              in 
 
             let single_chrom = UtlPoy.concat seg_ls in 
-(*
-             print_endline "After making single"; flush stdout;
-            UtlPoy.printDNA chromt.seq;
-            UtlPoy.printDNA single_chrom;
-            print_newline (); flush stdout;
-*)
              single_chrom
         ) med.chrom_arr 
     in
     
-    Array.iter (fun chromt -> 
-                    if List.length chromt.map = 1 then begin                        
-                        let seg = List.hd chromt.map in 
-                        if (is_first_child && (seg.sta1 = -1))
-                            || (not is_first_child && seg.sta2 = -1) then begin
-                                let cost = UtlPoy.cmp_gap_cost ali_pam.ChromPam.chrom_indel_cost chromt.seq in
-                                total_cost := !total_cost + cost
+    single_genome
 
-                            end 
-                    end 
-               ) single_parent.chrom_arr;
 
-    let recost = 
-        match med.genome_ref_code = single_parent.genome_ref_code1 with
-        | true -> single_parent.recost1
-        | false -> single_parent.recost2
-    in 
+
+
+
+
+
+let to_single_root root c2 = 
+(*
+    fprintf stdout "Genome_parent_id: %i, genome_child1_id: %i, genome_child2_id: %i, 
+                    constructing_genome_id: %i\n" single_parent.genome_ref_code
+        single_parent.genome_ref_code1 single_parent.genome_ref_code2 med.genome_ref_code;     
+    print_endline "The genome map of single parent";
+    print_genome single_parent;
+*) 
+
+    let gap = Cost_matrix.Two_D.gap c2 in
+
+    let single_genome = Array.map 
+        (fun chromt -> 
+             let map = 
+                 List.map
+                     (fun seg ->                              
+                          let single_seg, _ = UtlPoy.closest_alied_seq
+                              seg.alied_seq2 seg.alied_seq1 c2
+                          in  
+                          let ungap_alied_med = Sequence.fold_righti  
+                              (fun ungap_alied_med p code ->
+                                   match code = gap with
+                                   | false -> code::ungap_alied_med
+                                   | true ->
+                                         if Sequence.get seg.alied_med p = gap then ungap_alied_med
+                                         else code::ungap_alied_med
+                              ) [] single_seg
+                          in                       
+                          let ungap_alied_med = UtlPoy.of_array (Array.of_list ungap_alied_med) in         
+                          ungap_alied_med                                   
+                     ) chromt.map  
+             in 
+             UtlPoy.concat map
+        ) root.chrom_arr 
+    in
     
-
-    (!total_cost + recost), recost, single_genome
+    single_genome
 
 
 

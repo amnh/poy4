@@ -282,19 +282,10 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
 
 
 let to_single ref_codes (root : t option) single_parent mine = 
-
-    let single_parent, mine = 
-        match root with 
-        | Some root ->  root, root
-        | None -> single_parent, mine
-    in 
-
     let previous_total_cost = mine.total_cost in 
 
     let median code med (acc_meds, acc_costs, acc_recosts, acc_total_cost) =        
         let amed = List.hd med.Breakinv.med_ls in
-
-
 
         let parent_med = IntMap.find code single_parent.meds in  
       
@@ -310,8 +301,7 @@ let to_single ref_codes (root : t option) single_parent mine =
         in 
         
         let single_med = {med with Breakinv.med_ls = [amed]} in 
-            
-                
+        
         let new_single = IntMap.add code single_med acc_meds in
         let new_costs = IntMap.add code (float_of_int cost) acc_costs in 
         let new_recosts = IntMap.add code (float_of_int (recost1 + recost2) ) acc_recosts in 
@@ -319,7 +309,11 @@ let to_single ref_codes (root : t option) single_parent mine =
     in  
     
     let meds, costs,  recosts, total_cost = 
-        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        match root with
+        | Some root ->
+              IntMap.fold median root.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        | None ->
+              IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
     in 
         
     previous_total_cost, float_of_int total_cost, 

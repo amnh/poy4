@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2006 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2198 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -325,8 +325,8 @@ module MakeNormal
                                  median_cost_fn
                                  id tree) tree
                              in
-                             let new_cost = Ptree.get_cost `Unadjusted new_tree
-                             and old_cost = Ptree.get_cost `Unadjusted tree in
+                             let new_cost = Ptree.get_cost `Adjusted new_tree
+                             and old_cost = Ptree.get_cost `Adjusted tree in
                              Status.user_message Status.Information
                              ("The break new old is " ^ string_of_float new_cost
                              ^ " - " ^ string_of_float old_cost);
@@ -368,7 +368,7 @@ module MakeNormal
             let tabu, right = join_tabu component in
             let mgr = new PhyloQueues.first_best_srch_mgr (new Sampler.do_nothing) in
             let () =
-                mgr#init [(forest, Ptree.get_cost `Unadjusted forest,
+                mgr#init [(forest, Ptree.get_cost `Adjusted forest,
                            Ptree.NoCost, tabu)] in
 
             (* get the current `Right junction *)
@@ -496,7 +496,6 @@ let rec find_local_optimum ?queue data emergency_queue
             trajectory, break_tabu, join_tabu, reroot_tabu, samples)
             = meth in
     let samplerf = sampler data emergency_queue samples in
-
     let queue_manager =
         match queue with
         | Some
@@ -571,7 +570,7 @@ let rec find_local_optimum ?queue data emergency_queue
     let result = 
             PhyloQueues.reset_trees_considered ();
             let process_tree tree = 
-                let cost = Ptree.get_cost `Unadjusted tree in
+                let cost = Ptree.get_cost `Adjusted tree in
                 let tabu_manager = tabu_manager tree in
                 let queue_manager = queue_manager () in
                 queue_manager#init [(tree, cost, Ptree.NoCost, tabu_manager)];
@@ -579,9 +578,9 @@ let rec find_local_optimum ?queue data emergency_queue
                     let res = (search_fn queue_manager)#results in
                     List.map (fun (a, _, _) ->
                         let a = PtreeSearch.uppass a in
-                        (a, Ptree.get_cost `Unadjusted a)) res
+                        (a, Ptree.get_cost `Adjusted a)) res
                 with
-                | Sampler.TimedOut -> [(tree, Ptree.get_cost `Unadjusted tree)]
+                | Sampler.TimedOut -> [(tree, Ptree.get_cost `Adjusted tree)]
             in
             Sexpr.map_status "Tree search" process_tree trees 
     in

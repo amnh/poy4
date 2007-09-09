@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 2127 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 2198 $"
 
 (** Chromosome parameters
  *
@@ -34,6 +34,7 @@ type order_t = [`First | `Second | `BothSeq]
 type direction_t = [`Positive | `Negative | `BothDir]
 
 type re_meth_t = Data.re_meth_t
+
 
 
 (** Parameters used to align two chromosomes *)
@@ -75,7 +76,7 @@ type chromPairAliPam_t = {
     keep_median : int;
     swap_med : int;
 
-    approx : bool;
+    approx : order_t;
 
     (** The cost to delete or insert a segment (loci) in a chromosome *)
     locus_indel_cost : (int * int);
@@ -107,7 +108,7 @@ let chromPairAliPam_default = {
     keep_median = 1;
     swap_med = 1;
 
-    approx = false;
+    approx = `BothSeq;
     
     locus_indel_cost = (10, 100);
     chrom_indel_cost = (10, 100);
@@ -172,7 +173,9 @@ let get_chrom_pam user_chrom_pam =
     let chrom_pam = 
         match user_chrom_pam.Data.approx with
         | None -> chrom_pam
-        | Some approx -> {chrom_pam with approx = approx}
+        | Some approx -> 
+              if approx then {chrom_pam with approx = `First}
+              else {chrom_pam with approx = `BothSeq}
     in 
 
     let chrom_pam =

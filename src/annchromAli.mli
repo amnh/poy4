@@ -45,7 +45,7 @@ type annchromPam_t = {
   keep_median : int;
   circular : int;
   swap_med : int;
-  approx : bool;
+  approx : ChromPam.order_t;
   locus_indel_cost : int * int;
 }
 val annchromPam_default : annchromPam_t
@@ -73,10 +73,13 @@ val compare : annchrom_t -> annchrom_t -> int
 val find_approx_med2 : annchrom_t -> annchrom_t -> annchrom_t -> annchrom_t
 val assign_seq_ref : annchrom_t -> int -> annchrom_t * int
 val create_map : annchrom_t -> int -> int * int * Tags.output
-val to_single :
-  annchrom_t ->
-  int ->
-  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * Sequence.s array
+val create_single_map : annchrom_t -> Tags.output
+
+
+val to_single : annchrom_t -> int -> Cost_matrix.Two_D.m -> Sequence.s array
+val to_single_root :
+  annchrom_t -> int -> Cost_matrix.Two_D.m -> Sequence.s array
+
 val change_to_single : annchrom_t -> Sequence.s array -> annchrom_t
 val to_formater : annchrom_t -> Alphabet.a -> string
 val copy_chrom_map : annchrom_t -> annchrom_t -> annchrom_t

@@ -127,6 +127,6 @@ val create_subseq_id :
   [> `Alied | `Both | `Deleted ] ->
   block_t list ->
   pairChromPam_t -> block_t list * subseq_t list * subseq_t list
-val create_median : ?approx:bool -> block_t -> Cost_matrix.Two_D.m -> Sequence.s * int
+val create_median : ?approx:ChromPam.order_t -> block_t -> Cost_matrix.Two_D.m -> Sequence.s * int
 val find_block : block_t list -> int -> int -> block_t option
 val find_subseq1 : block_t list -> int -> block_t option

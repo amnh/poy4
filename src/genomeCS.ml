@@ -239,7 +239,13 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                       | "Final" ->
                             GenomeAli.create_map med parent_med.GenomeAli.genome_ref_code   
                       | "Single" -> 
-                            let _, _, map = GenomeAli.create_map parent_med med.GenomeAli.genome_ref_code in 
+                            let _, _, _, med_ls = GenomeAli.find_med2_ls med
+                                parent_med t.c2 t.chrom_pam 
+                            in 
+                            let med = List.hd med_ls in 
+                            
+                            let map = GenomeAli.create_single_map med in 
+
                             let cost = IntMap.find code t.costs in 
                             let recost = IntMap.find code t.recosts in 
                             (int_of_float cost), (int_of_float recost), map 
@@ -309,13 +315,6 @@ let get_active_ref_code t =
 
 
 let to_single ref_codes (root : t option) single_parent mine = 
-    let single_parent, mine = 
-        match root with 
-        | Some root -> root, root
-        | None -> single_parent, mine
-    in 
-
-
     let previous_total_cost = mine.total_cost in 
     let c2 = mine.c2 in 
 
@@ -330,46 +329,46 @@ let to_single ref_codes (root : t option) single_parent mine =
         in         
 
 
+        let parent_med = IntMap.find code single_parent.meds in  
+        let aparent_med = List.hd parent_med.Genome.med_ls in 
+
         let cost,  recost, single_genome = 
-            let parent_med = IntMap.find code single_parent.meds in  
-            let aparent_med = 
-                try
-                    List.find  
-                        (fun med -> 
-                             IntSet.mem med.GenomeAli.genome_ref_code ref_codes 
-                        ) parent_med.Genome.med_ls
-                with Not_found -> List.hd parent_med.Genome.med_ls
-            in            
-
-
-
             match root with
-            | None  -> 
-                  GenomeAli.to_single aparent_med amed c2  med.Genome.chrom_pam
-            | Some root ->
-                  let single_root = Array.map 
-                      (fun chromt ->  
-                           let single_seq = UtlPoy.get_single_seq
-                               chromt.GenomeAli.seq c2 in 
-                           single_seq
-                      ) amed.GenomeAli.chrom_arr
-                  in                   
-                  0, 0, single_root
+            | None -> 
+                  let single_chrom_arr = 
+                      GenomeAli.to_single aparent_med amed c2  med.Genome.chrom_pam
+                  in 
+                  let amed = {amed with GenomeAli.chrom_arr = Array.mapi 
+                          (fun idx medt -> {medt with GenomeAli.seq = single_chrom_arr.(idx)} )
+                             amed.GenomeAli.chrom_arr}
+                  in  
+
+                  let cost, recost1, recost2 = GenomeAli.cmp_cost amed aparent_med c2
+                      med.Genome.chrom_pam in 
+                  
+                  cost, (recost1 + recost2), single_chrom_arr
+
+            | Some root ->              
+                  let single_root = GenomeAli.to_single_root amed c2 in
+                  0, 0, single_root 
         in 
+        
 
         let single_med = GenomeAli.change_to_single amed single_genome in 
-
-
         let single_med = {med with Genome.med_ls = [single_med]} in 
-
 
         let new_single = IntMap.add code single_med acc_meds in
         let new_costs = IntMap.add code (float_of_int cost) acc_costs in 
         let new_recosts = IntMap.add code (float_of_int recost) acc_recosts in 
         new_single, new_costs, new_recosts, (acc_total_cost + cost)
     in
+
     let meds, costs,  recosts, total_cost = 
-        IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        match root with
+        | Some root ->
+              IntMap.fold median root.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
+        | None ->
+              IntMap.fold median mine.meds (IntMap.empty, IntMap.empty, IntMap.empty, 0)
     in 
 
 

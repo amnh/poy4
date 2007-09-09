@@ -142,8 +142,8 @@ with type b = AllDirNode.OneDirF.n = struct
             in
             (*
             Status.user_message Status.Information
-            ("Dist between " ^ string_of_int a ^ " and " ^ 
-            string_of_int b ^ " is " ^ string_of_float dist);
+                ("Dist between " ^ string_of_int a ^ " and " ^ 
+                     string_of_int b ^ " is " ^ string_of_float dist);
             *)
             Tree.Continue, dist +. acc
         in
@@ -165,7 +165,7 @@ with type b = AllDirNode.OneDirF.n = struct
                         (Node.total_cost_of_type y
                         (Lazy.force_val x.AllDirNode.lazy_node))) cost 
                         Node.has_to_single
-                | _ -> failwith "Wha?")
+                | _ -> failwith "What?")
         in
         real_cost +. root_minus
 

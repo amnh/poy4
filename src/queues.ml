@@ -20,8 +20,8 @@
 (** queues.ml - contains the serach managers that manage the queue of trees to
  * be searched. *)
 
-(* $Id: queues.ml 2006 2007-07-26 18:31:33Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 2006 $"
+(* $Id: queues.ml 2198 2007-09-09 17:27:28Z andres $ *)
+let () = SadmanOutput.register "Queues" "$Revision: 2198 $"
 
 (** {1 Types} *)
 
@@ -776,7 +776,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         lazy (let (t, j) = Lazy.force ljoin in
                         new_tabu#update_join t j;
                         new_tabu) in
-
                     if self#filter ltree cost then 
                         let cost = 
                             let nt = Lazy.force ltree in
@@ -825,11 +824,11 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             | `Last ->
                   if all_stored
                   then Array.to_list results
-                  else Array.to_list (Array.sub results 0 ins_index)
+                  else Array.to_list (Array.sub results 0 (ins_index + 1))
             | _ ->
                   if ins_index >= n
                   then Array.to_list results
-                  else Array.to_list (Array.sub results 0 ins_index)
+                  else Array.to_list (Array.sub results 0 (ins_index + 1))
             in
             let res = 
                 List.map
@@ -839,6 +838,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                 res
             in
             sampler#results (List.map (fun (a, b, _) -> (a, b)) res);
+            assert (0 < List.length res);
             res
 
         val mutable current_break_position = None

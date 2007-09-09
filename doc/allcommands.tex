@@ -75,7 +75,8 @@
             {}
 
         \argumentdefinition{all}{}
-            {Turns off all preference strategies to make a join, simply try all possible join positions for all terminals added.}
+            {Turns off all preference strategies to make a join, simply try all possible join
+            positions for all terminals added.}
             {allbuild}
         
    \end{arguments}
@@ -1052,15 +1053,15 @@
         \argumentdefinition{prealigned}{\obligatory{(read argument,
         tcm:\poystring)}}
             {Specifies that the input sequences are prealigned and
-            should be assigned the transformation cost matrix specified in the
-            input file. (See \poyargument{tcm}.)}
+            should be assigned the transformation cost matrix from the 
+            input file specified by the string argument. (See \poyargument{tcm}.)}
             {}
 
         \argumentdefinition{prealigned}{\obligatory{(read argument,
         tcm:(\poyint, \poyint))}}
             {Specifies that the input sequences are prealigned and should be
-            assigned substitution and indel costs as defined in the tcm
-            argument. (See \poyargument{tcm}.)}
+            assigned substitution and indel costs as defined by the
+            \poyargument{tcm} argument. (See \poyargument{tcm}.)}
             {prealigned2}
 
 	\end{argumentgroup}
@@ -1116,9 +1117,9 @@
             \poyexample{read(genome:("mt\_genomes", "nu\_genomes").}
             {Reads two files containing genomic (multi-chromosomal) sequence data.}
 
-	   \poyexample{read(prealigned: ("18s.aln", tcm:(1, 2))}
-	    {Reads the prealigned data file\texttt{18s.aln} generated from the nucleotide file \texttt{18s.FASTA}
-	    using the the transformation costs of 1 for substitutions and 2 for indels.}
+	   \poyexample{read(prealigned:("18s.aln", tcm:(1, 2))}
+	    {Reads the prealigned data file \texttt{18s.aln} generated from the nucleotide file \texttt{18s.FASTA}
+	    using the the transformation costs \texttt{1} for substitutions and \texttt{2} for indels.}
 	
 	\end{poyexamples}
 
@@ -1212,7 +1213,7 @@
         
 \begin{command}{report}{}
 
-	\syntax{\obligatory{(\optional{argument})}}
+	\syntax{\obligatory{(\optional{argument list})}}
 
 	\begin{poydescription} 
         Outputs the results of current analysis or loaded data in the \emph{POY Output}
@@ -1248,13 +1249,13 @@
             characters from the imported data files. }
 		
             \argumentdefinition{compare}{\obligatory{(\poybool, identifiers,
-            identifiers)}} 
-                {Given an argument value \poyargument{(a, b, c)}, report the
-                ratio between the all pairs distance and their maximum length,
-                between the characters listed in \poyargument{b} and
-                \poyargument{c}. If \poyargument{a} is true, then compute the
-                complement sequence of all the characters in \poyargument{c}
-                before reporting the distance. } {}
+            identifiers)}}
+                {If the boolean argument is set to \texttt{false}, the command
+                reports the ratios of all pairwise distances to their maximum length
+                for the characters specified by character identifiers. If the boolean
+                argument is set to \texttt{true}, the complement sequences for
+                the characters specified by the second identifier are computed prior
+                to reporting the distance.}{}
 
             \argumentdefinition{cross\_references}{\optional{identifiers\optional{STRING}}}
                 {Reports a table with terminals being analyzed in rows, and the
@@ -2173,12 +2174,12 @@
             \poycommand{set} command will be used.}
 
             \argumentdefinition{normal\_do}{}
-                {Use the standard Direct Optimization algorithm for the tree
+                {Applies a standard Direct Optimization algorithm for the tree
                 cost estimation. This is the default and fastest technique.}
                 {normaldo}
 
             \argumentdefinition{exhaustive\_do}{}
-                {Use the starndard Direct Optimization algorithm for the tree
+                {Applies a starndard Direct Optimization algorithm for the tree
                 cost estimation. The difference with \poyargument{normal\_do} is
                 that the calculation of the tree costs during a search are much
                 more intense, always looking for the best possible alignment 
@@ -2187,10 +2188,9 @@
                 {exhaustivedo}
 
             \argumentdefinition{iterative}{}
-                {Use iterative pass in the tree cost calculations. This improves
-                the tree cost estimation, but has a tremendous execution time.
-                Use at the very end to polish the final set of trees and perform
-                a final search.}
+                {Applies the iterative pass optimization in the tree cost calculations. This improves
+                the tree cost estimation but at the expense of a tremendous execution time.
+                Use at the very end to polish the final set of trees and perform a final search.}
                 {}
 
         \end{argumentgroup}
@@ -2635,17 +2635,15 @@
             {Evaluates each fragment and if a long region appears 
             to have no indels, then the fragment is broken inside that region.
             Any number of partitions can occur along a fragment. Fragmenting
-            long sequences greatly accelerate searching.}
+            long sequences greatly accelerates searching.}
             {autosequencepartition}
 
         \argumentdefinition{fixedstates}{}
           {Transforms the characters specified in fixed state characters~\cite{wheeler1999a}
-          with
-          distances equal to the edition distance between their observed values.
+          with distances equal to the edition distance between their observed values.
           By default, the application of \poyargument{fixedstates} transforms
           all molecular characters. To specify a subset of characters, an identifier
-          must be used in conjunction with \poyargument{fixedstates}. For
-          example, \poycommand{((names:("s\_[0-5]"), fixedstates))}.}
+          must be used in conjunction with \poyargument{fixedstates}.}
           {}
         \argumentdefinition{gap\_opening}{\obligatory{\poyint}}
             {Sets the cost of opening a block of gaps to the specified value. Note that
@@ -2661,7 +2659,7 @@
             {gapopening}
 
         \argumentdefinition{multi\_static\_approx}{}
-            {Calculate the implied alignment for each tree in memory
+            {Calculates the implied alignment for each tree in memory
             and convert them to static homology characters using the alignment's
             cost regime. The new character set will be the union of all those
             characters generated for all the trees~\cite{wheeler1995a}. This option is intended only
@@ -2669,10 +2667,10 @@
             {multistaticapprox}
 
             \argumentdefinition{prealigned}{}
-                {Assume that the sequences are prealigned and should use the
-                cost regime specified in their assigned transformation cost
-                matrix. All other cost parameters are ignored, including affine
-                gap costs.}
+                {Treats the sequences as prealigned and uses the
+                cost regime according to the specified transformation cost
+                matrix. All other cost parameters are ignored (including affine
+                gap costs).}
                 {prealignedtransform}
             
         \argumentdefinition{static\_approx}{\optional{\poylident}}
@@ -2758,14 +2756,16 @@
             }
             {transformtcmmatrix}
 
-            \argumentdefinition{weight}{\obligatory{\poyfloat}}
+            \argumentdefinition{weight}{\obligatory{argument}}
             {Changes the cost of specified characters by a
-            constant value (weight) specified by the float value.} 
+            constant value (weight) which is specified by either a
+            float or an integer value.} 
             {weight}
 
-            \argumentdefinition{weightfactor}{\obligatory{\poyfloat}}
+            \argumentdefinition{weightfactor}{\obligatory{argument}}
             {Changes the cost of specified characters by a
-            multiplicative factor (weight factor) specified by the float value.} 
+            multiplicative factor (weight factor) which is specified by either a
+            float or an integer value.} 
             {weightfactor}
 
       \end{argumentgroup}
@@ -2986,29 +2986,32 @@
             {Applies the character transformation matrix "molmatrix" to all
             characters.}
             	
-		\poyexample{transform((all, tcm:(1,1)))}{is equivalent to 
-		transform ((dynamic, tcm:(1,1)))}
+		\poyexample{transform((all, tcm:(1,1)))}{This command
+		is equivalent to \poycommand{transform((dynamic, tcm:(1,1)))}.}
 		
-		\poyexample{transform(tcm:(1,1), gap\_opening:1)}{}
+		\poyexample{transform(tcm:(1,1), gap\_opening:1)}
+		{Applies the transformation cost matrix and the gap opening cost
+		to all characters. In this example the cost for substitutions is \texttt{1},
+		the gap opening cost is \texttt{2} (\texttt{1} set by \poyargument{gap\_opening}
+		+ \texttt{1} set by \poyargument{tcm}), and the gap extension cost is \texttt{1}
+		(set by \poyargument{tcm}).}
 		
 		\poyexample{transform(tcm:(2,2), ti:(1,1,1,1,0), td:(1,1,1,1,0))}
-		{will assign to all characters the symmetric transformation cost
-		matrix with cost 2 for every indel and substitution, but for those
+		{Assigns to all characters the symmetric transformation cost
+		matrix with cost \texttt{2} for every indel and substitution, but for those
 		insertions and deletions at the ends of the sequences, the cost
-		assigned will only be 1.}
+		assigned will only be \texttt{1}.}
 		
 		\poyexample{transform((static, weightfactor:2))}
-            {This command will reweight all the static homology characters
-            by a multiplicative factor of 2, while keeping the weighting
+            {This command reweights all the static homology characters
+            by a multiplicative factor of \texttt{2}, while keeping the weighting
             scheme that has been specified before.}
 		
-		\poyexample{transform((static, weight:4))}{If all the
-		weights are intended to be the same (4), for all the
-		static homology characters.}
+		\poyexample{transform((static, weight:4.2))}{Applies the same
+		weight (a float value \texttt{4.2}) to all static homology characters.}
 		
-		\poyexample{transform((dynamic, weight:4))}{If all the
-		weights are intended to be the same (4) for all the
-		dynamic homology characters.}
+		\poyexample{transform((dynamic, weight:4))}{Applies the same
+		weight (an integer value \texttt{4}) to all dynamic homology characters.}
 
         \poyexample{transform((all, tcm:(1,1)), (names:("gen1",
         "gen2"), \\ static\_approx), (names:("gen3"), tcm:"molmatrix"))}  
@@ -3019,19 +3022,24 @@
             as it was reported with report (data), which differs from the actual
             file name (\poycommand{report (data)} reports files as fileX:N).}
 
-        \poyexample{transform((all, tcm:(1,1)), (names:("gen 1:3",
+        \poyexample{transform((all, tcm:(1,1)), (names:("gen1:3",
         "gen2:10", "gen3:1", "gen4:5"), static\_approx), (names:("gen5",
-        "gen6"), tcm: "Molmatrix1"))}  
-            {Applies tcm (1,1) to all characters, then applies static approx
-            using that tcm to sequence fragments in files gen1, gen2, gen3, and
-            gen4, and for files gen5 and gen6, it invokes a different
-            transformation cost matrix, contained in the file molmatrix.}
+        "gen6"), tcm:"Molmatrix1"))}
+            {Applies \poyargument{tcm (1,1)} to all characters, then applies
+            static approximation to the sequence data contained in files \texttt{gen1}, \texttt{gen2},
+            \texttt{gen3}, and \texttt{gen4} according to this transformation cost
+            matrix, and applies the custom transformation cost matrix contained in the file
+            \texttt{Molmatrix1} to the sequence data contained in files \texttt{gen5} and
+            \texttt{gen6}.}
          
-         \poyexample{transform(fixedstates)}{}
+         \poyexample{transform(fixedstates)}
+         {Transformed all sequence characters into fixed states characters.}
             
-          \poyexample{transform((names:("s\_[0-5]"), fixedstates))}{}
+          \poyexample{transform((names:("gen1", "gen4"), fixedstates))}
+           {Transformed only specified sequence characters (\texttt{gen1} and
+           \texttt{gen4}) into fixed states characters.}
            
-          \poyexample{transform((all, seq\_to\_breakinv:()))} 
+          \poyexample{transform((all, seq\_to\_breakinv:()))}
           {In this example all sequence data is transformed into breakinv data
           type under default settings of \poyargument{dynamic\_pam}.}
           
@@ -3058,12 +3066,32 @@
 	\syntax{\obligatory{(\poystring)}}
 
 	\begin{poydescription}
-         Loads a saved \poy state from memory. It replaces the current one. See
-         the usage in \poycommand{store}.
+         Restores from memory the state of a\poy session (that includes character data,
+         selections, trees, and all other data and specifications) that had previously been
+         saved during the session using the command ~\ccross{store}{}. The recalled
+         session replaces the current session. The string argument specifies the name
+         of the stored state.
+         
+         In combination with ~\ccross{store}{}, the command \poycommand{use}
+         is very useful for exploring alternative  cost regimes and terminal sets
+         within a single \poy session.
+            
 	\end{poydescription}
+	
+	\begin{poyexamples}
+        \poyexample{store("initial\_tcm") \\ transform(tcm:(1,1)) \\ use("initial\_tcm")}
+            {The first command, \poycommand{store}, stores the current
+            characters and trees under the
+            name \texttt{initial\_tcm}. The second command,
+            \poycommand{transform}, changes the cost regime of molecular characters,
+            effectively changing the data being analyzed. However, the third
+            command, \poycommand{use}, recovers the initial state stored under the
+            name \texttt{initial\_tcm}.}
+    \end{poyexamples}
 
-    \begin{poyalso}
+     \begin{poyalso}
         \cross{store}
+        \cross{transform}
     \end{poyalso}
 
 \end{command}

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 2169 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2198 $"
 
 let fprintf = Printf.fprintf
 
@@ -239,30 +239,10 @@ let create_subalign2 (seq1 : Sequence.s) (seq2 : Sequence.s)
 
 	let len1 = end_pos1 - start_pos1 + 1 in
 	let len2 = end_pos2 - start_pos2 + 1 in 
-	
-(*    fprintf stdout "(%i %i), (%i %i), (%i, %i)" start_pos1 len1 start_pos2 len2
-        (Sequence.length seq1) (Sequence.length seq2);
-    print_newline ();
-*)
 	let subseq1 = Sequence.sub seq1 start_pos1 len1 in 
-	let subseq2 = Sequence.sub seq2 start_pos2 len2 in
-		
-
-
+	let subseq2 = Sequence.sub seq2 start_pos2 len2 in	
 	let alied_subseq1, alied_subseq2, cost, ali_len = 
         align2 subseq1 subseq2 cost_mat in 	
-(*
-    let real_cost = cmp_ali_cost alied_subseq1 alied_subseq2
-        `Positive cost_mat in
-    if cost != real_cost then begin
-	    Sequence.print stdout subseq1 Alphabet.nucleotides; print_newline ();
-	    Sequence.print stdout subseq2 Alphabet.nucleotides; print_newline (); 
-        fprintf stdout "Cost: %i, ali_len: %i, real cost: %i" cost ali_len real_cost; print_newline ();
-	    Sequence.print stdout alied_subseq1 Alphabet.nucleotides; print_newline ();
-	    Sequence.print stdout alied_subseq2 Alphabet.nucleotides; print_newline (); 
-        failwith "Wrong alignment cost";
-    end;
-*)
 	alied_subseq1, alied_subseq2, cost
 
 
@@ -321,14 +301,15 @@ let create_median_gap seq ?(start_pos=(-1)) ?(end_pos=(-1)) cost_mat =
     med
 
 
-let create_median_seq ?(approx=false) alied_seq1 alied_seq2 cost_mat =
+let create_median_seq ?(approx=`BothSeq) alied_seq1 alied_seq2 cost_mat =
     let len = Sequence.length alied_seq1 in 
     let get_median_code pos = 
         let code1 = Sequence.get alied_seq1 pos in 
+        let code2 = Sequence.get alied_seq2 pos in          
         match approx with 
-        | true -> code1
-        | false ->              
-              let code2 = Sequence.get alied_seq2 pos in         
+        | `First -> code1
+        | `Second -> code2
+        | `BothSeq ->              
               Cost_matrix.Two_D.median code1 code2 cost_mat
     in
 
@@ -359,7 +340,7 @@ let create_median_deled_seq seq cost_mat =
     median
 
 
-let create_median ?(approx=false) seq1 seq2 
+let create_median ?(approx=`BothSeq) seq1 seq2 
         ?(s1=(-1)) ?(e1=(-1)) ?(s2=(-1)) ?(e2=(-1)) cost_mat = 
 
     let s1, e1, s2, e2 =
