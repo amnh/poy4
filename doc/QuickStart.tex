@@ -110,15 +110,9 @@ The following detailed step-by-step instruction will guide you through downloadi
                 \href{http://research.amnh.org/scicomp/projects/poy.php}{Windows compressed binary} file to the desktop.
 
 			\item 
-                Typically, double-clicking on the compressed file will
-                decompress it into an executable program. If this does not
-                work, decompress it using a the standard compression utility program
-                (such as \href{http://www.gnu.org/software/emacs/}{WinZip}).
-
-			\item
-                Move the executable file to your home directory (typically the
-                directory holding \emph{My Documents}). This will make the program
-                available for running under your user name.
+                Open the zipped file and run the windows installer
+                POY\_installer.msi. The installer will create shortcuts in your
+                Programs menu.
 		\end{itemize}
 
 	\begin{minipage}[c]{0.074\textwidth}
@@ -143,9 +137,11 @@ The following detailed step-by-step instruction will guide you through downloadi
 	\end{minipage}
 
     Download the 
-    \href{http://research.amnh.org/scicomp/projects/poy.php}{gzipped} copy of
-    the program and store it in any of the folders of your \texttt{PATH}
-    environment. 
+    \href{http://research.amnh.org/scicomp/projects/poy.php}{gzipped}, untar and
+    ungzip poy4.tar.gz, and  run the command \texttt{tar -Pxvzf poy4.tar.gz} as
+    super user in the newly created poy4 directory.
+    The GUI will be installed in /opt/poy4/Contents/POY and terminal binaries in
+    /opt/poy4/Resources/ncurses\_poy.
 \end{flushleft}
 
 
@@ -182,7 +178,315 @@ multiple implementations, and if you have a parallel environment, most likely
 your system administrator has already installed one. Ask him for the proper
 paths to set in your config file.
 
-\section{Starting a \poy session}
+\section{The Graphical User Interface}
+
+\subsection{POY Launcher} 
+This window is the only that automatically opens upon launching
+\poy. It allows the user to open a previously created script,
+designate a working directory, specify the number of processors,
+and start the analysis.
+
+\begin{description}
+
+\item[Select script to run...]
+     Allows the user to specify the location of a \poy script.
+
+\item[Select a working directory...]
+    By default the working directory is set to be the same as the
+    directory containing the selected \poy script but the default
+    can be modified by the user. The working directory is the
+    directory that contains the data files and where the results
+    are reported.
+
+\item[Select the number of processors]
+    The selection of the number of processors is disabled for LINUX
+    and WINDOWS platforms. Once specified, the selection is applied
+    to all subsequent analyses in the current \poy session.
+
+\item[Run your analysis]
+    Clicking the \emph{Run} button starts the execution of the selected
+    script. Once the script is executed, the \emph{Run} button
+    becomes the \emph{Cancel} button that can be used to interrupt
+    a \poy session.
+\end{description}
+
+If the script is executed without the properly selected script and
+working directory (of their names contain errors), \poy issues an
+error message in the upper part of the \emph{POY Launcher} window,
+such as \texttt{POY finished with an error}.
+
+\subsection{Basic Tree Search}
+
+\subsubsection{Simple Search}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SimpleSearch_Menu.jpg}
+    \end{center}
+    \caption{Opening the Simple Search Window}
+    \label{fig:simple_search_menu}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SimpleSearch_Window.jpg}
+    \end{center}
+    \caption{Simple Search Window}
+    \label{fig:simple_search_window}
+\end{figure}
+
+The simple search window (Figure~\ref{fig:simple_search_window})
+provides the most common and basic options for a standard search
+in \poy.  It is divided in four sections. \emph{All their fields
+must be filled}.
+
+\begin{description}
+    \item[Input Files]
+        Contains the list of files that are to be read by POY. These include
+        character files, and tree files. 
+    \item[Search Parameters]
+        The number of randomized trees that POY should produce to start the
+        search with.
+    \item[Sequence Alignment Parameters]
+        The substitution, indel, and gap opening costs. If no gap opening cost
+        is desired, simply fill with 0.
+    \item[Output Files]
+        The result files as described by their titles.
+\end{description}
+
+Once all the parameters are selected, click in the Make Script button, and a new
+window containing the generated script appears on screen. You can edit your
+script directly, save it, or simply load a new script. When you push the Run
+button, POY will ask you to save the script to be executed. Not only will POY
+execute that script, but this will also serve for you to document what kind of
+analysis did you exactly run.
+
+\subsubsection{Search with Ratchet}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchWithRatchet_Menu.jpg}
+    \end{center}
+    \caption{Opening the Search with Ratchet Window}
+    \label{fig:search_with_ratchet}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchWithRatchet_Window.jpg}
+    \end{center}
+    \caption{Search with Ratchet Window}
+    \label{fig:search_with_ratchet_window}
+\end{figure}
+
+Search with Ratchet (Figure~\ref{fig:search_with_ratchet_window}) provides means to escape the local optimum using the
+parsimony ratchet.
+In addition to the same four
+parameter groups described for the Simple Search window, the Search Parameters section provide the
+following ratchet parameters fields:
+\begin{description}
+    \item[Ratchet iterations] The number of iterations for the parsimony
+        ratchet.
+    \item[Severity] The severity parameter of the parsimony ratchet (the weight
+        change factor for the selected characters)
+    \item[Percentage] The percentage of characters to be affected by the
+        parsimony ratchet.
+\end{description}
+
+\subsubsection{Search with Perturb}
+
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchWithPerturb_Menu.jpg}
+    \end{center}
+    \caption{Opening the Search with Perturb Window}
+    \label{fig:search_with_perturb_menu}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchWithPerturb_Window.jpg}
+    \end{center}
+    \caption{Search with Perturb Window}
+    \label{fig:search_with_perturb_window}
+\end{figure}
+
+Search and perturb the search space to escape local the local optima by changing
+the transformation cost matrix of the molecular characters
+(Figure~\ref{fig:search_with_perturb_window}). In addition to the
+same four parameter groups described for the Simple Search window, the Search
+with Perturb window provides three extra fields with the parameters for the
+transformation cost matrix perturbation as follows:
+
+\begin{description}
+    \item[Perturb iterations] The number of iterations to be performed to try to
+        escape the local optima.
+    \item[Substitutions] The cost of a the perturbed substitution.
+    \item[Indels] The cost of the perturbed indels.
+\end{description}
+
+\subsection{Support Calculation}
+
+None of the support calculation windows include functions to create or search
+trees. One of your input files must be a file containing the trees for which you
+want to calculate the support values.
+
+\subsubsection{Bremer Supports}
+
+The bremer support calculation is divided in two windows, one to collect the
+necessary information for Bremer support calculations, and a second one to
+actually report those results. 
+
+\paragraph{Search for Bremer}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchForBremer_Menu.jpg}
+    \end{center}
+    \caption{Open the Search for Bremer Window}
+    \label{fig:search_for_bermer_menu}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/SearchForBremer_Window.jpg}
+    \end{center}
+    \caption{Search for Bremer Window}
+    \label{fig:search_for_bremer_window}
+\end{figure}
+
+The script produced in this window collects trees visited during a search. This
+search can take a long time, as all the tree search heuristics are turned off,
+with the goal of sampling a wide variation of trees, and guarantee that all
+clades have Bremer support values. 
+
+In addition to the standard four sections defined for the Simple Search window,
+not that one of the output files is the \emph{Temporary Trees} file, which will
+contain \emph{all the information required to produce the bremer support tree
+results in the Report Bremer Window}. Make sure that you pick a file that you
+will not destroy for this output.
+
+If POY is taking too long running the Search for Bremer script (say, 4 days and
+still doesn't finish), you can cancel the search. Although this will yield
+slightly inflated bremer support values, the work that has been done so far will
+not be lost, and will still be stored in the Temporary Trees file, which will
+then be usable in the Report Bremer Window.
+
+\paragraph{Report Bremer}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/ReportBremer_Window.jpg}
+    \end{center}
+    \caption{Report Bremer Window}
+    \label{fig:report_bremer_window}
+\end{figure}
+The script produced in this window takes the ``Temporary
+Trees'' file generated in the Search for Bremer window in the ``File with trees for
+bremer calculation'' field. 
+
+\subsection{Bootstrap} 
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/Bootstrap_Menu.jpg}
+    \end{center}
+    \caption{Open the Bootstrap Window}
+    \label{fig:bootstrap_menu}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/Bootstrap_Window.jpg}
+    \end{center}
+    \caption{Bootstrap Window}
+    \label{fig:bootstrap_window}
+\end{figure}
+
+The \emph{Bootstrap} window specifies parameters
+for estimating the Bootstrap support values. The window consists
+of essentially same four sections as the \emph{Simple Search} window
+except for \emph{Bootstrap Parameters} that specifies the number
+of Bootstrap pseudoreplicates.
+
+\subsection{Jackknife}
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/Jackknife_Menu.jpg}
+    \end{center}
+    \caption{Open the Jackknife Window}
+    \label{fig:jackknife_menu}
+\end{figure}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/Jackknife_Window.jpg}
+    \end{center}
+    \caption{Jackknife Window}
+    \label{fig:jackknife_window}
+\end{figure}
+
+The \emph{Bootstrap} window specifies parameters for estimating the
+Jackknife support values. The window consists of essentially same
+four sections as the \emph{Simple Search} window except for
+\emph{Jackknife Parameters} that has two fields, \emph{Pseudoreplicates}
+and \emph{Remove}
+
+\subsection{About Window}
+
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/About_Window.jpg}
+    \end{center}
+    \caption{About Window}
+    \label{fig:about_window}
+\end{figure}
+The about window contains the program version number and contact information for
+the program. It can be found in the POY menu of Mac OS X, or the View menu of
+Windows and Linux.
+
+\subsection{Open POY Script}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/OpenPoyScript_Menu.jpg}
+    \end{center}
+    \caption{Open a POY script}
+    \label{fig:open_poy_script}
+\end{figure}
+Selecting \emph{Open POY Script} displays the \emph{POY Launcher}
+window, the function of which is described above.
+
+\subsection{Run Interactive Console}
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/RunInteractive_Menu.jpg}
+    \end{center}
+    \caption{Run POY in the interactive console}
+    \label{fig:open_poy_script}
+\end{figure}
+Selecting \emph{Run Interactive Console} opens the ncurses interface
+that enables the user to run the analysis interactively by entering
+\poy commands directly via the command-line \emph{Interactive
+Console}. Note that the interactive console \emph{does not run in parallel.}
+
+\subsection{Results and Status windows}
+
+\begin{figure}[htpb]
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/View_Menu.jpg}
+    \end{center}
+    \caption{Opening the Results and Status Windows}
+    \label{fig:results_and_status_windows}
+\end{figure}
+The \emph{Results} and \emph{Status} windows report, as their names
+imply, the current results of the analysis and the state of the
+search. These windows are not updated automatically and in order
+to display the current state of the analysis the user must click
+the \emph{Update} buttons in the right lower corner of each window.
+
+\section{Starting a \poy session using the \emph{Interactive Console}}
 
 \begin{flushleft}
 	\begin{minipage}[c]{0.075\textwidth}
@@ -193,17 +497,7 @@ paths to set in your config file.
 		\subsubsection{Windows}
 	\end{minipage}
 			\begin{itemize}
-				\item {Open the Command Prompt window: \\
-				Start$>$All Programs$>$Accessories$>$Command Prompt.}
-				\item {Resize the Command Prompt window to desirable dimensions.
-				When \poy is running, resizing the window is not possible.}
-				\item{Change from the home directory to the directory containing
-				\poy binaries and datafiles. At the prompt enter \texttt{cd}
-				(``change directory'') followed by a space and the name of the directory
-				(such as ``\texttt{POY4}'' as in the example below). Hit the Return key.}
-				\item{Open \poy. At the prompt enter ``\texttt{poy4}'' and
-				hit the Return key. This will open \poy interface that will occupy the
-				entire Command Prompt window.}
+                \item{Start$>$All Programs$>$POY$>$POY Interactive Console}
 			\end{itemize}
 
 	\begin{minipage}[c]{0.075\textwidth}
@@ -214,21 +508,9 @@ paths to set in your config file.
 	   	\subsubsection{Mac OSX}
 	\end{minipage}
 			\begin{itemize}
-				\item {Open the Terminal window: \\
-				Macintosh HD$>$Applications$>$Utilities$>$Terminal. If a Terminal
-				window does not open by default, go to File$>$New Shell.}
-				\item{Change from the home directory to the directory containing the
-				 datafiles. At the Terminal prompt (\texttt{\$}) enter \texttt{cd} (``change directory'')
-				 followed by a space and drag the folder containing the datafiles in the
-				 window (see Figure~\ref{fig:figprelim1}). This will automatically generate the path to the
-				 folder where the datafiles are. (Alternatively, the path can be typed in.)
-				 Hit the Return key.}
-				\item{Open \poy. At the Terminal' prompt enter \texttt{poy} and
-				hit the Return key. This will open \poy interface.}
-				\item {Resize the Command Prompt window to desirable dimensions. Use
-				lower right corner of the Terminal window to resize the interface to the desired
-				dimensions. Note that if the window is resized while \poy performs a task, the
-				interface might get distorted for the rest of the process.}
+				\item {Double-click \poy application icon to start the program.}
+				\item {Select \emph{Run Interactive Console} from the
+				\emph{Analyses} menu.}
 			\end{itemize}		
 
 	\begin{minipage}[c]{0.075\textwidth}
@@ -238,8 +520,8 @@ paths to set in your config file.
 	\begin{minipage}[t]{0.89\textwidth}
 	   	\subsubsection{Linux}
 	\end{minipage}
-    If you had placed the program in your PATH, then simply type \texttt{poy}
-    in a terminal; this will start the \poy session.
+    Add \texttt{/opt/poy4/Resources/} to your \texttt{PATH} and then simply run
+    \texttt{ncurses\_poy} from a terminal.
 \end{flushleft}
 
 
@@ -257,9 +539,9 @@ paths to set in your config file.
    \label{fig:figprelim2}
 \end{figure}
 
-\section{\poy interface}
+\section{\poy Interactive Console}
 
-The \poyv interface has the same appearance regardless of the operation system under which \poyv is run (except under parallel environment settings; see below). It has four windows: \emph{POY Output}, \emph{Interactive Console}, \emph{State of Stored Search}, and \emph{Current Job} (Figure \ref{fig:figinterface}).
+The \poyv Interactive Console has the same appearance regardless of the operation system under which \poyv is run (except under parallel environment settings; see below). It has four windows: \emph{POY Output}, \emph{Interactive Console}, \emph{State of Stored Search}, and \emph{Current Job} (Figure \ref{fig:figinterface}).
 
 \begin{figure}[htbp]
    \centering
