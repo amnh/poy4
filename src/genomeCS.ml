@@ -239,16 +239,14 @@ let to_formatter ref_codes attr t (parent_t : t option) d : Tags.output list =
                       | "Final" ->
                             GenomeAli.create_map med parent_med.GenomeAli.genome_ref_code   
                       | "Single" -> 
-                            let _, _, _, med_ls = GenomeAli.find_med2_ls med
+                            let cost, (recost1, recost2),  med_ls = GenomeAli.find_med2_ls med
                                 parent_med t.c2 t.chrom_pam 
                             in 
                             let med = List.hd med_ls in 
                             
                             let map = GenomeAli.create_single_map med in 
 
-                            let cost = IntMap.find code t.costs in 
-                            let recost = IntMap.find code t.recosts in 
-                            (int_of_float cost), (int_of_float recost), map 
+                            cost, (recost1 + recost2), map
                       | _ -> failwith "Fucking up at the to_formatter in GenomeCS.ml"
                   in 
                   cost, recost, Some map
@@ -343,7 +341,7 @@ let to_single ref_codes (root : t option) single_parent mine =
                              amed.GenomeAli.chrom_arr}
                   in  
 
-                  let cost, recost1, recost2 = GenomeAli.cmp_cost amed aparent_med c2
+                  let cost, (recost1, recost2) = GenomeAli.cmp_cost amed aparent_med c2
                       med.Genome.chrom_pam in 
                   
                   cost, (recost1 + recost2), single_chrom_arr

@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "ChromPam" "$Revision: 2198 $"
+let () = SadmanOutput.register "ChromPam" "$Revision: 2265 $"
 
 (** Chromosome parameters
  *
@@ -77,6 +77,8 @@ type chromPairAliPam_t = {
     swap_med : int;
 
     approx : order_t;
+    symmetric : bool;
+    negative : bool;
 
     (** The cost to delete or insert a segment (loci) in a chromosome *)
     locus_indel_cost : (int * int);
@@ -88,11 +90,15 @@ type chromPairAliPam_t = {
 
 let locus_indel_cost_default = (10, 100)
 
+(** TODO: Get rid of this set of defaults!!!
+* WARNING: The true defaults are in Data!!! this defaults need to be cleaned up.
+* *)
 let chromPairAliPam_default = {
     min_pos1 = -1; max_pos1 = -1; min_pos2 = -1; max_pos2 = -1; 
 
 
-    k = 9; max_gap = 10; 
+    k = 9;  (* Seed length *)
+    max_gap = 10; 
     sig_k = 12;
     sig_block_len = 100;
     rearranged_len = 100;
@@ -109,6 +115,8 @@ let chromPairAliPam_default = {
     swap_med = 1;
 
     approx = `BothSeq;
+    symmetric = false;
+    negative = true;
     
     locus_indel_cost = (10, 100);
     chrom_indel_cost = (10, 100);
@@ -178,6 +186,13 @@ let get_chrom_pam user_chrom_pam =
               else {chrom_pam with approx = `BothSeq}
     in 
 
+
+    let chrom_pam = 
+        match user_chrom_pam.Data.symmetric with
+        | None -> chrom_pam
+        | Some sym -> {chrom_pam with symmetric = sym}
+    in 
+
     let chrom_pam =
         match user_chrom_pam.Data.locus_indel_cost with  
         | None -> chrom_pam
@@ -216,6 +231,7 @@ let cloneChromPairPam (donor : chromPairAliPam_t) = {
     keep_median  = donor.keep_median;
     swap_med  = donor.swap_med;
     approx  = donor.approx;
+    negative = donor.negative;
 
     locus_indel_cost = donor.locus_indel_cost;
     chrom_indel_cost = donor.chrom_indel_cost;
@@ -223,6 +239,7 @@ let cloneChromPairPam (donor : chromPairAliPam_t) = {
     chrom_hom = donor.chrom_hom;
 
     circular = donor.circular;
+    symmetric = donor.symmetric;
 }
 
 

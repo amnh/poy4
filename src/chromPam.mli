@@ -39,6 +39,8 @@ type chromPairAliPam_t = {
   keep_median : int;
   swap_med : int;
   approx : order_t;
+  symmetric : bool;
+  negative : bool;
   locus_indel_cost : int * int;
   chrom_indel_cost : int * int;
   chrom_hom : int;

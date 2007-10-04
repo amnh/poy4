@@ -59,7 +59,6 @@ type seg_t = {
     dir2 : direction_t;
 }
 
-
 type chrom_t = {
     chrom_id : int ref;
     main_chrom1_id : int;
@@ -89,6 +88,38 @@ type genome_block_t = {
     block : Block.block_t;
 }
 
+
+let swap_seg s = {
+    s with ref_code1 = s.ref_code2;
+        sta1 = s.sta2;
+        en1 = s.en2;
+        chi1_chrom_id = s.chi2_chrom_id;
+        alied_seq1 = s.alied_seq2;
+        dir1 = s.dir2;
+
+        ref_code2 = s.ref_code1;
+        sta2 = s.sta1;
+        en2 = s.en1;
+        chi2_chrom_id = s.chi1_chrom_id;
+        alied_seq2 = s.alied_seq1;
+        dir2 = s.dir1;
+}
+
+let swap_chrom ch = {
+    ch with main_chrom1_id = ch.main_chrom2_id;
+        main_chrom2_id = ch.main_chrom1_id;
+        map = List.map swap_seg ch.map
+}
+
+let swap_med m = {
+    m with genome_ref_code1 = m.genome_ref_code2;
+        genome_ref_code2 = m.genome_ref_code1;
+        cost1 = m.cost2;
+        cost2 = m.cost1;
+        recost1 = m.recost2;
+        recost2 = m.recost1;
+        chrom_arr = Array.map swap_chrom m.chrom_arr
+}
 
 let print_block b = 
     fprintf stdout "BlockID: %i, chrom1_id: %i, chrom2_id: %i\n" b.block_id
@@ -204,8 +235,8 @@ let ref_genome = ref {chrom_arr = [||];
 
 
 let assign_hom_chrom med cost_mat user_chrom_pams = 
+
     if !(med.chrom_arr.(0).chrom_id) = -1 then begin
-        let chrom_pams = ChromPam.get_chrom_pam user_chrom_pams in
 
         let num_chrom1 = Array.length !ref_genome.chrom_arr in
         let num_chrom2 = Array.length med.chrom_arr in
@@ -217,7 +248,7 @@ let assign_hom_chrom med cost_mat user_chrom_pams =
                 let chrom_med1 = ChromAli.create_med chrom1 in 
                 let chrom_med2 = ChromAli.create_med chrom2 in 
                 let cost, recost = (ChromAli.cmp_cost chrom_med1 chrom_med2
-                                        cost_mat user_chrom_pams) 
+                                        cost_mat user_chrom_pams `Genome) 
                 in
                 let len = max (Sequence.length chrom1) (Sequence.length chrom2) in 
                 chrom_cost_mat.(c1).(c2) <- (float cost) /. (float len);
@@ -245,6 +276,7 @@ let assign_hom_chrom med cost_mat user_chrom_pams =
                 done;    
             done;  
 
+            let chrom_pams = ChromPam.get_chrom_pam user_chrom_pams in        
             let chrom_hom = float chrom_pams.ChromPam.chrom_hom in 
             if  (!min_cost < chrom_hom /. 100.) then begin                
                 med.chrom_arr.(!best_c2).chrom_id := !best_c1;
@@ -339,8 +371,10 @@ let find_conserved_areas seq1 seq2 cost_mat chrom_pams =
                        ChromPam.max_pos1 = len1 - 1;  
                        ChromPam.min_pos2 = 0;  
                        ChromPam.max_pos2 = len2 - 1;  
+                       negative = false;
                   }  
     in   
+
     let global_map, _, _ = ChromAli.create_global_map seq1 seq2 cost_mat ali_pam in   
     global_map
 
@@ -513,6 +547,7 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
             let sq2 = loci2_arr.(sq2_id - len1 - 1) in 
             let sta2 = sq2.Subseq.sta and en2 = sq2.Subseq.en in 
             let sq2_seq = Sequence.sub chrom2_seq sta2 (en2 - sta2 + 1) in  
+
             let seg = 
                 {sta = -1; en = -1;
                  cost = -Utl.infinity;
@@ -527,7 +562,8 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                  chi2_chrom_id = chrom_id;  alied_seq2 = sq2_seq; dir2 = `Positive
                 }                         
             in 
-  
+            assert (Sequence.length seg.alied_seq1 > 0);
+            assert (Sequence.length seg.alied_seq2 > 0); 
             add_missing_sq2 (sq2_id - 1) (seg::seg_ls)
         end else seg_ls
     in 
@@ -591,6 +627,9 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                             chi2_chrom_id = chrom_id;  alied_seq2 = sq2_seq; dir2 = `Positive
                            }                        
                        in  
+
+                       assert (Sequence.length seg.alied_seq1 > 0); 
+                       assert (Sequence.length seg.alied_seq2 > 0); 
                        chrom_med_len := !chrom_med_len + med_len;
                        med::med_ls, seg::seg_ls, chrom_cost
 
@@ -621,6 +660,10 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                              chi2_chrom_id = chrom_id;  alied_seq2 = alied_seq2; dir2 = `Positive;                          
                             }
                         in 
+
+                        assert (Sequence.length seg.alied_seq1 > 0);
+                        assert (Sequence.length seg.alied_seq2 > 0); 
+            
                         chrom_med_len := !chrom_med_len + med_len; 
                         let mis_seg2_ls = add_missing_sq2 (sq2_id - 1) [] in 
                         med::med_ls, (List.append mis_seg2_ls (seg::seg_ls)), chrom_cost
@@ -657,6 +700,10 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
                        alied_seq2 = alied_seq2; dir2 = b.Block.direction;
                    }
                    in 
+
+                   assert (Sequence.length seg.alied_seq1 > 0);
+                   assert (Sequence.length seg.alied_seq2 > 0); 
+
                    chrom_med_len := !chrom_med_len + med_len; 
 
                    med::med_ls, seg::seg_ls, chrom_cost + cost 
@@ -749,8 +796,7 @@ let create_chrom_med (genome1_ref_code, chrom1) (genome2_ref_code, chrom2) gb_ls
         genome1_ref_code chrom1.seq loci1_ls genome2_ref_code chrom2.seq loci2_ls gb_ls cost_mat chrom_pams 
     in 
     let chrom_ref_code = Utl.get_new_chrom_ref_code () in 
-
-
+    
     let chrom_med = {
         chrom_id = ref chrom_id; 
         main_chrom1_id = !(chrom1.chrom_id);
@@ -906,11 +952,13 @@ let create_med med1 med2 cost_mat user_chrom_pams =
                     
                    ref_code1 = child1_genome_ref_code; sta1 = 0;  en1 = chrom1_len - 1;
                    chi1_chrom_id = !(chrom1.chrom_id); alied_seq1 = chrom1.seq; dir1 = `Positive;  
-
                    ref_code2 = -1; sta2 = -1; en2 = -1;  
-                   chi2_chrom_id = -1;  alied_seq2 = UtlPoy.get_empty_seq (); dir2 = `Positive;                          
+                   chi2_chrom_id = -1;  alied_seq2 = UtlPoy.create_gap_seq (Sequence.length chrom1.seq); dir2 = `Positive;                          
                   } 
               in  
+
+              assert (Sequence.length seg.alied_seq1 > 0);
+              assert (Sequence.length seg.alied_seq2 > 0); 
 
               let chrom_med = {chrom_ref_code = Utl.get_new_chrom_ref_code ();
                                main_chrom1_id = !(chrom1.chrom_id);
@@ -940,7 +988,7 @@ let create_med med1 med2 cost_mat user_chrom_pams =
                    alied_med = med_seq;
   
                    ref_code1 = -1; sta1 = -1;  en1 = -1;
-                   chi1_chrom_id = -1; alied_seq1 = UtlPoy.get_empty_seq (); dir1 = `Positive;  
+                   chi1_chrom_id = -1; alied_seq1 = UtlPoy.create_gap_seq (Sequence.length chrom2.seq); dir1 = `Positive;  
 
 
                    ref_code2 = child2_genome_ref_code; sta2 = 0;  en2 = chrom2_len - 1;
@@ -948,6 +996,8 @@ let create_med med1 med2 cost_mat user_chrom_pams =
                   } 
               in  
               
+              assert (Sequence.length seg.alied_seq1 > 0);
+              assert (Sequence.length seg.alied_seq2 > 0); 
 
               let chrom_med = {chrom_ref_code = Utl.get_new_chrom_ref_code ();
                                main_chrom1_id = -1;
@@ -982,7 +1032,7 @@ let create_med med1 med2 cost_mat user_chrom_pams =
     
     if (List.length chrom_med_ls = 0) then failwith "Created a fucking empty genome";
     
-    genome_med, !g_cost, !g_recost1, !g_recost2
+    genome_med, !g_cost, (!g_recost1, !g_recost2)
         
 
 
@@ -1003,9 +1053,22 @@ let cmp_cost med1 med2 cost_mat user_chrom_pams =
         close_out genomeFile;
     end;   
 
-    let _, cost, recost1, recost2 = create_med med1 med2 cost_mat user_chrom_pams in 
+    let ali_pam = ChromPam.get_chrom_pam user_chrom_pams in 
+    match ali_pam.ChromPam.symmetric with
+    | true ->
+          let _, cost12, recost12 = create_med med1 med2 cost_mat user_chrom_pams in 
+          let _, cost21, recost21 = create_med med2 med1 cost_mat user_chrom_pams in 
+          if cost12 <= cost21 then cost12, recost12
+          else cost21, recost21
+    | false ->
+          let med1, med2 = 
+              match compare med1 med2 < 0 with 
+              | true ->  med1, med2
+              | false ->  med2, med1
+          in 
 
-    cost, recost1, recost2
+          let med, cost, recost = create_med med1 med2 cost_mat user_chrom_pams in 
+          cost, recost
 
 
 (** Compute the cost between two genomes with rearrangement operations *)
@@ -1025,10 +1088,35 @@ let find_med2_ls med1 med2 cost_mat user_chrom_pams =
         fprintf genomeFile "\n";  
         close_out genomeFile;
     end;   
-    
+    let ali_pam = ChromPam.get_chrom_pam user_chrom_pams in 
+    let med, cost, recost = 
+        match ali_pam.ChromPam.symmetric with
+        | true ->
+              let med12, cost12, recost12 = create_med med1 med2 cost_mat user_chrom_pams in 
+              let med21, cost21, recost21 = create_med med2 med1 cost_mat user_chrom_pams in 
+              if cost12 <= cost21 then med12, cost12, recost12
+              else begin 
+                  let med12 = swap_med med21 in 
+                  med12, cost21, recost21
+              end 
 
-    let med, cost, recost1, recost2  = create_med med1 med2 cost_mat user_chrom_pams in 
-    cost, recost1, recost2, [med]
+        | false ->
+              let med1, med2, ali_pam, swaped = 
+                  match compare med1 med2 < 0 with 
+                  | true ->  med1, med2, ali_pam, false
+                  | false ->  med2, med1, ali_pam, true
+              in 
+              
+              let med, cost, recost = create_med med1 med2 cost_mat user_chrom_pams in 
+              let med = 
+                  match swaped with
+                  | false -> med
+                  | true -> swap_med med 
+              in 
+              med, cost, recost
+    
+    in                   
+    cost, recost, [med]
     
 
 let compare med1 med2 =
@@ -1317,19 +1405,13 @@ let change_to_single med single_genome =
         (fun idx chromt -> 
 
              let single_seq = single_genome.(idx) in 
-
              let num_dna = ref 0 in  
              let new_map = match is_leaf med with 
              | true -> chromt.map
              | false -> 
-(*
-                   UtlPoy.printDNA single_seq;
-                   UtlPoy.printDNA chromt.seq;
-                   print_newline ();
-*)
-
                    List.map 
                  (fun seg ->
+
                       let single_alied_med = UtlPoy.map 
                           (fun code ->
 (*                             fprintf stdout "%i\n" !num_dna; *)
@@ -1345,7 +1427,7 @@ let change_to_single med single_genome =
                                end 
                           ) seg.alied_med
                       in 
-
+                      
                       {seg with alied_med = single_alied_med}
                           
                  ) chromt.map

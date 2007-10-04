@@ -85,3 +85,6 @@ val get_active_ref_code : t -> IntSet.t * IntSet.t
 val print : t -> unit
 val copy_chrom_map : t -> t -> t
 
+val readjust :
+  All_sets.Integers.t option ->
+  All_sets.Integers.t -> t -> t -> t -> t -> All_sets.Integers.t * float * t

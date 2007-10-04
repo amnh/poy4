@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2145 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2265 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -129,6 +129,7 @@ type ('a, 'b) cost_fn =
     clade_cost
     
 type ('a, 'b) reroot_fn =
+    bool ->
     Tree.edge ->
     ('a, 'b) p_tree ->
     ('a, 'b) p_tree * incremental list
@@ -799,8 +800,8 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             = 
         let nodes = 
             match sequence with
-            | None -> Tree.get_node_ids ptree.tree
-            | Some r -> r
+            | None -> Tree.handle_list ptree.tree
+            | Some r -> List.map (fun x -> handle_of x ptree) r 
         in
         let ptree = set_avail_start ptree ((code_fn ()) + 1) in
         (* make sure you have atleast two nodes to build a tree 
@@ -808,23 +809,49 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         match nodes with
         | n1 :: n2 :: rest ->
                 let status = 
-                    Status.create "Wagner" (Some (2 + List.length rest)) "" 
+                    Status.create "Wagner" (Some (2 + List.length rest)) ""
                 in
                 (* build one edge tree with h1 h2 *)
-                let h1 = Tree.get_handle_id n1 ptree.tree 
+                let h1 = Tree.get_handle_id n1 ptree.tree
                 and h2 = Tree.get_handle_id n2 ptree.tree in
-                let j1 = Tree.Single_Jxn(h1) 
-                and j2 = Tree.Single_Jxn(h2) in
+                let j1, j2 =
+                    let get_corrected_jnx nd =
+                        match get_node nd ptree with
+                        | Tree.Single _ -> Tree.Single_Jxn nd
+                        | Tree.Leaf (x, y)
+                        | Tree.Interior (x, y, _, _) -> Tree.Edge_Jxn (x, y)
+                    in
+                    (get_corrected_jnx h1), (get_corrected_jnx h2)
+                in
                 let ptree, tree_delta = (Tree_Ops.join_fn [] j1 j2 ptree) in
+                (* Now we ensure that the root is located in between the two 
+                * handles that we just joined. This is needed for constrained
+                * building. *)
+                let ptree  = 
+                    let l, r, _ = tree_delta in
+                    let new_vertex x = 
+                        match x with
+                        | `Single (x, _)
+                        | `Edge (x, _, _, _) -> x
+                    in
+                    let l = new_vertex l 
+                    and r = new_vertex r in
+                    let tree, inc = 
+                        Tree_Ops.reroot_fn true (Tree.Edge (l, r)) ptree 
+                    in
+                    Tree_Ops.incremental_uppass tree inc
+                in
                 let cst = get_cost `Adjusted ptree in
                 (* function adds the given nd to each of the edges of pt and
                 * picks the tree/s according to some optimality criterion. *)
                 let add_node_everywhere (pt, cst, tabu_mgr) nd srch_mgr =
-                    let hd = (Tree.get_handle_id nd pt.tree) in
-                    let nd_data = get_node_data nd pt in
+                    let j2, nd_data =
+                        match (get_component_root nd ptree).root_median with
+                        | None -> assert false
+                        | Some ((`Edge (x, y)), z) -> (Tree.Edge_Jxn (x, y)), z
+                        | Some ((`Single x), z) -> (Tree.Single_Jxn x), z
+                    in
                     tabu_mgr#next_clade nd_data;
-
-                    let j2 = Tree.Single_Jxn(hd) in
                     (* function to add a node to an edge and determine the 
                     * optimality of the resulting tree. *)
                     let add_node_to_edge e srch_mgr tabu_mgr = 
@@ -987,7 +1014,7 @@ let spr_step
         match old_tree_delta with
         | `Edge (v, l1, l2, lst) ->
                 let edge = Tree.Edge (l1, l2) in
-                let ptree, newincr = Tree_Ops.reroot_fn edge ptree in
+                let ptree, newincr = Tree_Ops.reroot_fn false edge ptree in
                 let new_tree_delta = (old_clade_delta, old_tree_delta) in
                 let ptree = Tree_Ops.incremental_uppass ptree incremental in
                 let clade_root = get_component_root l1 ptree in
@@ -1122,7 +1149,7 @@ let rec tbr_join search ?(updt=[]) tabu ?(rerooted=false) ptree j2 clade_node
               | Some reroot_edge -> begin
                     if ndebug then odebug ("TBR: Rerooting");
                     let ptree, updt = 
-                        Tree_Ops.reroot_fn reroot_edge original_ptree 
+                        Tree_Ops.reroot_fn false reroot_edge original_ptree 
                     in
                     let j2, the_node =
                         let Tree.Edge (e1, e2) = reroot_edge in
@@ -1334,7 +1361,7 @@ let fuse source_arg target_arg =
         if is_edge edge tree
         then arg
         else
-            let tree, updt = Tree_Ops.reroot_fn edge tree in
+            let tree, updt = Tree_Ops.reroot_fn false edge tree in
             let tree = Tree_Ops.incremental_uppass tree updt in
             tree, tree.tree, edge in
     let source, source_u, sedge = maybe_reroot source_arg in

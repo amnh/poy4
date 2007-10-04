@@ -31,9 +31,13 @@
 #define Seq_custom_val(a) (*((struct seq **) Data_custom_val(a)))
 #define Seq_struct(a) (Seq_custom_val(a))
 #ifdef USE_LARGE_ALPHABETS 
-#define SEQT unsigned long
-#else
+#define SEQT unsigned int
+#define DESERIALIZE_SEQT(a,b) caml_deserialize_block_4((a),(b))
+#define SERIALIZE_SEQT(a,b) caml_serialize_block_4((a),(b))
+#else 
 #define SEQT unsigned char
+#define DESERIALIZE_SEQT(a,b) caml_deserialize_block_1((a),(b))
+#define SERIALIZE_SEQT(a,b) caml_serialize_block_1((a),(b))
 #endif
 
 /* Sequence structure to be used inside ocaml custom types. */

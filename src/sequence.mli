@@ -438,3 +438,6 @@ external encoding :
 * input sequence [s] as specified by the alphabet [alph]. If [alph] does not
 * provide the necessary specification, an exception is raised. *)
 val complement : Alphabet.a -> s -> s
+
+(* The same as complement for sequence, but no gap is inserted at the begin*)
+val complement_chrom : Alphabet.a -> s -> s

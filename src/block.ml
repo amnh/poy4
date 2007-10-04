@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 2198 $"
+let () = SadmanOutput.register "Block" "$Revision: 2265 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -529,14 +529,14 @@ let create_alied_block_ls (block_ls : block_t list) (ali_pam : pairChromPam_t)
     
     let min_pos2 = ali_pam.ChromPam.min_pos2 in 
     let max_pos2 = ali_pam.ChromPam.max_pos2 in 
-    UtlPoy.reverse_subseq seq2 min_pos2 max_pos2;
+    let com_seq2 = Sequence.complement_chrom Alphabet.nucleotides seq2 in
     List.iter (fun block -> 
                    if block.direction = `Negative then begin
                        invert block min_pos2 max_pos2;
-                       create_pos_alied_block block seq1 seq2 cost_mat ali_pam;
+                       create_pos_alied_block block seq1 com_seq2 cost_mat ali_pam;
                        invert block min_pos2 max_pos2;
-                    end) block_ls;
-    UtlPoy.reverse_subseq seq2 min_pos2 max_pos2
+                    end) block_ls
+
 
 (*==========================================================*)
  
@@ -666,28 +666,6 @@ let connect_pos_consecutive_block (block_ls : block_t list)
 
 
 
-let connect_neg_consecutive_block (block_ls : block_t list) 
-        (block_pam : blockPam_t) (seq1 : Sequence.s) (seq2 : Sequence.s) 
-        (cost_mat : Cost_matrix.Two_D.m) (ali_pam : pairChromPam_t)  = 
-
-    List.iter (fun block ->  invert block ali_pam.ChromPam.min_pos2
-                   ali_pam.ChromPam.max_pos2) block_ls;
-
-
-    let min_pos2 = ali_pam.ChromPam.min_pos2 in 
-    let max_pos2 = ali_pam.ChromPam.max_pos2 in 
-    UtlPoy.reverse_subseq seq2 min_pos2 max_pos2;
-
-    let neg_con_block_ls = connect_pos_consecutive_block block_ls block_pam seq1
-        seq2 cost_mat ali_pam in 
-    
-
-    List.iter (fun block ->  invert block ali_pam.ChromPam.min_pos2
-                   ali_pam.ChromPam.max_pos2) block_ls;
-
-    UtlPoy.reverse_subseq seq2 min_pos2 max_pos2;
-    neg_con_block_ls
-
 
 let connect_consecutive_block (block_ls : block_t list) (block_pam : blockPam_t)
         (seq1 : Sequence.s) (seq2 : Sequence.s) (cost_mat : Cost_matrix.Two_D.m)
@@ -696,10 +674,7 @@ let connect_consecutive_block (block_ls : block_t list) (block_pam : blockPam_t)
     let pos_con_block_ls = connect_pos_consecutive_block block_ls block_pam seq1
         seq2 cost_mat ali_pam in 
    
-    let all_con_block_ls = connect_neg_consecutive_block pos_con_block_ls
-        block_pam seq1 seq2 cost_mat ali_pam in 
-
-    all_con_block_ls
+    pos_con_block_ls
 
 
 

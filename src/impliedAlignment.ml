@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2198 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2265 $"
 
 exception NotASequence of int
 
@@ -128,8 +128,11 @@ let calculate_indels a b alph b_children =
     let in_indel_row = ref `None
     and result_list = ref [] in
     let gap = Alphabet.get_gap alph in
-    assert (Sequence.length a > 1);
+    assert ( (Sequence.length a > 1) || (Sequence.get a 0 != gap) ||
+                 (Sequence.get b 0 != gap) );
     assert (Sequence.length b = Sequence.length a);
+
+
     let len = Sequence.length a in
     let assign_in_indel_row i a_gap b_gap =
         (* Is any of them a gap? *)
@@ -236,6 +239,7 @@ codea codeb cm alph achld bchld =
     let lena = Sequence.length a.seq
     and lenb = Sequence.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
+
     let create_gaps len = Sequence.init (fun _ -> gap) len 
     and aempty = (Sequence.is_empty a.seq gap) && (state = `Seq)
     and bempty = (Sequence.is_empty b.seq gap) && (state = `Seq) in
@@ -725,7 +729,7 @@ let ancestor_genome prealigned calculate_median all_minus_gap acode bcode achld
     let chromb_arr = Array.map (fun ias -> ias.seq) ias2_arr in
     let med1 = GenomeAli.create_med_from_seq chroma_arr in 
     let med2 = GenomeAli.create_med_from_seq chromb_arr in
-    let _, _, _, med_ls = GenomeAli.find_med2_ls med1 med2 cm chrom_pam in 
+    let _, _, med_ls = GenomeAli.find_med2_ls med1 med2 cm chrom_pam in 
     let med = List.hd med_ls in 
 
     let order1_mat = Array.map (fun ias1 -> Array.of_list (List.rev ias1.order) ) ias1_arr in  

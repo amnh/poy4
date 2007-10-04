@@ -453,6 +453,28 @@ let readjust to_adjust modified ch1 ch2 parent mine =
                 SeqCS.readjust to_adjust modified ch1 ch2 parent mine in
             let prev_cost = SeqCS.distance ch1 mine +. SeqCS.distance ch2 mine in
             modified, prev_cost, new_cost, (SeqCS nc)
+
+    | ChromCS ch1, ChromCS ch2, ChromCS parent, ChromCS mine when ch1.ChromCS.alph =
+        Alphabet.nucleotides -> 
+            let modified, new_cost, nc = 
+                ChromCS.readjust to_adjust modified ch1 ch2 parent mine in
+            let prev_cost = ChromCS.distance ch1 mine +. ChromCS.distance ch2 mine in
+            modified, prev_cost, new_cost, (ChromCS nc)
+
+    | AnnchromCS ch1, AnnchromCS ch2, AnnchromCS parent, AnnchromCS mine when ch1.AnnchromCS.alph =
+          Alphabet.nucleotides -> 
+          let modified, new_cost, nc = 
+              AnnchromCS.readjust to_adjust modified ch1 ch2 parent mine in
+          let prev_cost = AnnchromCS.distance ch1 mine +. AnnchromCS.distance ch2 mine in
+          modified, prev_cost, new_cost, (AnnchromCS nc)
+
+
+    | BreakinvCS ch1, BreakinvCS ch2, BreakinvCS parent, BreakinvCS mine ->
+          let modified, new_cost, nc = 
+              BreakinvCS.readjust to_adjust modified ch1 ch2 parent mine in
+          let prev_cost = BreakinvCS.distance ch1 mine +. BreakinvCS.distance ch2 mine in
+          modified, prev_cost, new_cost, (BreakinvCS nc)
+              
     | _, _, _, mine ->  
             let prev_cost = total_cost mine in
             modified, prev_cost, prev_cost, mine

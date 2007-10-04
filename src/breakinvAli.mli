@@ -44,7 +44,10 @@ type breakinvPam_t = {
   keep_median : int;
   circular : int;
   swap_med : int;
+  symmetric : bool;
 }
+
+
 val breakinvPam_default : breakinvPam_t
 val init : Sequence.s -> breakinv_t
 val get_breakinv_pam : Data.dyna_pam_t -> breakinvPam_t

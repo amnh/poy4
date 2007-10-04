@@ -17,13 +17,13 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Seed" "$Revision: 2006 $"
+let () = SadmanOutput.register "Seed" "$Revision: 2265 $"
 type pairChromPam_t = ChromPam.chromPairAliPam_t
 
 (** The seed module contains data and funtions to determine all seeds between
     two chromosomes *)
 
-let negative_option = false
+
 
 type seed_t = {
     mutable id : int;
@@ -347,12 +347,9 @@ let determine_pos_seed (suf_tree : sufTree_t) (seq2 : Sequence.s) ali_pam =
 
 let determine_neg_seed (suf_tree : sufTree_t) (seq2 : Sequence.s) 
         (ali_pam : pairChromPam_t) = 
-    if negative_option = true then begin
-        Sequence.reverse_ip seq2;
-        let neg_seed_ls = determine_pos_seed suf_tree seq2 ali_pam in 
-        Sequence.reverse_ip seq2;    
-        neg_seed_ls  
-    end else []
+    let com_seq2 = Sequence.complement_chrom Alphabet.nucleotides seq2 in 
+    let neg_seed_ls = determine_pos_seed suf_tree com_seq2 ali_pam in 
+    neg_seed_ls  
 
     
     
@@ -398,10 +395,10 @@ let determine_seed (seq1 : Sequence.s) (seq2 : Sequence.s)
     in
 
     let neg_seed_ls = 
-        match direction with        
-        | `Negative | `BothDir ->  
+        match direction, ali_pam.ChromPam.negative with        
+        | `Negative, true | `BothDir, true ->  
               determine_neg_seed k_mer_tree seq2 ali_pam 
-        | `Positive -> [] 
+        | _, _ -> [] 
     in  
     pos_seed_ls, neg_seed_ls
 

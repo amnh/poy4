@@ -129,6 +129,8 @@ with type b = AllDirNode.OneDirF.n = struct
     (* We first define a function to check the total cost of a tree for
     * sequences only! *)
     let check_cost new_tree handle =
+(*        Printf.fprintf stdout "Checking cost start from handle: %i\n\n\n" handle;
+        flush stdout;*)
         let edge_visitor (Tree.Edge (a, b)) acc =
             let nda = 
                 (List.hd ((Ptree.get_node_data a
@@ -140,11 +142,11 @@ with type b = AllDirNode.OneDirF.n = struct
                 (Lazy.force_val nda)
                 (Lazy.force_val ndb) 
             in
-            (*
+(*            
             Status.user_message Status.Information
                 ("Dist between " ^ string_of_int a ^ " and " ^ 
                      string_of_int b ^ " is " ^ string_of_float dist);
-            *)
+*)           
             Tree.Continue, dist +. acc
         in
         let real_cost = 
@@ -169,6 +171,11 @@ with type b = AllDirNode.OneDirF.n = struct
         in
         real_cost +. root_minus
 
+
+    let check_cost_all_handles ptree = 
+        All_sets.Integers.fold (fun handle cost ->
+            (check_cost ptree handle) +. cost) 
+        (Ptree.get_handles ptree) 0.0
 
     let convert_three_to_one_dir tree = 
         (* We will convert the tree in a one direction tree, then we will use
@@ -491,27 +498,33 @@ with type b = AllDirNode.OneDirF.n = struct
                         ptree.Ptree.node_data 
                 | Some items -> items
             in
-            let adjust_vertices vertex chars_to_check (affected, ptree, changed) =
+            let adjust_vertices vertex chars_to_check (affected, ptree, changed)
+            =
                 let ptree, ch2, affected = 
                     adjust_vertex chars_to_check affected vertex ptree
                 in
                 affected, ptree, changed || ch2
             in
-            let rec iterator affected ptree =
-                let affected, ptree, changed =
+            let rec iterator prev_cost affected ptree =
+                let affected, new_ptree, changed =
                     All_sets.IntegerMap.fold adjust_vertices
                     affected
                     (All_sets.IntegerMap.empty, ptree, false)
                 in
                 if changed then 
-                    iterator affected ptree
+                    let new_cost = check_cost_all_handles ptree in
+                    if new_cost < prev_cost then
+                        iterator new_cost affected new_ptree
+                    else ptree
                 else ptree
             in
-            iterator first_affected ptree
+            iterator (Ptree.get_cost `Adjusted ptree) first_affected ptree
         in
         let adjust_root_n_cost handle root a b ptree =
             let tree = convert_three_to_one_dir ptree in 
-            let pre_ref_codes, fi_ref_codes = Chartree.get_active_ref_code tree in  
+            let pre_ref_codes, fi_ref_codes = 
+                Chartree.get_active_ref_code tree 
+            in  
             let ad = Ptree.get_node_data a ptree
             and bd = Ptree.get_node_data b ptree in
             match ad.AllDirNode.adjusted, bd.AllDirNode.adjusted with
@@ -1109,7 +1122,7 @@ with type b = AllDirNode.OneDirF.n = struct
                 let nt, _ = join_fn [] a b e in
                 Ptree.Cost (pc -. (Ptree.get_cost `Adjusted nt))
 
-    let reroot_fn edge ptree =
+    let reroot_fn force edge ptree =
         let Tree.Edge (h, n) = edge in
         let my_handle = Ptree.handle_of h ptree in
         let root = Ptree.get_component_root my_handle ptree in
@@ -1124,7 +1137,7 @@ with type b = AllDirNode.OneDirF.n = struct
         | `Normal -> 
                 let root = 
                     let new_roots = create_root h n ptree in
-                    if new_roots.Ptree.component_cost < 
+                    if force || new_roots.Ptree.component_cost < 
                     root.Ptree.component_cost then
                         new_roots
                     else root
@@ -1265,6 +1278,8 @@ with type b = AllDirNode.OneDirF.n = struct
 
         let tree = assign_final_states tree in
         let pre_ref_codes, fi_ref_codes = get_active_ref_code tree in 
+
+
 (*
         Utl.printIntSet pre_ref_codes;
         Utl.printIntSet fi_ref_codes;
@@ -1313,6 +1328,10 @@ with type b = AllDirNode.OneDirF.n = struct
                     (Tags.Trees.tree, [], singler nodest)
         in
         let handle_to_formatter (pre, fi) handle (recost, trees) =
+(*
+            let treecost = check_cost tree handle in 
+            Printf.fprintf stdout "Tree cost for diagnosis: %f\n" treecost;
+*)
             let r = Ptree.get_component_root handle tree in
             let recost, contents, attr =
                 match r.Ptree.root_median with
@@ -1340,7 +1359,6 @@ with type b = AllDirNode.OneDirF.n = struct
                             Node.to_formatter_subtree 
                             (pre, fi) [] data 
                             ((get_unadjusted (-1) root), sa) a (a, get_unadjusted b handle)
-(*                            (b, get_unadjusted a parent) (Some sroot)*)
                             (b, get_unadjusted a parent) None
                         in
                         recost, (merger a b froot), 

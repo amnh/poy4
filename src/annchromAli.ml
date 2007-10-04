@@ -78,6 +78,7 @@ type annchromPam_t = {
     circular : int;
     swap_med : int;
     approx : ChromPam.order_t;
+    symmetric : bool;
     locus_indel_cost : (int * int);
 }
 
@@ -87,6 +88,7 @@ let annchromPam_default = {
     circular = 0;
     swap_med = 1;
     approx = `BothSeq;
+    symmetric = false;
     locus_indel_cost = (10, 100);
 }
 
@@ -122,6 +124,28 @@ let printMap seq_arr =
                ) seq_arr;
     print_endline "End printing alied_annchrom ";
     print_newline ()
+
+
+let swap_seq s = 
+    {
+        s with seq_ord1 = s.seq_ord2;
+            alied_seq1 = s.alied_seq2;
+            seq_ord2 = s.seq_ord1;
+            alied_seq2 = s.alied_seq1                
+    } 
+
+
+
+let swap_med m = 
+     {m with ref_code1 = m.ref_code2;
+         ref_code2 = m.ref_code1;
+         cost1 = m.cost2;
+         recost1 = m.recost2;
+         cost2 = m.cost1;
+         recost2 = m.recost1;
+         seq_arr = Array.map swap_seq m.seq_arr
+     }
+
 
 
 let get_seq_arr t =
@@ -220,6 +244,13 @@ let get_annchrom_pam user_annchrom_pam =
               else {chrom_pam with approx = `BothSeq}
     in 
 
+
+    let chrom_pam = 
+        match user_annchrom_pam.Data.symmetric with
+        | None -> chrom_pam
+        | Some sym -> {chrom_pam with symmetric = sym}
+    in 
+
     let chrom_pam = 
         match user_annchrom_pam.Data.locus_indel_cost with
         | None -> chrom_pam
@@ -263,9 +294,36 @@ let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
     pure_gen_cost_mat.(gen_gap_code).(gen_gap_code) <- 0;
     
     let update (seq1, code1) (seq2, code2) =
+        let com_seq1 = Sequence.complement_chrom Alphabet.nucleotides seq1 in 
+        let com_seq2 = Sequence.complement_chrom Alphabet.nucleotides seq2 in 
+(*
+        UtlPoy.printDNA seq1;
+        UtlPoy.printDNA com_seq1;
+        print_newline ();
+        UtlPoy.printDNA seq2;
+        UtlPoy.printDNA com_seq2;
+        print_endline "----------------------------------";
+*)        
         let _, _, cost, _ = UtlPoy.align2 seq1 seq2 cost_mat in 
+  (*      fprintf stdout "%i %i -> %i\n" code1 code2 cost;*)
         pure_gen_cost_mat.(code1).(code2) <- cost;
         pure_gen_cost_mat.(code2).(code1) <- cost;
+
+        let _, _, cost, _ = UtlPoy.align2 seq1 com_seq2 cost_mat in 
+(*        fprintf stdout "%i %i -> %i\n" code1 (-code2) cost; *)
+        pure_gen_cost_mat.(code1).(code2 + 1) <- cost;
+        pure_gen_cost_mat.(code2 + 1).(code1) <- cost;
+
+        let _, _, cost, _ = UtlPoy.align2 com_seq1 seq2 cost_mat in 
+(*        fprintf stdout "%i %i -> %i\n" (-code1) code2 cost; *)
+        pure_gen_cost_mat.(code1 + 1).(code2) <- cost;
+        pure_gen_cost_mat.(code2).(code1 + 1) <- cost;
+
+        let _, _, cost, _ = UtlPoy.align2 com_seq1 com_seq2 cost_mat in 
+(*        fprintf stdout "%i %i -> %i\n" (-code1) (-code2) cost;*)
+        pure_gen_cost_mat.(code1 + 1).(code2 + 1) <- cost;
+        pure_gen_cost_mat.(code2 + 1).(code1 + 1) <- cost;
+
     in 
 
         
@@ -293,8 +351,8 @@ let create_pure_gen_cost_mat seq1_arr seq2_arr cost_mat ali_pam =
 (** Given two annotated chromosomes [chrom1] and [chrom2], compute 
  * the total cost between them which is comprised of editing cost and 
  * rearrangement cost *)
-let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t) 
-        cost_mat alpha annchrom_pam = 
+let cmp_simple_cost (chrom1: annchrom_t) (chrom2 : annchrom_t) 
+        cost_mat alpha ali_pam =
 
 
     let chrom_len1 = Array.fold_left (fun len s -> len + Sequence.length s.seq) 0 chrom1.seq_arr in     
@@ -302,9 +360,6 @@ let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t)
     
     if (chrom_len1 < 2) || (chrom_len2 < 2) then 0, 0
     else begin
-            
-        let ali_pam = get_annchrom_pam annchrom_pam in     
-    
         let seq1_arr, _ = split chrom1 in  
         let seq2_arr, _ = split chrom2 in  
     
@@ -318,27 +373,36 @@ let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t)
                 ali_pam.re_meth ali_pam.swap_med 
                 ali_pam.circular  
         in 
-
         total_cost, (recost1 + recost2)
     end 
 
 
 
+let cmp_cost (chrom1: annchrom_t) (chrom2 : annchrom_t) 
+        cost_mat alpha annchrom_pam = 
+    let ali_pam = get_annchrom_pam annchrom_pam in     
+    match ali_pam.symmetric with
+    | true ->
+          let cost12 = cmp_simple_cost chrom1 chrom2 cost_mat alpha ali_pam in
+          let cost21 = cmp_simple_cost chrom2 chrom1 cost_mat alpha ali_pam in
+          min cost12 cost21
+    | false ->
+          if compare chrom1 chrom2 < 0 then
+              cmp_simple_cost chrom1 chrom2 cost_mat alpha ali_pam
+          else cmp_simple_cost chrom2 chrom1 cost_mat alpha ali_pam
 
+              
 (** Given two annotated chromosomes [chrom1] and [chrom2], 
  * find all median chromoromes between [chrom1] and [chrom2]. 
  * Rearrangements are allowed *) 
-let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t) 
-        (cost_mat : Cost_matrix.Two_D.m) alpha annchrom_pam = 
+let find_simple_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t) 
+        (cost_mat : Cost_matrix.Two_D.m) alpha ali_pam = 
     
-
     let chrom_len1 = Array.fold_left (fun len s -> len + Sequence.length s.seq) 0 chrom1.seq_arr in     
     let chrom_len2 = Array.fold_left (fun len s -> len + Sequence.length s.seq) 0 chrom2.seq_arr in 
-    
     if (chrom_len1 < 2) then 0,0, [chrom2]
     else if chrom_len2 < 2 then 0,0, [chrom1]
     else begin    
-        let ali_pam = get_annchrom_pam annchrom_pam in         
         let approx = ali_pam.approx in 
 
         let seq1_arr, _ = split chrom1 in  
@@ -360,7 +424,7 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
 
         let ali_len = Array.length alied_code1_arr in 
     
-        let ali_chrom = Array.init ali_len   
+        let ali_chrom = Array.init ali_len
             (fun idx ->   
                  let idx1 = Utl.find_index code1_arr alied_code1_arr.(idx) compare in   
                  let seq1 =  
@@ -369,11 +433,17 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
                      | _ -> Some chrom1.seq_arr.(idx1).seq
                  in                             
     
-                 let idx2 = Utl.find_index code2_arr alied_code2_arr.(idx) compare in  
+                 let pos_code2 = 
+                     if alied_code2_arr.(idx) mod 2 = 0 then alied_code2_arr.(idx) - 1
+                     else alied_code2_arr.(idx)
+                 in 
+                 let idx2 = Utl.find_index code2_arr pos_code2 compare in  
                  let seq2 =
                      match idx2 with 
                      | -1 -> None
-                     | _ -> Some chrom2.seq_arr.(idx2).seq
+                     | _ -> 
+                           if pos_code2 = alied_code2_arr.(idx) then Some chrom2.seq_arr.(idx2).seq
+                           else Some (Sequence.complement_chrom Alphabet.nucleotides chrom2.seq_arr.(idx2).seq)
                  in                            
                      
                  let alied_med_seq, alied_seq1, alied_seq2 =
@@ -456,6 +526,7 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
         let re_code2_arr = Utl.filterArr alied_code2_arr  
             (fun code2 -> code2 != gen_gap_code)  
         in   
+        let code2_arr = UtlGrappa.get_ordered_permutation re_code2_arr in 
              
         let all_order_ls =   
             if (Utl.equalArr code2_arr re_code2_arr compare) ||  
@@ -473,6 +544,59 @@ let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
         in 
         total_cost, (recost1 + recost2), med_ls           
     end
+
+
+
+
+(** Given two annotated chromosomes [chrom1] and [chrom2], 
+ * find all median chromoromes between [chrom1] and [chrom2]. 
+ * Rearrangements are allowed *) 
+let find_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t) 
+        (cost_mat : Cost_matrix.Two_D.m) alpha annchrom_pam = 
+    
+    let ali_pam = get_annchrom_pam annchrom_pam in          
+    match ali_pam.symmetric with
+    | true ->
+          let cost12, recost12, med12_ls = find_simple_med2_ls chrom1 chrom2
+              cost_mat alpha ali_pam in 
+          
+          let ali_pam = 
+              if ali_pam.approx = `First then {ali_pam with approx = `Second}
+              else ali_pam
+          in 
+          let cost21, recost21, med21_ls = find_simple_med2_ls chrom2 chrom1
+              cost_mat alpha ali_pam in 
+          if cost12 <= cost21 then cost12, recost12, med12_ls
+          else begin 
+              let med12_ls = List.map swap_med med21_ls in 
+              cost21, recost21, med12_ls
+          end 
+
+    | false ->
+          let med1, med2, ali_pam, swaped = 
+              match compare chrom1 chrom2 < 0 with 
+              | true ->  chrom1, chrom2, ali_pam, false
+              | false -> 
+                    let ali_pam = 
+                        if ali_pam.approx = `First then {ali_pam with approx = `Second}
+                        else ali_pam
+                    in 
+                    chrom2, chrom1, ali_pam, true
+          in 
+
+          let cost, recost, med_ls = find_simple_med2_ls med1 med2 cost_mat
+              alpha ali_pam in
+          let med_ls = 
+              match swaped with
+              | false -> med_ls
+              | true -> List.map swap_med med_ls 
+          in 
+          cost, recost, med_ls
+
+
+ 
+
+
 
 (** Given two annotated chromosomes [chrom1] and [chrom2], 
  * compare chrom1 and chrom2 *)

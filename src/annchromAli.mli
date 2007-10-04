@@ -46,6 +46,7 @@ type annchromPam_t = {
   circular : int;
   swap_med : int;
   approx : ChromPam.order_t;
+  symmetric : bool;
   locus_indel_cost : int * int;
 }
 val annchromPam_default : annchromPam_t

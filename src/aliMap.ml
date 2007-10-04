@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AliMap" "$Revision: 2006 $"
+let () = SadmanOutput.register "AliMap" "$Revision: 2265 $"
 (** The implementation of functions to find the map between two chromosomes *)
 
 type chromPairAliPam_t = ChromPam.chromPairAliPam_t
@@ -37,7 +37,7 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
 
     let len1 = List.length subseq1_ls in 
     let len2 = List.length subseq2_ls in 
-    let len = len1 + len2 + 1 in 
+    let len = 2 * (len1 + len2) + 1 in 
 
     let gen_cost_mat = Array.make_matrix len len Utl.infinity in 
 
@@ -46,20 +46,21 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
     set_cost gen_gap_code gen_gap_code 0;
 
     let num_block = List.length global_map in 
-
     let block_gap_cost = Utl.infinity / (num_block + 1) in 
     List.iter (fun b -> 
-       let subseq1_id = b.Block.subseq1_id in 
-       let subseq2_id = b.Block.subseq2_id in 
-       let cost = b.Block.cost in 
-       set_cost subseq1_id subseq2_id cost;
-       set_cost subseq2_id subseq1_id cost;
+                   let code1_id = b.Block.subseq1_id in 
+                   let code2_id = b.Block.subseq2_id in 
+                   
+                   let cost = b.Block.cost in 
 
-       set_cost subseq1_id gen_gap_code block_gap_cost; 
-       set_cost gen_gap_code subseq1_id block_gap_cost;
-
-       set_cost subseq2_id gen_gap_code block_gap_cost; 
-       set_cost gen_gap_code subseq2_id block_gap_cost;
+                   set_cost code1_id code2_id cost;
+                   set_cost code2_id code1_id cost;
+                   
+                   set_cost code1_id gen_gap_code block_gap_cost; 
+                   set_cost gen_gap_code code1_id block_gap_cost;
+                   
+                   set_cost code2_id gen_gap_code block_gap_cost; 
+                   set_cost gen_gap_code code2_id block_gap_cost;
               ) global_map;
 
 
@@ -123,214 +124,57 @@ let create_gen_cost_mat subseq1_ls subseq2_ls global_map gen_gap_code
     
 (** Given a global map between two chromosomes. 
     Create globally general alignment between two *)
-let create_general_ali global_map seq1 seq2 cost_mat ali_pam =
+let create_general_ali state global_map seq1 seq2 cost_mat ali_pam =
 
     let global_map, subseq1_ls, subseq2_ls = 
         Block.create_subseq_id `Both global_map ali_pam in
-(*
-    print_endline "Global map";
-      List.iter Block.print global_map; print_newline (); 
-*)
-
-    let len1 = List.length subseq1_ls in 
-    let len2 = List.length subseq2_ls in 
-(*    fprintf stdout "(len1: %i, len2: %i)" len1 len2; flush stdout;*)
-
-    List.iter (fun sq -> sq.Subseq.id <- sq.Subseq.id + len1) subseq2_ls;    
-    List.iter (fun b -> b.Block.subseq2_id <- b.Block.subseq2_id + len1) global_map;
-
-
-
-    let gen_gap_code = 0 in     
-    let gen_cost_mat, ali_mat = create_gen_cost_mat subseq1_ls subseq2_ls 
-        global_map gen_gap_code seq1 seq2 cost_mat ali_pam in 
-
-    let gen_seq1 = Array.init len1 (fun index -> index + 1) in 
-    let gen_seq2 = Array.init len2 (fun index -> index + len1 + 1) in 
-    
-
-    let circular = ali_pam.ChromPam.circular in
-    let cmp_partial_cost partial_gen_seq2 = 
-
-        let _, _, editing_cost = 
-            Utl.create_pair_align gen_seq1 partial_gen_seq2 
-                gen_cost_mat gen_gap_code in 
-
-
-        let recost  = match ali_pam.ChromPam.re_meth with
-        | `Inversion cost -> 
-              (UtlGrappa.cmp_self_inversion_dis partial_gen_seq2 circular) * cost
-        | `Breakpoint cost -> 
-              (UtlGrappa.cmp_self_oriented_breakpoint_dis partial_gen_seq2 circular) * cost
-        in 
-
-        editing_cost + recost
-    in
-        
-
-    let rec find_wagner_ali pos2 (best_wagner_seq2 : int array) = 
-        match pos2 = len2 with
-        | true -> best_wagner_seq2
-        | false -> 
-              let subseq2_id = gen_seq2.(pos2) in
-              let wagner_cost = ref Utl.infinity in 
-              let wagner_gen_seq2 = ref [||] in 
-              for pos = 0 to Array.length best_wagner_seq2 do 
-                  let partial_gen_seq2 = Utl.insert best_wagner_seq2 pos subseq2_id in 
-                  let cost = cmp_partial_cost partial_gen_seq2 in
-                  if cost < !wagner_cost then begin
-                      wagner_cost := cost; 
-                      wagner_gen_seq2 := partial_gen_seq2 
-                  end 
-              done;
-              find_wagner_ali (pos2 + 1) !wagner_gen_seq2 
-    in
-
-    
-    let rec swap_locus  best_cost best_seq2 = 
-         let len2 = Array.length best_seq2 in  
-         let new_best_seq2 = ref best_seq2 in   
-         let new_best_cost = ref best_cost in  
-
-
-         for donor_pos = 0 to len2 - 2 do
-             for rev_pos = donor_pos + 1 to len2 - 1 do 
-                 let new_seq2 = Utl.swap_item donor_pos rev_pos !new_best_seq2 
-                 in   
-
-                 let new_cost = cmp_partial_cost new_seq2 in     
-            
-                 if new_cost < !new_best_cost then begin                    
-                     new_best_seq2 := new_seq2;    
-                     new_best_cost := new_cost;      
-                 end;   
-             done;
-         done; 
-
-
-         if !new_best_cost < best_cost then 
-             swap_locus !new_best_cost !new_best_seq2 
-         else best_cost, best_seq2
-    in
-
-
-    let wagner_gen_seq2 = find_wagner_ali 1 [|gen_seq2.(0)|] in 
-
-
-    let wagner_cost = cmp_partial_cost wagner_gen_seq2 in 
-
-
-
-    let best_cost, best_gen_seq2 = swap_locus wagner_cost wagner_gen_seq2 in
-
-
-    let alied_gen_seq1, alied_gen_seq2, cost = Utl.create_pair_align gen_seq1
-        best_gen_seq2 gen_cost_mat gen_gap_code in
-
-
-
-    subseq1_ls, subseq2_ls, global_map, ali_mat, 
-    alied_gen_seq1, alied_gen_seq2, best_cost
-
-
-
-
-
-
-
-(** Given a global map between two chromosomes. 
-    Create globally general alignment between two *)
-let create_fast_general_ali state global_map seq1 seq2 cost_mat ali_pam =
-
-    let global_map, subseq1_ls, subseq2_ls = 
-        Block.create_subseq_id `Both global_map ali_pam 
-    in
-
     let len1 = List.length subseq1_ls in 
 
-    List.iter (fun sq -> sq.Subseq.id <- sq.Subseq.id + len1) subseq2_ls;    
-    List.iter (fun b -> b.Block.subseq2_id <- b.Block.subseq2_id + len1) global_map;
+
+    let subseq1_ls = List.map (fun sub -> 
+                                    {sub with Subseq.id = sub.Subseq.id * 2 - 1}
+                              ) subseq1_ls   
+    in 
+    let subseq2_ls = List.map (fun sub ->                                    
+                                   {sub with Subseq.id = len1 * 2 + sub.Subseq.id * 2 - 1}
+                              ) subseq2_ls   
+    in 
+
+    List.iter (fun b -> 
+                   b.Block.subseq1_id <- b.Block.subseq1_id * 2 - 1;
+                   b.Block.subseq2_id <- 
+                       match b.Block.direction with 
+                       | `Positive -> len1 * 2 + b.Block.subseq2_id * 2 - 1  
+                       | _ -> len1 * 2 + b.Block.subseq2_id * 2
+
+              ) global_map;
+
 
     let gen_gap_code = 0 in     
     let gen_cost_mat, ali_mat = create_gen_cost_mat subseq1_ls subseq2_ls 
         global_map gen_gap_code seq1 seq2 cost_mat ali_pam 
     in 
 
-
-
-    let rem_seq1 = List.fold_right 
-        (fun ss rem_seq1 -> 
-             if Subseq.is_free ss then ss.Subseq.id::rem_seq1
-             else rem_seq1
-        ) subseq1_ls []
+    let gen_seq1 = Array.map (fun sub -> sub.Subseq.id) (Array.of_list subseq1_ls) in 
+    let gen_seq2 = Array.map 
+        (fun sub ->                                   
+             let id = 
+                 try 
+                     let b = List.find (fun b ->
+                                            (b.Block.subseq2_id + 1)/2 = (sub.Subseq.id + 1)/2
+                                       ) global_map
+                     in 
+                     b.Block.subseq2_id
+                 with not_found -> sub.Subseq.id
+             in 
+             id 
+        ) (Array.of_list subseq2_ls) 
     in 
-
-    let rem_seq2 = List.fold_right 
-        (fun ss rem_seq2 -> 
-             if Subseq.is_free ss then ss.Subseq.id::rem_seq2
-             else rem_seq2 
-        ) subseq2_ls []
-    in 
-
-    let rem_seq1 = Array.of_list rem_seq1 in
-    let rem_seq2 = Array.of_list rem_seq2 in
-
+    
     let swap_med = ali_pam.ChromPam.swap_med in 
-    let edit_cost, _, alied_rem_seq1, alied_rem_seq2 = GenAli.create_gen_ali_code         
-        state rem_seq1 rem_seq2 gen_cost_mat gen_gap_code 
+    let cost, recost, alied_gen_seq1, alied_gen_seq2 = GenAli.create_gen_ali_code         
+        state gen_seq1 gen_seq2 gen_cost_mat gen_gap_code 
         ali_pam.ChromPam.re_meth swap_med ali_pam.ChromPam.circular
     in   
-
-
-    let add sta_id1 end_id1 alied_seq1 alied_seq2 = 
-        let alied_seq1 = ref alied_seq1 in  
-        let alied_seq2 = ref alied_seq2 in  
-        for id = sta_id1 to end_id1 do 
-            let b = Utl.deref (Block.find_subseq1 global_map id) in 
-            alied_seq1 := !alied_seq1 @ [b.Block.subseq1_id]; 
-            alied_seq2 := !alied_seq2 @ [b.Block.subseq2_id]; 
-        done; 
-        !alied_seq1, !alied_seq2
-    in 
-        
-    let last_id1, alied_seq1, alied_seq2 = List.fold_left2 
-        (fun (last_id1, alied_seq1, alied_seq2) id1 id2 ->
-             let alied_seq1, alied_seq2 = 
-                 match id1 = gen_gap_code with 
-                 | true -> alied_seq1, alied_seq2
-                 | false ->
-                       add (last_id1 + 1) (id1 - 1) alied_seq1 alied_seq2 
-             in 
-             let last_id1 = max last_id1 id1 in 
-             let alied_seq1 = alied_seq1 @ [id1] in  
-             let alied_seq2 = alied_seq2 @ [id2] in               
-             last_id1, alied_seq1, alied_seq2
-        ) (0, [], []) (Array.to_list alied_rem_seq1) (Array.to_list alied_rem_seq2)
-    in  
-
-
-
-    let alied_seq1, alied_seq2 = add (last_id1 + 1) len1 alied_seq1 alied_seq2 in 
-    let edit_cost = List.fold_left2 
-        (fun cost id1 id2 -> cost + gen_cost_mat.(id1).(id2) ) 0 alied_seq1 alied_seq2
-    in 
-
-    let alied_seq1 = Array.of_list alied_seq1 in 
-    let alied_seq2 = Array.of_list alied_seq2 in 
-
-    let circular = ali_pam.ChromPam.circular in
-    let re_seq2 = Utl.filterArray (fun id -> id > 0) alied_seq2 in 
-
-
-    let recost  = match ali_pam.ChromPam.re_meth with 
-    | `Inversion cost ->  
-          (UtlGrappa.cmp_self_inversion_dis re_seq2 circular) * cost 
-    | `Breakpoint cost ->  
-          (UtlGrappa.cmp_self_oriented_breakpoint_dis re_seq2 circular) * cost 
-    in  
-
     subseq1_ls, subseq2_ls, global_map, ali_mat, 
-    alied_seq1, alied_seq2, (edit_cost + recost), recost
-
-
-
+    alied_gen_seq1, alied_gen_seq2, cost, recost

@@ -85,7 +85,7 @@ let update_cost_mat meds1 meds2 =
 
         let med1 = List.hd meds1.med_ls in  
         let med2 = List.hd meds2.med_ls in  
-        let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in  
+        let cost, (recost1, recost2) = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in  
         meds1.approx_cost_arr.(code2) <- cost; 
         meds2.approx_cost_arr.(code1) <- cost; 
 
@@ -101,7 +101,7 @@ let find_meds2 ?(keep_all_meds=false) (meds1 : meds_t) (meds2 : meds_t) =
             (fun best_meds med1 -> 
                  List.fold_left  
                      (fun best_meds med2 -> 
-                          let cost, recost1, recost2, med_ls =
+                          let cost, (recost1, recost2), med_ls =
                               GenomeAli.find_med2_ls med1 med2 meds1.c2
                                   meds1.chrom_pam 
                           in  
@@ -146,7 +146,7 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (best_cost, recost) med1 ->
                    List.fold_left 
                        (fun (best_cost, recost) med2 ->
-                            let acost, a_recost1, a_recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            let acost, (a_recost1, a_recost2) = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
                             if acost < best_cost then acost, a_recost1 + a_recost2
                             else best_cost, recost
                        ) (best_cost, recost) meds2.med_ls
@@ -169,7 +169,7 @@ let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (min_cost, min_recost) med1 ->
                    List.fold_left 
                        (fun (min_cost2, min_recost2) med2 ->
-                            let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            let cost, (recost1, recost2) = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
                             if cost < min_cost2 then cost, recost1 + recost2
                             else min_cost2, min_recost2
                        ) (min_cost, min_recost) meds2.med_ls
@@ -192,7 +192,7 @@ let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
               (fun (max_cost, max_recost) med1 ->
                    List.fold_left 
                        (fun (max_cost2, max_recost2) med2 ->
-                            let cost, recost1, recost2 = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
+                            let cost, (recost1, recost2) = GenomeAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
                             if cost > max_cost2 then cost, recost1 + recost2
                             else max_cost2, max_recost2
                        ) (max_cost, max_recost) meds2.med_ls

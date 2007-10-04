@@ -113,11 +113,6 @@ val connect_pos_consecutive_block :
   blockPam_t ->
   Sequence.s ->
   Sequence.s -> Cost_matrix.Two_D.m -> pairChromPam_t -> block_t list
-val connect_neg_consecutive_block :
-  block_t list ->
-  blockPam_t ->
-  Sequence.s ->
-  Sequence.s -> Cost_matrix.Two_D.m -> pairChromPam_t -> block_t list
 val connect_consecutive_block :
   block_t list ->
   blockPam_t ->

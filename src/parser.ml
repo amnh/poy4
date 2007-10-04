@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2145 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2265 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -3738,7 +3738,7 @@ module Dictionary = struct
         let rec reader hash counter = 
             try
                 let line = input_handler#read_line in
-                match Str.split (Str.regexp "\\s+") line with
+                match Str.split (Str.regexp " +") line with
                 | [] | [_] -> 
                         let msg = 
                             ("Line " ^ string_of_int counter ^ ": " ^ line)

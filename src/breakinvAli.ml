@@ -43,6 +43,17 @@ type breakinv_t = {
 }
 
 
+let swap_med m = {
+    m with alied_seq1 = m.alied_seq2;
+        alied_seq2 = m.alied_seq1;
+        ref_code1 = m.ref_code2;
+        ref_code2 = m.ref_code1;
+        cost1 = m.cost2;
+        cost2 = m.cost1;
+        recost1 = m.recost2;
+        recost2 = m.recost1
+}
+
 
 (** Parameters used to align two general character sequences *)
 type breakinvPam_t = {
@@ -50,6 +61,7 @@ type breakinvPam_t = {
     keep_median : int;
     circular : int;
     swap_med : int;
+    symmetric : bool;
 }
 
 let breakinvPam_default = {
@@ -57,6 +69,7 @@ let breakinvPam_default = {
     keep_median = 1;
     circular = 0;
     swap_med = 1;
+    symmetric = false;
 }
 
 
@@ -102,6 +115,13 @@ let get_breakinv_pam user_breakinv_pam =
         | Some swap_med -> {chrom_pam with swap_med = swap_med}
     in 
 
+
+    let chrom_pam = 
+        match user_breakinv_pam.Data.symmetric with
+        | None -> chrom_pam
+        | Some sym -> {chrom_pam with symmetric = sym}
+    in 
+
     chrom_pam
 
         
@@ -110,30 +130,45 @@ let get_breakinv_pam user_breakinv_pam =
  * rearrangement cost *)
 let cmp_cost med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam = 
     let ali_pam = get_breakinv_pam breakinv_pam in     
-
     let len1 = Sequence.length med1.seq in 
     let len2 = Sequence.length med2.seq in 
     if (len1 < 1) || (len2 < 1) then 0, (0, 0)
     else begin
-        let total_cost, (recost1, recost2), alied_seq1, alied_seq2 =         
-            GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
-                alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
-        in  
-        total_cost , (recost1, recost2)
+        match ali_pam.symmetric with
+        | true ->
+              let cost12, recost12, _, _ =
+                  GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
+                      alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
+              in 
+              let cost21, recost21, _, _ = 
+                  GenAli.create_gen_ali `Breakinv med2.seq med1.seq gen_cost_mat pure_gen_cost_mat
+                      alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
+              in  
+              if cost12 <= cost21 then cost12, recost12
+              else cost21, recost21
+        | false ->
+              let cost, recost, _, _ = 
+                  if Sequence.compare med1.seq med2.seq < 0 then                       
+                      GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
+                          alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
+                  else 
+                      GenAli.create_gen_ali `Breakinv med2.seq med1.seq gen_cost_mat pure_gen_cost_mat
+                          alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
+              in               
+              cost , recost
     end 
         
 
 
 (** Given two sequences of general characters [med1] and [med2], 
  * find all median sequences between [med1] and [med2]. Rearrangements are allowed *) 
-let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =  
+let find_simple_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha ali_pam =  
     let len1 = Sequence.length med1.seq in 
     let len2 = Sequence.length med2.seq in 
 
     if len1 < 1 then 0, (0, 0), [med2]
     else if len2 < 1 then 0, (0, 0), [med1] 
     else begin        
-        let ali_pam = get_breakinv_pam breakinv_pam in         
         let total_cost, (recost1, recost2), alied_gen_seq1, alied_gen_seq2 = 
             GenAli.create_gen_ali `Breakinv med1.seq med2.seq gen_cost_mat pure_gen_cost_mat
                 alpha ali_pam.re_meth ali_pam.swap_med ali_pam.circular 
@@ -178,6 +213,41 @@ let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =
         total_cost, (recost1, recost2), med_ls
     end
 
+
+
+
+(** Given two sequences of general characters [med1] and [med2], 
+ * find all median sequences between [med1] and [med2]. Rearrangements are allowed *) 
+let find_med2_ls med1 med2 gen_cost_mat pure_gen_cost_mat alpha breakinv_pam =  
+    let ali_pam = get_breakinv_pam breakinv_pam in          
+    match ali_pam.symmetric with 
+    | true ->
+          let cost12, recost12, med12_ls = find_simple_med2_ls med1 med2
+              gen_cost_mat pure_gen_cost_mat alpha ali_pam in
+          let cost21, recost21, med21_ls = find_simple_med2_ls med2 med1
+              gen_cost_mat pure_gen_cost_mat alpha ali_pam in
+          if cost12 <= cost21 then cost12, recost12, med12_ls
+          else begin 
+              let med12_ls = List.map swap_med med21_ls in 
+              cost21, recost21, med12_ls
+          end 
+
+    | false ->
+          let med1, med2, swaped = 
+              match Sequence.compare med1.seq med2.seq < 0 with 
+              | true ->  med1, med2, false
+              | false -> med2, med1, true
+          in 
+
+          let cost, recost, med_ls = find_simple_med2_ls med1 med2 
+              gen_cost_mat pure_gen_cost_mat alpha ali_pam in
+
+          let med_ls = 
+              match swaped with
+              | false -> med_ls
+              | true -> List.map swap_med med_ls 
+          in 
+          cost, recost, med_ls
 
 
 let get_costs med child_ref = 

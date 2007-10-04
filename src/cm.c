@@ -812,7 +812,7 @@ cm_CAML_deserialize (void *v) {
     n->tail_cost = (int *) malloc (len * sizeof(int));
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
     deserialize_block_4(n->cost, len);
-    deserialize_block_4(n->median, len);
+    DESERIALIZE_SEQT(n->median, len);
     deserialize_block_4(n->worst, len);
     deserialize_block_4(n->prepend_cost, len);
     deserialize_block_4(n->tail_cost, len);
@@ -835,7 +835,7 @@ cm_CAML_deserialize_3d (void *v) {
     n->median = (SEQT *) malloc (len * sizeof(SEQT));
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
     deserialize_block_4(n->cost, len);
-    deserialize_block_4(n->median, len);
+    DESERIALIZE_SEQT(n->median, len);
     return (sizeof(struct cm_3d));
 }
 
@@ -860,7 +860,7 @@ cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
     *wsize_64 = *wsize_32 = sizeof(struct cm);
     len = 1 << (c->lcm * 2);
     serialize_block_4(c->cost, len);
-    serialize_block_4(c->median, len);
+    SERIALIZE_SEQT(c->median, len);
     serialize_block_4(c->worst, len);
     serialize_block_4(c->prepend_cost, len);
     serialize_block_4(c->tail_cost, len);
@@ -883,7 +883,7 @@ cm_CAML_serialize_3d (value vcm, unsigned long *wsize_32, \
     *wsize_64 = *wsize_32 = sizeof(struct cm);
     len = (c->a_sz + 1) * (c->a_sz + 1) * (c->a_sz + 1);
     serialize_block_4(c->cost, len);
-    serialize_block_4(c->median, len);
+    SERIALIZE_SEQT(c->median, len);
     CAMLreturn0;
 }
 

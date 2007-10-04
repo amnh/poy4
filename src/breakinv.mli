@@ -20,3 +20,5 @@ val cmp_min_pair_cost : meds_t -> meds_t -> int * int
 val cmp_max_pair_cost : meds_t -> meds_t -> int * int
 val compare : meds_t -> meds_t -> int
 val get_active_ref_code : meds_t -> int * int * int
+val readjust_3d : meds_t -> meds_t -> meds_t -> 'a -> 'b -> meds_t -> int * meds_t * bool
+

@@ -25,7 +25,6 @@ val create_subalign2 :
   Cost_matrix.Two_D.m ->
   int -> int -> int -> int -> Sequence.s * Sequence.s * int
 val get_num_base : Sequence.s -> int
-val reverse_subseq : Sequence.s -> int -> int -> unit
 val delete_gap : ?gap_code : int -> Sequence.s -> Sequence.s
 val create_median_gap :
   Sequence.s ->

@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 1952 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2265 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -46,6 +46,8 @@ module type S = sig
 
     (** A function that constructs a wagner edge manager for the phylogeny. *)
     val wagner_tabu : phylogeny -> int -> wem
+
+    val wagner_constraint : All_sets.Integers.t -> phylogeny -> int -> wem
 
     (* A function that constructs a wagner edge manager for the phylogeny, that
     * uses the unions of the vertices to reduce the number of attempts. *)
@@ -362,20 +364,25 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             let right_edges = Ptree.get_pre_order_edges right forest in (* TODO: remove right junction from the list of `Right edges... *)
             (new tabu_join_once left_edges right_edges, right)
 
-    class virtual wagner_dfs_distance_based max_distance (ptree : phylogeny) 
+    class virtual wagner_dfs_distance_based constraints max_distance (ptree : phylogeny) 
         (handle : int) = 
             let to_calculate_for_compare =
                 let to_calculate_for_compare = Stack.create () in
                 match Ptree.get_node handle ptree with
                 | Tree.Interior (s1, s2, _, _)
                 | Tree.Leaf (s1, s2) ->
-                        (let node = Tree.get_node s1 ptree.Ptree.tree in
-                        try
-                            let (a, b) = Tree.other_two_nbrs s2 node in
-                            Stack.push (Tree.Edge (s1, a), 1) to_calculate_for_compare;
-                            Stack.push (Tree.Edge (s1, b), 1) to_calculate_for_compare
-                        with
-                        | _ -> ());
+                        let add_edges parent child =
+                            let node = Tree.get_node child ptree.Ptree.tree in
+                            try
+                                let (a, b) = Tree.other_two_nbrs parent node in
+                                Stack.push (Tree.Edge (child, a), 1) to_calculate_for_compare;
+                                Stack.push (Tree.Edge (child, b), 1) to_calculate_for_compare
+                            with
+                            | _ -> ()
+                        in
+                        if All_sets.Integers.mem s2 constraints || 
+                            All_sets.Integers.mem s1 constraints then ()
+                        else add_edges s2 s1;
                         Stack.push (Tree.Edge (s1, s2), 0) to_calculate_for_compare;
                         to_calculate_for_compare
                 | Tree.Single _ -> failwith "Joining with a single?"
@@ -500,11 +507,12 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
     class union_dfs_wagner max_distance ptree handle : wem = object
 
-        inherit wagner_dfs_distance_based max_distance ptree handle
+        inherit wagner_dfs_distance_based All_sets.Integers.empty max_distance ptree handle
 
         method new_delta _ = ()
 
         method clone = ({< >} :> wem)
+
         method private should_continue_this_path edge x =
             x &&
                 (match edge with
@@ -528,9 +536,29 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                         else true)
     end
 
+    class constrained_dfs_wagner constrains max_distance ptree handle : wem =
+        object
+            inherit wagner_dfs_distance_based constrains max_distance ptree
+            handle as super
+
+            method new_delta _ = ()
+            method clone = ({<>} :> wem)
+
+            method private should_continue_this_path edge x =
+                x &&
+                    (match edge with
+                    | None -> false
+                    | Some (Tree.Edge (a, b)) ->
+                            if All_sets.Integers.mem b constrains then 
+                                false
+                            else if All_sets.Integers.mem a constrains then
+                                false
+                            else true)
+        end
+
     class probabilitisic_union_dfs_wagner max_distance ptree handle 
         : wem = object 
-        inherit wagner_dfs_distance_based max_distance ptree handle
+        inherit wagner_dfs_distance_based All_sets.Integers.empty max_distance ptree handle
 
         method new_delta _ = ()
 
@@ -565,7 +593,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
     class distance_dfs_wagner max_distance ptree handle : wem = object (self)
 
-        inherit wagner_dfs_distance_based max_distance ptree handle
+        inherit wagner_dfs_distance_based All_sets.Integers.empty max_distance ptree handle
 
         method new_delta _ = ()
 
@@ -1706,6 +1734,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
 (* This tabu is used by andres for testing purposes *)
     let wagner_tabu ptree handle = new Unions.wagner_joiner dsp ptree handle
+
+    let wagner_constraint constrain ptree handle = 
+        new constrained_dfs_wagner constrain max_int ptree handle
 
     let distance_dfs_wagner ptree handle = 
         new distance_dfs_wagner max_int ptree handle

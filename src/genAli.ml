@@ -25,7 +25,28 @@ type dyna_state_t = Data.dyna_state_t
 
 (** Given two arrays of orders [seq2] and [re_seq2], 
  * compute their rearrangement distance*)
-let cmp_recost state seq1 seq2 re_seq2 re_meth circular =     
+let cmp_recost state seq1 seq2 reseq2 re_meth circular =     
+(*
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) seq1; 
+    print_newline ();
+
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) seq2; 
+    print_newline ();
+
+
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) reseq2; 
+    print_newline ();
+    print_newline ();
+*)
+
+    let orientation code = 
+        if code mod 2 = 0 then -(code / 2)
+        else (code + 1) /2
+    in 
+    
+    let seq1 = Array.map orientation seq1 in 
+    let seq2 = Array.map orientation seq2 in 
+    let reseq2 = Array.map orientation reseq2 in 
 
     if Array.length seq2 = 0 then 0, 0
     else begin
@@ -33,13 +54,16 @@ let cmp_recost state seq1 seq2 re_seq2 re_meth circular =
             match state with
             | `Breakinv ->                            
                   let seq1_ls = Array.to_list seq1 in 
-                  let reseq2_ls = Array.to_list re_seq2 in 
+                  let reseq2_ls = Array.to_list reseq2 in 
+
+                  let pos_seq1_ls = List.map abs seq1_ls in 
+                  let pos_reseq2_ls = List.map abs reseq2_ls in 
 
                   let com_seq1_ls  = List.filter 
-                          (fun code1 -> List.mem code1 reseq2_ls) seq1_ls 
+                      (fun code1 -> List.mem (abs code1) pos_reseq2_ls) seq1_ls 
                   in 
                   let com_reseq2_ls = List.filter 
-                          (fun code2 -> List.mem code2 com_seq1_ls) reseq2_ls
+                      (fun code2 -> List.mem (abs code2) pos_seq1_ls) reseq2_ls
                   in 
                   let com_seq1_arr = Array.of_list com_seq1_ls in 
                   let com_reseq2_arr = Array.of_list com_reseq2_ls in 
@@ -55,42 +79,46 @@ let cmp_recost state seq1 seq2 re_seq2 re_meth circular =
         let recost2  = 
             match re_meth with 
             | `Inversion cost -> 
-                  (UtlGrappa.cmp_inversion_dis seq2 re_seq2 circular) * cost  
+                  (UtlGrappa.cmp_inversion_dis seq2 reseq2 circular) * cost  
             | `Breakpoint cost ->               
-                  (UtlGrappa.cmp_oriented_breakpoint_dis seq2 re_seq2 circular) * cost   
+                  (UtlGrappa.cmp_oriented_breakpoint_dis seq2 reseq2 circular) * cost   
         in  
+
         recost1, recost2
     end 
 
 
 (** Given two sequences [seq1], [seq2] and rearranged sequence 
- * [re_seq2] of [seq2], compute the total cost between [seq1] and [re_seq2] where 
- * total cost = editing cost (seq1, re_seq2) plus rearrangement cost (seq2, re_seq2) *)
-let cmp_cost state seq1 seq2 re_seq2 gen_cost_mat gap re_meth circular = 
+ * [reseq2] of [seq2], compute the total cost between [seq1] and [reseq2] where 
+ * total cost = editing cost (seq1, reseq2) plus rearrangement cost (seq2, reseq2) *)
+let cmp_cost state seq1 seq2 reseq2 gen_cost_mat gap re_meth circular = 
 
     let alied_seq1, alied_seq2, editing_cost =  
-        Utl.create_pair_align seq1 re_seq2 gen_cost_mat gap
+        Utl.create_pair_align seq1 reseq2 gen_cost_mat gap
     in   
+    let recost1, recost2 = cmp_recost state seq1 seq2 reseq2 re_meth circular in 
+(*
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) seq1; 
+    print_newline ();
 
-(*  
-    let alied_seq1, alied_seq2, editing_cost =  
-    UtlPoy.create_general_ali seq1 re_seq2 gap gen_cost_mat 
-    in   
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) seq2; 
+    print_newline ();
+
+
+    Array.iter (fun c -> Printf.fprintf stdout "%i " c) reseq2; 
+    print_newline ();
+    print_endline "----------------------------------------------------------";
+
 *)
-
-    let recost1, recost2 = cmp_recost state seq1 seq2 re_seq2 re_meth circular in 
-
-
-    
 
     (editing_cost + recost1 + recost2), (recost1, recost2), alied_seq1, alied_seq2
 
 
 
-(** Given two sequences [seq1], [seq2], find rearranged sequence [re_seq2]
+(** Given two sequences [seq1], [seq2], find rearranged sequence [reseq2]
  * of sequence [seq2] using stepwise addition method 
  * such that the total cost is minimum where 
- * total cost = editing cost (seq1, re_seq2) plus rearrangement cost (seq2, re_seq2) *)
+ * total cost = editing cost (seq1, reseq2) plus rearrangement cost (seq2, reseq2) *)
 let find_wagner_ali state seq1 seq2 gen_cost_mat gap re_meth circular = 
     let rec add (best_wagner_seq2 : int array) added_seq2_ls rem_seq2_ls = 
         match rem_seq2_ls with
@@ -100,9 +128,7 @@ let find_wagner_ali state seq1 seq2 gen_cost_mat gap re_meth circular =
 
               let wagner_cost = ref Utl.infinity in 
               let wagner_seq2 = ref [||] in 
-              for pos = 0 to Array.length best_wagner_seq2 do 
-                  let partial_seq2 = Utl.insert best_wagner_seq2 pos code2 in 
-
+              let update partial_seq2 =
                   let cost, (_, _), _, _  = 
                       cmp_cost state seq1 (Array.of_list added_seq2_ls) partial_seq2 
                           gen_cost_mat gap re_meth circular
@@ -111,8 +137,19 @@ let find_wagner_ali state seq1 seq2 gen_cost_mat gap re_meth circular =
                   if cost < !wagner_cost then begin
                       wagner_cost := cost; 
                       wagner_seq2 := partial_seq2 
+                  end;
+
+              in 
+
+              for pos = 0 to Array.length best_wagner_seq2 do 
+                  let partial_seq2 = Utl.insert best_wagner_seq2 pos code2 in 
+                  update partial_seq2;
+
+                  if code2 mod 2 = 1 then begin
+                      let partial_seq2 = Utl.insert best_wagner_seq2 pos (code2 + 1) in 
+                      update partial_seq2;
                   end 
-              done;              
+              done;  
               add !wagner_seq2 added_seq2_ls tl
     in
               
@@ -121,9 +158,9 @@ let find_wagner_ali state seq1 seq2 gen_cost_mat gap re_meth circular =
 
 
 (** Given two sequences [seq1], [seq2] and rearranged sequence 
- * [re_seq2] of [seq2], swap [re_seq2] in order to minimize the total
- * cost between [seq1] and [re_seq2] where 
- * total cost = editing cost (seq1, re_seq2) plus rearrangement cost (seq2, re_seq2) *)
+ * [reseq2] of [seq2], swap [reseq2] in order to minimize the total
+ * cost between [seq1] and [reseq2] where 
+ * total cost = editing cost (seq1, reseq2) plus rearrangement cost (seq2, reseq2) *)
 let rec multi_swap_locus state seq1 seq2 best_seq2 best_cost 
         gen_cost_mat gap re_meth max_swap_med
         circular num_done_swap =             

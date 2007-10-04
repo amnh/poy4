@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2169 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2265 $"
 
 module IntSet = All_sets.Integers
 
@@ -55,6 +55,7 @@ let has_something x = List.exists (is_something x)
 let build_has item = function
     | `Mst _ 
     | `Prebuilt _ -> false
+    | `Branch_and_Bound (_, _, _, _, l) 
     | `Build (_, _, l)
     | `Build_Random (_, _, l, _) -> has_something item l
 
@@ -146,7 +147,7 @@ let reroot_at_outgroup run =
                try
                    let nbr = Ptree.get_parent outgroup ptree in
                    let ptree, update =
-                       TreeOps.reroot_fn (Tree.Edge (outgroup, nbr)) ptree in
+                       TreeOps.reroot_fn false (Tree.Edge (outgroup, nbr)) ptree in
                    let ptree = TreeOps.incremental_uppass ptree update in
                    ptree
                with _ -> ptree
@@ -671,11 +672,11 @@ let rec process_application run item =
                  | `Information -> Status.Information
                  | `Error -> Status.Error
                  | `Output str ->
-                       if str = "-"
-                       then Status.Output (None, false, [])
-                       else Status.Output (Some str, false, [])
+                         match str with
+                         | None -> Status.Output (None, false, [])
+                         | Some str -> Status.Output (Some str, false, [])
              in
-             Status.user_message c (s ^ "@\n");
+             Status.user_message c (s ^ "@\n%!");
              run
      | `Graph (filename, collapse) ->
              let run = reroot_at_outgroup run in
@@ -866,7 +867,6 @@ exception Error_in_Script of (exn * r)
 let check_ft_queue run =
     if Stack.is_empty run.queue.Sampler.stack then ()
     else begin
-        Queue.clear run.queue.Sampler.queue;
         while not (Stack.is_empty run.queue.Sampler.stack) do
             Queue.push (Stack.pop run.queue.Sampler.stack)
             run.queue.Sampler.queue;
@@ -1174,6 +1174,28 @@ END
 
 IFDEF USEPARALLEL THEN
     let args = Mpi.init Sys.argv
+
+    let () = 
+        let my_rank = Mpi.comm_rank Mpi.comm_world in
+        let vbst = Mpi.broadcast Methods.Low 0 Mpi.comm_world in
+        match my_rank with
+        | 0 -> ()
+        | _ -> 
+                let printer_function t m =
+                    let vbst = 
+                        match t with
+                        | Status.Output _ -> Methods.High
+                        | _ -> vbst
+                    in
+                    match vbst with
+                    | Methods.High -> 
+                            Mpi.send (t, m) 
+                            0
+                            Methods.io
+                            Mpi.comm_world
+                    | _ -> ()
+                in
+                Status.is_parallel (Some printer_function)
 
     let debug_parallel = false
     let print_msg msg = 

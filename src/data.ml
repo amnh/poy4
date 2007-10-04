@@ -69,22 +69,24 @@ type dyna_pam_t = {
     swap_med : int option; 
     (** number iterations are applied 
     in refining alignments with rearrangements *)
-    approx : bool option
+    approx : bool option;
+    symmetric : bool option;
 }
 
 let dyna_pam_default ={ 
-    seed_len = None;
-    re_meth = None;
-    circular = None;
-    locus_indel_cost = None;
-    chrom_indel_cost = None;
-    chrom_hom = None;
-    chrom_breakpoint = None;
-    sig_block_len = None;
-    rearranged_len = None;
-    keep_median = None;
-    swap_med = None;
-    approx = None;
+    seed_len = Some 9;
+    re_meth = Some (`Breakpoint 10);
+    circular = Some 0;
+    locus_indel_cost = Some (10, 100);
+    chrom_indel_cost = Some (10, 100);
+    chrom_hom = Some 200;
+    chrom_breakpoint = Some 100;
+    sig_block_len = Some 100;
+    rearranged_len = Some 100;
+    keep_median = Some 1;
+    swap_med = Some 1;
+    approx = Some false;
+    symmetric = Some false;
 }
 
 type dynamic_hom_spec = {
@@ -1677,17 +1679,64 @@ let states_set_to_formatter enc : Tags.output =
     let res = All_sets.Integers.fold add set [] in
     Tags.Characters.states, [], `Structured (`Set res)
 
+let pam_spec_to_formatter (state : dyna_state_t) pam =
+    let option_to_string contents = function
+        | Some x -> contents x
+        | None -> assert false
+    in
+    let handle_bool = option_to_string string_of_bool 
+    and handle_int = option_to_string string_of_int 
+    and handle_of_tuple = 
+        option_to_string 
+        (fun (x, y) -> string_of_int x ^ ", " ^ string_of_int y)
+    and handle_re_meth x = 
+        let conversion =
+            (function `Breakpoint x | `Inversion x -> string_of_int x)
+        in
+        match x with
+        | Some x -> conversion x
+        | None -> assert false
+    in
+    match (state : dyna_state_t) with
+    | `Seq -> [Tags.Characters.clas, Tags.Characters.sequence]
+    | others -> 
+            let clas = 
+                match others with
+                | `Chromosome -> Tags.Characters.chromosome
+                | `Genome -> Tags.Characters.genome
+                | `Annotated -> Tags.Characters.annotated
+                | `Breakinv -> Tags.Characters.breakinv
+                | _ -> assert false
+            in
+            [Tags.Characters.clas, clas; 
+            Tags.Characters.seed_len, handle_int pam.seed_len; 
+            Tags.Characters.re_meth, handle_re_meth pam.re_meth;
+            Tags.Characters.circular, handle_int pam.circular;
+            Tags.Characters.locus_indel_cost,
+            handle_of_tuple pam.locus_indel_cost;
+            Tags.Characters.chrom_indel_cost,
+            handle_of_tuple pam.chrom_indel_cost;
+            Tags.Characters.chrom_hom, handle_int pam.chrom_hom;
+            Tags.Characters.chrom_breakpoint, handle_int pam.chrom_breakpoint;
+            Tags.Characters.sig_block_len, handle_int pam.sig_block_len;
+            Tags.Characters.rearranged_len, handle_int pam.rearranged_len;
+            Tags.Characters.keep_median, handle_int pam.keep_median;
+            Tags.Characters.swap_med, handle_int pam.swap_med;
+            Tags.Characters.approx, handle_bool pam.approx;
+            Tags.Characters.symmetric, handle_bool pam.symmetric;]
+
 let character_spec_to_formatter enc : Tags.output =
     match enc with
     | Static enc ->
             Parser.SC.to_formatter enc
     | Dynamic dspec ->
-            Tags.Characters.molecular, 
-            [
-                Tags.Characters.name, dspec.filename;
-                Tags.Characters.fixed_states, dspec.fs;
-                Tags.Characters.tcm, dspec.tcm;
-            ],
+            Tags.Characters.molecular,
+            ( (Tags.Characters.name, dspec.filename) ::
+                (Tags.Characters.fixed_states, dspec.fs) ::
+                (Tags.Characters.tcm, dspec.tcm) ::
+                (Tags.Characters.weight, string_of_float dspec.weight) ::
+                (pam_spec_to_formatter dspec.state dspec.pam)
+            ),
             `Structured (`Single (Alphabet.to_formatter dspec.alph))
     | Set -> failwith "TODO Set in Data.character_spec_to_formatter"
 
@@ -1736,7 +1785,8 @@ let set_dyna_pam dyna_pam_ls =
         | `Keep_Median c -> 
                 {dyna_pam with keep_median = Some c}
         | `SwapMed c -> {dyna_pam with swap_med = Some c}    
-        | `Approx c  -> {dyna_pam with approx = Some c}) 
+        | `Approx c  -> {dyna_pam with approx = Some c} 
+        | `Symmetric c  -> {dyna_pam with symmetric = Some c}) 
     ~init:dyna_pam_default dyna_pam_ls
 
 let get_dynas data dyna_code = 

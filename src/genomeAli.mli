@@ -114,13 +114,13 @@ val create_genome_blocks :
   med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> genome_block_t list
 val create_med :
   med_t ->
-  med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> med_t * int * int * int
+  med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> med_t * int * (int * int)
 val cmp_cost :
-  med_t -> med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * int
+  med_t -> med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * (int * int)
 val find_med2_ls :
   med_t ->
   med_t ->
-  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * int * med_t list
+  Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * (int * int) * med_t list
 val compare : med_t -> med_t -> int
 val create_map : med_t -> int -> int * int * Tags.output
 val to_single :

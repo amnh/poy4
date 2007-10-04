@@ -312,7 +312,7 @@ seq_CAML_deserialize (void *v) {
     if (n->head == NULL) failwith("Memory error.");
     n->end = n->head + n->cap - 1;
     n->begin = n->head + n->cap - n->len;
-    deserialize_block_4(n->begin, n->len);
+    DESERIALIZE_SEQT(n->begin,n->len);
     n->my_pool = NULL;
     return (sizeof(struct seq **));
 }
@@ -327,7 +327,7 @@ seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64)
     serialize_int_4(v->cap);
     serialize_int_4(v->len);
     tmp = v->begin;
-    serialize_block_4(tmp, v->len);
+    SERIALIZE_SEQT(tmp,v->len);
     *wsize_64 = *wsize_32 = sizeof(struct seq **);
     CAMLreturn0;
 }

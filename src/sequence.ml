@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2177 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2265 $"
 
 module Pool = struct
     type p
@@ -1621,16 +1621,22 @@ external encoding :
     (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array1.t -> 
         s -> float = "seq_CAML_encoding"
 
-let complement a s = 
-    let gap = Alphabet.get_gap a in
+let aux_complement start a s = 
     let res =
         let acc = (create_same_pool s (length s)) in
-        for i = 1 to (length s) - 1 do
+        for i = start to (length s) - 1 do
             match Alphabet.complement (get s i) a with
             | Some x -> prepend acc x
             | None -> failwith "I can't complement this alphabet"
         done;
         acc
     in
+    res
+
+let complement a s = 
+    let gap = Alphabet.get_gap a in
+    let res = aux_complement 1 a s in
     prepend res gap;
     res
+
+let complement_chrom = aux_complement 0 

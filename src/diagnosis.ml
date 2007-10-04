@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 2157 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 2265 $"
 
 let debug = true
 
@@ -40,10 +40,70 @@ let sort_using_tree tree all_taxa =
     in
     List.rev res
 
-let output_implied_alignment (tree, seqname) filename data to_process = 
-    Status.user_message (Status.Output (filename, false, [])) 
-    ("@[<v>@,@[New Tree@ for@ sequence@ " ^ seqname ^ "@]@,@[");
+(** Functions to output immediately all the taxa without memory consumption *)
+module O = struct
+    let header_f filename seqname () = 
+        Status.user_message (Status.Output (filename, false, [])) 
+        ("@[<v>@,@[New Tree@ for@ sequence@ " ^ seqname ^ "@]@,@[")
 
+    let rec sequence_f ?(break=true) alphabet gap (taxon, result, pos, cnt) base =
+        if cnt = 0 then (taxon, result, pos, 1) 
+        else if break && 80 = pos then 
+            sequence_f alphabet gap (taxon, result ^ "@,", 0, cnt) base
+        else if base = 0 then 
+            taxon, result ^ gap, pos + 1, cnt
+        else 
+            let item = 
+                Alphabet.match_code base alphabet 
+        in
+        (taxon, result ^ item, pos + 1, cnt) 
+
+    let taxonf name = (name, "", 0, 0)
+
+    let taxon_closef filename (name, result, _, _) =
+        let fo = Status.Output (filename, false, []) in
+        Status.user_message fo ("@,@[<v>@,>" ^ name ^
+        "@,");
+        Status.user_message fo result;
+        Status.user_message fo "@]%!"
+
+    let closef filename () = 
+        Status.user_message (Status.Output (filename, false, [])) "@]@]"
+
+end
+
+(**************)
+
+(** Functions to concatenate all of the sequences belonging to the same taxon 
+* in one long line *)
+
+module C = struct
+    let break = false
+    let header_f _ _ () = ()
+    let sequence_f = O.sequence_f ~break
+    let taxonf = O.taxonf
+    let taxon_closef hash filename (name, result, _, _) =
+        Hashtbl.add hash name result
+    let closef _ () = ()
+    let output_all_taxa filename seqname hash =
+        O.header_f filename seqname ();
+        let names = ref All_sets.Strings.empty in
+        Hashtbl.iter (fun x b -> 
+            if not (All_sets.Strings.mem x !names) then
+                names := All_sets.Strings.add x !names
+            else ()) hash;
+        All_sets.Strings.iter (fun taxon ->
+            let terms = List.rev (Hashtbl.find_all hash taxon) in
+            let fo = Status.user_message (Status.Output (filename, false, [])) in
+            fo ("@,@[<v>@,>" ^ taxon ^ "@,");
+            List.iter (fun x -> fo x; fo " ") terms;
+            fo "@]%!") !names 
+end
+
+(**************)
+let output_implied_alignment (tree, seqname) headerf taxonf taxon_closef seqf 
+closef data to_process = 
+    headerf ();
     (* This function expects only one element *)
     match to_process with
     | [all_taxa, _] ->
@@ -83,29 +143,14 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                                         done
                                     else ()
                                 in
-                                preprocess_sequence sequence;
-                                let rec folder (result, pos, cnt) base =
-                                    if cnt = 0 then (result, pos, 1) 
-                                    else if 80 = pos then 
-                                        folder (result ^ "@,", 0, cnt) base
-                                    else if base = 0 then 
-                                        result ^ gap, pos + 1, cnt
-                                    else 
-                                        let item = 
-                                            Alphabet.match_code base alphabet 
-                                        in
-                                        (result ^ item, pos + 1, cnt) 
+                                let () = preprocess_sequence sequence in
+                                let accumulator = 
+                                    Array.fold_left (seqf alphabet gap) 
+                                    (taxonf name) sequence 
                                 in
-                                let result, _, _ = 
-                                    Array.fold_left folder ("", 0, 0) sequence 
-                                in
-                                let fo = Status.Output (filename, false, []) in
-                                Status.user_message fo ("@,@[<v>@,>" ^ name ^
-                                "@,");
-                                Status.user_message fo result;
-                                Status.user_message fo "@]%!";
-
-                                if Array.length sequence_arr = 1 then (taxcode, tl) :: acc
+                                let () = taxon_closef accumulator in
+                                if Array.length sequence_arr = 1 then 
+                                    (taxcode, tl) :: acc
                                 else begin
                                     let hd_sequence = All_sets.IntegerMap.map
                                         (fun sequence_arr -> Array.of_list
@@ -114,8 +159,6 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                                     in 
                                     (taxcode, hd_sequence::tl)::acc
                                 end 
-
-
                         | None -> (taxcode, tl) :: acc)
                 | [] -> acc
             in
@@ -127,7 +170,7 @@ let output_implied_alignment (tree, seqname) filename data to_process =
                         process_all_sequences acc
             in
             process_all_sequences all_taxa;
-            Status.user_message (Status.Output (filename, false, [])) "@]@]";
+            closef ();
     | _ -> failwith "Diagnosis.output_implied_alignment 1"
 
 module type S = sig
@@ -175,22 +218,43 @@ module Make
                     Data.get_code_from_characters_restricted_comp
                     `AllDynamic data chars 
                 in
+                let char_codes = List.sort compare char_codes in
                 let res = 
                     List.map (fun code -> Sexpr.map (fun x -> 
                         let seqname = Data.code_character code data in
                         let ia = IA.create CT.filter_characters [code] data x in
                         (x.Ptree.tree, seqname) , ia) trees) char_codes  
                 in
+                let extract_name name = 
+                    match Str.split (Str.regexp ":") name with
+                    | h :: _ -> h
+                    | [] -> name
+                in
+                let hash = ref (Hashtbl.create 97) 
+                and name = ref "" in
                 List.iter (fun res ->
                     Status.user_message 
                     (Status.Output (filename, false, [])) "@[<v>@,@,@{<b>Implied \
                     Alignments@}@,";
                     Sexpr.leaf_iter 
-                    (fun (x, y) -> List.iter (output_implied_alignment x filename
+                    (fun (x, y) ->
+                        let (_, seqname) = x in
+                        if (extract_name seqname) = !name then ()
+                        else begin
+                            C.output_all_taxa filename !name !hash;
+                            hash := Hashtbl.create 97;
+                            name := extract_name seqname;
+                        end;
+                        List.iter 
+                        (output_implied_alignment x 
+                        (C.header_f filename seqname) C.taxonf 
+                        (C.taxon_closef !hash filename) (C.sequence_f) 
+                        (C.closef filename) 
                     data) y) res;
                     Status.user_message 
                     (Status.Output (filename, false, [])) "@]%!")
-                res
+                res;
+                C.output_all_taxa filename !name !hash
 
 
 end

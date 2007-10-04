@@ -107,6 +107,7 @@ type ('a, 'b) cost_fn =
 * at this location. *)
 
 type ('a, 'b) reroot_fn =
+    bool ->
     Tree.edge ->
     ('a, 'b) p_tree ->
     ('a, 'b) p_tree * incremental list

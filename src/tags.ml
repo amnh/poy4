@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tags" "$Revision: 2127 $"
+let () = SadmanOutput.register "Tags" "$Revision: 2265 $"
 
 type tag = string
 type value = tag
@@ -120,6 +120,27 @@ module Characters = struct
     let equivalent = "Equivalency"
     let from = "From"
     let towards = "To"
+
+    (* All the chromosomal information character contents *)
+    let clas = "class"
+    let sequence = "sequence"
+    let chromosome = "chromosome"
+    let genome = "genome"
+    let annotated = "annotated"
+    let breakinv = "breakinv"
+    let seed_len = "seed_len"
+    let re_meth = "re_meth"
+    let circular = "circular"
+    let locus_indel_cost = "locus_indel_cost"
+    let chrom_indel_cost = "chrom_indel_cost"
+    let chrom_hom = "chrom_hom"
+    let chrom_breakpoint = "chrom_breakpoint"
+    let sig_block_len = "sig_block_len"
+    let rearranged_len = "rearranged_len"
+    let keep_median = "keep_median"
+    let swap_med = "swap_med"
+    let approx = "approx"
+    let symmetric = "symmetric"
 end
 
 module Nodes = struct

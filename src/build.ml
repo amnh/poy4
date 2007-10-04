@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2006 $"
+let () = SadmanOutput.register "Build" "$Revision: 2265 $"
 
 let debug_profile_memory = false
 
@@ -49,11 +49,22 @@ let rec build_features meth =
                             other_features "minimum spanning tree wagner" max_n
                     | `Wagner_Distances (max_n, _, _, _) ->
                             other_features "distances based tree wagner" max_n
+                    | (`Branch_and_Bound _) 
                     | (`Prebuilt _) as x ->
                             build_features x
-                    | _ -> [])
-    | `Build_Random _ ->  (* TODO *)
-            failwith "Unsupported"
+                    | _ -> [] )
+    | `Branch_and_Bound (bound, threshold, keep_method, max_trees, _) ->
+            [("type", "Branch and bound"); ("initial_bound", match bound with | None ->
+                "none" | Some x -> string_of_float x); 
+                ("threshold", match threshold with
+                | None -> "0.0" | Some x -> string_of_float x);
+                ("number of trees to keep", string_of_int max_trees);
+                ("keep method", match keep_method with
+                | `Last -> "last"
+                | `First -> "first"
+                | `Keep_Random -> "random")]
+    | `Build_Random _ ->  
+            [("type", "Uniformly at random")]
 
 
 let remove_exact (meth : Methods.cost_calculation) (acc : Methods.transform
@@ -67,12 +78,15 @@ let rec get_transformations (meth : Methods.build) : Methods.transform list =
     | `Build (n, build_meth, trans) ->
             List.fold_right remove_exact (trans @ 
             (match build_meth with
+            | `Branch_and_Bound (_, _, _, _, trans)
             | `Wagner_Distances (_, _, trans, _)
             | `Wagner_Mst (_, _, trans, _) 
             | `Wagner_Rnd (_, _, trans, _) 
             | `Wagner_Ordered (_, _, trans, _)
+            | `Constraint (_, _, _, trans)
             | `Build_Random (_, _, trans, _) -> trans
             | `Prebuilt _ -> [])) []
+    | `Branch_and_Bound (_, _, _, _, trans)
     | `Build_Random (_, _, trans, _) -> 
             List.fold_right remove_exact trans []
 
@@ -127,6 +141,190 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         let leafs = set_of_leafs data in
         let tree = Ptree.make_disjoint_tree leafs in
         PtreeSearch.downpass tree
+
+    let edges_of_tree tree =
+        Tree.EdgeSet.fold (fun x acc -> x :: acc) tree.Ptree.tree.Tree.d_edges []
+
+    let random_tree data nodes =
+        let pick_random_edge tree =
+            let edges = edges_of_tree tree in
+            let arr = Array.of_list edges in
+            Array_ops.randomize arr;
+            arr.(0)
+        in
+        let rec aux_random_constructor tree node =
+            let tree, _ = 
+                let (Tree.Edge (x, y)) = pick_random_edge tree in
+                TreeOps.join_fn [] (Tree.Edge_Jxn (x, y)) node tree
+                in
+                tree
+        in
+        let initial_tree = disjoin_tree nodes in
+        let nodes = 
+            let nodes = Array.of_list nodes in
+            Array_ops.randomize nodes;
+            Array.to_list nodes
+        in
+        let nodes = 
+            List.map (fun x -> Tree.Single_Jxn (Node.taxon_code
+                x)) nodes
+        in
+        match nodes with
+        | f :: s :: tail ->
+                let new_tree, _ = TreeOps.join_fn [] f s initial_tree in
+                Sexpr.fold_status
+                "Random tree" ~eta:true aux_random_constructor new_tree 
+                (Sexpr.of_list tail)
+        | _ -> initial_tree
+
+    let branch_and_bound keep_method max_trees threshold data nodes bound =
+        let select_appropriate bound_plus_threshold lst =
+            let lst = List.filter (fun x -> bound_plus_threshold >=
+                Ptree.get_cost `Adjusted x) lst in 
+            let len = List.length lst in
+            if len <= max_trees then lst
+            else
+                let () = assert (len = max_trees + 1) in
+                match keep_method with
+                | `Last ->
+                        (match List.rev lst with
+                        | h :: lst -> List.rev lst
+                        | [] -> assert false)
+                | `First ->
+                        (match lst with
+                        | h :: lst -> lst
+                        | [] -> assert false)
+                | `Keep_Random ->
+                        (let arr = Array.of_list lst in
+                        Array_ops.randomize arr;
+                        match Array.to_list arr with
+                        | h :: lst -> lst
+                        | [] -> assert false)
+        in
+        let bound = 
+            match bound with
+            | None -> max_float /. 2.
+            | Some x -> x
+        in
+        let rec aux_branch_and_bound ((bound, best_trees) as acc) tree edges 
+        cur_handle other_handles =
+            match edges with
+            | (Tree.Edge (x, y)) :: t ->
+                    let new_tree, _ = 
+                        TreeOps.join_fn [] (Tree.Edge_Jxn (x, y)) cur_handle
+                        tree
+                    in
+                    let new_cost = Ptree.get_cost `Adjusted new_tree in
+                    if new_cost >  bound +. threshold then 
+                        aux_branch_and_bound acc tree t cur_handle other_handles
+                    else begin
+                        let acc =
+                            match other_handles with
+                            | nh :: oh ->
+                                        aux_branch_and_bound acc new_tree 
+                                        (edges_of_tree new_tree)  (Tree.Single_Jxn nh)
+                                        oh
+                            | [] -> 
+                                    let realbound = bound +. threshold in
+                                    if new_cost < bound then
+                                        new_cost, 
+                                        select_appropriate 
+                                        (new_cost +. threshold)
+                                        (new_tree :: best_trees)
+                                    else if new_cost <= realbound then
+                                        let nl = (new_tree ::  best_trees) in
+                                        (bound, select_appropriate realbound nl)
+                                    else acc
+                        in
+                        aux_branch_and_bound acc tree t cur_handle
+                        other_handles
+                    end
+            | [] -> acc
+        in
+        let initial_tree = disjoin_tree nodes in
+        let _, trees =
+            if max_trees < 1 then 0., []
+            else
+                match nodes with
+                | f :: s :: tail ->
+                        let codef = Node.taxon_code f 
+                        and codes = Node.taxon_code s in
+                        let new_tree, _ = 
+                            TreeOps.join_fn [] (Tree.Single_Jxn codef) 
+                            (Tree.Single_Jxn codes) initial_tree
+                        in
+                        let res =
+                            match tail with
+                            | t :: tail ->
+                                    aux_branch_and_bound (bound, []) new_tree 
+                                    (edges_of_tree new_tree) 
+                                    (Tree.Single_Jxn (Node.taxon_code t))
+                                    (List.map Node.taxon_code tail)
+                            | [] -> Ptree.get_cost `Adjusted new_tree,
+                            [new_tree]
+                        in
+                        res
+                | _ -> 0., [initial_tree]
+        in
+        Sexpr.of_list trees
+
+    let constrained_build cg data n constraint_tree nodes = 
+        let rec randomize_tree tree = 
+            match tree with
+            | Parser.Tree.Leaf _ -> tree
+            | Parser.Tree.Node (lst, res) ->
+                    let arr = Array.map randomize_tree (Array.of_list lst) in
+                    Array_ops.randomize arr;
+                    Parser.Tree.Node ((Array.to_list arr), res)
+        in
+        let ptree = disjoin_tree nodes in
+        let rec aux_constructor ptree tree = 
+            match tree with
+            | Parser.Tree.Leaf x -> 
+                    ptree, (Data.taxon_code x data)
+            | Parser.Tree.Node ([x], _) ->
+                    aux_constructor ptree x
+            | Parser.Tree.Node (lst, _) ->
+                    let ptree, handles = 
+                        List.fold_left (fun (ptree, acc) item ->
+                            let ptree, nh = aux_constructor ptree item in
+                            ptree, (nh :: acc)) (ptree, []) lst 
+                    in
+                    let handles = 
+                        List.map 
+                        (fun (x : int) -> Ptree.handle_of x ptree) 
+                        handles
+                    in
+                    let constraints = List.fold_left (fun acc x ->
+                        let acc = All_sets.Integers.add x acc in
+                        try 
+                            let parent = Ptree.get_parent x ptree in
+                            All_sets.Integers.add parent acc
+                        with
+                        | _ -> acc) All_sets.Integers.empty handles 
+                    in
+                    match (PtreeSearch.make_wagner_tree ~sequence:handles ptree
+                    cg single_wagner_search_manager (BuildTabus.wagner_constraint constraints))#results, handles with
+                    | ((ptree, _) :: _), (h :: _) -> 
+                             ptree, h
+                    | _ -> assert false
+        in
+        let st = Status.create "Constrained Wagner Replicate" (Some n)
+        "Constrained Wagner tree replicate building" in
+        let rec total_builder res blt =
+            Status.full_report ~adv:(n - blt) st;
+            if blt = n then 
+                let () = Status.finished st in
+                `Set res
+            else 
+                let tree, _ = 
+                    aux_constructor ptree (randomize_tree constraint_tree) 
+                in
+                let tree = TreeOps.uppass tree in
+                total_builder ((`Single tree) :: res) (blt + 1)
+        in
+        if n < 0 then `Empty 
+        else total_builder [] 0
 
     let single_wagner wmgr cg data = 
         let disjoin_tree = disjoin_tree data in
@@ -382,6 +580,10 @@ module TS = Ptree.Search (Node) (Edge) (TreeOps)
 
 let rec build_initial_trees trees data nodes (meth : Methods.build) =
     let d = (data, nodes) in
+    let cg () = 
+        incr Data.median_code_count;
+        !Data.median_code_count
+    in
     let built_tree_report acc trees =
         let builder (acc, cnt) t =
             let cost = Ptree.get_cost `Adjusted t in
@@ -391,8 +593,40 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
         in
         builder acc trees
     in
+    let do_constraint file =
+        match file with
+        | None -> 
+                let hd, tree_list = 
+                    match Sexpr.to_list trees with
+                    | (h :: _) as t -> h, t
+                    | [] -> failwith "No trees for constraint"
+                in
+                let maj = List.length tree_list in
+                Ptree.consensus TS.collapse_as_needed 
+                (fun code -> Data.code_taxon code data) maj 
+                (Sexpr.to_list trees) 
+                (match data.Data.root_at with
+                | Some v -> v
+                | None ->
+                        let f = Sexpr.first trees in
+                        Ptree.choose_leaf f)
+        | Some file ->
+                match (Data.process_trees data file).Data.trees with
+                | [[one]] -> one
+                | _ -> failwith "Illegal input constraint file"
+    in
     let perform_build () =
         match meth with
+        | `Constraint (n, threshold, file, _) ->
+                let constraint_tree = do_constraint file in
+                constrained_build cg data n constraint_tree nodes
+        | `Branch_and_Bound (bound, threshold, keep_method, max_trees, _) ->
+                let threshold = 
+                    match threshold with
+                    | None -> 0.
+                    | Some x -> x
+                in
+                branch_and_bound keep_method max_trees threshold data nodes bound
         | `Prebuilt file -> 
                 let data = Data.process_trees data file in
                 let trees = data.Data.trees in
@@ -401,13 +635,21 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
                 let new_nodes = nodes in
                 (** TODO: Add different cost calculation heuristic methods *)
                 (** TODO: Add different keep methods *)
-                if n = 0 then trees
+                if n < 1 then trees
                 else
-                    let cg () = 
-                        incr Data.median_code_count;
-                        !Data.median_code_count
-                    in
                     begin match build_meth with
+                    | `Constraint (_, threshold, file, _) ->
+                            let constraint_tree = do_constraint file in
+                            constrained_build cg data n constraint_tree nodes
+                    | `Branch_and_Bound 
+                        (bound, threshold, keep_method, max_trees, _) ->
+                            let threshold = 
+                                match threshold with
+                                | None -> 0.
+                                | Some x -> x
+                            in
+                            branch_and_bound keep_method (n * max_trees) 
+                            threshold data nodes bound
                     | `Wagner_Rnd (max_n, _, lst, tabu_mgr) ->
                             let tabu_mgr = pick_tabu_manager tabu_mgr in
                             let res = 
@@ -467,11 +709,25 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
                             Sexpr.of_list (Sexpr.to_list lst)
                     | (`Prebuilt _) as x -> build_initial_trees trees data nodes x
                     | `Build_Random _ ->
-                            (* TODO *)
-                            failwith "TODO";
+                            let st = Status.create "Random Trees build" (Some n)
+                            ""
+                            in
+                            let arr = Array.init n (fun x ->
+                                Status.full_report ~adv:x st;
+                                random_tree data nodes) 
+                            in
+                            Status.finished st;
+                            Sexpr.of_list (Array.to_list arr)
                 end;
-        | `Build_Random _ -> (* TODO *)
-                failwith "Unsupported"
+        | `Build_Random (n, _, _, _) -> 
+                            let st = Status.create "Random Trees build" (Some n)
+                            "" in
+                let arr = Array.init n (fun x ->
+                                Status.full_report ~adv:x st;
+                    random_tree data nodes) 
+                            in
+                            Status.finished st;
+                            Sexpr.of_list (Array.to_list arr)
     in
     Sadman.start "build" (build_features meth);
     let timer = Timer.start () in

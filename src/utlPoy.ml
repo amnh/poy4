@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlPoy" "$Revision: 2198 $"
+let () = SadmanOutput.register "UtlPoy" "$Revision: 2265 $"
 
 let fprintf = Printf.fprintf
 
@@ -255,16 +255,6 @@ let get_num_base (seq : Sequence.s) =
                        else num_code) 0 seq
 	
 	
-let reverse_subseq (seq : Sequence.s) (start_pos : int) (end_pos : int) = 
-	if (start_pos = 0) && (end_pos + 1 = Sequence.length seq) then 
-		Sequence.reverse_ip seq
-	else begin
-		let code_arr = Sequence.to_array seq in 
-		for offset = 0 to (end_pos - start_pos) do
-			Sequence.set seq (start_pos + offset) code_arr.(end_pos - offset)
-		done
-	end
-		
 
 let delete_gap ?(gap_code = dna_gap) seq = 
 	let new_len = Sequence.fold 
@@ -474,3 +464,4 @@ let test_general_ali  () =
 
         
 let get_single_seq seq c2 = Sequence.select_one seq c2
+

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlGrappa" "$Revision: 1644 $"
+let () = SadmanOutput.register "UtlGrappa" "$Revision: 2265 $"
 
 (** This module provide functions for rearrangement operations such as computing
     inversion, breakpoint distances between two gene orders arrays *)
@@ -126,7 +126,6 @@ let cmp_breakpoint_dis (genomeX : int array) (genomeY : int array) circular =
  * For example: X = (-6, 1, 5), Y = (-5, 1, 6) *)
 let cmp_oriented_breakpoint_dis (genomeX : int array) (genomeY : int array)
         circular = 
-
     let _, sta_genomeY = standardize genomeX genomeY in
                         
     let num_gene = Array.length sta_genomeY in 

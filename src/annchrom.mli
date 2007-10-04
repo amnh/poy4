@@ -46,3 +46,7 @@ val compare : meds_t -> meds_t -> int
 val to_string : annchrom_t -> Alphabet.a -> string
 val get_active_ref_code : meds_t -> int * int * int
 val copy_chrom_map : meds_t -> meds_t -> meds_t
+val readjust_3d :
+  meds_t ->
+  meds_t ->
+  meds_t -> Cost_matrix.Two_D.m -> 'a -> meds_t -> int * meds_t * bool

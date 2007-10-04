@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2169 $"
+let () = SadmanOutput.register "Main" "$Revision: 2265 $"
 
-(* $Id: main.ml 2169 2007-09-01 22:49:51Z andres $ *)
+(* $Id: main.ml 2265 2007-10-04 14:40:44Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -43,27 +43,6 @@ IFDEF USEPARALLEL THEN
 
 let my_rank = Mpi.comm_rank Mpi.comm_world
 
-let _ = 
-    let vbst = Mpi.broadcast Methods.Low 0 Mpi.comm_world in
-    match my_rank with
-    | 0 -> ()
-    | _ -> 
-            let printer_function t m =
-                let vbst = 
-                    match t with
-                    | Status.Output _ -> Methods.High
-                    | _ -> vbst
-                in
-                match vbst with
-                | Methods.High -> 
-                        Mpi.send (t, m) 
-                        0
-                        Methods.io
-                        Mpi.comm_world
-                | _ -> ()
-            in
-            Status.is_parallel (Some printer_function)
-
 let () = 
     if my_rank <> 0 then SadmanOutput.do_sadman := false
     else ()
@@ -77,7 +56,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2169 $"
+let () = SadmanOutput.register "Main" "$Revision: 2265 $"
 
 let () = Status.init ()
 

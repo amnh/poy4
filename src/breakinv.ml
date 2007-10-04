@@ -111,19 +111,6 @@ let find_meds2 (meds1 : meds_t) (meds2 : meds_t) =
          num_med = List.length kept_med_ls} 
 
     
-
-(** Given three lists of medians [medsp=(x1,...,xk)], [meds1=(y1,...,yt)]
- * and [meds2=(z1,...,zq)] where xi, yj, and zp are medians. 
- * For each triplet (xi, yj, zp) we have 
- * a list of medians w_ijp with the same cost c_ijp. 
- * Find w*ijp = minargv_(w_ijp) (c_ijp) *)
-let find_meds3 (medsp: meds_t) (meds1: meds_t) (meds2: meds_t) =
-    let meds1p = find_meds2 meds1 medsp in 
-    let meds2p = find_meds2 meds2 medsp in 
-    if meds1p.total_cost < meds2p.total_cost then meds1p
-    else meds2p
-            
-       
 (** Given two lists of medians [meds1=(x1,...,xk)] and [meds2=(y1,...,yt)]
  * where xi and yj are medians. For each pair (xi, yj) we have 
  * a list of medians z_ij with the same cost c_ij. 
@@ -166,6 +153,28 @@ let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) =
         ) (0, 0) meds1.med_ls 
     in 
     max_cost, max_recost
+
+
+(** Given three lists of medians [medsp=(x1,...,xk)], [meds1=(y1,...,yt)]
+ * and [meds2=(z1,...,zq)] where xi, yj, and zp are medians. 
+ * For each triplet (xi, yj, zp) we have 
+ * a list of medians w_ijp with the same cost c_ijp. 
+ * Find w*ijp = minargv_(w_ijp) (c_ijp) *)
+let find_meds3 (medsp: meds_t) (meds1: meds_t) (meds2: meds_t) =
+    let meds1p = find_meds2 meds1 medsp in 
+    let meds2p = find_meds2 meds2 medsp in 
+    if meds1p.total_cost < meds2p.total_cost then meds1p
+    else meds2p
+            
+
+let readjust_3d ch1 ch2 mine c2 c3 parent = 
+    let adjust_med = find_meds3 parent ch1 ch2 in 
+    let cost1, _  = cmp_min_pair_cost ch1 adjust_med in
+    let cost2, _  = cmp_min_pair_cost ch2 adjust_med in
+    let costp, _ = cmp_min_pair_cost parent adjust_med in
+    (cost1 + cost2 + costp), adjust_med, 0 <> (compare mine adjust_med)
+
+       
     
 
 (** Compare two list of medians *)

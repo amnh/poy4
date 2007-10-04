@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2127 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2265 $"
 
 open StdLabels
 
@@ -107,8 +107,8 @@ EXTEND Gram
     u_function_application:
         [
             [ "prep"; b = u_lang_apps; s = u_lang_apps -> Prepend (b, s) ] 
-            | [ "hd"; s = u_lang_apps -> Head s ] 
-            | [ "tl"; s = u_lang_apps -> Tail s ] 
+            | [ "head"; s = u_lang_apps -> Head s ] 
+            | [ "tail"; s = u_lang_apps -> Tail s ] 
             | [ "pre"; s = u_lang_apps -> Predecessor s ] 
             | [ "suc"; s = u_lang_apps -> Successor s ] 
             | [ fname = LIDENT; res = LIST0 [x = u_lang_apps -> x] -> 
@@ -150,8 +150,8 @@ EXTEND Gram
     fname_for_prob:
         [
             [ el = "prep" -> Gram.Token.to_string el ] |
-            [ el = "hd" -> Gram.Token.to_string el ] |
-            [ el = "tl" -> Gram.Token.to_string el ] |
+            [ el = "head" -> Gram.Token.to_string el ] |
+            [ el = "tail" -> Gram.Token.to_string el ] |
             [ el = "pre" -> Gram.Token.to_string el ] |
             [ el = "suc" -> Gram.Token.to_string el ] |
             [ el = UIDENT -> el] |

@@ -60,8 +60,13 @@ val create_median :
   int array ->
   int array * int * int * int ->
   Cost_matrix.Two_D.m -> ChromPam.chromPairAliPam_t -> med_t
+
 val cmp_cost :
-  med_t -> med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int
+  med_t ->
+  med_t ->
+  Cost_matrix.Two_D.m ->
+  Data.dyna_pam_t -> [< `Chromosome | `Genome ] -> int * int
+
 val find_med2_ls :
   med_t ->
   med_t -> Cost_matrix.Two_D.m -> Data.dyna_pam_t -> int * int * med_t list

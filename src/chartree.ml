@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 2145 2007-08-25 16:28:42Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 2145 $"
+(* $Id: chartree.ml 2265 2007-10-04 14:40:44Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 2265 $"
 
 
 (** chartree.ml *)
@@ -864,7 +864,7 @@ type 'a break_fn_t =
   'a p_tree ->
   'a p_tree * Tree.break_delta * float * int * Node.node_data * incremental list
 
-let reroot_fn edge ptree =
+let reroot_fn (_ : bool) edge ptree =
     let Tree.Edge (h, n) = edge in
     let my_handle = Ptree.handle_of h ptree in
     let ptree = Ptree.remove_root_of_component my_handle ptree in
@@ -1300,7 +1300,7 @@ let to_formatter atr data tree : Tags.output =
 let root_costs tree = 
     All_sets.Integers.fold (fun handle acc ->
         let get_cost edge acc = 
-            let ntree, _ = reroot_fn edge tree in
+            let ntree, _ = reroot_fn false edge tree in
             (Tree.Continue, (((edge, Ptree.get_cost `Adjusted ntree) :: acc)))
         in
         Ptree.pre_order_edge_visit get_cost handle tree acc)

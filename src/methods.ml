@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 2157 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2265 $"
 
 (** Data *)
 
@@ -122,6 +122,7 @@ type chromosome_pam_t = [
 
     | `SwapMed of int
     | `Approx of bool 
+    | `Symmetric of bool 
 ]
 
 type dynamic_char_transform = [
@@ -293,7 +294,7 @@ type io = [
 type output_class = [
     | `Information
     | `Error
-    | `Output of string
+    | `Output of string option
 ]
 
 (** Options *)
@@ -318,7 +319,11 @@ type tabu_join_strategy = [
 (* So I will modify this set of build methods to wrap them in a nicer manner *)
 type build_strategy = 
     int * keep_method * cost_calculation list * tabu_join_strategy
+
 type build_method = [
+    | `Constraint of (int * float * filename option * cost_calculation list)
+    | `Branch_and_Bound  of
+        (float option * float option * keep_method * int * cost_calculation list)
     | `Wagner_Rnd of build_strategy
     | `Wagner_Mst of build_strategy
     | `Wagner_Distances of build_strategy
@@ -332,6 +337,8 @@ type build = [
     | `Prebuilt of filename
     | `Build of int * build_method * cost_calculation list
     | `Build_Random of build_strategy
+    | `Branch_and_Bound  of
+        (float option * float option * keep_method * int * cost_calculation list)
 ]
 
 (* Optimality criterion employed. Self explanatory. *)

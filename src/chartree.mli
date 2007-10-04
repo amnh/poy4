@@ -116,6 +116,7 @@ val cost_fn :
     for more information. *)
 
 val reroot_fn :
+    bool -> 
   Tree.edge ->
   'a p_tree -> 'a p_tree * incremental list
 (** [reroot_fn] is a break function usable for Ptree's searches.  See {!Ptree}

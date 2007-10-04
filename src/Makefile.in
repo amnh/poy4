@@ -178,28 +178,20 @@ LANGUAGE = intSpec.cmo alphSpec.cmo wordSpec.cmo specIndex.cmo characSpec.cmo \
 
 PARALLEL = methods.cmo 
 
-# ftol.cmo register.cmo process.cmo comm.cmo parallel.cmo 
-
 CHROM_OBJS = grappa/grappa.cma utl.cmo chromPam.cmo staMat.cmo utlPoy.cmo \
 	utlGrappa.cmo incList.cmo sufNode.cmo sufTree.cmo subseq.cmo \
 	seed.cmo block.cmo genAli.cmo aliMap.cmo chromAli.cmo chrom.cmo chromCS.cmo 
 
+GENOME_OBJS = genomeAli.cmo genome.cmo genomeCS.cmo
 
-GENOME_OBJS = grappa/grappa.cma utl.cmo chromPam.cmo staMat.cmo utlPoy.cmo \
-	utlGrappa.cmo genomeAli.cmo genome.cmo genomeCS.cmo
+BREAKINV_OBJS = breakinvAli.cmo breakinv.cmo breakinvCS.cmo
 
+ANNCHROM_OBJS = annchromAli.cmo annchrom.cmo annchromCS.cmo
 
-BREAKINV_OBJS = grappa/grappa.cma utl.cmo utlPoy.cmo \
-	utlGrappa.cmo genAli.cmo breakinvAli.cmo breakinv.cmo breakinvCS.cmo
-
-ANNCHROM_OBJS = grappa/grappa.cma utl.cmo utlPoy.cmo \
-	utlGrappa.cmo genAli.cmo annchromAli.cmo annchrom.cmo annchromCS.cmo
-
-
-CHARACTER = $(READLINE) sleep.o timer.cmo char_add.cmo char_nonadd.cmo \
-	sankCS.cmo seqCS.cmo chromCS.cmo genomeCS.cmo  breakinvCS.cmo annchromCS.cmo \
+CHARACTER = char_add.cmo char_nonadd.cmo \
+	sankCS.cmo seqCS.cmo $(CHROM_OBJS) $(GENOME_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) \
 	dynamicCS.cmo nodeSig.cmo node.cmo allDirNode.cmo edge.cmo \
-	characterScripting.cmo  metric.cmo
+	characterScripting.cmo  metric.cmo 
 
 PARSER = nexus.cmo hennig.cmo hennigLexer.cmo hennigParser.cmo nexusLexer.cmo nexusParser.cmo parser.cmo $(LANGUAGE) 
 
@@ -239,8 +231,7 @@ BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) \
 	compileFlags.cmo buildNumber.cmo \
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
-	array_ops.cmo $(PARSER) distances.cma \
-	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) \
+	array_ops.cmo $(PARSER) distances.cma $(CHARACTER) \
 	methods.cmo trees.cma diagnosis.cmo supports.cmo help.cmo helpIndex.cmo \
 	analyzer.cmo poyCommand.cmo poyFile.cmo $(XSLT_COMPONENTS) scripting.cmo 
 
@@ -505,10 +496,10 @@ sequence.cmx: sadmanOutput.cmx matrix.cmx fingerPrint.cmx cost_matrix.cmx \
     alphabet.cmx all_sets.cmx sequence.cmi sequence.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
 seqCS.cmo: tags.cmo status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
-    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi seqCS.ml
 	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) seqCS.ml
 seqCS.cmx: tags.cmx status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
-    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi seqCS.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c seqCS.ml
 scripting.cmo: scripting.cmi scripting.ml
 	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml

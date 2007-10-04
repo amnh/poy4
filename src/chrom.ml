@@ -79,7 +79,6 @@ let update_approx_mat meds1 meds2 =
     let med1 = List.hd meds1.med_ls in  
     let med2 = List.hd meds2.med_ls in  
     let code2 = meds2.code in
-
     (if meds1.approx_cost_arr.(code2) = max_int then begin 
         let cost, recost, med2_ls = ChromAli.find_med2_ls med1 med2 meds1.c2 meds1.chrom_pam in  
         meds1.approx_med_arr.(code2) <- List.hd med2_ls;
@@ -87,6 +86,55 @@ let update_approx_mat meds1 meds2 =
         meds1.approx_recost_arr.(code2) <- recost; 
      end) 
 
+(** Compute the minimum pair cost between medians in two lists *)
+let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) = 
+    let cmp_exact () = 
+          List.fold_left 
+              (fun (min_cost, min_recost) med1 ->
+                   List.fold_left 
+                       (fun (min_cost2, min_recost2) med2 ->
+                            let cost, recost = ChromAli.cmp_cost med1 med2
+                                meds1.c2 meds1.chrom_pam `Chromosome 
+                            in 
+                            if cost < min_cost2 then cost, recost
+                            else min_cost2, min_recost2
+                       ) (min_cost, min_recost) meds2.med_ls
+              ) (max_int, 0) meds1.med_ls
+    in 
+
+    match meds1.chrom_pam.Data.approx with 
+    | Some approx ->
+          if approx then begin 
+              update_approx_mat meds1 meds2;
+              meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
+          end else cmp_exact ()
+
+    | None -> cmp_exact ()
+
+(** Compute the maximum pair cost between medians in two lists *)
+let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) = 
+    let cmp_exact () = 
+          List.fold_left 
+              (fun (max_cost, max_recost) med1 ->
+                   List.fold_left 
+                       (fun (max_cost2, max_recost2) med2 ->
+                            let cost, recost = ChromAli.cmp_cost med1 med2
+                                meds1.c2 meds1.chrom_pam `Chromosome
+                            in 
+                            if cost > max_cost2 then cost, recost
+                            else max_cost2, max_recost2
+                       ) (max_cost, max_recost) meds2.med_ls
+              ) (0, 0) meds1.med_ls
+    in 
+
+    match meds1.chrom_pam.Data.approx with 
+    | Some approx ->
+          if approx then begin 
+              update_approx_mat meds1 meds2;
+              meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
+          end else cmp_exact ()
+
+    | None -> cmp_exact ()
 
 
 (** Find the best median list between two lists of medians *)
@@ -139,52 +187,21 @@ let find_meds3 (medsp: meds_t) (meds1: meds_t) (meds2: meds_t) =
     if meds1p.total_cost < meds2p.total_cost then meds1p
     else meds2p
             
+
+let readjust_3d ch1 ch2 mine c2 c3 parent = 
+    let adjust_med = find_meds3 parent ch1 ch2 in 
+    let amed = List.hd adjust_med.med_ls in
+    let single_seq = UtlPoy.get_single_seq amed.ChromAli.seq c2 in 
+    
+    
+    let adjust_med = {adjust_med with med_ls = [{amed with ChromAli.seq = single_seq}]} in 
+    let cost1, _  = cmp_min_pair_cost ch1 adjust_med in
+    let cost2, _  = cmp_min_pair_cost ch2 adjust_med in
+    let costp, _ = cmp_min_pair_cost parent adjust_med in
+    (cost1 + cost2 + costp), adjust_med, 0 <> (compare mine adjust_med)
+
+
        
-(** Compute the minimum pair cost between medians in two lists *)
-let cmp_min_pair_cost (meds1 : meds_t) (meds2 : meds_t) = 
-    let cmp_exact () = 
-          List.fold_left 
-              (fun (min_cost, min_recost) med1 ->
-                   List.fold_left 
-                       (fun (min_cost2, min_recost2) med2 ->
-                            let cost, recost = ChromAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
-                            if cost < min_cost2 then cost, recost
-                            else min_cost2, min_recost2
-                       ) (min_cost, min_recost) meds2.med_ls
-              ) (max_int, 0) meds1.med_ls
-    in 
-
-    match meds1.chrom_pam.Data.approx with 
-    | Some approx ->
-          if approx then begin 
-              update_approx_mat meds1 meds2;
-              meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
-          end else cmp_exact ()
-
-    | None -> cmp_exact ()
-
-(** Compute the maximum pair cost between medians in two lists *)
-let cmp_max_pair_cost (meds1 : meds_t) (meds2 : meds_t) = 
-    let cmp_exact () = 
-          List.fold_left 
-              (fun (max_cost, max_recost) med1 ->
-                   List.fold_left 
-                       (fun (max_cost2, max_recost2) med2 ->
-                            let cost, recost = ChromAli.cmp_cost med1 med2 meds1.c2 meds1.chrom_pam in 
-                            if cost > max_cost2 then cost, recost
-                            else max_cost2, max_recost2
-                       ) (max_cost, max_recost) meds2.med_ls
-              ) (0, 0) meds1.med_ls
-    in 
-
-    match meds1.chrom_pam.Data.approx with 
-    | Some approx ->
-          if approx then begin 
-              update_approx_mat meds1 meds2;
-              meds1.approx_cost_arr.(meds2.code), meds1.approx_recost_arr.(meds2.code)
-          end else cmp_exact ()
-
-    | None -> cmp_exact ()
 
 
 (** Check if median list meds1 is the same median list meds2 *)
@@ -223,7 +240,7 @@ let copy_chrom_map s_ch d_ch =
                               as_med.ChromAli.ref_code2 = ad_med.ChromAli.ref_code
                       ) s_ch.med_ls
                   in 
-                  ChromAli.copy_chrom_map ad_med as_med
+                  ChromAli.copy_chrom_map as_med ad_med
              ) d_ch.med_ls
     in 
     {d_ch with med_ls = copied_med_ls}

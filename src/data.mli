@@ -76,6 +76,7 @@ type dyna_pam_t = {
                     * rearranged median search. If None, the default is 1 (see
                     * the chromosome side). *)
     approx : bool option; (* Convert the chromosomes into Sankoff characters *)
+    symmetric : bool option; 
 }
 
 type dynamic_hom_spec = {

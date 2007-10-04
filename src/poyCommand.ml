@@ -74,6 +74,7 @@ type chromosome_args = [
     | `Keep_Median of int 
     | `SwapMed of int 
     | `Approx of bool
+    | `Symmetric of bool 
 ]
 
 
@@ -134,7 +135,10 @@ type builda = [
     | `Prebuilt of Methods.filename
     | `Mst
     | `DistancesRnd
+    | `Branch_and_Bound of float option
+    | `Constraint of string option
     | `Random
+    | `RandomTree
     | `Ordered
     | keep_method
     | transform
@@ -210,7 +214,7 @@ type settings = [
 type output_class = [
     | `Information
     | `Error
-    | `Output of string 
+    | `Output of string option
 ]
 
 type application = [
@@ -387,6 +391,63 @@ let build_default = (10, build_default_method, [])
 let transform_build ((n, (meth : Methods.build_method), (trans :
     Methods.transform list)) as acc) = function
     | `Prebuilt fn -> (n, (`Prebuilt fn), trans)
+    | `RandomTree ->
+            begin match meth with
+            | `Prebuilt _ -> acc
+            | `Wagner_Ordered x 
+            | `Wagner_Distances x 
+            | `Wagner_Mst x
+            | `Build_Random x 
+            | `Wagner_Rnd x -> 
+                    (n, (`Build_Random x), trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint tree has already been selected as build method."
+            | `Branch_and_Bound _ ->
+                    failwith 
+                    "Branch and bound tree has already been selected as build method."
+            end
+    | `Constraint file ->
+            let file = 
+                match file with
+                | None -> None
+                | Some x -> Some (`Local x)
+            in
+            begin match meth with
+            | `Wagner_Ordered (keep_max, keep_method, lst, _) 
+            | `Wagner_Distances (keep_max, keep_method, lst, _) 
+            | `Wagner_Mst (keep_max, keep_method, lst, _)
+            | `Build_Random (keep_max, keep_method, lst, _) 
+            | `Wagner_Rnd (keep_max, keep_method, lst, _) -> 
+                    (n, (`Constraint (1, 0.0, file, lst)), trans)
+            | `Branch_and_Bound _ ->
+                    failwith
+                    "Branch and bound has already been selected as build method."
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Prebuilt _ -> 
+                    failwith 
+                    "Prebuilt has already been selected as build method."
+            end
+    | `Branch_and_Bound bound ->
+            begin match meth with
+            | `Wagner_Ordered (keep_max, keep_method, lst, _) 
+            | `Wagner_Distances (keep_max, keep_method, lst, _) 
+            | `Wagner_Mst (keep_max, keep_method, lst, _)
+            | `Build_Random (keep_max, keep_method, lst, _) 
+            | `Wagner_Rnd (keep_max, keep_method, lst, _) -> 
+                    (n, (`Branch_and_Bound (bound, None, keep_method,
+                    keep_max, lst)), trans)
+            | `Branch_and_Bound x ->
+                    (n, `Branch_and_Bound x, trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Prebuilt _ -> 
+                    failwith 
+                    "Prebuilt has already been selected as build method."
+            end
     | `DistancesRnd ->
             begin match meth with
             | `Prebuilt _
@@ -395,6 +456,12 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Wagner_Rnd x 
             | `Wagner_Ordered x
             | `Build_Random x -> (n, (`Wagner_Distances x), trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Branch_and_Bound _ -> 
+                    failwith
+                    "Branch and bound tree has already been selected as build method."
             end
     | `Mst ->
             begin match meth with
@@ -404,6 +471,12 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Wagner_Rnd x 
             | `Wagner_Ordered x
             | `Build_Random x -> (n, (`Wagner_Mst x), trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Branch_and_Bound _ -> 
+                    failwith
+                    "Branch and bound tree has already been selected as build method."
             end
     | `Random ->
             begin match meth with
@@ -413,6 +486,12 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Wagner_Mst x
             | `Wagner_Ordered x
             | `Build_Random x -> (n, (`Wagner_Rnd x), trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Branch_and_Bound _ -> 
+                    failwith
+                    "Branch and bound tree has already been selected as build method."
             end
     | `Ordered ->
             begin match meth with
@@ -422,6 +501,12 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Wagner_Mst x
             | `Build_Random x 
             | `Wagner_Rnd x -> (n, (`Wagner_Ordered x), trans)
+            | `Constraint _ ->
+                    failwith 
+                    "Constraint has already been selected as build method."
+            | `Branch_and_Bound _ -> 
+                    failwith
+                    "Branch and bound tree has already been selected as build method."
             end
     | `Threshold _ ->
             acc
@@ -432,6 +517,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
     | `Keep_Random as x -> 
             let nmeth = 
                 match meth with
+                | `Constraint _
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances (a, _, c, d) -> 
                         `Wagner_Distances (a, x, c, d)
@@ -440,6 +526,8 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
                 | `Wagner_Rnd (a, _, c, d) -> `Wagner_Rnd (a, x, c, d)
                 | `Wagner_Ordered (a, _, c, d) -> `Wagner_Ordered (a, x, c, d)
                 | `Build_Random (a, _, c, d) -> `Build_Random (a, x, c, d)
+                | `Branch_and_Bound (a, b, _, c, d) ->
+                        `Branch_and_Bound (a, b, x, c, d)
             in
             n, nmeth, trans
     | `Transform x ->
@@ -448,6 +536,8 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
     | #Methods.tabu_join_strategy as tabu ->
             let nmeth = 
                 match meth with
+                | `Constraint _
+                | `Branch_and_Bound _
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances (a, b, c, _) -> 
                         `Wagner_Distances (a, b, c, tabu)
@@ -459,6 +549,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
                         `Wagner_Ordered (a, b, c, tabu)
                 | `Build_Random (a, b, c, _) -> 
                         `Build_Random (a, b, c, tabu)
+
             in
             n, nmeth, trans
 
@@ -840,7 +931,8 @@ let transform_search items =
     let do_transform = 
         List.exists (function `Transform true -> true | _ -> false) items
     and do_build =
-        List.exists (function `Build true -> true | _ -> false) items
+        List.fold_left (fun acc ction ->
+            acc && (match ction with `Build false -> false | _ -> true)) true items
     in
     match default_search with
     | [a; b; c; d] ->
@@ -943,7 +1035,7 @@ let create_expr () =
                 [ LIDENT "randomize_terminals" -> `RandomizedTerminals ] |
                 [ LIDENT "alphabetic_terminals" -> `AlphabeticTerminals ] |
                 [ LIDENT "tcm"; ":";  x = STRING -> `Tcm x ] |
-                [ LIDENT "fixedstates" -> `Fixed_States ] |
+                [ LIDENT "fixed_states" -> `Fixed_States ] |
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
                     right_parenthesis -> `Gap (int_of_string x, int_of_string y) ] |
                 [ LIDENT "gap_opening"; ":"; x = INT -> `AffGap (int_of_string x) ] |
@@ -1029,7 +1121,8 @@ let create_expr () =
                 [ LIDENT "median"; ":"; c = INT ->
                       `Keep_Median (int_of_string c) ] |
                 [ LIDENT "swap_med"; ":"; iters = INT -> `SwapMed (int_of_string iters) ] | 
-                [ LIDENT "approx"; ":"; ans = boolean -> `Approx ans] 
+                [ LIDENT "approx"; ":"; ans = boolean -> `Approx ans] |
+                [ LIDENT "symmetric"; ":"; ans = boolean -> `Symmetric ans] 
             ];
 
         (* Applications *)
@@ -1085,8 +1178,10 @@ let create_expr () =
             [
                 [ LIDENT "info" -> `Information ] |
                 [ LIDENT "error" -> `Error ] |
-                [ LIDENT "output"; ":"; x = STRING -> `Output x ]
+                [ LIDENT "output"; x = OPT optional_string -> `Output x ]
             ];
+        optional_string:
+            [ [  ":"; x = STRING -> x ] ];
         setting:
             [
                 [ LIDENT "history"; ":"; x = INT -> `HistorySize (int_of_string x) ] |
@@ -1190,7 +1285,9 @@ let create_expr () =
         ratchet:
             [
                 [ LIDENT "ratchet"; ":"; left_parenthesis; x = FLOAT; ","; y = INT; 
-                    right_parenthesis -> `Ratchet (float_of_string x, int_of_string y) ] 
+                    right_parenthesis -> `Ratchet (float_of_string x,
+                    int_of_string y) ] |
+                [ LIDENT "ratchet" -> perturb_default_perturb ]
             ];
         resample:
             [
@@ -1419,6 +1516,8 @@ let create_expr () =
                 [ LIDENT "sectorial"; x = OPT integer -> 
                     ((`UnionBased x) : Methods.tabu_join_strategy)  ] |
                 [ LIDENT "all"; x = OPT integer -> `AllBased x ] |
+                [ LIDENT "constraint"; ":"; x = INT ->
+                    `Partition [`MaxDepth (int_of_string x)] ] |
                 [ LIDENT "constraint"; ":"; left_parenthesis; 
                     x = LIST1 [x = constraint_options -> x] SEP ","; right_parenthesis
                     -> `Partition x ] |
@@ -1444,7 +1543,17 @@ let create_expr () =
                 [ x = STRING -> `Prebuilt (`Local x) ] |
                 [ LIDENT "of_file"; ":"; x = STRING -> `Prebuilt (`Local x) ] |
                 [ LIDENT "randomized" -> `Random ] |
+                [ LIDENT "random" -> `RandomTree ] |
                 [ LIDENT "as_is" -> `Ordered ] |
+                [ LIDENT "branch_and_bound"; x = OPT optional_integer_or_float -> 
+                    let thresh = 
+                        match x with
+                        | None ->  None
+                        | Some x -> Some (float_of_string x)
+                    in
+                    `Branch_and_Bound thresh ] |
+                [ LIDENT "constraint"; x = OPT optional_string -> `Constraint x ]
+                        |
                 [ LIDENT "_mst" -> `Mst ] |
                 [ LIDENT "_distances" -> `DistancesRnd ]
             ];
