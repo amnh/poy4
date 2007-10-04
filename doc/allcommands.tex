@@ -38,6 +38,27 @@
             sequence.}
             {asis}
 
+        \argumentdefinition{branch\_and\_bound}{\optional{\poyfloat}}
+            {Instead of building a tree the default heuristic method, calculate
+            the exact solution using the branch and bound algorithm, and return
+            as many trees as the \poyargument{trees} argument specify, 
+            within the optional threshold value of the argument. By default only
+            one tree which is the optimal solution will be kept in the result.}
+            {branchandbound}
+
+        \argumentdefinition{constraint}{\optional{\poystring}}
+            {Build trees using the set of constraints contained in the input
+            file. If no input file is provided, the constraint is calculated as
+            the strict consensus of the trees held in memory. Every tree built
+            using this method is subject to the same randomization as wagner
+            builds, within each constraint.}
+            {buildconstraint}
+
+        \argumentdefinition{random}{}
+            {Generate a tree at random.  All possible trees have equal
+            probability.}
+            {buildrandom}
+
 		\argumentdefinition{randomized}{} 
             {Indicates that terminals are added in random order on every Wagner
             tree built.}
@@ -690,7 +711,7 @@
             and to the standard error in the flat interface.}
             {}
 
-        \argumentdefinition{ratchet}{\obligatory{(\poyfloat, \poyint)}}
+        \argumentdefinition{ratchet}{\optional{(\poyfloat, \poyint)}}
             {Perturbs the data by implementing a variant of the parsimony
             ratchet~\cite{Nixon1999}. For unaligned data,
             \poyargument{ratchet} randomly selects and reweighs a fraction of
@@ -882,8 +903,10 @@
             only character data and ignore other content (such as blocks of
             commands, \emph{etc.}). For certain data file formats, \poy will interpret
             additional information as detailed for each file type below.
+            It is important, however, to verify that the data was interpreted properly (using
+            the command \poycommand{report}).
         \end{statement}
-        
+          
         \begin{statement}
             Unlike many phylogenetic programs, \poy does not clear the memory
             buffer upon reading a second file. Instead, any subsequently read files
@@ -904,7 +927,7 @@
              taxon name appears to match a nucleotide sequence.
 
              If one of the terminal names in an imported molecular file contains
-             an \atsymbol or a percentage symbol, the file will not be loaded as
+             an \atsymbol  or a percentage symbol, the file will not be loaded as
              it may cause the program to crash when reporting results.
         \end{statement}
 	\end{poydescription}
@@ -943,14 +966,20 @@
             {Specifies that the data listed in the string argument
             are amino acid sequences in FASTA format.} 
             {}
-
+            
+	\begin{statement}
+            Currently, IUPAC ambiguity codes for aminoacids are \emph{not} supported 
+            and inputing files that contain aminoacid data with ambiguities results in
+            an error message.
+        \end{statement}
+        
         \argumentdefinition{annotated}{\obligatory{(\poystring list)}}
             {Specifies that the data listed in the string argument are chromosomal
             sequences with pipes (`` $\vline$ '') separating individual
             loci. This data type allows for locus-level rearrangements specified by
             the argument \nccross{dynamic\_pam}{dynamicpam} of the command
             \nccross{transform}{transformcommand}. Locus homologies are
-            determined dynamically, but based on annotated regions.} 
+            determined dynamically, but based on annotated regions~\cite{vinh2006}.} 
             {}
 
         \argumentdefinition{breakinv}{\obligatory{(STRING, STRING, 
@@ -972,7 +1001,7 @@
             command~\nccross{transform}{transformcommand}.  
             Unlike when using \poycommand{annotated} data type,
             both locus-level and nucleotide-level homologies
-            are determined dynamically. If chromosome sequences were imported as
+            are determined dynamically~\cite{vinh2007}. If chromosome sequences were imported as
             nucleotide type data, they can be converted to chromosome type data
             using the argument \poyargument{seq\_to\_chrom} of
             \nccross{transform}{transformcommand}.} 
@@ -1049,14 +1078,21 @@
             {Specifies that the data in the list of files hold nucleotide
             sequences in FASTA format.} 
             {}
-
+            
+	\begin{statement}
+            By default, upon importing prealigned sequence data, all the gaps are
+             removed and the sequences are treated as dynamic homology characters.
+             To preserve the alignment the data must be imported using the
+             \poyargument{prealigned} argument of the command \poycommand{read}.
+          \end{statement}
+        
         \argumentdefinition{prealigned}{\obligatory{(read argument,
         tcm:\poystring)}}
             {Specifies that the input sequences are prealigned and
             should be assigned the transformation cost matrix from the 
             input file specified by the string argument. (See \poyargument{tcm}.)}
             {}
-
+        
         \argumentdefinition{prealigned}{\obligatory{(read argument,
         tcm:(\poyint, \poyint))}}
             {Specifies that the input sequences are prealigned and should be
@@ -1208,7 +1244,13 @@
         \poycommand{terminals}, a filename, or a pair of strings. Specifying \texttt{("a",
         "b")} would rename the character or taxon \texttt{a} to \texttt{b}.
 	\end{poydescription}
-
+	
+	\begin{statement}
+            In order to change taxon names, the command \poycommand{rename} must be
+            executed \emph{before} importing the datafiles (see command  \nccross{read}{read})
+            that contain character data the taxa to be renamed.
+          \end{statement}
+          
 \end{command}
         
 \begin{command}{report}{}
@@ -1605,8 +1647,14 @@
                 \poy session. This command is useful for monitoring the execution time
                 of specific tasks.}
                 {}
-
-		\end{argumentgroup}
+                
+                \argumentdefinition{xslt}{\obligatory{(STRING, STRING)}}
+	     {Applies a user-defined stylesheet to the xml output. The first string is
+	     the filename of the output, the second string is the name of the stylesheet
+	     requested to generate it.}
+	     {}
+	     
+	     \end{argumentgroup}
 	\end{arguments}
 
 	\poydefaults{data, diagnosis, trees}
@@ -1848,8 +1896,8 @@
 
 	\end{arguments}
 
-    \poydefaults{build:false, transform:false}{Under default settings, all the trees
-     currently in memory (either from prior builds or imported as tree files) are subjected
+    \poydefaults{build:true, transform:false}{Under default settings, 10 trees
+    are built, then subjected
      to branch swapping using alternating SPR and TBR, keeping one tree per
      swap (the default of \poycommand{swap}), and without transforming characters.}
         
@@ -2638,13 +2686,13 @@
             long sequences greatly accelerates searching.}
             {autosequencepartition}
 
-        \argumentdefinition{fixedstates}{}
+        \argumentdefinition{fixed\_states}{}
           {Transforms the characters specified in fixed state characters~\cite{wheeler1999a}
           with distances equal to the edition distance between their observed values.
-          By default, the application of \poyargument{fixedstates} transforms
+          By default, the application of \poyargument{fixed\_states} transforms
           all molecular characters. To specify a subset of characters, an identifier
-          must be used in conjunction with \poyargument{fixedstates}.}
-          {}
+          must be used in conjunction with \poyargument{fixed\_states}.}
+          {fixedstates}
         \argumentdefinition{gap\_opening}{\obligatory{\poyint}}
             {Sets the cost of opening a block of gaps to the specified value. Note that
             this cost is in addition to the standard cost of the insertion as
@@ -2791,7 +2839,7 @@
             {Transforms custom\_alphabet character type into breakinv
             character type to allow for rearrangement operations
             (translocations and inversions; duplications are not currently
-            supported.) This argument is useful, for example, when
+            supported). This argument is useful, for example, when
             custom\_alphabet characters are used to define a sequence of
             individual genes and once is interested in detecting potential
             change in their order on a chromosome. See the
@@ -2856,7 +2904,7 @@
                         takes into account rearrangements but not inversions.
                         Note, that this argument \emph{cannot} be used in
                         conjunction with \poyargument{inversion}. The default
-                        value of \poyargument{breakpoint} is \texttt{50}.} 
+                        value of \poyargument{breakpoint} is \texttt{10}.} 
                         {breakpoint}
                         
                         \argumentdefinition{circular}{\obligatory{\poybool}} 
@@ -2872,7 +2920,7 @@
                         rearrangement specified by an integer value. The breakpoint distance
                         takes into account locus rearrangements between non-homologous
                         chromosomes (translocations) but not inversions. The default value of
-                        \poyargument{chrom\_breakpoint} is \texttt{10}.}
+                        \poyargument{chrom\_breakpoint} is \texttt{100}.}
                         {chrombreakpoint}
 		
 		\argumentdefinition{chrom\_hom}{\obligatory{\poyfloat}}
@@ -2951,20 +2999,22 @@
                         fragments. Increasing the value of \poyargument{sig\_block\_len} decreases
                         the chance of inferring small-size rearrangements. The default value is \texttt{100}.} 
                         {sigblocklen}
-
-  		    \argumentdefinition{rearranged\_len}{\obligatory{\poyint}}
-           	 {Two seeds are said to be \emph{non-rearranged}, 
-              	if their distance is not greater than  a predefined 
-              	threshold $rearranged\_len$. In other words, it is unlikely that rearrangement 
-              	operations can occur between seeds if they are connected.
-             	 The default value is \texttt{100}}{rearrangedlen} 
-
+                        
+  		            \argumentdefinition{rearranged\_len}{\obligatory{\poyint}}
+           	               {Two seeds are said to be \emph{non-rearranged}, 
+               	             if their distance is not greater than  a predefined 
+              	             threshold $rearranged\_len$. 
+                             In other words, it is unlikely that rearrangement 
+              	             operations can occur between two non-rearranged seeds 
+                             if they are connected.
+                	         The default value is \texttt{100}}{rearrangedlen} 
+ 
 
 
                     \argumentdefinition{swap\_med}{\obligatory{\poyint}}
                         {Specifies the maximum number of swapping iterations
-                        per each HTU (median) to search for best pairwise
-                        alignment of two genomes taking into account locus-level
+                        to search for best pairwise
+                        alignment of two chromosomes taking into account locus-level
                         rearrangement events. Limiting the number of swapping
                         iterations accelerates the search at the expense of
                         thoroughness. The default value is \texttt{1}.}
@@ -3032,10 +3082,10 @@
             \texttt{Molmatrix1} to the sequence data contained in files \texttt{gen5} and
             \texttt{gen6}.}
          
-         \poyexample{transform(fixedstates)}
+         \poyexample{transform(fixed\_states)}
          {Transformed all sequence characters into fixed states characters.}
             
-          \poyexample{transform((names:("gen1", "gen4"), fixedstates))}
+          \poyexample{transform((names:("gen1", "gen4"), fixed\_states))}
            {Transformed only specified sequence characters (\texttt{gen1} and
            \texttt{gen4}) into fixed states characters.}
            

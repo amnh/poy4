@@ -59,7 +59,31 @@ The aggressiveness of searches can be adjusted by varying parameters of the bran
 Further economies can be reached by using a combination of different character optimization methods. For example, initial searches can be conducted under faster static approximation (that converts sequence data into static homology characters; see \emph{Character optimization} section), whereas the final refinement can be performed using direct optimization.
 
 \section{Chromosomal heuristics}
-Analysis of chromosomal data requires heuristic procedures to estimate rearrangement events in addition to nucleotide transformations.  In unannotated chromosomal sequences \poy uses \poycommand{seed\_length}, \poycommand{sig\_block\_len} and connecting sequence length to identify homologous fragments (e.g. loci) within nucleotide strings. A seed is a contiguous nucleotide sequence that is identical in composition between two chromosomes.  Once detected seeds are used to partition chromosomes into fragments, or blocks.  If blocks are considered to be homologous and their relative positions differ between the chromosomes, a rearrangement is inferred. The command \poycommand {seed\_length} specifies the minimum length of the seed.  The higher the seed\_length value, the fewer seeds are detected, that, in turn influence the number of blocks recognized. Conversely, if the value of seed\_length is low, an increased number of seeds and, consequently, a greater number of short blocks are detected. The command \poycommand{sig\_block\_len} sets the minimum nucleotide length of the blocks, beyond which the block are not considered homologous.If the value of \poycommand{sig\_block\_len} is low, small-size rearrangements are allowed; whereas if the value of \poycommand{sig\_block\_len} is high—larger rearrangements are detected. The connector length parameter sets a threshold value under which homologous blocks separated by non-homologous regions can be considered as a single block. The default for this parameter is \texttt{1000}.  Therefore if two inferred homologous blocks are separated by less than 1000 nucleotides they will be treated as a single block in calculating of rearrangement events. Thus, the combination of parameters \poycommand{seed\_length}, \poycommand{sig\_block\_len}, and connector length significantly influence the estimation of inferred rearrangements.
+Analysis of chromosomal data requires heuristic procedures to estimate
+rearrangement events in addition to nucleotide transformations.  In unannotated
+chromosomal sequences \poy uses \poycommand{seed\_length},
+\poycommand{sig\_block\_len} and connecting sequence length to identify
+homologous fragments (e.g. loci) within nucleotide strings. A seed is a
+contiguous nucleotide sequence that is identical in composition between two
+chromosomes.  Once detected seeds are used to partition chromosomes into
+fragments, or blocks.  If blocks are considered to be homologous and their
+relative positions differ between the chromosomes, a rearrangement is
+inferred. The command \poycommand {seed\_length} specifies the minimum length of
+the seed.  The higher the seed\_length value, the fewer seeds are detected,
+that, in turn influence the number of blocks recognized. Conversely, if the
+value of seed\_length is low, an increased number of seeds and, consequently, a
+greater number of short blocks are detected. The command
+\poycommand{sig\_block\_len} sets the minimum nucleotide length of the blocks,
+beyond which the block are not considered homologous.If the value of
+\poycommand{sig\_block\_len} is low, small-size rearrangements are allowed;
+whereas if the value of \poycommand{sig\_block\_len} is high—larger
+rearrangements are detected. The connector length parameter sets a threshold
+value under which homologous blocks separated by non-homologous regions can be
+considered as a single block. 
+The default for this parameter is \texttt{100}.  Therefore if two inferred
+homologous blocks are separated by less 
+than 100 nucleotides they will be treated as a single block in 
+calculating of rearrangement events. Thus, the combination of parameters \poycommand{seed\_length}, \poycommand{sig\_block\_len}, and connector length significantly influence the estimation of inferred rearrangements.
 
 Once blocks have been designated, heuristic solutions estimating the number of rearrangement events among chromosomal strings can be implemented using \poycommand{breakpoint} distance, \poycommand {inversion} distance, or \poycommand {approx}. The command \poycommand{breakpoint} calculates HTU medians that minimize the number of adjacency breaks (between ordered block pairs) in terminals.  Estimating rearrangements using inversion distance \poycommand {inversion} is more computationally costly (time consuming) but considers locus inversion events as well as adjacency breaks.  Static approximation of chromosomal blocks (\poycommand {approx}) provides the fastest median calculation but is the least exhaustive of the rearrangement search options. The efficiency of each rearrangement heuristic is also influenced by the median parameter specifying the number of alternate rearrangements considered in the search.  The choice of heuristic and thoroughness with which rearrangement estimation is conducted is contingent upon the properties of chromosomal data being analyzed and the cost assigned to rearrangement events relative to that of locus insertions and deletions (\poycommand {locus\_indel}) and nucleotide transformations.
 
@@ -75,13 +99,13 @@ Heuristic&Default Cost &Suggested Cost  \\ \hline \hline
 Locus & & \\
 \poycommand{seed\_length}&9&5-15\\
 \poycommand{sig\_block\_len}&100&60-150\\
-connector length&?&?\\
+connector length&100&50-1000\\
 \poycommand{breakpoint}&10&10-50\\
 \poycommand {inversion}&none&15-35\\
  \poycommand {approx}&false&large data sets\\
-  \poycommand {median}&1&?\\
-   \poycommand {swap\_med}&1&?\\
-  \poycommand {locus\_indel})&opening 10, extension 1&?\\
+  \poycommand {median}&1&1-2\\
+   \poycommand {swap\_med}&1&1-2\\
+  \poycommand {locus\_indel})&opening 10, extension 1&opening 10, extension 1\\
   %Chromosome\\
   %\poycommand{chrom\_breakpoint}&?&?\\
   %\poycommand{chrom\_indel}&?&?\\

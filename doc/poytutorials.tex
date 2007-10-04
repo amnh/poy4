@@ -1,49 +1,28 @@
-These tutorials are intended for new \poy users as well as for users who 
-have previously used \texttt{POY3} and are now upgrading to \poy. The command structure 
-has been overhauled in \poy to allow greater user control. Although \texttt{POY3} users 
-will find the changes challenging initially (as did we), the new structure is 
-more intuitive, flexible, and powerful. For details, see the \poy Commands 
-Reference; for a quick overview see the \poy Quick Guide. The following 
-tutorials are intended to facilitate the transition to the new command structure 
-by providing examples of analyses that are loosely based on the commands covered 
-in the tutorials found in Chapter 14 in Wheeler et al. (2006). For a fuller 
-discussion of analytical strategies, refer to:\
+These tutorials are intended to provide guidance for more sophisticated applications of \poy that involve multiple steps and a combination of different commands. Each tutorial contains a \poy script that is followed by detailed commentaries explaining the rationale behind each step of the analysis. Although these analyses can be conducted interactively using the \emph{Interactive Console} or running separate sequential analyses using the \emph{Graphical User Interphace}, the most practical way to do this is to use \poy scripts (see \emph{ POY4 Quick Start} for more information on \poy scripts).
+
+It is important to remember that the numerical values for most command arguments will differ substantially depending on type, complexity, and size of the data. Therefore, the values used here should not be taken as optimal parameters.
+
+The tutorials use sample datasets that are provided with \poy installation but can also be downloaded from the \poy site at
 \begin{center}
-http://homepage.mac.com/wmleosmith/homepage/datafiles/joy/joy.html
+\texttt{http://research.amnh.org/scicomp/projects/poy.php}
 \end{center}
-and Chapter 9 
-in Wheeler et al. (2006). In addition to the \poy executable, the only other 
-application software you need for these tutorials is a text editor, such as 
-Textpad, BBEDIT, EMACS, Word, WordPad, or NotePad. Additionally, a postscript 
-(.ps) viewer/converter (e.g., online at http://pdf.sesse.net/ , Adobe Acrobat 
-Distiller, Apple Preview) will be required to view publication-quality 
-postscript cladograms.
+The minimal required items to run the tutorial analyses are the \poy application and the sample datafiles. Running these analyses requires some familiarity with \poy interface and command structure that can be found in the preceding chapters.
 
-The commands in the following tutorials can all be written and executed 
-separately from the command line, saved and run as a script file, or written 
-into a text file and copied and pasted into \poy's interactive console or flat 
-interface. Initially, we recommend writing and executing them separately, as 
-presented below, as this will allow you to see how \poy reports progress as you 
-start to use \poy. We also recommend running these tutorials using the graphical 
-interface (ncurses version) of \poy, although they can also be run using the 
-flat interface.
+\section{Tutorial name}
+Description of the tutorial.
 
-Preliminary tasks:
-\begin{enumerate}
-    \item Make sure you have downloaded all of the \poy tutorial datafiles. 
-    \item Create a folder named \texttt{tutorial}. Although you can place this folder anywhere, we suggest you make it a 
-        subfolder to the \poy folder you created during installation. In addition, nothing depends operationally on this new folder being 
-        named \texttt{tutorial}. 
-    \item Review the \poy Quick Guide for instructions to install and run \poy using 
-        Windows, Mac OSX, and Linux operating systems. 
-    \item Either copy the \poy executable from the \poy folder to the new
-        \texttt{tutorial}
-        folder or make sure the executable is in /usr/local/bin/ or another directory 
-        included in your path (Linux and Mac OSX only). 
-    \item Copy all of the files from the \poy \texttt{tutorial} folder to the new
-        \texttt{tutorial} 
-        folder. 
-\end{enumerate}
+\begin{verbatim}
+(* my first tutorial *)
+read()
+build()
+swap()
+\end{verbatim}
+
+\begin{description}
+\item[read()] This command does...
+\item[build()] The argument of this command specify...
+\item[swap()] This command is necessary... 
+\end{description}
 
 \section{Basic Search}{\label{tutorial2}}
 
