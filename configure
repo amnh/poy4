@@ -1226,9 +1226,9 @@ Optional Features:
                           ncurses, readline, and html. The default is ncurses,
                           if ncurses is not found, then the readline interface
                           is used.
-  --enable-mpi=libname    Turns on parallel support using MPI, with the
-                          library name libname. When using MPI remember to set
-                          CC to mpicc.
+  --enable-mpi            Turns on parallel support using MPI. When using MPI
+                          remember to set CC to the appropriate mpicc
+                          compiler.
   --enable-shared-hd      Force POY to support live broadcast of file contents
                           when running in parallel. The default is false.
   --enable-long-sequences Enable the analysis of sequences longer than 16383
@@ -2791,7 +2791,7 @@ fi
 
 # Check whether --enable-mpi was given.
 if test "${enable_mpi+set}" = set; then
-  enableval=$enable_mpi; USEPARALLEL=true; MPILNAME=$enableval
+  enableval=$enable_mpi; USEPARALLEL=true
 else
   USEPARALLEL=false
 fi

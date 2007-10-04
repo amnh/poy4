@@ -666,7 +666,6 @@ USE_LONG_SEQUENCES
 USE_LARGE_ALPHABETS
 USE_XSLT
 USE_VERIFY_COSTS
-MPILNAME
 OCAML
 OCAMLC
 OCAMLOPT
@@ -1266,9 +1265,9 @@ Optional Features:
                           is none
   --enable-interface      Force POY's user interface. Valid options are
                           ncurses, readline, and html. The default is ncurses.
-  --enable-mpi=libname    Turns on parallel support using MPI, with the
-                          library name libname. When using MPI remember to set
-                          CC to mpicc.
+  --enable-mpi            Turns on parallel support using MPI. When using MPI
+                          remember to set CC to the appropriate mpicc
+                          compiler.
   --enable-shared-hd      Force POY to support live broadcast of file contents
                           when running in parallel. The default is false.
   --enable-long-sequences Enable the analysis of sequences longer than 16383
@@ -2499,7 +2498,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-
 INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
 # Check whether --enable-graphics was given.
@@ -2520,7 +2518,7 @@ fi
 
 # Check whether --enable-mpi was given.
 if test "${enable_mpi+set}" = set; then
-  enableval=$enable_mpi; USEPARALLEL=true; MPILNAME=$enableval
+  enableval=$enable_mpi; USEPARALLEL=true
 else
   USEPARALLEL=false
 fi
@@ -3079,82 +3077,8 @@ fi
 fi
 
 
-if test $USEPARALLEL = "true"; then
-  as_ac_Lib=`echo "ac_cv_lib_$MPILNAME''_MPI_Init" | $as_tr_sh`
-{ echo "$as_me:$LINENO: checking for MPI_Init in -l$MPILNAME" >&5
-echo $ECHO_N "checking for MPI_Init in -l$MPILNAME... $ECHO_C" >&6; }
-if { as_var=$as_ac_Lib; eval "test \"\${$as_var+set}\" = set"; }; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-l$MPILNAME  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MPI_Init ();
-int
-main ()
-{
-return MPI_Init ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  eval "$as_ac_Lib=yes"
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	eval "$as_ac_Lib=no"
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-ac_res=`eval echo '${'$as_ac_Lib'}'`
-	       { echo "$as_me:$LINENO: result: $ac_res" >&5
-echo "${ECHO_T}$ac_res" >&6; }
-if test `eval echo '${'$as_ac_Lib'}'` = yes; then
-  LIBS="-l$MPILNAME $LIBS"
-else
-  { { echo "$as_me:$LINENO: error: In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.
-See \`config.log' for more details." >&5
-echo "$as_me: error: In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-
-fi
-
+#AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
+#      [LIBS="-l$MPILNAME $LIBS"], [AC_MSG_FAILURE([In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.])])])
 
 # Check for malloc, if not there, this is most likely a Mac OS X.
 ac_ext=c
@@ -6736,7 +6660,6 @@ USE_LONG_SEQUENCES!$USE_LONG_SEQUENCES$ac_delim
 USE_LARGE_ALPHABETS!$USE_LARGE_ALPHABETS$ac_delim
 USE_XSLT!$USE_XSLT$ac_delim
 USE_VERIFY_COSTS!$USE_VERIFY_COSTS$ac_delim
-MPILNAME!$MPILNAME$ac_delim
 OCAML!$OCAML$ac_delim
 OCAMLC!$OCAMLC$ac_delim
 OCAMLOPT!$OCAMLOPT$ac_delim
@@ -6753,7 +6676,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 66; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 65; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

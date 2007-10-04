@@ -36,7 +36,6 @@ USEGRAPHICS := @USEGRAPHICS@
 USESHAREDHD := @USESHAREDHD@
 USE_XSLT := @USE_XSLT@
 USE_VERIFY_COSTS := @USE_VERIFY_COSTS@
-MPILNAME := @MPILNAME@
 OCAML := @OCAML@
 OCAMLC := @OCAMLC@
 OCAMLOPT := @OCAMLOPT@ @OCAMLFLAGS@
@@ -447,8 +446,7 @@ help.txt: compileFlags.cmx sadmanOutput.cmx statusCommon.cmx \
 	fileStream.cmx latex.ml ../doc/allcommands.tex
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper -cclib \
-	-L$(OCAMLMPI) -cclib -l$(MPILNAME) \
-	mpi.cmxa unix.cmxa str.cmxa compileFlags.cmx \
+	-L$(OCAMLMPI) mpi.cmxa unix.cmxa str.cmxa compileFlags.cmx \
 	sadmanOutput.cmx statusCommon.cmx fileStream.cmx latex.ml
 else 
 	$(OCAMLOPT) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper \
@@ -578,7 +576,7 @@ nexusLexer.ml: nexus.cmo nexusParser.cmi nexusLexer.mll
 mpoy: $(MAIN_OBJS)
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLC) -custom $(OCAML_INCLUDES) -cc mpicc -cclib -L$(OCAMLMPI) \
-		-cclib -l$(MPILNAME) $(OCAMLMPI)/mpi.cma -cclib -l$(MPILNAME) \
+		$(OCAMLMPI)/mpi.cma \
 		-cclib -lcamlgrappa $(LIBS)  $(CCOPT) $(DEBUG) -ccopt -L./ -o mpoy \
 		$(GRAPHICS) dynlink.cma camlp4fulllib.cma unix.cma str.cma bigarray.cma $^
 else
@@ -615,7 +613,7 @@ ifeq ($(USEPARALLEL), true)
 	$(OCAMLTOP) $(PREPROCESSOR) $(OCAML_INCLUDES) -cc mpicc -cclib -L./ \
 	-I $(OCAMLMPI) -cclib -L./grappa -cclib -L./graphps -custom -cclib \
 	-L$(OCAMLMPI) $(LIBS) $(CCOPT) $(PROFILE) \
-	-cclib -l$(MPILNAME) -cclib -lcamlgrappa -o $@ mpi.cma $(GRAPHICS) camlp4o.cma unix.cma str.cma \
+	-cclib -lcamlgrappa -o $@ mpi.cma $(GRAPHICS) camlp4o.cma unix.cma str.cma \
 	bigarray.cma $^
 else
 	$(OCAMLTOP) $(CCOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) $(LIBS) -o $@ -cclib -L./grappa \

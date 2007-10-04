@@ -22,9 +22,9 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 
-AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi=libname], 
-              [Turns on parallel support using MPI, with the library name libname. When using MPI remember to set CC to mpicc.])], 
-              [USEPARALLEL=true; MPILNAME=$enableval], 
+AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
+              [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
+              [USEPARALLEL=true], 
               [USEPARALLEL=false])
 
 AC_SUBST(USESHAREDHD)

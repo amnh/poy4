@@ -19,7 +19,6 @@ AC_SUBST(USE_LONG_SEQUENCES)
 AC_SUBST(USE_LARGE_ALPHABETS)
 AC_SUBST(USE_XSLT)
 AC_SUBST(USE_VERIFY_COSTS)
-AC_SUBST(MPILNAME)
 AC_SUBST(OCAML)
 AC_SUBST(OCAMLC)
 AC_SUBST(OCAMLOPT)
@@ -40,9 +39,9 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses; INTERFACE_SELECTED=false])
 
-AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi=libname], 
-              [Turns on parallel support using MPI, with the library name libname. When using MPI remember to set CC to mpicc.])], 
-              [USEPARALLEL=true; MPILNAME=$enableval], 
+AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
+              [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
+              [USEPARALLEL=true], 
               [USEPARALLEL=false])
 
 AC_ARG_ENABLE([shared-hd], [AS_HELP_STRING([--enable-shared-hd],
@@ -103,8 +102,8 @@ AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[LIBS
 AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([readline], [readline],
       [LIBS="-lreadline $LIBS"; AC_DEFINE(HAVE_LIBREADLINE)], [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.])])])
 
-AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
-      [LIBS="-l$MPILNAME $LIBS"], [AC_MSG_FAILURE([In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.])])])
+#AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
+#      [LIBS="-l$MPILNAME $LIBS"], [AC_MSG_FAILURE([In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.])])])
 
 # Check for malloc, if not there, this is most likely a Mac OS X.
 AC_CHECK_HEADER(malloc.h,[],[AC_CHECK_HEADER(/usr/include/malloc/malloc.h,[CFLAGS="-I /usr/include/malloc/ $CFLAGS"], [AC_MSG_FAILURE([Could not find malloc.h])])])
