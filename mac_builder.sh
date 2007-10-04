@@ -90,7 +90,7 @@ function tiger_distribution {
         exit 1
     fi
 
-    if ! generate_ppc "--enable-xslt --enable-interface=html --enable-mpi=mpich" \
+    if ! generate_ppc "--enable-xslt --enable-interface=html --enable-mpi" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc ""; then 
         exit 1
     fi
@@ -103,7 +103,7 @@ function tiger_distribution {
         exit 1
     fi
 
-    if ! generate_intel "--enable-xslt --enable-interface=html --enable-mpi=mpich" \
+    if ! generate_intel "--enable-xslt --enable-interface=html --enable-mpi" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc \
         par_poy_intel ""; then
         exit 1
