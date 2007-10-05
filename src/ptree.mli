@@ -291,10 +291,11 @@ module type SEARCH = sig
           (a, b) p_tree ->
           Tree.join_jxn -> a -> float -> Tree.t_status
 
-      (** [alternate_spr_tbr search] takes each tree in search manager [search]
+      (** [alternate spr_searcher tbr_searcher search] takes each tree in search manager [search]
           and performs rounds of alternating SPR and TBR until there is no further
-          improvement *)
-      val alternate_spr_tbr : searcher
+          improvement, using the [spr_searcher] and [tbr_searcher] passed as
+          arugment. *)
+      val alternate : searcher -> searcher -> searcher
 
       (** [repeat_until_no_more f s sm] iterates a search using whatever
        * searcher [s] is selected until no better tree is found, using the search

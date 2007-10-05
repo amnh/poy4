@@ -20,8 +20,8 @@
 (** queues.ml - contains the serach managers that manage the queue of trees to
  * be searched. *)
 
-(* $Id: queues.ml 2198 2007-09-09 17:27:28Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 2198 $"
+(* $Id: queues.ml 2274 2007-10-05 15:49:42Z andres $ *)
+let () = SadmanOutput.register "Queues" "$Revision: 2274 $"
 
 (** {1 Types} *)
 
@@ -883,32 +883,23 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         val mutable current_tree_in_search = None 
 
         method private check_results = 
-            let attempt_to_make_them_true (tree, (tabu : ('a, 'b)
-            Ptree.tabu_mgr), todo) (_, break, r1, r2) =
-                let breaknjoin = 
-                    let Tree.Edge (b1, b2) = break in
-                    "Break " ^ string_of_int b1 ^ " and " ^
-                    string_of_int b2 ^ " to join " ^ Tree.string_of_jxn
-                    r1 ^ " and " ^ Tree.string_of_jxn r2 
+            let attempt_to_make_them_true tree tabu (acc_tree, (acc_tabu : ('a, 'b)
+            Ptree.tabu_mgr), acc_todo) (_, break, r1, r2) =
+                let icost = Ptree.get_cost `Adjusted acc_tree in
+                let ntabu = tabu#clone in
+                let Tree.Edge break = Tree.normalize_edge break tree.Ptree.tree in
+                let tree, a, b, c, d, il = break_fn break tree in
+                let t1_h, t2_h = Tree.get_break_handles a (tree.Ptree.tree) in
+                let t1_h, t2_h = 
+                    Ptree.handle_of t1_h tree, Ptree.handle_of t2_h tree
                 in
-                let icost = Ptree.get_cost `Adjusted tree
-                and itree = tree in
-                try
-                    let Tree.Edge break = Tree.normalize_edge break
-                    tree.Ptree.tree in
-                    let tree, a, b, c, d, il = break_fn break tree in
-                    let tree, treed = join_fn il r1 r2 tree in
-                    let cost = Ptree.get_cost `Adjusted tree in
-                    Status.user_message Status.Information 
-                    ("Successful: " ^ breaknjoin);
-                    if cost < icost then 
-                        tree, tabu, true
-                    else itree, tabu, true
-                with
-                | _ -> 
-                        Status.user_message Status.Information 
-                        ("Non successful: " ^ breaknjoin);
-                        tree, tabu, true
+                let () = ntabu#update_break tree a t1_h t2_h c in
+                let tree, treed = join_fn il r1 r2 tree in
+                let () = ntabu#update_join tree treed in
+                let cost = Ptree.get_cost `Adjusted tree in
+                if cost < icost then 
+                    tree, ntabu, true
+                else acc_tree, acc_tabu, acc_todo
             in
             let what_to_do = 
                 List.sort (fun (a, _, _, _) (b, _, _, _) -> compare b a)
@@ -917,7 +908,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             match current_tree_in_search with
             | Some (tr, tabu) ->
                     let tree, tabu, do_again = 
-                        List.fold_left attempt_to_make_them_true (tr, tabu, false) what_to_do
+                        List.fold_left (attempt_to_make_them_true tr tabu) 
+                        (tr, tabu, false) what_to_do
                     in
                     do_repeat <- do_again;
                     all_places_to_join <- [];
@@ -948,6 +940,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             match cost_fn j1 j2 b_delta cd_nd pt with
             | Ptree.NoCost -> Tree.Skip
             | Ptree.Cost cc ->
+                    tabu_mgr#break_distance cc;
                     sampler#process j1 j2 cd_nd pt None b_delta cc None; 
                     if cc < b_delta then 
                       let nt, j_delta = (join_fn incremental j1 j2 pt) in

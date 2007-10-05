@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2265 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2274 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -334,7 +334,7 @@ module type SEARCH = sig
       (** [alternate_spr_tbr search] takes each tree in search manager [search]
           and performs rounds of alternating SPR and TBR until there is no further
           improvement *)
-      val alternate_spr_tbr : searcher
+      val alternate : searcher -> searcher -> searcher
 
       val repeat_until_no_more : 
           ((a, b) p_tree -> (a, b) tabu_mgr) -> 
@@ -1033,11 +1033,8 @@ let spr_step
     (* then try to reattach the clade in each tabu#join_edge location *)
     let break_side (ptree, tree_delta, break_delta, clade_id, 
         clade_node, incremental) =
-
         if ndebug_break_delta
         then odebug ("break_delta is " ^ string_of_float break_delta);
-
-        
         let t1_h, t2_h = Tree.get_break_handles tree_delta (ptree.tree) in
         let t1_h, t2_h = handle_of t1_h ptree, handle_of t2_h ptree in
         let j2 = Tree.side_to_jxn (let (l, r) = tree_delta in r) in
@@ -1250,8 +1247,7 @@ let search (searcher, name) search =
     while search#any_trees do
         let (ptree, cost, tabu) = search#next_tree in
         Status.full_report ~adv:(int_of_float cost) status;
-        let _ = searcher ptree tabu#clone search in
-        ()
+        searcher ptree tabu#clone search;
     done;
     Status.finished status;
     search
@@ -1273,7 +1269,7 @@ let tbr_simple = search (tbr_step, "TBR")
 let spr_single = search_local_next_best (spr_step, "SPR")
 let tbr_single = search_local_next_best (tbr_step, "TBR")
 
-let alternate_spr_tbr search =
+let alternate spr tbr search =
     let find_best_cost lst = 
               List.fold_left (fun best (_, cost, _) -> if best < cost then best
               else cost) max_float lst
@@ -1284,7 +1280,7 @@ let alternate_spr_tbr search =
     | false -> search
     | true ->
           Status.full_report ~msg:("SPR search") status;
-          let search = spr_simple search in
+          let search = spr search in
           (* SPR is done---run TBR steps on the results *)
           Status.full_report
               ~msg:"Performing TBR swapping" status;
@@ -1294,13 +1290,14 @@ let alternate_spr_tbr search =
           let () = search#init
               (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
                    results) in
-          let search = tbr_single search in
+          let search = tbr search in
 (*           let search = Sexpr.fold_status *)
 (*               "TBR swapping" *)
 (*               (fun search (tree, cost, tabu) -> *)
 (*                    tbr_step tree tabu search) search (Sexpr.of_list results) in *)
             let new_cost = find_best_cost search#results in
-            if new_cost < best_cost && new_cost < prev_best then 
+            if (new_cost < best_cost && new_cost < prev_best) ||
+            search#should_repeat then 
                 let search = search#clone in
                 let () = search#init
                     (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)

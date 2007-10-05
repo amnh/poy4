@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 2265 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2274 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -1149,7 +1149,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
     end
 
     class virtual all_edges side initial_edges (ptree : (Node.n, Edge.e) Ptree.p_tree) =
-
+            let () = assert (0 < Array.length initial_edges) in
         object (self)
 
         val mutable edges = initial_edges
@@ -1250,7 +1250,8 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             in
             edges <- Array.map filter edges;
             (*assert (0 = List.length !created);*)
-            end_of_check <- next_edge;
+            end_of_check <- 
+                if next_edge < 0 then (Array.length edges) - 1 else next_edge;
             this_is_the_end <- false
 
     end
@@ -1379,7 +1380,8 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             in
             edges <- Array.map filter edges;
             (*assert (0 = List.length !created);*)
-            end_of_check <- next_edge;
+            end_of_check <- 
+                if next_edge < 0 then (Array.length edges) - 1 else next_edge;
             this_is_the_end <- false
 
     end

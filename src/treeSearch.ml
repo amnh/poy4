@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2198 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2274 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -265,16 +265,32 @@ module MakeNormal
             | `Spr ->  PtreeSearch.spr_step, "SPR"
             | `Tbr -> PtreeSearch.tbr_step, "TBR"
         in
-        let res = 
-            match meth with
-            | `Alternate _ -> PtreeSearch.alternate_spr_tbr
-            | `SingleNeighborhood x -> PtreeSearch.search_local_next_best (stepfn x)
-            | `ChainNeighborhoods x -> PtreeSearch.search (stepfn x)
-            | `None -> (fun a -> a)
-        in
-        match trajectory with
-        | `AllThenChoose -> PtreeSearch.repeat_until_no_more tabu_creator res
-        | _ -> res
+            match trajectory with
+            | `AllThenChoose ->
+                    (match meth with
+                    | `Alternate _ -> 
+                            PtreeSearch.alternate
+                            (PtreeSearch.repeat_until_no_more tabu_creator 
+                            (PtreeSearch.search (stepfn `Spr)))
+                            (PtreeSearch.search_local_next_best (stepfn `Tbr))
+                    | `SingleNeighborhood x -> 
+                            PtreeSearch.repeat_until_no_more tabu_creator
+                            (PtreeSearch.search_local_next_best (stepfn x))
+                    | `ChainNeighborhoods x -> 
+                            PtreeSearch.repeat_until_no_more tabu_creator
+                            (PtreeSearch.search (stepfn x))
+                    | `None -> (fun a -> a))
+            | _ ->
+                    (match meth with
+                    | `Alternate _ -> 
+                            PtreeSearch.alternate
+                            (PtreeSearch.search (stepfn `Spr))
+                            (PtreeSearch.search_local_next_best (stepfn `Tbr))
+                    | `SingleNeighborhood x -> 
+                            PtreeSearch.search_local_next_best (stepfn x)
+                    | `ChainNeighborhoods x -> 
+                            PtreeSearch.search (stepfn x)
+                    | `None -> (fun a -> a))
 
     (** [forest_break_search_tree origin_cost tree] attempts to break all edges
         in [tree] with length greater than [origin_cost].  It attempts to be
