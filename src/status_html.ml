@@ -21,8 +21,18 @@ exception Illegal_update
 
 type formatter_output = StatusCommon.formatter_output
 
+
+
 type c = SearchReport | Status | Error | Information 
          | Output of (string option * bool * formatter_output list)
+
+let are_we_parallel = ref false
+
+let my_rank = ref 0
+
+let verbosity : ([ `Low | `Medium | `High ] ref) = ref `Low
+
+let slaves_deal_in_this_way : (c -> string -> unit) ref = ref (fun _ _ -> ())
 
 let output_header ch = 
     output_string ch "<html><head><style type \"text/css\">
@@ -202,9 +212,6 @@ end
 let output = new standard out_output
 let current_search = new standard out_current
 
-let are_we_parallel = ref false
-let my_rank = ref 0
-let verbosity : ([ `Low | `Medium | `High ] ref) = ref `Low
 let get_verbosity () = !verbosity
 let set_verbosity x = verbosity := x
 
@@ -215,11 +222,15 @@ let achieved status v = status#set_advanced v
 
 let get_achieved status = status#get_achieved
 
-let slaves_deal_in_this_way : (c -> string -> unit) ref = ref (fun _ _ -> ())
+let message status string = 
+    if (not !are_we_parallel) || (0 = !my_rank) then
+        status#set_message string
+    else !slaves_deal_in_this_way Status string
 
-let message status string = status#set_message string
-
-let report status = status#print
+let report status = 
+    if (not !are_we_parallel) || (0 = !my_rank) then
+        status#print
+    else ()
 
 let finished status = status#destroy ()
 
@@ -234,13 +245,16 @@ let full_report ?msg ?adv status =
         | None -> ()
         | Some adv -> status#set_advanced adv
     in
-    status#print
+    if (not !are_we_parallel) || (0 = !my_rank) then
+        status#print
+    else ()
 
 let is_parallel x = 
     are_we_parallel := true;
     match x with
     | None -> ()
-    | Some f -> slaves_deal_in_this_way := f
+    | Some f -> 
+            slaves_deal_in_this_way := f
 
 let rank x = my_rank := x
 
@@ -309,13 +323,15 @@ let do_output_table t v =
     else ()
 
 let output_table t v =
-    do_output_table t v;
-    let _ =
-        match t with
-        | Output _ -> ()
-        | _ -> output#print "@." 
-    in
-    ()
+    if (not !are_we_parallel) || (0 = !my_rank) then begin
+        do_output_table t v;
+        let _ =
+            match t with
+            | Output _ -> ()
+            | _ -> output#print "@." 
+        in
+        ()
+    end else ()
 
 let redraw_screen () = ()
 
