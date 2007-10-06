@@ -1007,6 +1007,7 @@ let to_local x = List.map (fun x -> `Local x) x
 
 (* The necessary types to produce the tree of the parsed input. *)
 open Camlp4.PreCast
+module Gram = Camlp4.Struct.Grammar.Static.Make CommandLexer.Lexer
 let create_expr () = 
     let expr = Gram.Entry.mk "expr" in
     EXTEND Gram
