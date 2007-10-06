@@ -230,7 +230,7 @@ BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) \
 	array_ops.cmo $(PARSER) distances.cma \
 	$(CHROM_OBJS) $(BREAKINV_OBJS) $(ANNCHROM_OBJS) $(GENOME_OBJS) $(CHARACTER) \
 	methods.cmo trees.cma diagnosis.cmo supports.cmo help.cmo helpIndex.cmo \
-	analyzer.cmo poyCommand.cmo poyFile.cmo $(XSLT_COMPONENTS) scripting.cmo 
+	analyzer.cmo commandLexer.cmo poyCommand.cmo poyFile.cmo $(XSLT_COMPONENTS) scripting.cmo 
 
 MAIN_OBJS = $(BASE_OBJS) arguments.cmo compileFlags.cmo main.cmo
 
@@ -483,12 +483,12 @@ ocaml-str:
 # Poy Parser needs to be preprocessed and remove the unsafe option
 poyParser.cmo: poyParser.ml
 	ocamlc -g $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c $<
-poyCommand.cmo: poyCommand.ml
-	ocamlc -g $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c $<
+poyCommand.cmo: commandLexer.cmo poyCommand.ml
+	ocamlc -g $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c poyCommand.ml
 poyParser.cmx: poyParser.ml
 	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c $<
-poyCommand.cmx: poyCommand.ml
-	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c $<
+poyCommand.cmx: commandLexer.cmx poyCommand.ml
+	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c poyCommand.ml
 poyParser.cma: poyParser.ml
 	$(OCAMLC) -g $(PREPROCESSOR:-unsafe=) -I +camlp4 $(OCAML_INCLUDES:-unsafe=) -c $(DEBUG:-unsafe=) $<
 status_gtk2.cmo: status_gtk2.ml
@@ -510,17 +510,17 @@ sequence.cmx: sadmanOutput.cmx matrix.cmx fingerPrint.cmx cost_matrix.cmx \
     alphabet.cmx all_sets.cmx sequence.cmi sequence.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c sequence.ml
 seqCS.cmo: tags.cmo status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
-    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi seqCS.ml
 	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) seqCS.ml
 seqCS.cmx: tags.cmx status.cmi sequence.cmi sadmanOutput.cmi matrix.cmi \
-    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi 
+    intSpec.cmi data.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi seqCS.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c seqCS.ml
 scripting.cmo: scripting.cmi scripting.ml
 	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) scripting.ml
 scripting.cmx: scripting.cmi scripting.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) $(CCOPT) -c scripting.ml
 timer.cmo: timer.cmi timer.ml
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c timer.ml
+	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) timer.ml
 timer.cmx: timer.cmi timer.ml
 	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c timer.ml
 fileStream.cmo: fileStream.ml
@@ -560,6 +560,15 @@ hennigParser.ml: hennigParser.cmi
 
 hennigLexer.ml: hennig.cmo hennigParser.cmi hennigLexer.mll
 	$(OCAMLLEX) hennigLexer.mll
+
+commandLexer.ml: commandLexer.mll
+	$(OCAMLLEX) commandLexer.mll
+
+commandLexer.cmo: commandLexer.ml
+	$(OCAMLC) -I +camlp4 -c commandLexer.ml
+
+commandLexer.cmx: commandLexer.ml
+	$(OCAMLOPT) -I +camlp4 -c commandLexer.ml
 
 nexusParser.cmi: nexus.cmo nexusParser.mly
 	$(OCAMLYACC) nexusParser.mly
