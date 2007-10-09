@@ -252,6 +252,8 @@ let dependency_relations (init : Methods.script) =
                 | `Branch_and_Bound _
                 | `Prebuilt _ ->
                         [([Data], [Data; Trees], init, Linnearizable)]
+                | `Build (_, (`Constraint (_, _, None, _)), _) ->
+                        [([Data; Trees], [Trees], init, NonComposable)]
                 | `Build _
                 | `Build_Random _ ->
                         [([Data], [Trees], init, Parallelizable)]

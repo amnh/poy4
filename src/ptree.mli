@@ -247,7 +247,7 @@ module type SEARCH = sig
   val make_wagner_tree :
       ?sequence:(int list) ->
     (a, b) p_tree ->
-    (unit -> int) -> (a, b) wagner_mgr ->
+    (a, b) wagner_mgr ->
     ((a, b) p_tree -> int -> (a, b) wagner_edges_mgr) ->
     (a, b) wagner_mgr
 
@@ -377,7 +377,7 @@ module type SEARCH = sig
 
     end
     
-val set_avail_start : ('a, 'b) p_tree -> int -> ('a, 'b) p_tree
+val set_avail_start : ('a, 'b) p_tree -> ('a, 'b) p_tree
 val int_of_id : Tree.id -> int
 val get_id : Tree.node -> int
 val is_handle : int -> ('a, 'b) p_tree -> bool

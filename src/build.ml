@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2265 $"
+let () = SadmanOutput.register "Build" "$Revision: 2296 $"
 
 let debug_profile_memory = false
 
@@ -140,7 +140,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     let disjoin_tree data =
         let leafs = set_of_leafs data in
         let tree = Ptree.make_disjoint_tree leafs in
-        PtreeSearch.downpass tree
+        PtreeSearch.uppass (PtreeSearch.downpass tree)
 
     let edges_of_tree tree =
         Tree.EdgeSet.fold (fun x acc -> x :: acc) tree.Ptree.tree.Tree.d_edges []
@@ -304,7 +304,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         | _ -> acc) All_sets.Integers.empty handles 
                     in
                     match (PtreeSearch.make_wagner_tree ~sequence:handles ptree
-                    cg single_wagner_search_manager (BuildTabus.wagner_constraint constraints))#results, handles with
+                    single_wagner_search_manager (BuildTabus.wagner_constraint constraints))#results, handles with
                     | ((ptree, _) :: _), (h :: _) -> 
                              ptree, h
                     | _ -> assert false
@@ -329,7 +329,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     let single_wagner wmgr cg data = 
         let disjoin_tree = disjoin_tree data in
         let data = List.map (fun x -> Node.taxon_code x) data in
-        match (PtreeSearch.make_wagner_tree ~sequence:data disjoin_tree cg wmgr
+        match (PtreeSearch.make_wagner_tree ~sequence:data disjoin_tree wmgr
         BuildTabus.wagner_tabu)#results with
         | (hd, _) :: _ -> 
                 `Single (PtreeSearch.uppass hd)
@@ -386,7 +386,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         let data = data_generator () in
         let datal = List.map (fun x -> Node.taxon_code x) data in
         let res = 
-            (PtreeSearch.make_wagner_tree ~sequence:datal (disjoin_tree data) cg wmgr
+            (PtreeSearch.make_wagner_tree ~sequence:datal (disjoin_tree data) wmgr
             tabu_mgr)#results in
         `Set (List.map (fun (x, _) -> 
             `Single (TreeOps.uppass x)) res)
@@ -602,7 +602,7 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
                     | [] -> failwith "No trees for constraint"
                 in
                 let maj = List.length tree_list in
-                Ptree.consensus TS.collapse_as_needed 
+                Ptree.consensus TS.never_collapse 
                 (fun code -> Data.code_taxon code data) maj 
                 (Sexpr.to_list trees) 
                 (match data.Data.root_at with
@@ -617,9 +617,6 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
     in
     let perform_build () =
         match meth with
-        | `Constraint (n, threshold, file, _) ->
-                let constraint_tree = do_constraint file in
-                constrained_build cg data n constraint_tree nodes
         | `Branch_and_Bound (bound, threshold, keep_method, max_trees, _) ->
                 let threshold = 
                     match threshold with

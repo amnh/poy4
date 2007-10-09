@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2274 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2296 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -101,15 +101,15 @@ let remove_root_of_component node ptree =
 let empty = { 
     node_data = All_sets.IntegerMap.empty ;
     edge_data = Tree.EdgeMap.empty ;
-    tree = Tree.empty;
+    tree = Tree.empty ();
     component_root = All_sets.IntegerMap.empty;
     origin_cost = 0.;
 }
 
 (** [set_avail_start ptree id] tells [ptree] to start creating new nodes with
     ID [id] *)
-let set_avail_start ptree id =
-    { ptree with tree = Tree.set_avail_start ptree.tree id }
+let set_avail_start ptree =
+    { ptree with tree = Tree.set_avail_start ptree.tree }
 
 type ('a, 'b) break_fn = Tree.break_jxn -> ('a, 'b) p_tree ->
     (('a, 'b) p_tree * Tree.break_delta * float * int * 'a * incremental list)
@@ -288,7 +288,7 @@ module type SEARCH = sig
       val make_wagner_tree :
           ?sequence:(int list) ->
         (a, b) p_tree ->
-        (unit -> int) -> (a, b) wagner_mgr ->
+        (a, b) wagner_mgr ->
             ((a, b) p_tree -> int -> (a, b) wagner_edges_mgr) ->
         (a, b) wagner_mgr 
 
@@ -793,7 +793,6 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         @param cost_fn function to determine the cost of the tree.
         @return the wagner tree. i.e. best spr tree over the given data. *)
     let make_wagner_tree ?(sequence) ptree 
-            code_fn 
             (srch_mgr : (Tree_Ops.a, Tree_Ops.b) wagner_mgr) 
             (create_tabu_mgr : (('a, b) p_tree -> int -> (Tree_Ops.a, Tree_Ops.b)
             wagner_edges_mgr))
@@ -803,7 +802,6 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             | None -> Tree.handle_list ptree.tree
             | Some r -> List.map (fun x -> handle_of x ptree) r 
         in
-        let ptree = set_avail_start ptree ((code_fn ()) + 1) in
         (* make sure you have atleast two nodes to build a tree 
          *  (one edge only) of type a -- b *)
         match nodes with

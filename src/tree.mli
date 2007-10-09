@@ -143,8 +143,8 @@ type break_jxn = id * id
 
 
 (** The empty u_tree. *)
-val empty : u_tree
-val set_avail_start : u_tree -> int -> u_tree
+val empty : unit -> u_tree
+val set_avail_start : u_tree -> u_tree
 val get_id : node -> int
 val int_of_id : id -> int 
 val is_handle : int -> u_tree -> bool

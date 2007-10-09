@@ -47,11 +47,11 @@
             {branchandbound}
 
         \argumentdefinition{constraint}{\optional{\poystring}}
-            {Build trees using the set of constraints contained in the input
+            {Builds trees using the set of constraints contained in the input
             file. If no input file is provided, the constraint is calculated as
             the strict consensus of the trees held in memory. Every tree built
-            using this method is subject to the same randomization as wagner
-            builds, within each constraint.}
+            using this method is subjected to the same randomization as wagner
+            builds within each constraint.}
             {buildconstraint}
 
         \argumentdefinition{random}{}
@@ -1236,21 +1236,80 @@
 
 \begin{command}{rename}{}
 
-	\syntax{\obligatory{(argument)}}
+	\syntax{\obligatory{argument list}}
 
 	\begin{poydescription} 
-        Changes the name of specified items from one string to another. Valid
-        \poycommand{rename} arguments can be \poycommand{character},
-        \poycommand{terminals}, a filename, or a pair of strings. Specifying \texttt{("a",
-        "b")} would rename the character or taxon \texttt{a} to \texttt{b}.
-	\end{poydescription}
-	
+        Replaces the name(s) of specified item(s) (characters or terminals). This command allows 
+        for substituting taxon names and helps merging multiple datasets without modifying the original
+        datafiles. More specifically, it can be used, for example, (1) for housekeeping purposes
+        when it is desirable to maintain long verbose taxon names (such as catalog or GenBank
+        accession numbers) associated with the original datafiles but avoid reporting these 
+        names on the trees; (2) to provide a single name for a terminal in cases where the corresponding
+        data is stored in different files under different terminal names; and (3) to simply change an
+        outdated or invalid terminal name.
+        
+        The command consists of a terminal or character identifier followed by a comma and then by
+        either a string containing a synonymy file or a pair (or pairs) of strings containing the names of
+        items being renamed.
+	\end{poydescription}  
+          
 	\begin{statement}
             In order to change taxon names, the command \poycommand{rename} must be
             executed \emph{before} importing the datafiles (see command  \nccross{read}{read})
             that contain character data the taxa to be renamed.
           \end{statement}
           
+          \begin{arguments}
+		\begin{argumentgroup}{Identifiers}
+		{The identifiers specify whether terminals or characters are being renamed. An identifier
+		must precede the subsequent arguments.}
+		
+		\argumentdefinition{characters}{}
+                {Specifies that the subsequently subsequently items to be renamed are characters.} 
+                {}
+		\argumentdefinition{terminals}{}
+                {Specifies that the subsequently subsequently items to be renamed are terminals.} 
+                {}
+		\end{argumentgroup}
+	      
+	      \begin{argumentgroup}{Specifying items to be renamed}
+	      {These arguments allow to specify the items to be renamed either individually (by 
+	      using a pair of string arguments) or in a group (by importing a \emph{synonymy} file.
+	      The latter is useful when there are multiple items to be renamed and/or when it is
+	      desirable to substitute a single name for  multiple ones.}
+	      
+	      \argumentdefinition{STRING}{}
+                {Specifies the name of the file (a \emph{synonymy} file) that contains the list of
+                terminals or characters to be renamed. The synonymy file has the following structure:
+                each line contains a list of synonyms (two or more) separated by spaces. The name of the
+                item listed first is going to be substituted for all the subsequently listed names. Consider,
+                for example, a two-line synonymy file below:
+                
+                \texttt{alpha beta gamma \\
+                delta 1\\}
+                 
+                 When this file is imported, the items \texttt{beta} and \texttt{gamma} will be
+                 renamed as \texttt{alpha} and the item \texttt{1} will be renamed as \texttt{delta}
+                 in all subsequently imported datafiles.}
+                {}
+                \argumentdefinition{(STRING, STRING)}{}
+                {Specifies the names of individual items to be renamed. The first item will be renamed
+                as the second item: specifying \texttt{("alpha","beta")} would rename the character or taxon
+                \texttt{alpha} to \texttt{beta}. To specify multiple pairwise name substitution, several 
+                name pairs can be listed: \texttt{("alpha","beta"),("gamma","delta").}}
+                {}
+	      \end{argumentgroup}
+	      
+          \end{arguments}
+          
+          \begin{poyexamples}
+        \poyexample{rename(terminals,"synfile")}{This command will rename terminal names
+            contained in the synonymy file \texttt{synfile} in all subsequently imported datafiles.}
+            \poyexample{rename(terminals,("Mytilus\_sp","Mytilus\_edulis"))}{This command will
+            rename terminal file \texttt{Mytilus\_sp} as \texttt{Mytilus\_edulis} in all subsequently
+            imported datafiles.}
+    \end{poyexamples}
+
 \end{command}
         
 \begin{command}{report}{}
@@ -1578,7 +1637,7 @@
 			{This set of arguments will output the diagnosis.} 
 
 			\argumentdefinition{diagnosis}{}
-                {Outputs the diagnosis of each tree to screen or to a file, if
+                {Outputs the diagnosis of each tree on screen or redirects it to a file, if
                 specified.} 
                 {}
 
@@ -2240,7 +2299,15 @@
                 the tree cost estimation but at the expense of a tremendous execution time.
                 Use at the very end to polish the final set of trees and perform a final search.}
                 {}
-
+                
+	\begin{statement}
+  	  Due to the complexity of heuristics of the iterative pass optimization, there is no
+	  guarantee that the tree cost recovered from the search would be exactly the same
+	  as produced by the diagnosis of the same tree. However, once the cost is computed
+	  by the diagnosis, subsequent rediagnosing of the same tree must produce the same
+	  cost.
+	\end{statement}
+	
         \end{argumentgroup}
 
         \begin{argumentgroup}{Randomized routines}
@@ -2251,7 +2318,12 @@
                 value. If unspecified, \poy uses the system's time as seed. It
                 is reported when the program starts.}
                 {}
-
+	\begin{statement}
+  	 It is critical to set a seed value to insure reproducibility of the results
+	 of the analyses that require randomization routines (such as tree
+	 building).
+	\end{statement}
+	
             \end{argumentgroup}
 	\end{arguments}
 
@@ -2520,10 +2592,11 @@
                 {}
 
         \argumentdefinition{timedprint}{\obligatory{(\poyint, \poystring)}}
-			{\poyargument{timedprint:(n, "trees.txt")} will print the current
-                best tree in memory to the file \texttt{trees.txt}, at least every 
-                \texttt{n} seconds. However, \poy typically underestimates the amount of
-                time and, therefore, the samples can be slightly sparcer.}
+	{\poyargument{timedprint:(n, "trees.txt")} will print the current
+            best tree in memory to the file \texttt{trees.txt}, at least every 
+            \texttt{n} seconds. However, \poy typically underestimates the amount of
+            time and, therefore, the samples can be slightly sparcer. \poyargument{timedprint} 
+            can only be used in combination with the argument \poyargument{recover}.}
             {}
 
 		\argumentdefinition{trajectory}{\optional{\poystring}}
@@ -2594,17 +2667,20 @@
             cost trees for each starting tree.}
             
         \poyexample{swap(constraint:(depth:4))}
-            {Calculate a consensus tree of the files in memory and use it as
-            constraint file, then join at distance at most 4 from the breaking
-            branch. This is equivalent to swap (constraint:(4))}
+            {Calculates a consensus tree of the files in memory and uses it as
+            constraint file, then joins at distance at most 4 from the breaking
+            branch. This is equivalent to \texttt{swap(constraint:(4))}.}
 	
         \poyexample{swap(constraint:(file:"bleh"))}
-            {Read the tree in file "bleh" and use it as constraint for the
-            search. This is equivalent to swap (constraint:("bleh")).}	
+            {Reads the tree in file \texttt{bleh} and use it as constraint for the
+            search. This is equivalent to \texttt{swap(constraint:("bleh"))}.}	
 		
-		\poyexample{swap(constraint:(file:"bleh", depth:4))}
-            {Use the tree in file "bleh" as constraint tree, and join at
+        \poyexample{swap(constraint:(file:"bleh", depth:4))}
+            {Uses the tree in the file \texttt{bleh} as a constraint tree and joins at
             distance at most 4 from the breaking branch during the swap.}
+        
+         \poyexample{swap(recover, timedprint:(5, "timedprint.txt"))}
+            {Saves the current best tree to file \texttt{timedprint.txt} every 5 seconds.}
             
 	\end{poyexamples}
 

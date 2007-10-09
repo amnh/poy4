@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2013 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2296 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -199,8 +199,9 @@ let replace_codes f tree =
     { tree with u_topo = topo; d_edges = edges; handles = handles; avail_ids =
         avail_ids }
 
-let set_avail_start tree id =
-    { tree with new_ids = id }
+let set_avail_start tree =
+    incr Data.median_code_count;
+    { tree with new_ids = !Data.median_code_count }
 
 let get_available tree =
     match tree.avail_ids with
@@ -209,8 +210,14 @@ let get_available tree =
           assert (false = List.mem id ids);
           id, { tree with avail_ids = ids }
     | [] ->
-          assert (false = All_sets.IntegerMap.mem tree.new_ids tree.u_topo);
-          tree.new_ids, { tree with new_ids = succ tree.new_ids }
+            assert (
+                if All_sets.IntegerMap.mem (succ tree.new_ids) tree.u_topo then
+                begin
+                    Status.user_message Status.Error ("I am using " ^
+                    string_of_int tree.new_ids);
+                    false
+                end else true);
+            tree.new_ids, { tree with new_ids = succ tree.new_ids }
 
 type break_jxn = id * id
 
@@ -229,13 +236,15 @@ let get_id node =
 (*****************************************************************************)
 
 (** The empty unrooted tree. *)
-let empty = {
-    u_topo = All_sets.IntegerMap.empty;
-    d_edges = EdgeSet.empty;
-    handles = All_sets.Integers.empty;
-    avail_ids = [];
-    new_ids = 12345;
-}
+let empty () = 
+    incr Data.median_code_count;
+    {
+        u_topo = All_sets.IntegerMap.empty;
+        d_edges = EdgeSet.empty;
+        handles = All_sets.Integers.empty;
+        avail_ids = [];
+        new_ids = !Data.median_code_count;
+    }
 
 (** [is_handle id tree]
     @param id node id.
@@ -807,7 +816,7 @@ let add_tree_to d add_to tree =
 
 
 let convert_to trees data = 
-    List.fold_left (add_tree_to data) empty trees
+    List.fold_left (add_tree_to data) (empty ()) trees
 
 (** [make_disjoint_tree n]
     @return a disjointed tree with the given nodes and 0 edges *)
@@ -817,7 +826,7 @@ let make_disjoint_tree nodes =
         let tr = (add_handle m tr) in
             tr
     in
-        (List.fold_left f empty nodes)
+        (List.fold_left f (empty ()) nodes)
 
 (** [get_children id tree] returns the two children of node [id] in [tree]
     @raise [Failure] if the node has no children *)
@@ -1031,7 +1040,7 @@ let make_minimal_tree () =
         e1 = Edge(1, 2) and
         e2 = Edge(1, 3) and
         e3 = Edge(1, 4) in
-    let bt = (add_nodes [nd1; nd2; nd3; nd4] empty) in
+    let bt = (add_nodes [nd1; nd2; nd3; nd4] (empty ())) in
     let bt = (add_edges [e1; e2; e3] bt) in
     let bt = (add_handle 1 bt) in
     if debug_tests then test_tree bt;
