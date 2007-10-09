@@ -7,9 +7,9 @@ if ! svn update; then
     exit 1
 fi
 
-cp ./config.win32 config
-
 function compile_executable {
+
+echo "$1" >> config
 
 cd ./src
 
@@ -33,7 +33,8 @@ fi
 cd ../
 }
 
-compile_executable
+cp ./config.win32 config
+compile_executable "export USE_LONG_SEQUENCES = $1"
 
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
     echo "I could not replace the poy executable in the distribution"
@@ -41,7 +42,7 @@ if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
 fi
 
 sed -e "s/ncurses/html/" config.win32 > config
-compile_executable
+compile_executable "export USE_LONG_SEQUENCES = $1"
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/seq_poy.exe; then
     echo "I could not replace the executable in the distribution"
     exit 1

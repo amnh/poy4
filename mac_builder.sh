@@ -81,29 +81,30 @@ function make_universals {
     ./$UNIVERSAL_DIRECTORY/$3
 }
 
+configuration=
 function tiger_distribution {
-    if ! generate_ppc "--enable-xslt --enable-interface=html" gcc seq_poy_ppc ""; then
+    if ! generate_ppc "${configuration} --enable-xslt --enable-interface=html" gcc seq_poy_ppc ""; then
         exit 1
     fi
 
-    if ! generate_ppc "--enable-xslt --enable-interface=ncurses" gcc ncurses_poy_ppc ""; then
+    if ! generate_ppc "${configuration} --enable-xslt --enable-interface=ncurses" gcc ncurses_poy_ppc ""; then
         exit 1
     fi
 
-    if ! generate_ppc "--enable-xslt --enable-interface=html --enable-mpi" \
+    if ! generate_ppc "${configuration} --enable-xslt --enable-interface=html --enable-mpi" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc ""; then 
         exit 1
     fi
 
-    if ! generate_intel "--enable-xslt --enable-interface=html" gcc seq_poy_intel ""; then
+    if ! generate_intel "${configuration} --enable-xslt --enable-interface=html" gcc seq_poy_intel ""; then
         exit 1
     fi
 
-    if ! generate_intel "--enable-xslt --enable-interface=ncurses" gcc ncurses_poy_intel ""; then
+    if ! generate_intel "${configuration} --enable-xslt --enable-interface=ncurses" gcc ncurses_poy_intel ""; then
         exit 1
     fi
 
-    if ! generate_intel "--enable-xslt --enable-interface=html --enable-mpi" \
+    if ! generate_intel "${configuration} --enable-xslt --enable-interface=html --enable-mpi" \
         /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc \
         par_poy_intel ""; then
         exit 1
@@ -143,7 +144,6 @@ function create_generic {
 }
 
 target=
-configuration=
 while getopts 't:c:h:help' OPTION; do
     case $OPTION in
         t) 
