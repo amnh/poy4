@@ -2563,30 +2563,28 @@
     \end{argumentgroup}
 
 	\begin{argumentgroup}{Trajectory samples}
-	{During the search, \poy visits a (large) number of trees; it is
-        possible to ask the program to collect information about those
-        trees, to be used later: either to provide backups of the state of a
-        search (in the improbable case that \poy crashes), or simply to
-        analyze the characteristics of the alignments. A difference with
-        other groups of arguments in \poycommand{swap}, is that the user can
-        choose any combination of trajectory samples, and they will all be 
+	{During the search, \poy visits a large number of trees. For some applications
+	 it might be desirable to  collect information about the trees examined during a
+	 search: for example, to provide backups of the state of a
+        search (in an unlikely crash), or to examine the characteristics of the alignments.
+        The difference from the \poycommand{swap} arguments is that the user can
+        choose any combination of trajectory samples, and they will all can be 
         used during the search. None of the trajectory samples is used by
         default.}
 
 	\argumentdefinition{recover}{}
-	{Store the current best tree in memory to recover it in
-            case of failure (default is off); If it is necessary to recover such
+	{Stores the current best tree in memory that can be recovered it 
+            case of failure. If it is necessary to recover such
             trees after an aborted command, use the command~\ccross{recover}. 
             If the program terminates normally, the stored trees are exactly
             those produced at the end of the \poycommand{swap}. Using
-            \poyargument{recover} will require twice as much memory as the
-            \poycommand{swap} would take without it; however, it will not
-            affect the application's performance.}
+            \poyargument{recover}, however, requires twice as much memory
+            compared to swapping without it.}
             {recoverarg}
 
          \argumentdefinition{timeout}{\obligatory{\poyint}}
-	{is the number of seconds after which the swap will
-           be cancelled. Use this argument in association with \poycommand{recover}
+	{Specifies the number of seconds after which branch swapping isl
+           stopped. Use this argument in association with \poycommand{recover}
            to keep the best trees found up to \emph{n} seconds after
            starting the search.}
                 {}
@@ -2596,7 +2594,8 @@
             best tree in memory to the file \texttt{trees.txt}, at least every 
             \texttt{n} seconds. However, \poy typically underestimates the amount of
             time and, therefore, the samples can be slightly sparcer. \poyargument{timedprint} 
-            can only be used in combination with the argument \poyargument{recover}.}
+            can only be used in combination with the argument \poyargument{recover}. This
+            argument requires the argument \poyargument{recover} to be specified.}
             {}
 
 		\argumentdefinition{trajectory}{\optional{\poystring}}
