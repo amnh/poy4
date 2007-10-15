@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2319 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2321 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2802,7 +2802,12 @@ module SC = struct
                 if not labels then 
                     let cntr = ref (-1) in
                     (fun stream -> incr cntr; 
+                        consume_spaces stream;
                         if !cntr = taxa_len then 
+                            (* If we are at the end of the stream, we are just
+                            * fine, so we attempt to provoque an End of File
+                            , so we attempt to provoque an End of File error* error *)
+                            let _ = Stream.next stream in
                             let _ = Status.user_message Status.Error
                             ("Your@ input@ matrix@ declares@ fewer@ " ^
                             "terminals@ than@ there@ are@ on@ it.") in
