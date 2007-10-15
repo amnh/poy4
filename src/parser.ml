@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2265 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2319 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2804,8 +2804,8 @@ module SC = struct
                     (fun stream -> incr cntr; 
                         if !cntr = taxa_len then 
                             let _ = Status.user_message Status.Error
-                            ("Your@ input@ matrix@ declares@ less@ " ^
-                            "taxa@ than@ there@ are@ in@ your@ matrix.") in
+                            ("Your@ input@ matrix@ declares@ fewer@ " ^
+                            "terminals@ than@ there@ are@ on@ it.") in
                             failwith "Illegal input file"
                         else
                         match taxa.(!cntr) with
