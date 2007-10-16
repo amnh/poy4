@@ -17,7 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2328 $"
+let () = SadmanOutput.register "Node" "$Revision: 2338 $"
+let infinity = float_of_int max_int
 
 let debug = false
 let debug_exclude = false
