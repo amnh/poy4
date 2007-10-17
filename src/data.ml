@@ -2688,11 +2688,6 @@ let get_pool data c =
     | Dynamic dspec -> dspec.pool
     | _ -> failwith "Data.get_alphabet"
 
-let get_alphabet data c =
-    match Hashtbl.find data.character_specs c  with
-    | Dynamic dspec -> dspec.alph
-    | _ -> failwith "Data.get_alphabet"
-
 let get_character_state data c =
     match Hashtbl.find data.character_specs c  with
     | Dynamic dspec -> dspec.state
