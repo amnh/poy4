@@ -1487,7 +1487,8 @@ let create_expr () =
                 [ LIDENT "total" -> `Total ] |
                 [ LIDENT "newick" -> `Newick ] |
                 [ LIDENT "margin"; ":"; m = INT -> `Margin (int_of_string m) ] |
-                [ LIDENT "nomargin" -> `Margin max_int] |
+                [ LIDENT "nomargin" -> `Margin (1000000010 - 1) (* Format.pp_infinity
+                 - 1 *)] |
                 [ x = collapse -> (x :> Methods.information_contained)  ]
 
             ];
