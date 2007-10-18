@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.mli 2049 2007-08-06 19:06:02Z andres $ *)
+(* $Id: nonaddCS.mli 2361 2007-10-18 20:03:26Z andres $ *)
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
     in C.  These sets are immutable but can share data through reference
@@ -109,6 +109,7 @@ external elt_to_list : t -> int -> int list = "char_nonadd_CAML_elt_to_list"
 external to_list : t -> (int * e * float) list = "char_nonadd_CAML_to_list"
 val of_list : (int * e * float) list -> t
 val of_parser : Data.d -> (int list option * int) array * 'a -> int -> t * 'a
+val is_potentially_informative : int list option list -> bool
 
 val to_string : t -> string
 (** [to_formatter attrs c parent d : Tags.output list] returns the formatter for
