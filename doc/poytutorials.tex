@@ -138,44 +138,40 @@ exit()
 \end{itemize}
 
 
-%\section{Chromosome Analysis: Unannotated Sequences}{\label{tutorial 4}}
+\section{Chromosome Analysis: Unannotated Sequences}{\label{tutorial 4}}
 
-%This tutorial illustrates the analysis of chromosome-level transformations using 
-%unannotated sequences, i.e., contiguous strings of sequences without prior 
-%identification of independent regions.
-%\begin{enumerate}
-%    \item Type
-%    \begin{verbatim}
-%    wipe () [enter]
-%    read (chromosome:("mit5.txt"))  [enter]
-%    transform ((all, dynamic_pam:(inversion:15, locus_indel:(10, 1.5), 
-%    median:  3, swap_med:5, circular:true, approx:true))) [enter]
-%    build (5) [enter]
-%    swap ()[enter]
-%    select () [enter]
-%    report (asciitrees, diagnosis) [enter]
-%    transform ((all, dynamic_pam:(inversion:15, locus_indel:(10, 1.5), 
-%    median:3, swap_med:5, circular:true, approx:false))) [enter]
-%    swap ()[enter]
-%    select ()[enter]
-%    report (asciitrees, diagnosis) [enter]
-%    \end{verbatim}
+This tutorial illustrates the analysis of chromosome-level transformations using 
+unannotated sequences, i.e., contiguous strings of sequences without prior 
+identification of independent regions. Prior to attempting an analysis of  
+unannotated chromosomes it is necessary to enable the \texttt {"long sequences"}
+option when compiling the \texttt{POY4} program. 
 
+\begin{verbatim}
+(* Chromosome analysis of unannotated sequences *)
+read (chromosome:("mit5.txt"))
+transform ((all, dynamic_pam: (locus_breakpoint:20, locus_indel:(10, 1.5), 
+circular:true, median:2, seed_length:15, rearranged_len:45,
+sig_block_len:50, median:2, swap_med:1)))
+build()
+swap()
+select()
+report ("chrom", diagnosis)
+report ("consensustree", graphconsensus)
+exit()
+\end{verbatim}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+\begin{itemize}
+\item \texttt{(* Chromosome analysis of unannotated sequences *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
+\item \texttt{read(chromosome:("mit5.txt"))} This command imports the unannotated chromosomal sequence file \texttt{mit5.txt}. The argument \poyargument{chromosome} specifies the characters as unannotated chromosomes.
+\item \texttt{transform ((all, dynamic\_pam: (locus\_breakpoint:20, locus\_indel:(10, 1.5), circular:true, seed\_length:15, rearranged\_len:50, sig\_block\_len:50, median:2, swap\_med:1)))}  The \poycommand{transform} followed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating chromosome-level HTUs (medians).  The argument \poyargument{locus\_breakpoint:20} applies a breakpoint distance between chromosomes with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10, 1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  As the type of chromosomal sequences being analyzed are of mitochondrial origin, the argument \poyargument{circular:true} treats each chromosome sequence as a continuous rather than linear. The argument \poyargument{seed\_length:15} sets the minimum length of identical continuous fragments (seeds) at 15.  Setting the seed length to an integer appropriate for the data is critical to optimizing the efficiency with which the program correctly identifies chromosomal fragments and detects rearrangements.  Seeds are the foundation of larger homologous blocks.  The \poyargument{rearranged\_len} argument sets the minimum distance between two seeds at which rearrangement events can be detected.  The argument \poyargument{sig\_block\_len} creates a pairwise alignment between two chromosomes and sets an integer value below which sequence blocks are not considered homologous.  In this example, because the data are mitochondrial containing relatively short homologous tRNA sequences both the \poyargument{rearranged\_len} and the \poyargument{sig\_block\_len} were set to values below the defaults for these arguments.  The \poyargument{median} specifies the number of best cost locus-rearrangements which will be considered for each HTU (median), while the \poyargument{swap\_med} argument specifies the maximum number of swapping iterations performed to search for the best pairwise alignment between two chromosomes.  Because values for the \poyargument{median} and \poyargument{swap\_med} arguments set above the default (1) will significantly increase the calculation time, the default values are recommended for larger chromosomal data sets.
+\item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees.  It is essential that trees are either specified from a file or that trees are built and loaded in memory before attempting to calculate bremer support values.
+\item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
+\item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
+\item \texttt{report ("chrom", diagnosis)}  The \poycommand{report} command in combination with a file name and the \poyargument{diagnosis} outputs the optimal median states and edge values to a specified file (\emph{i.e.} \texttt{chrom}). 
+\item \texttt{report ("consensustree", graphconsensus)}  The \poycommand{report} command in combination with a file name and the \poyargument{graphconsensus} generates a postscript strict consensus file of the trees generated (\emph{i.e.} \texttt{consensustree}). 
+\item \texttt{exit()} This commands ends the \poy session.
+\end{itemize}
 
 
 %\section[Fusing and Ratcheting]{Advanced Search II: Tree Fusing and Fragment
