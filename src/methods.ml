@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 2265 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2369 $"
 
 (** Data *)
 
@@ -645,6 +645,7 @@ type tree_handling = [
 ]
 
 type script = [ 
+    | `Skip
     | `Entry (* Beginning of the program for analyzer *)
     | `StoreTrees
     | `UnionStored
