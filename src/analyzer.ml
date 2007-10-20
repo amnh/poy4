@@ -165,10 +165,10 @@ let dependency_relations (init : Methods.script) =
                                 outputf !output_files
                         in
                         [(output_files, output_files, init, NonComposable)]
+                | `Skip -> [([], [], init, Composable)]
                 | `SetSeed _
                 | `ClearMemory _
                 | `Recover
-                | `Skip
                 | `ClearRecovered ->
                         [([Data; Trees; JackBoot; Bremer], [Data; Trees; JackBoot; Bremer], init, NonComposable)]
                 | `Wipe ->
@@ -680,7 +680,7 @@ let rec explode_tree tree =
                         todo_p = 
                             Tree { x with children = [InteractiveState 0] };
                         composer = InteractiveState 0;
-                        next = Tree { x with run = `Skip; children = children };
+                        next = Tree { x with run = `Skip; thread = [-1]; children = children };
                         order_p = x.order_c;
                         weight_p = x.weight_c;
                     })
