@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2361 2007-10-18 20:03:26Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2361 $"
+(* $Id: nonaddCS.ml 2399 2007-10-24 15:34:07Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2399 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -449,6 +449,22 @@ let is_potentially_informative elts =
     | None -> false 
     | Some states ->
             0 = (All_sets.Integers.cardinal states)
+(*
+let min_cost elts =
+    let n_elts = List.length elts in
+    let states, graph = build_graph elts in
+    let rec compute_cost states remaining_graph =
+        if has_single_elts remaining_graph then
+            max_int
+        else 
+            match states with
+            | h :: t ->
+                min (1 + compute_cost t (pick_state h remaining_graph))
+                (1 + compute_cost t (do_not_pick h remaining_graph))
+            | [] -> 0
+    in
+    compute_cost states graph
+*)
 
 module Imperative = struct
     type it = t

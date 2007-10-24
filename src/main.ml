@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2265 $"
+let () = SadmanOutput.register "Main" "$Revision: 2399 $"
 
-(* $Id: main.ml 2265 2007-10-04 14:40:44Z andres $ *)
+(* $Id: main.ml 2399 2007-10-24 15:34:07Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -56,7 +56,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2265 $"
+let () = SadmanOutput.register "Main" "$Revision: 2399 $"
 
 let () = Status.init ()
 
@@ -138,7 +138,7 @@ let script =
                 else None
                 *)
         | err ->
-                let msg = Printexc.to_string err in
+                let msg = StatusCommon.escape (Printexc.to_string err) in
                 Status.user_message Status.Error msg;
                 if !(Arguments.just_exit) then
                     exit 1
@@ -272,10 +272,10 @@ END
         | err when (((not !(Arguments.just_exit)) && (Status.is_interactive ())) && 
                 (not debug_pass_errors)) ->
                 Status.clear_status_subwindows ();
-                let msg = Printexc.to_string err in
+                let msg = StatusCommon.escape (Printexc.to_string err) in
                 Status.user_message Status.Error msg
         | err when !Arguments.just_exit ->
-                let msg = Printexc.to_string err in
+                let msg = StatusCommon.escape (Printexc.to_string err) in
                 Status.user_message Status.Error msg;
                 exit 1
     in
