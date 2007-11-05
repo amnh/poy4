@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2364 $"
+let () = SadmanOutput.register "Node" "$Revision: 2425 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -1040,7 +1040,7 @@ let extract_dynamic data dyna tcode =
 type ms = All_sets.Integers.t
 
 module OrderedLists = struct
-    type t = int list list
+    type t = float * (int list list)
     let rec single_compare a b =
         match a, b with
         | ha :: ta, hb :: tb -> 
@@ -1052,7 +1052,7 @@ module OrderedLists = struct
         | _, [] -> 1
 
 
-    let rec compare a b = 
+    let rec list_compare a b = 
         match a, b with
         | ha :: ta, hb :: tb ->
                 let res = single_compare ha hb in
@@ -1061,6 +1061,11 @@ module OrderedLists = struct
         | [], [] -> 0
         | [], _ -> -1
         | _, [] -> 1
+
+    let compare (aw, a) (bw, b) =
+        match Pervasives.compare aw bw  with
+        | 0 -> list_compare a b
+        | x -> x
 end
 
 module SetLists = Map.Make (OrderedLists)
@@ -1091,10 +1096,10 @@ let collapse characters all_static =
             List.fold_left (fun acc x ->
                 let (code, weight, lst) = characters x in
                 let lst = simplify lst in
-                if SetLists.mem lst acc then
-                    let code, nweight = SetLists.find lst acc in
-                    SetLists.add lst (code, (weight +. nweight)) acc
-                else SetLists.add lst (code, weight) acc) SetLists.empty 
+                if SetLists.mem (weight, lst) acc then
+                    let code, nweight = SetLists.find (weight, lst) acc in
+                    SetLists.add (weight, lst) (code, (weight +. nweight)) acc
+                else SetLists.add (weight, lst) (code, weight) acc) SetLists.empty 
                 all_static
         in
         SetLists.fold (fun lst (code, weight) acc -> (code, weight, lst) :: acc)
