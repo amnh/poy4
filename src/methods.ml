@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Methods" "$Revision: 2369 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2449 $"
 
 (** Data *)
 
@@ -146,7 +146,7 @@ type char_transform = [
     | `Static_Aprox of (characters * bool)
     | `Search_Based of characters
     | `Fixed_States of characters
-    | `Automatic_Sequence_Partition of (characters * bool)
+    | `Automatic_Sequence_Partition of (characters * bool * (int option))
     | `Automatic_Static_Aprox of bool
     | `Prioritize
     | `ReWeight of (characters * float)
