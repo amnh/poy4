@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2399 $"
+let () = SadmanOutput.register "Main" "$Revision: 2451 $"
 
-(* $Id: main.ml 2399 2007-10-24 15:34:07Z andres $ *)
+(* $Id: main.ml 2451 2007-11-09 22:30:31Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -56,7 +56,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2399 $"
+let () = SadmanOutput.register "Main" "$Revision: 2451 $"
 
 let () = Status.init ()
 
@@ -68,7 +68,6 @@ let () =
 let debug_pass_errors = false
 
 let () =
-    Random.init 0;
     let out = Status.user_message Status.Information in
     let rephrase str = Str.global_replace (Str.regexp " +") "@ " str in
     out Version.string;
