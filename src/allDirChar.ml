@@ -568,7 +568,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     (All_sets.IntegerMap.empty, ptree, false)
                 in
                 if changed then 
-                    let new_cost = check_cost_all_handles ptree in
+                    let new_cost = check_cost_all_handles new_ptree in
                     if new_cost < prev_cost then
                         iterator new_cost affected new_ptree
                     else ptree
