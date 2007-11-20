@@ -191,7 +191,12 @@ let dependency_relations (init : Methods.script) =
             let rec processor (meth : [< Methods.input]) = 
                 match meth with
                 | `Prealigned (input, _) ->
-                        processor (input  :> Methods.input)
+                        let data, data1, compos =
+                            match ((processor (input  :> Methods.input))) with
+                            | [(data, data1, _, compo)] -> data, data1, compo
+                            | _ -> assert false
+                        in
+                        [data, data1, init, compos]
                 | `AnnotatedFiles files ->
                         (* TODO: Fix this analyzer step, this will be a hard
                         * stop *)
