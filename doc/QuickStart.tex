@@ -897,19 +897,18 @@ There are several ways to visualize results. A quick way to see the tree(s) on s
 
 So far, we have communicated with \poy interactively through the \emph{Graphical User Interface} or by executing commands from the \emph{Interactive Console}. Another way of conducting an analysis is to run a \emph{script}, a simple-text file containing a list of commands to be performed (Figure~\ref{fig:script}). 
 
-Running analyses using scripts has many advantages: not only does it allow for the entire analysis to proceed from the beginning to the end at one click of a button, but it also provides means for examining the logical dependency of the commands (see the description of \poyargument{script\_analysis} argument of the command \poycommand{report} in the \emph{POY Commands} chapter). Submitting jobs using scripts may produce results faster because \poy automatically optimizes the workflow of the entire analysis by taking into account the functional relationships among various tasks and efficiently distributing the jobs and resources (such as memory and multiple processors).
+Running analyses using scripts has many advantages: not only does it allow for the entire analysis to proceed from the beginning to the end at one click of a button, but it also provides means to examine the logical dependency of the commands (see the description of \poyargument{script\_analysis} argument of the command \poycommand{report} in the \emph{POY Commands} chapter). Submitting jobs using scripts may produce results faster because \poy automatically optimizes the workflow of the entire analysis by taking into account the functional relationships among various tasks and efficiently distributing the jobs and resources (such as memory and multiple processors).
 
-Another advantage of using scripts is that they may contain comments that are ignored by \poy but can be helpful to describe the contents of the files and provide other annotations. The comments are enclosed in parenthesis \emph{and} asterisks. For example, \texttt{(*this is a comment*)}. Comments can also be entered interactively from the \emph{Interactive Console}. Their utility in that context is, however, limited unless the comments are featured in some output files.
+Another advantage of using scripts is that they may contain comments that are ignored by \poy but can be helpful to describe the contents of the files and provide other annotations. The comments are enclosed in parenthesis \emph{and} asterisks. For example, \texttt{(*this is a comment*)}. Comments can be of any length and span multiple lines. Comments can also be entered interactively from the \emph{Interactive Console}. Their utility in that context is, however, limited unless the comments are featured in some output files.
 
 Obviously, using scripts requires the user to design the workflow of the process prior to conducting the analysis. \poy scripts can be created and saved using \emph{Script Editor} window of \poy interface or any conventional text editor or word processor (such as TextPad, TextWrangler, BBEdit, Emacs, MicrosoftWord, WordPad, or NotePad).
 
-The scripts can be imported and executed using the \emph{POY Launcher} of the \emph{Graphical User Interface}, using the \commandstyle{run()} of the \emph{Interactive Console}or, at start up, by entering the names of the script files (without quotes and parentheses). This is extremely useful in cases when operations may take long time to complete eliminating waiting for a part of the analysis to finish in order to proceed to the next step.
+The scripts can be imported and executed using the \emph{POY Launcher} of the \emph{Graphical User Interface} or using the \commandstyle{run()} of the \emph{Interactive Console}. This is extremely useful in cases when operations may take a long time to complete, eliminating the need to wait for a part of the analysis to finish in order to proceed to the next step.
 
-There are three ways to import and run a script:
+There are two ways to import and run a script:
 \begin{itemize}
     \item using the \emph{POY Launcher} of the \emph{Graphical User Interface};
-    \item using the \commandstyle{run()} of the \emph{Interactive Console} (such as \texttt{run("script.txt")}, where \texttt{script.txt} is the name of the file containing the script);
-   \item from the command line used to start \poy by including the filename(s) of the script (or multiple scripts) (such as \texttt{poy script.txt}.
+    \item using the \commandstyle{run()} of the \emph{Interactive Console} (such as \texttt{run("script.txt")}, where \texttt{script.txt} is the name of the file containing the script).
 \end{itemize}
 
 It it critical to include the command \commandstyle{exit()} at the end of the script; otherwise \poy will be waiting for further instructions to be entered after executing the script's contents.

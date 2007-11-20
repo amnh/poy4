@@ -280,7 +280,7 @@ Illya Bomash \\ Ward C. Wheeler \\ \bigskip \textbf{Documentation} \\ Ilya T\"em
 \vspace*{5.5cm}
 
 \begin{flushleft}
-    \small
+    \small`
 {\it
 Andr\'es Var\'on}\\
 Division of Invertebrate Zoology, American Museum of Natural History, New York, NY, U.S.A. \\
@@ -300,11 +300,11 @@ Department of Biology, University of Vermont, Berlington, VT, U.S.A.\\
 \smallskip
 {\it
 Juli\'an Faivovich}\\
-Departamento de Zoologia, Instituto de Bioci\^encias, Universidade Estadual Paulista, Bresil\\
+Departamento de Zoologia, Instituto de Bioci\^encias, Universidade Estadual Paulista, Brasil\\
 \smallskip
 {\it
 Taran Grant}\\
-Faculdade de Bioci\^encias, Pontif’cia Universidade Cat\'olica do Rio Grande do Sul (PUCRS), Bresil\\
+Faculdade de Bioci\^encias, Pontif’cia Universidade Cat\'olica do Rio Grande do Sul (PUCRS), Brasil\\
 \smallskip
 {\it
 William Leo Smith}\\
@@ -386,7 +386,7 @@ of the command \poycommand{perturb}. Therefore, to take the maximum advantage of
 
 \subsection{Grammar Specification}
 
-The following is the formal specification of the valid grammar of a script in \poy 4:
+The following is the formal specification of the valid grammar of a script in \poy:
 
 \begin{verbatim}
 script: | command
@@ -426,23 +426,19 @@ the syntax of the command \poycommand{swap}. The name of the
 command (\poycommand{swap}) is followed by a list of two arguments,
 \poyargument{tbr} and \poyargument{trees:2}, inclosed in parentheses
 and separated by a comma. Note that \poyargument{trees:2} is a labeled-value
-argument, that is it contains a label (\texttt{trees}) and a value (\texttt{2})
+argument that contains a label (\texttt{trees}) and a value (\texttt{2})
 separated by a colon.
 
 \begin{figure}[htbp]
    \centering
    \includegraphics[width=0.34\textwidth]{figures/fig-poycommand1.jpg}
-   \caption{A structure of a simple \poy command. The entire command (highlighted
+   \caption{The structure of a simple \poy command. The entire command (highlighted
    in blue), consists of  a command name followed by a list of arguments (enclosed in red box).
    See text for details.}
    \label{simplecommand}
 \end{figure}
 
-Figure \ref{compositecommand} shows a compound command \poycommand{perturb}, because the list of its arguments contains another command, \poycommand{swap}. This means
-that executing \poycommand{perturb} will perform a set of specified operations that contains
-a nested set of operations specified by \poycommand{swap}. Note also that in contrast to the first labeled-values argument \poyargument{iterations}, the second labeled-values argument \poyargument{ratchet} has multiple values (a float and an integer), the values must be enclosed in parentheses and separated by a comma. The third argument is a command (\poycommand{swap}), therefore it is syntactically distinguished from other arguments, labeled and unlabeled alike, by having
-parentheses following the command name. It must be emphasized that the parentheses always follow
-the command name even if no arguments are specified. (If no arguments are specified, a command is executed under its default settings if they exist.)
+Figure \ref{compositecommand} shows a more complex command structure, using the command \poycommand{perturb} as an example. This is a compound command because the list of its arguments contains another command, \poycommand{swap}. This means that executing \poycommand{perturb} will perform a set of specified operations that contains a nested set of operations specified by \poycommand{swap}. Note also, that in contrast to the first labeled-values argument \poyargument{iterations}, the second labeled-values argument \poyargument{ratchet} has multiple values (a float and an integer), the values must be enclosed in parentheses and separated by a comma. The third argument is a command (\poycommand{swap}), therefore it is syntactically distinguished from other arguments, labeled and unlabeled alike, by having parentheses following the command name. It must be emphasized that the parentheses always follow the command name even if no arguments are specified. (If no arguments are specified, a command is executed under its default settings.)
 
 \begin{figure}[htbp]
    \centering
@@ -459,7 +455,7 @@ the command name even if no arguments are specified. (If no arguments are specif
 Some arguments are obligatory, whereas others are not; some commands accept an
 empty list of arguments, but others do not; some argument labels have
 obligatory values, whereas values of others are optional. In the descriptions of
-\poy commands below, the elements of \poy grammar are emphasized in
+\poy commands below, the elements of \poy grammar are defined in
 the text using the following conventions:
 
 \begin{itemize}

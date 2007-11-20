@@ -5,9 +5,7 @@
  	\begin{poydescription}
         Builds Wagner trees~\cite{farris1970}. The arguments of the command
         \poycommand{build} specify the number of trees to be generated and
-        the order in which terminals are added during a singe tree building procedure. The
-        sequence of taxon addition can either be random or correspond to the
-        order of terminals as they are listed in the first imported datafile. During tree
+        the order in which terminals are added during a singe tree building procedure. During tree
         building, \poy reports in the \emph{Current Job} window of the ncurses interface
         which of the terminal addition strategies is currently used.
         Building multiple trees with a randomized addition of terminals allows for
@@ -16,13 +14,14 @@
 
         By default \poy replaces the trees stored in memory with those generated
         in a subsequent build. For example, executing \poycommand{build(10)}
-        followed by \poycommand{build(20)} will replace 10 trees generated
+        followed by \poycommand{build(20)} will replace the 10 trees generated
         during the first build with 20 new trees. However, it might be desirable
         (for example, if computer memory were limited) to generate a large number of trees by
         appending trees from multiple separate builds. To keep trees from consecutive
         builds, a tree output file must be specified using~\ccross{report} that must 
-        precede the subsequent \poycommand{build} command. This will produce a file
-        containing the trees appended from all builds. Alternatively, trees from different
+        precede the \poycommand{build} command. This will produce a file
+        containing the trees appended from all builds. If the same file name is used for reporting
+         trees for other analysis, the new trees are going to be appended. Alternatively, trees from different
         builds can be redirected to separate files if different file names are specified.
         
         The command \poycommand{build} is also used as
@@ -39,16 +38,18 @@
             {asis}
 
         \argumentdefinition{branch\_and\_bound}{\optional{\poyfloat}}
-            {Calculates the exact solution using the branch and bound algorithm
+            {Calculates the exact solution using the Branch and Bound algorithm
             ~\cite{hendy1982}. By default only one optimal tree is kept but
             the number of optimal trees to be retained can be specified by the
             argument \poyargument{trees}. The optional float value specifies the
-            bound (either tree cost or likelihood score. Instead of building a tree the default heuristic method,}
+            bound (either tree cost or likelihood score. Instead of building a tree,
+             the default heuristic method,}
             {branchandbound} 
 
         \argumentdefinition{constraint}{\optional{\poystring}}
-            {Builds trees using the set of constraints contained in the input
-            file. If no input file is provided, the constraint is calculated as
+            {Builds trees using the set of constraints specified by the consensus
+            tree input file.
+            file containing a. If no input file is provided, the constraint is calculated as
             the strict consensus of the trees held in memory. Every tree built
             using this method is subjected to the same randomization as wagner
             builds within each constraint.}
@@ -61,7 +62,7 @@
 
 		\argumentdefinition{randomized}{} 
             {Indicates that terminals are added in random order on every Wagner
-            tree built.}
+            tree built. This is a default tree-building strategy.}
             {randomized}
 
         \argumentdefinition{trees}{\obligatory{\poyint}}
@@ -73,8 +74,7 @@
             also used as an argument of the command~\nccross{swap}{swapcommand}
             but with different meaning.
             
-            The value \texttt{0} generates no trees, but, unlike other values,
-            it \emph{retains} all trees in memory instead of eliminating them.
+            The value \texttt{0} generates no trees but it \emph{retains} all trees in memory.
             This is useful, for example, in the \ccross{bremer} support calculation,
             where instead of generating new trees per each node, the searches are
             performed on the trees in the neighborhood of the current trees in memory.}
@@ -96,8 +96,8 @@
             {}
 
         \argumentdefinition{all}{}
-            {Turns off all preference strategies to make a join, simply try all possible join
-            positions for all terminals added.}
+            {Turns off all preference strategies for adding branches and simply tries all possible addition
+            positions for all terminals.}
             {allbuild}
         
    \end{arguments}
@@ -114,17 +114,17 @@
 		\poyexample{build(trees:20, randomized)}
             {A more verbose version of the previous example. By default a build
             is randomized, but in this case the addition sequence is explicitly
-            set. For the total number of trees, instead of simply specifying 20,
-            we use the label trees (this might be desirable to improve a
-            script's readability).}
+            set. For the total number of trees, rather than simply specifying \texttt{20},
+            the label \texttt{trees} is used. The verbose version might be desirable
+            to improve the readability of the script.}
 
 		\poyexample{build(15, as\_is)}
-            {Builds the first Wagner tree using  tree using the order of terminals in
-            as they are listed in the first imported datafile and generates the remaining
-            14 trees using a random addition sequence.}
+            {Builds the first Wagner tree using the order of terminals in the first
+            imported datafile and generates the remaining
+            14 trees using random addition sequences.}
             
             	\poyexample{build(branch\_and\_bound, trees:5)}
-            {Builds trees using branch\_and\_bound method and keeps up to
+            {Builds trees using branch and bound method and keeps up to
             5 optimal trees in memory.}
             
 	\end{poyexamples}
@@ -137,17 +137,18 @@
 
 	\begin{poydescription} 
             Calculates the requested support values. \poy implements support
-            estimation based on resampling methods (Jackknife and Bootstrap) and
-            Bremer support. The Jackknife and Bootstrap support values are computed as
+            estimation based on resampling methods (Jackknife~\cite{Farrisetal1996} 
+            and Bootstrap~\cite{Felsenstein1985}) and Bremer support~\cite{Bremer1988, Kallersjoetal1992}. 
+            The Jackknife and Bootstrap support values are computed as
             frequencies of clades recovered in strict consensus trees built in each resampling
             iteration. The consensus trees are based on best trees recovered in each replicate
             with zero-length branches collapsed.
-            All the arguments of \poycommand{calculate\_support} command are and
+            All the arguments of \poycommand{calculate\_support} command are optional and
             their order is arbitrary.
             
             \begin{statement}
   	  The placement of the root affects calculation of the support values.
-	  Therefore, it is critical to define the root prior to executing
+	  Therefore, it is critical to specify the root prior to executing
 	  \poycommand{calculate\_support}. See the description of the
 	  command \nccross{set}{root} on how to specify the root.
 	\end{statement}
@@ -156,18 +157,18 @@
             support values must be requested using~\ccross{report}. 
             This is particularly important for
             Jackknife and Bootstrap support values, as these sampling techniques
-            do not require the existence of trees in memory. Therefore, it is
+            do not require the presence of trees in memory. Therefore, it is
             possible to perform the sampling for support values \emph{before}
             the tree of interest has been found.
             
             \begin{statement}
-                It is critical to understand that in the context of dynamic
+                In the context of dynamic
                 homology, the characters being sampled during pseudoreplicates
                 are entire sequence fragments, not individual nucleotides.
                 Consequently, the bootstrap and jackknife support values
                 calculated for dynamic characters are not directly comparable to
                 those calculated based on static character matrices. If it is
-                desirable to perform character sampling at the level of
+                desired to perform character sampling at the level of
                 individual nucleotides, the dynamic characters must be
                 transformed into static characters using \poyargument{static\_approx}
                 argument of the command~\ccross{transform}
@@ -175,9 +176,8 @@
                 Alternatively, an output file in the Hennig86 format can be
                 generated based on an implied alignment
                 using~\ccross{phastwinclad} that can subsequently be analyzed
-                using other programs such as NONA or TNT.
-                
-                
+                using other programs.
+                                
                 It is important to remember that the local optimum for the dynamic
                 homology characters can differ from that for the static homology characters
                 based on the same sequence data. Therefore, in calculating support values by
@@ -193,12 +193,12 @@
 
 	\begin{arguments}
 		\begin{argumentgroup}{Support calculation methods}
-            {The following commands allow to choose among several methods for
+            {The following commands allow selecting among several methods for
             calculating support.} 
 
 			\argumentdefinition{bremer}{}
                 {Calculates Bremer support~\cite{Bremer1988, Kallersjoetal1992}
-                for each tree in memory by performing independent searches for each
+                for each tree in memory by performing independent constrained searches for each
                 node. The parameters for the searches can be modified using arguments
                 described under \emph{Search strategy}.
                 The argument \poyargument{bremer} takes no values.} 
@@ -244,16 +244,16 @@
              (\texttt{build:0}) specifies that Bremer support values are
              calculated on the starting trees currently
              in memory, rather than on newly generated trees.
-             Alternatively, the initial trees for calculating Bremer support
-             can be imported using the argument \poyargument{of\_file}
+             The initial trees for calculating Bremer support
+             can also be imported using the argument \poyargument{of\_file}
              of the command ~\nccross{build}{buildcommand}.
              
              For calculating Jackknife
              and Bootstrap supports, it specifies the number of
              Wagner tree builds per pseudoreplicate.  Single best trees from all
              psudoreplicates are used to calculate the support values. If
-             multiple best trees are recovered in a pseudoreplicate, only one of
-             them is selected at random. If \poyargument{build} is
+             multiple best trees are recovered in a pseudoreplicate, one 
+             is selected. If \poyargument{build} is
              omitted from the argument list of \poycommand{calculate\_support},
              \poy a single random addition Wagner tree per
              pseudoreplicate by default. This is equivalent to 
@@ -263,9 +263,9 @@
              {buildarg}
 
         \argumentdefinition{swap}{}
-            {Specifies the method and parameters for local tree search. If the
-            argument \poyargument{swap} is omitted, the search is performed under
-            the default settings of the command~\nccross{swap}{swapcommand}.} 
+            {Specifies the method and parameters for local tree search. If searching
+            parameters are not specified, the search is performed under
+            the default settings of ~\nccross{swap}{swapcommand}.} 
             {swaparg}
 	     
         		\end{argumentgroup}
@@ -274,7 +274,7 @@
 
     \poydefaults{bremer, build (trees:1, randomized), swap (trees:1)}
     {By default \poy will calculate the bremer support for each tree in memory node by node.
-    However, if no trees loaded in memory, executing the command
+    However, if no trees stored in memory, executing the command
     \poycommand{calculate\_support()} does not have any effect.}
 
 	\begin{poyexamples} 
@@ -306,7 +306,7 @@
             {Calculates Bootstrap support values performing 1 random resampling with
             replacement, followed by 5 Wagner tree builds (by random addition sequence)
             and swapping these trees under the default settings of the command 
-            \poyargument{swap}, and keeping 1 minimum-cost tree. The procedure
+            \poyargument{swap}, and keeping one minimum-cost tree. The procedure
             is repeated 100 times.}
         
         \poyexample{calculate\_support(jackknife:(resample:1000), \\ 
@@ -316,7 +316,8 @@
             Wagner trees by random addition sequence (the default of
             \poycommand{build}), swapping these trees using \poyargument{tbr},
             and keeping up to 5 minimum-cost tree in the
-            final swap. The procedure is repeated 1000 times.}
+            final swap per swap (totaling up to 50 stored trees per replicate). 
+            The procedure is repeated 1000 times.}
 
 	\end{poyexamples}
             
@@ -371,7 +372,7 @@
 	\begin{poydescription}
             Changes the working directory of the program. This command is useful
             when datafiles are contained in different directories. It also
-            eliminates the need to enter to the working directory before
+            eliminates the need to navigate into the working directory before
             beginning a \poy session. To display the path of the current
             directory, use the command~\ccross{pwd}.
 	\end{poydescription}
@@ -401,28 +402,28 @@
     \syntax{\obligatory{(\poystring, output class)}} 
 	
 	\begin{poydescription} 
-         Prints a the content of the string argument into a specified type of output.
+         Prints the content of the string argument into a specified type of output.
          Several types of output are generated by \poy  which are specified by the
          ``output class'' of arguments (see below). If no output-class arguments are
-         specified, the commands does not generate any output.
+         specified, the command does not generate any output.
 	\end{poydescription}
 
     \begin{arguments}
            \begin{argumentgroup}{Output class}
         \argumentdefinition{error}{}
-            {Outputs the specified string as an error message (\texttt{stder} in the
+            {Outputs the specified string as an error message (\texttt{stderr} in the
             flat interface).}
             {errorecho}
 
         \argumentdefinition{info}{}
-            {Outputs the specified string as an information message (\texttt{stder} in the
+            {Outputs the specified string as an information message (\texttt{stderr} in the
             flat interface).}
             {}
 
         \argumentdefinition{output}{\optional{\poystring}}
-            {Reports a specified string on screen or to a file, if the filename string (enclosed in
-            parentheses) is specified following \texttt{output} and separated from it by
-            a colon, ``:''.}
+            {Reports a specified string (\texttt{stdout} in the flat interface) to screen or file, 
+            if the filename string (enclosed in parentheses) is specified following \texttt{output} 
+            and separated from it by a colon, ``:''.}
             {}
            \end{argumentgroup}
     \end{arguments}
@@ -439,7 +440,7 @@
 
         \poyexample{echo("Initial trees", output)}
             {Prints the string \texttt{Initial trees} to the output window in the
-            ncurses interface, and to the standard output in the flat
+            ncurses interface, and to the standard output (\texttt{stdout})in the flat
             interface.}
     \end{poyexamples}
 
@@ -454,7 +455,7 @@
 	\syntax{\obligatory{()}}
 
 	\begin{poydescription}
-         Exits a \poy session. This command does not have any arguments.
+         Exits a \poy session. This command does not accept any argument.
          \poycommand{exit} is equivalent to the command \poycommand{quit}.
 
          \begin{statement}
@@ -482,11 +483,11 @@
     \syntax{\obligatory{(\optional{argument list})}}
 
     \begin{poydescription}
-            Performs Tree Fusing on the trees in memory. Tree Fusing is a
-            genetic algorithm technique that allows the escaping the local optimum
+            Performs Tree Fusing~\cite{goloboff1999} on the trees in memory. Tree Fusing is a
+            genetic algorithm technique avoids being trapped at a local optimum
             by exchanging clades with identical composition of terminals between
             pairs of trees. Only \emph{one} pair of trees is evaluated during a single iteration.
-            The size of the clades being exchanged is not determined.
+            The size of the clades being exchanged is not specified.
     \end{poydescription}
 
     \begin{arguments}
@@ -543,7 +544,7 @@
             {This command performs tree fusing  
             with modified settings for swapping that follows each iteration. Once
             a given iteration is completed, a consensus tree of the files in memory
-            is computed and used as constraint file for subsequent swapping (see
+            is computed and used as constraint file for subsequent rounds of swapping (see
             the argument \nccross{constraint}{swapconstraint} of the command
             \poycommand{swap}).}
 
@@ -565,12 +566,12 @@
 	
 	\begin{arguments}
         \argumentdefinition{LIDENT}{}
-            {Specifies a command name, the help for which is requested.}
+            {Reports the description of the command, the name of which is specified by the
+            lident value.}
             {}
 
         \argumentdefinition{STRING}{}
-            {Specified the expression (treated as an emacs regular expression), every occurrence
-            of which in the help file is reported on screen.}
+            {Reports every occurrence in the help file of the expression specified by the string value.}
             {}
 	\end{arguments}
 	
@@ -638,9 +639,8 @@
 	\syntax{\obligatory{(\poystring)}} 
 
 	\begin{poydescription}
-            Reads and imports a \poy file, the name of which (or its path if the file
-            is not located in the current working directory) is included in the
-            string argument.
+            Reads and imports a \poy file, the name of which (specified by the command
+             \poycommand{save}) is included in the string argument.
             All the information of the current \poy session will be replaced
             with the contents of the \poy file. If the file is not in proper \poy file
             format, an error message is printed in the \emph{POY Output}
@@ -652,8 +652,8 @@
         for temporary storage of a \poy session, checkpointing
         the current state of the search (to avoid losing data in case the computer or the
         program fails), or reporting bugs. \poy also automatically
-        generates \poy files in cases of terminating errors (important exceptions are
-        out-of-memory errors).
+        generates \poy files in cases of terminating errors (an important exception is
+        out-of-memory error).
 	
 	\end{poydescription}
 
@@ -728,7 +728,7 @@
             using the command~\nccross{transform}{transformcommand}, 
             \poycommand{ratchet} randomly selects and
             reweights individual nucleotide positions (column vectors), as in Nixon's
-            original implementation.
+            original implementation ~\cite{Nixon1999}.
             
             Under default settings,
             \poyargument{ratchet} selects 25 percent of characters and upweights
@@ -770,13 +770,13 @@
 	\end{arguments}
 
     \poydefaults{ratchet, swap (trees:1)}
-        {By default, \poy performs the ratchet procedure under default
+        {When no arguments specified, \poy performs the ratchet procedure under default
         settings.}
 	
 	\begin{poyexamples}
 	
 	\poyexample{perturb(resample:(50,terminals), iterations:10)}
-	{Performs 10 successive repetitions of random resampling of 50
+	{Performs 10 successive repetitions of random resampling of 50 percents of
 	terminals with replacement. Branch swapping is performed using
 	alternating SPR and TBR, and and keeping 1 minimum-cost
 	tree (the default of \poycommand{swap}).}
@@ -828,7 +828,7 @@
 	
 	\begin{poydescription}
          Prints the current working directory in the \emph{POY Output} window of
-         the ncurses interface and the standard error of the flat interface.
+         the ncurses interface and the standard error (stderr) of the flat interface.
          The command \poycommand{pwd} does not have arguments; the default
          working directory is the shell's directory when \poy started.
 	\end{poydescription}
@@ -1265,6 +1265,13 @@
             that contain character data the taxa to be renamed.
           \end{statement}
           
+          \begin{statement}
+            Once the command \poycommand{rename} is applied, subsequent commands 
+            must refer to the terminals using the new, substitute names. This is critical, for example,
+            when importing a terminals file using the command \poycommand{select} or specifying
+             a root using the command \poycommand{set}.
+          \end{statement}
+          
           \begin{arguments}
 		\begin{argumentgroup}{Identifiers}
 		{The identifiers specify whether terminals or characters are being renamed. An identifier
@@ -1304,6 +1311,13 @@
                 \texttt{alpha} to \texttt{beta}. To specify multiple pairwise name substitution, several 
                 name pairs can be listed: \texttt{("alpha","beta"),("gamma","delta").}}
                 {}
+                
+                \begin{statement}
+                Note that when \poycommand{rename} is applied by specifying pairs of
+                 synonyms in the command's argument,
+                the substitute name is listed \emph{second}. However,  the substitute name 
+                appears \emph{first} in a synonymy file, followed by one or more synonyms.
+                \end{statement}
 	      \end{argumentgroup}
 	      
           \end{arguments}
@@ -1657,7 +1671,9 @@
 
 			\argumentdefinition{diagnosis}{}
                 {Outputs the diagnosis of each tree on screen or redirects it to a file, if
-                specified.} 
+                specified. If the extension \emph{.xml} is appended to the name of the
+                output file, the diagnosis is reported in XML format, rather than in
+                simple text format.} 
                 {}
 
 		\end{argumentgroup} 
@@ -1692,7 +1708,7 @@
 	      to static homology characters using the argument \poyargument{static\_approx} 
 	      of the command \nccross{transform}{transformcommand}.}
 	      {ri}
-	     
+	      
 	     \argumentdefinition{script\_analysis}{\obligatory{\poystring}}
                 {Reports the order in which commands listed of the imported
                 script (listed in the string argument) are going to be executed.
@@ -1727,10 +1743,21 @@
                 {}
                 
                 \argumentdefinition{xslt}{\obligatory{(STRING, STRING)}}
-	     {Applies a user-defined stylesheet to the xml output. The first string is
+	     {Applies a user-defined xslt stylesheet to the XML output. The first string is
 	     the filename of the output, the second string is the name of the stylesheet
 	     requested to generate it.}
 	     {}
+	     
+	     \begin{statement}
+	     Extensible Stylesheet Language Transformations (XSLT) stylesheets are used
+	     for the transformation of XML output into other XML or human-readable documents.
+	     Thus, the original XML output of \poy is not changed but a new document is created based
+	     on its content. Because xml output contains all the information regarding data and trees,
+	     using XSLT stylesheets greatly expands the capabilities of \poy to use and display this information.
+	     Examples of potential applications includes graphical display of trees with proportional branch lengths,
+	     integration of tree topologies with geographical coordinate data for spatial mapping, and
+	     generating input files for other programs.
+	     \end{statement}
 	     
 	     \end{argumentgroup}
 	\end{arguments}
@@ -1800,7 +1827,7 @@
 		postscript format.}
 
         \poyexample{report("hennig.ss", phastwinclad, trees:(hennig, total))}
-            {Output all the static homology characters, including their cost
+            {This command outputs all the static homology characters, including their cost
             regime, in the file \poycommand{hennig.ss}; then append to the same
             file the trees currently in memory using the Hennig format, 
             including the total cost of each tree in square brackets. The
@@ -1842,6 +1869,10 @@
           the string \texttt{swap end} followed by the number of seconds (in
           decimals) elapsed since the execution of the previous \poyargument{timer}
           argument.}
+          
+          \poyexample{report("new\_tree\_diagnosis.xml", diagnosis)}
+         {This command reports the diagnosis to the \texttt{new\_tree\_diagnosis.xml}
+         file in XML format.}
 
 	\end{poyexamples}
 
