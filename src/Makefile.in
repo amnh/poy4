@@ -210,8 +210,8 @@ TREE = enum.cmo bitSet.cmo tree.cmo rtree.cmo hash_tbl.cmo gen_rtree.cmo \
 	queues.cmo tabus.cmo treeSearch.cmo impliedAlignment.cmo charTransform.cmo \
 	mst.cmo build.cmo 
 
-DISTANCE_LIBS = character.cmo addCS.cmo memstack.o add.o nonaddCS8.cmo \
-	nonaddCSc8.o nonaddCS16.cmo nonaddCSc16.o nonaddCS32.cmo nonaddCSc32.o
+DISTANCE_LIBS = character.cmo memstack.o add.o nonaddCS8.cmo \
+	nonaddCSc8.o nonaddCS16.cmo nonaddCSc16.o nonaddCS32.cmo nonaddCSc32.o addCS.cmo 
 
 SEQUENCE = all_sets.cmo alphabet.cmo cost_matrix.cmo matrix.cmo \
 	primes.cmo fingerPrint.cmo sequence.cmo zarr.o avl.o \
