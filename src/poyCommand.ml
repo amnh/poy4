@@ -261,6 +261,8 @@ type reporta = [
     | `TreesStats
     | `TimeDelta of string
     | `SequenceStats of old_identifiers
+    | `Ci of old_identifiers option
+    | `Ri of old_identifiers option
     | `CompareSequences of (bool * old_identifiers * old_identifiers)
     | `FasWinClad
     | `ExplainScript of string
@@ -779,6 +781,8 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
             (`GraphicConsensus (file, v)) :: acc, file
     | `SequenceStats c ->
             (`SequenceStats (file, c)) :: acc, file
+    | `Ci c -> (`Ci (file, c)) :: acc, file 
+    | `Ri c -> (`Ri (file, c)) :: acc, file
     | `CompareSequences (a, b, c) ->
             (`CompareSequences (file, a, b, c)) :: acc, file
     | `FasWinClad ->
@@ -1277,6 +1281,10 @@ let create_expr () =
                 [ LIDENT "phastwinclad" -> `FasWinClad ] | 
                 [ LIDENT "seq_stats"; ":"; ch = old_identifiers ->
                     `SequenceStats ch ] |
+                [ LIDENT "ci"; ":"; ch = old_identifiers -> `Ci (Some ch) ] |
+                [ LIDENT "ri"; ":"; ch = old_identifiers -> `Ri (Some ch) ] |
+                [ LIDENT "ci" -> `Ci None ] |
+                [ LIDENT "ri" -> `Ri None ] |
                 [ LIDENT "compare"; ":"; left_parenthesis; complement = boolean;
                 ","; ch1 = old_identifiers; ","; ch2 = old_identifiers; right_parenthesis ->
                     `CompareSequences (complement, ch1, ch2) ] |
