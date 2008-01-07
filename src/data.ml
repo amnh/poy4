@@ -1230,6 +1230,13 @@ let process_molecular_file tcmfile tcm tcm3 annotated alphabet is_prealigned dyn
 
 let process_ignore_taxon data taxon =
     let res = All_sets.Strings.add taxon data.ignore_taxa_set in
+    let () =
+        try 
+            Hashtbl.remove data.taxon_characters 
+            (Hashtbl.find data.character_names taxon)
+        with
+        | Not_found -> ()
+    in
     { data with ignore_taxa_set = res; }
 
 let process_ignore_file data file = 
@@ -1343,6 +1350,7 @@ let rec process_analyze_only_taxa meth data =
             process_analyze_only_taxa (`Names (false, excluded)) data
 
 let process_analyze_only_file dont_complement data files =
+    let data = duplicate data in
     try
         let appender acc file = 
             try 
@@ -2905,12 +2913,15 @@ let report_taxon_file_cross_reference chars data filename =
                 let taxa =
                     All_sets.StringMap.fold 
                      (fun taxon files arr ->
-                         let new_arr = Array.mapi (fun pos file ->
-                             if pos = 0 then taxon
-                             else if All_sets.Strings.mem file files then "+"
-                             else "-") files_arr
-                         in
-                         new_arr :: arr) data.taxon_files []
+                         if All_sets.Strings.mem taxon data.ignore_taxa_set then
+                             arr
+                         else
+                             let new_arr = Array.mapi (fun pos file ->
+                                 if pos = 0 then taxon
+                                 else if All_sets.Strings.mem file files then "+"
+                                 else "-") files_arr
+                             in
+                             new_arr :: arr) data.taxon_files []
                 in
                 files_arr, taxa
         | Some chars -> (* The user requested the data for some characters *)
@@ -2938,14 +2949,16 @@ let report_taxon_file_cross_reference chars data filename =
                 let taxa = 
                     All_sets.IntegerMap.fold
                     (fun code taxon acc ->
-                        let new_arr = Array.mapi (fun pos file ->
-                            if pos = 0 then taxon
-                            else if 
-                                is_specified code (codes_arr.(pos - 1)) data 
-                            then "+"
-                            else "-") chars_arr
-                        in
-                        new_arr :: acc) data.taxon_codes []
+                        try
+                            let new_arr = Array.mapi (fun pos file ->
+                                if pos = 0 then taxon
+                                else if 
+                                    is_specified code (codes_arr.(pos - 1)) data
+                                then "+"
+                                else "-") chars_arr
+                            in
+                            new_arr :: acc
+                        with Not_found -> acc) data.taxon_codes []
                 in
                 chars_arr, taxa
     in
