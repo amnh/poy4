@@ -3424,3 +3424,29 @@ let apply_boolean nonadd_f add_f data char =
                     add_f all_specs
             | _ -> true)
     | _ -> true
+
+(* We define a function that adds the min possible cost to the  *)
+let apply_on_static ordered unordered sankoff char data =
+    let process_code acc code =
+        match Hashtbl.find data.character_specs code with
+        | Static spec ->
+                let specified_static_chars = 
+                    Hashtbl.fold (fun a b acc -> 
+                        match Hashtbl.find b code with
+                        | (Stat (_, x), `Specified) -> x :: acc
+                        | _ -> acc) data.taxon_characters []
+                in
+                let res = 
+                    match spec.Parser.SC.st_type with
+                    | Parser.SC.STOrdered -> 
+                            ordered specified_static_chars
+                    | Parser.SC.STUnordered -> 
+                            unordered specified_static_chars
+                    | Parser.SC.STSankoff mtx -> 
+                            sankoff mtx specified_static_chars 
+                in
+                (code, res) :: acc
+        | _ -> acc
+    in
+    let codes = get_chars_codes_comp data char in
+    List.fold_left ~f:process_code ~init:[] codes

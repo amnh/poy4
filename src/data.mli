@@ -516,3 +516,12 @@ val to_human_readable : d -> int -> int -> string
 val apply_boolean : 
     (int list option list -> bool) -> (int list option list -> bool) -> 
         d -> int -> bool
+
+(** [min_max_possible_cost a b c d e] applies the functions [a], [b] and [c] in
+ * the ordered, unordered, and sankoff characters respectively listed in [d], 
+ * of all the terminals stored in [e], and returns the result per character in a
+ * list of tuples holding the character code and the result. *)
+val apply_on_static :
+    (int list option list -> float) -> (int list option list -> float) -> 
+        (int array array -> int list option list -> float) -> bool_characters ->
+            d -> (int * float) list
