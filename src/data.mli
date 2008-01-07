@@ -86,6 +86,7 @@ type dynamic_hom_spec = {
     filename : string;
     fs : string;
     tcm : string;
+    fo : string;
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
     alph : Alphabet.a;

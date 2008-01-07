@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2515 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2518 $"
 
 module IntSet = All_sets.Integers
 
@@ -298,19 +298,19 @@ let load_data (meth : Methods.input) data nodes =
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
                 List.fold_left 
-                (fun d f -> Data.process_molecular_file "Default"
+                (fun d f -> Data.process_molecular_file "tcm:(1,2)"
                 Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                 annotated Alphabet.nucleotides is_prealigned `Seq d f) 
                 data files
         | `Chromosome files ->
                 List.fold_left (fun d f ->
-                    Data.process_molecular_file "Default"
+                    Data.process_molecular_file "tcm:(1,2)"
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides false `Chromosome d f) 
                 data (explode_filenames files)
         | `Genome files ->
                 let data = List.fold_left (fun d f ->
-                    Data.process_molecular_file "Default"
+                    Data.process_molecular_file "tcm:(1,2)"
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides false `Genome d f) 
                 data (explode_filenames files)
@@ -323,7 +323,7 @@ let load_data (meth : Methods.input) data nodes =
                 List.fold_left 
                 (fun d f -> 
                     Data.process_molecular_file 
-                    "Default" Cost_matrix.Two_D.default_aminoacids
+                    "tcm:(1,2)" Cost_matrix.Two_D.default_aminoacids
                     (Lazy.force Cost_matrix.Three_D.default_aminoacids)
                     annotated Alphabet.aminoacids is_prealigned `Seq d f) 
                 data files
