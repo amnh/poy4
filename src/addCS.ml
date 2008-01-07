@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AddCS" "$Revision: 2481 $"
+let () = SadmanOutput.register "AddCS" "$Revision: 2514 $"
 
 (* Internal only exceptions *)
 exception Success
@@ -564,7 +564,10 @@ let of_parser data (it, taxon) code =
 let ( --> ) a b = b a
 
 let min_possible_cost elts =
-    let get_last lst = List.hd (List.rev lst) in
+    let get_last lst = 
+        assert (lst <> []);
+        List.hd (List.rev lst) 
+    in
     let elts = NonaddCS8.extract_elements_present elts in
     let elts = List.map (List.sort ( - )) elts in
     let codes = List.fold_left (fun acc lst ->
@@ -596,7 +599,10 @@ let min_possible_cost elts =
     let rec optimal_cost codes left =
         match codes, left with
         | _, [] -> None, 0
-        | [], _ -> None, (max_int / 2)
+        | [], _ -> 
+                (* We assign a big value that won't wrap
+                * to the negatives if we add something to it *)
+                None, (max_int / 2) 
         | (h :: t), left ->
                 let left' = filter h left in
                 let leftl', leftc' = optimal_cost t left'

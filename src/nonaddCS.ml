@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2481 2007-11-20 23:06:40Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2481 $"
+(* $Id: nonaddCS.ml 2514 2008-01-07 00:31:12Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2514 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -467,8 +467,8 @@ let min_cost elts =
 *)
 
 let extract_elements_present elts = 
-    List.map (function Some x -> x | None -> assert false) 
-    (List.filter (function Some _ -> true | None -> false) elts) 
+    List.fold_right (fun x acc -> match x with None -> acc | Some h -> h :: acc)
+    elts []
 
 let max_possible_cost elts =
     let elts = extract_elements_present elts in
@@ -483,11 +483,8 @@ let max_possible_cost elts =
         if y > b then acc else (a, b)) counter (0, 0) in
     if max = 0 then 0.
     else 
-        let res = 
-            List.fold_left (fun c a -> 
-                if List.mem code a then c else c + 1) 0 elts
-        in
-        float_of_int (res - 1)
+        List.fold_left (fun c a -> 
+            if List.mem code a then c else c +. 1.) 0. elts
 
 let min_possible_cost elts =
     let elts = extract_elements_present elts in

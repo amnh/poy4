@@ -63,6 +63,8 @@ val of_list : c list -> int -> t
 (**[to_list a] is symmetric to {!of_list}. *)
 val to_list : t -> c list
 
+val to_list_with_cost : t -> (int * int * int * float) list
+
 (** [copy a b] copies the contents of the additive character set [a] to the additive 
 * character set [b]. If the two character sets have a different length then
 * [raise Illegal_Arguments]. *)
