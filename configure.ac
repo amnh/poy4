@@ -23,6 +23,9 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 
+AC_ARG_WITH(extras, [Add the following object files to the final linking rules (needed for windows).],
+            [EXTRAS=$withval],[])
+
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
               [USEPARALLEL=true], 

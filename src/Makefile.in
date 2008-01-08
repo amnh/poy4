@@ -43,6 +43,7 @@ OCAMLDEP := @OCAMLDEP@
 OCAMLTOP := @OCAMLTOP@
 OCAMLLEX := @OCAMLLEX@
 OCAMLYACC := @OCAMLYACC@
+EXTRAS := @EXTRAS@
 
 INCLUDE = `$(OCAMLC) -where`
 export DEPEND = .depend
@@ -221,7 +222,6 @@ SEQUENCE = all_sets.cmo alphabet.cmo cost_matrix.cmo matrix.cmo \
 # Some personal tests that can be useful for everyone 
 CAMLP4PROCESSED = poyParser.ml poyCommand.ml 
 
-USEWIN32=false
 GETRUSAGE :=
 ifeq ($(USEWIN32), false)
 	GETRUSAGE := getrusage.o
@@ -598,20 +598,20 @@ endif
 
 poy: $(MAIN_OBJS_OPT)
 ifeq ($(USEPARALLEL), true)
-	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -cclib -L./grappa \
+	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) $(EXTRAS) -cclib -L./grappa \
 	-cclib -L./graphps -cclib -L./ \
 	-cclib -L$(OCAMLMPI) $(CCOPT) $(LIBS) $(PROFILE) \
 	-cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa \
 	unix.cmxa str.cmxa bigarray.cmxa $^
 else
-	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -verbose -ccopt -v -cclib -L./grappa \
+	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) $(EXTRAS) -verbose -ccopt -v -cclib -L./grappa \
 	-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
 	$(CCOPT) -cclib -lcamlgrappa $(LIBS) $(PROFILE) -o poy \
 	$(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^
 endif
 
 poy_test: $(TEST_OBJS_OPT)
-	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -verbose -ccopt -v -cclib \
+	$(OCAMLOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) $(EXTRAS) -verbose -ccopt -v -cclib \
 	-L./grappa -cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
 	$(CCOPT) -cclib -lcamlgrappa $(LIBS) $(PROFILE) -o poy_test \
 	$(GRAPHICS:.cma=.cmxa) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^

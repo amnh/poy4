@@ -28,6 +28,7 @@ AC_SUBST(OCAMLLEX)
 AC_SUBST(OCAMLYACC)
 AC_SUBST(LIBS)
 AC_SUBST(OCAMLFLAGS)
+AC_SUBST(EXTRAS)
 
 INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
@@ -38,6 +39,9 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
               [Force POY's user interface. Valid options are flat, ncurses, readline, and html. The default is ncurses, if ncurses is not found, then the readline interface is used, if readline is not present either, then choose the flat interface.])],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses; INTERFACE_SELECTED=false])
+
+AC_ARG_WITH(extras, [Add the following object files to the final linking rules (needed for windows).],
+            [EXTRAS=$withval],[])
 
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
@@ -130,15 +134,11 @@ case $OCAMLVERSION in
     ;;
 esac
 
+# System dependent options
 case `../gnu/config.guess` in
     x86_64*)
         OCAMLFLAGS="-fno-PIC"
         ;;
-    *)
-        ;;
-esac
-
-case `../gnu/config.guess` in
     *-apple-*)
         CFLAGS="-I /usr/include/malloc $CFLAGS"
         ;;

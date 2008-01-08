@@ -674,6 +674,7 @@ OCAMLTOP
 OCAMLLEX
 OCAMLYACC
 OCAMLFLAGS
+EXTRAS
 XSLT_CONFIG
 CPP
 GREP
@@ -1299,6 +1300,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+Add the following object files to the final linking rules (needed for windows).
 Select a different xslt-config program to detect the configuration options of libxslt.
 
 Some influential environment variables:
@@ -2501,6 +2503,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
 INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
 # Check whether --enable-graphics was given.
@@ -2516,6 +2519,13 @@ if test "${enable_interface+set}" = set; then
   enableval=$enable_interface; USEINTERFACE=$enableval
 else
   USEINTERFACE=ncurses; INTERFACE_SELECTED=false
+fi
+
+
+
+# Check whether --with-extras was given.
+if test "${with_extras+set}" = set; then
+  withval=$with_extras; EXTRAS=$withval
 fi
 
 
@@ -4314,15 +4324,11 @@ See \`config.log' for more details." >&2;}
     ;;
 esac
 
+# System dependent options
 case `../gnu/config.guess` in
     x86_64*)
         OCAMLFLAGS="-fno-PIC"
         ;;
-    *)
-        ;;
-esac
-
-case `../gnu/config.guess` in
     *-apple-*)
         CFLAGS="-I /usr/include/malloc $CFLAGS"
         ;;
@@ -6671,6 +6677,7 @@ OCAMLTOP!$OCAMLTOP$ac_delim
 OCAMLLEX!$OCAMLLEX$ac_delim
 OCAMLYACC!$OCAMLYACC$ac_delim
 OCAMLFLAGS!$OCAMLFLAGS$ac_delim
+EXTRAS!$EXTRAS$ac_delim
 XSLT_CONFIG!$XSLT_CONFIG$ac_delim
 CPP!$CPP$ac_delim
 GREP!$GREP$ac_delim
@@ -6679,7 +6686,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 65; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 66; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
