@@ -1,0 +1,52 @@
+SHELL = /bin/sh
+VPATH = @srcdir@
+
+subdirs = @subdirs@
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = $(exec_prefix)/bin
+infodir = $(prefix)/info
+libdir = $(prefix)/lib/gnudl
+mandir = $(prefix)/man/man1
+INCLUDE = `$(OCAMLC) -where`
+export DEPEND = .depend
+
+-include ../../config
+
+CCOPT := -cc $(CC) -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
+
+
+OCAMLMPI = ../ocamlmpi/
+OCAML_INCLUDES := -I $(OCAMLMPI) -I +camlp4 -I ./grappa -I ./graphps $(LABLTK)
+
+all: $(DEPEND) graphps.cmo graphps.cmx
+
+.SUFFIXES: .ml .mli .cmo .cmx .cmi
+
+$(DEPEND):	*.ml *.mli
+	ocamldep -I $(INCLUDEOCAMLMPI) *.ml *.mli > $(DEPEND)
+
+.ml.cmo:
+	$(OCAMLC) -g -c $<
+
+%.cmx: %.ml
+	$(OCAMLOPT) -c $(CCOPT) $< $(PROFILE)
+
+.ml.cmx:
+	$(OCAMLC) -c $(CCOPT) $< $(PROFILE)
+
+.mli.cmi:
+	$(OCAMLC) -c -I $(INCLUDE) $(DEBUG) $<
+
+.c.o:
+	$(OCAMLOPT) $(CCOPT) -c $< $(PROFILE)
+
+
+graphps.cmo: graphps.cmi graphps.ml
+
+graphps.cmx: graphps.cmi graphps.ml
+
+clean:	
+	rm -f *.cmi *.cmo *.cmx 
