@@ -1223,10 +1223,11 @@ Optional Features:
                           Valid options are none, ocaml, and tk. The default
                           is none.
   --enable-interface=interface
-                          Force POY's user interface. Valid options are
+                          Force POY's user interface. Valid options are flat,
                           ncurses, readline, and html. The default is ncurses,
                           if ncurses is not found, then the readline interface
-                          is used.
+                          is used, if readline is not present either, then
+                          choose the flat interface.
   --enable-mpi            Turns on parallel support using MPI. When using MPI
                           remember to set CC to the appropriate mpicc
                           compiler.

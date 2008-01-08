@@ -19,7 +19,7 @@ AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
 
 AC_SUBST(USEINTERFACE)
 AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
-              [Force POY's user interface. Valid options are ncurses, readline, and html. The default is ncurses, if ncurses is not found, then the readline interface is used.])],
+              [Force POY's user interface. Valid options are flat, ncurses, readline, and html. The default is ncurses, if ncurses is not found, then the readline interface is used, if readline is not present either, then choose the flat interface.])],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 
