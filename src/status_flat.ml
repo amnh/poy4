@@ -17,10 +17,10 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 2523 $"
+let () = SadmanOutput.register "" "$Revision: 2525 $"
 
 exception Illegal_update
-let () = SadmanOutput.register "Status_flat" "$Revision: 2523 $"
+let () = SadmanOutput.register "Status_flat" "$Revision: 2525 $"
 
 let _ = Format.pp_set_margin Format.std_formatter 78
 
@@ -72,7 +72,7 @@ let using_interface = ref false
 let is_interactive () = !using_interface
 
 IFDEF USEREADLINE THEN
-external get_line : unit -> string = "CAML_gets"
+external get_line : unit -> string = "rl_CAML_gets"
 ELSE
 let get_line () =
     print_string "poy> ";
