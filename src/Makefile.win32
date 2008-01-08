@@ -209,7 +209,7 @@ TREE = enum.cmo bitSet.cmo tree.cmo rtree.cmo hash_tbl.cmo gen_rtree.cmo \
 	queues.cmo tabus.cmo treeSearch.cmo impliedAlignment.cmo charTransform.cmo \
 	mst.cmo build.cmo 
 
-DISTANCE_LIBS = character.cmo addCS.cmo memstack.o add.o nonaddCS8.cmo \
+DISTANCE_LIBS = character.cmo nonaddCS8.cmo addCS.cmo memstack.o add.o \
 	nonaddCSc8.o nonaddCS16.cmo nonaddCSc16.o nonaddCS32.cmo nonaddCSc32.o
 
 SEQUENCE = all_sets.cmo alphabet.cmo cost_matrix.cmo matrix.cmo \
