@@ -30,7 +30,7 @@ let get_graphics str =
 
 let get_interface str =
     get_option [(".*gtk", "gtk2"); (".*ncurses", "ncurses"); (".*readline",
-    "readline"); (".*flat", "flat")] str
+    "readline"); (".*html", "html"); (".*flat", "flat")] str
 
 let is_true str = if Str.string_match truere str 0 then  "on" else "off"
 let rephrase str = Str.global_replace (Str.regexp " +") "@ " str

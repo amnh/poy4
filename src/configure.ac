@@ -15,6 +15,7 @@ AC_SUBST(USEGRAPHICS)
 AC_SUBST(USEINTERFACE)
 AC_SUBST(USESHAREDHD)
 AC_SUBST(USEPARALLEL)
+AC_SUBST(USEWIN32)
 AC_SUBST(USE_LONG_SEQUENCES)
 AC_SUBST(USE_LARGE_ALPHABETS)
 AC_SUBST(USE_XSLT)
@@ -141,6 +142,9 @@ case `../gnu/config.guess` in
         ;;
     *-apple-*)
         CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
         ;;
     *)
         ;;

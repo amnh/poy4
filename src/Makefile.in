@@ -29,6 +29,7 @@ LIBS = -cclib "@LIBS@"
 INSTALL = @INSTALL@
 
 USEPARALLEL := @USEPARALLEL@
+USEWIN32 := @USEWIN32@
 USE_LONG_SEQUENCES := @USE_LONG_SEQUENCES@
 USE_LARGE_ALPHABETS := @USE_LARGE_ALPHABETS@
 USEINTERFACE := @USEINTERFACE@
@@ -454,8 +455,13 @@ else
 	unix.cmxa str.cmxa compileFlags.cmx \
 	sadmanOutput.cmx statusCommon.cmx fileStream.cmx latex.ml
 endif
+ifeq ($(USEWIN32), true)
+	./latex_helper.exe > help.txt 
+	rm latex_helper.exe
+else
 	./latex_helper > help.txt 
 	rm latex_helper
+endif
 
 help.ml: help.txt ocaml-str helpRead.ml
 	./ocaml-str
@@ -531,7 +537,9 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 	$(filter-out $(DOCFILTER:.ml=.mli), $(wildcard *.mli)) > .depend 
 	$(OCAMLDEP) $(PREPROCESSOR) $(CAMLP4PROCESSED) $(CAMLP4PROCESSED:.ml=.mli) >> .depend
 	$(OCAMLDEP) $(OPTIONSPREPROCESSOR) $(OPTIONPREPROCESSED) scripting.mli >> .depend
+ifneq ($(USEWIN32), true)
 	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c >> .depend
+endif
 
 ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlc -v -g ultrametric.ml -package ocamlgraph -linkpkg

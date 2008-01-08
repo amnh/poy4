@@ -662,6 +662,7 @@ USEGRAPHICS
 USEINTERFACE
 USESHAREDHD
 USEPARALLEL
+USEWIN32
 USE_LONG_SEQUENCES
 USE_LARGE_ALPHABETS
 USE_XSLT
@@ -2485,6 +2486,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # What are we going to substitute in the Makefile
+
 
 
 
@@ -4331,6 +4333,9 @@ case `../gnu/config.guess` in
         ;;
     *-apple-*)
         CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
         ;;
     *)
         ;;
@@ -6665,6 +6670,7 @@ USEGRAPHICS!$USEGRAPHICS$ac_delim
 USEINTERFACE!$USEINTERFACE$ac_delim
 USESHAREDHD!$USESHAREDHD$ac_delim
 USEPARALLEL!$USEPARALLEL$ac_delim
+USEWIN32!$USEWIN32$ac_delim
 USE_LONG_SEQUENCES!$USE_LONG_SEQUENCES$ac_delim
 USE_LARGE_ALPHABETS!$USE_LARGE_ALPHABETS$ac_delim
 USE_XSLT!$USE_XSLT$ac_delim
@@ -6686,7 +6692,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 66; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 67; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
