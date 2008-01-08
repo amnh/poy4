@@ -1,6 +1,7 @@
 #!/bin/bash
 # The environment MACHOST holds the URL of the macintosh host running the
-# virtual machine.
+# virtual machine. The only argument contains the desired extra flags for the
+# configuration script (for example long sequence support). 
 export PATH=/home/andres/minglibs/bin:/cygdrive/c/ocamlmgw/3_10_0/bin:$PATH
 source $HOME/.keychain/${HOSTNAME}-sh
 
@@ -11,11 +12,7 @@ fi
 
 function compile_executable {
 
-echo "$1" >> config
-
 cd ./src
-
-cp ./Makefile.win32 Makefile
 
 if ! make clean; then
     echo "I could not clean up the distribution ..."
@@ -35,20 +32,20 @@ fi
 cd ../
 }
 
-cp ./config.win32 config
-compile_executable "export USE_LONG_SEQUENCES = $1"
-
+# We first compile the regular ncurses interface
+./configure $1 --with-extras="/home/andres/pdcurs28/*.o /home/andres/libxml2-2.6.30/*.o /home/andres/libxslt-1.1.22/libxslt/*.o" --enable-interface=ncurses CFLAGS="-I /home/andres/pdcurs28 -I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin"
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
     echo "I could not replace the poy executable in the distribution"
     exit 1
 fi
 
-sed -e "s/ncurses/html/" config.win32 > config
-compile_executable "export USE_LONG_SEQUENCES = $1"
+# Now we compile the html interface
+./configure $1 --enable-interface=html CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin"
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/seq_poy.exe; then
     echo "I could not replace the executable in the distribution"
     exit 1
 fi
+
 rm -f /cygdrive/c/POY_Installer.msi
 ./create_installers.bat
 if ! scp /cygdrive/c/POY_Installer.msi ${MACHOST}:poy_distro/distro_generation_scripts/; then
