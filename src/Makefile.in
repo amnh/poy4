@@ -224,7 +224,7 @@ SEQUENCE = all_sets.cmo alphabet.cmo cost_matrix.cmo matrix.cmo \
 CAMLP4PROCESSED = poyParser.ml poyCommand.ml 
 
 GETRUSAGE :=
-ifeq ($(USEWIN32), false)
+ifneq ($(USEWIN32), true)
 	GETRUSAGE := getrusage.o
 endif
 
