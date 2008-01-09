@@ -85,12 +85,28 @@ AC_ARG_WITH(xslt-config, [Select a different xslt-config program to detect the c
             [XSLT_CONFIG=$withval], [AC_CHECK_PROGS([XSLT_CONFIG],
                                                     [xslt-config])])
 
+# System dependent options
+case `../gnu/config.guess` in
+    x86_64*)
+        OCAMLFLAGS="-fno-PIC"
+        ;;
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
+        CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin $CFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
 oLIBS="$LIBS"
 NEWLIBS="`$XSLT_CONFIG --libs`"
 LIBS="$LIBS $NEWLIBS"
 oFLAGS="$CFLAGS"
 CFLAGS="`$XSLT_CONFIG --cflags` $CFLAGS"
-AS_IF([test $USE_XSLT = "true"],
+AS_IF([test $USEWIN32 = "false"], [AS_IF([test $USE_XSLT = "true"],
       [AC_CHECK_LIB([xml2], [xmlCreatePushParserCtxt], [
        CFLAGS="$CFLAGS `$XSLT_CONFIG --cflags`"
        AC_DEFINE(HAVE_XSLT)
@@ -100,7 +116,7 @@ AS_IF([test $USE_XSLT = "true"],
             AC_WARN([I could not find XSLT. I will remove the its support.])
         ])],[ LIBS="$oLIBS"
              CFLAGS="$oFLAGS"
-             ])
+             ])], [AC_DEFINE(HAVE_XSLT)])
 
 AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[LIBS="-ltermcap $LIBS"], [AC_CHECK_LIB([curses],[tgetent],[LIBS="-lcurses $LIBS"], [AC_CHECK_LIB([ncurses],[tgetent],[LIBS="-lncurses $LIBS"], [AC_MSG_FAILURE([The readline interface requires one of the following: termcap, curses, or ncurses.])])])])],[])
 
@@ -133,21 +149,6 @@ case $OCAMLVERSION in
     AC_MSG_RESULT([no])
     AC_MSG_FAILURE([POY requires OCaml version 3.10.0 or later to compile.  Please upgrade to the latest version. (You can get it from http://www.ocaml.org and follow their compilation instructions. It's really easy.)])
     ;;
-esac
-
-# System dependent options
-case `../gnu/config.guess` in
-    x86_64*)
-        OCAMLFLAGS="-fno-PIC"
-        ;;
-    *-apple-*)
-        CFLAGS="-I /usr/include/malloc $CFLAGS"
-        ;;
-    *-cygwin*)
-        USEWIN32=true
-        ;;
-    *)
-        ;;
 esac
 
 # Checks for header files.

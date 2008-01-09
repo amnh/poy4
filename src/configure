@@ -2716,12 +2716,29 @@ done
 fi
 
 
+# System dependent options
+case `../gnu/config.guess` in
+    x86_64*)
+        OCAMLFLAGS="-fno-PIC"
+        ;;
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
+        CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin $CFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
 oLIBS="$LIBS"
 NEWLIBS="`$XSLT_CONFIG --libs`"
 LIBS="$LIBS $NEWLIBS"
 oFLAGS="$CFLAGS"
 CFLAGS="`$XSLT_CONFIG --cflags` $CFLAGS"
-if test $USE_XSLT = "true"; then
+if test $USEWIN32 = "false"; then
+  if test $USE_XSLT = "true"; then
   { echo "$as_me:$LINENO: checking for xmlCreatePushParserCtxt in -lxml2" >&5
 echo $ECHO_N "checking for xmlCreatePushParserCtxt in -lxml2... $ECHO_C" >&6; }
 if test "${ac_cv_lib_xml2_xmlCreatePushParserCtxt+set}" = set; then
@@ -2803,6 +2820,13 @@ fi
 else
    LIBS="$oLIBS"
              CFLAGS="$oFLAGS"
+
+fi
+
+else
+  cat >>confdefs.h <<\_ACEOF
+#define HAVE_XSLT 1
+_ACEOF
 
 fi
 
@@ -4324,21 +4348,6 @@ echo "$as_me: error: POY requires OCaml version 3.10.0 or later to compile.  Ple
 See \`config.log' for more details." >&2;}
    { (exit 1); exit 1; }; }
     ;;
-esac
-
-# System dependent options
-case `../gnu/config.guess` in
-    x86_64*)
-        OCAMLFLAGS="-fno-PIC"
-        ;;
-    *-apple-*)
-        CFLAGS="-I /usr/include/malloc $CFLAGS"
-        ;;
-    *-cygwin*)
-        USEWIN32=true
-        ;;
-    *)
-        ;;
 esac
 
 # Checks for header files.

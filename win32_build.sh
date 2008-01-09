@@ -33,14 +33,14 @@ cd ../
 }
 
 # We first compile the regular ncurses interface
-./configure $1 --with-extras="/home/andres/pdcurs28/*.o /home/andres/libxml2-2.6.30/*.o /home/andres/libxslt-1.1.22/libxslt/*.o" --enable-interface=ncurses CFLAGS="-I /home/andres/pdcurs28 -I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin"
+./configure $1 --enable-xslt --with-extras="/home/andres/pdcurs28/*.o /home/andres/libxml2-2.6.30/*.o /home/andres/libxslt-1.1.22/libxslt/*.o" --enable-interface=ncurses 
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
     echo "I could not replace the poy executable in the distribution"
     exit 1
 fi
 
 # Now we compile the html interface
-./configure $1 --enable-interface=html CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin"
+./configure $1 --enable-xslt --enable-interface=html
 if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/seq_poy.exe; then
     echo "I could not replace the executable in the distribution"
     exit 1
