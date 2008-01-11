@@ -13,6 +13,7 @@ AC_ARG_PROGRAM
 AC_SUBST(USEGRAPHICS)
 AC_SUBST(USEPARALLEL)
 AC_SUBST(DOCSTRING)
+AC_SUBST(OCAMLFLAGS)
 
 AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
               [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none.])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
@@ -25,6 +26,10 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
 
 AC_ARG_WITH(extras, [Add the following object files to the final linking rules (needed for windows).],
             [EXTRAS=$withval],[])
+
+AC_ARG_WITH(ocaml-flags, [Add the following flags to the ocaml compiler.],
+            [OCAMLFLAGS=$withval],[])
+
 
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
@@ -59,6 +64,22 @@ case ${CONFIG_GUESS_SYS} in
         ;;
     *)
         DOCSTRING='\newcommand{\buildnumber}{'
+        ;;
+esac
+
+# System dependent options
+case `./gnu/config.guess` in
+    x86_64*)
+        OCAMLFLAGS="-fno-PIC $OCAMLFLAGS" 
+        ;;
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
+        CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin $CFLAGS"
+        ;;
+    *)
         ;;
 esac
 

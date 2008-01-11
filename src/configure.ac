@@ -44,6 +44,9 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface],
 AC_ARG_WITH(extras, [Add the following object files to the final linking rules (needed for windows).],
             [EXTRAS=$withval],[])
 
+AC_ARG_WITH(ocaml-flags, [Add the following flags to the ocaml compiler.],
+            [OCAMLFLAGS=$withval],[])
+
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
               [USEPARALLEL=true], 
@@ -88,7 +91,7 @@ AC_ARG_WITH(xslt-config, [Select a different xslt-config program to detect the c
 # System dependent options
 case `../gnu/config.guess` in
     x86_64*)
-        OCAMLFLAGS="-fno-PIC"
+        OCAMLFLAGS="-fno-PIC $OCAMLFLAGS" 
         ;;
     *-apple-*)
         CFLAGS="-I /usr/include/malloc $CFLAGS"
