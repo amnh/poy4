@@ -324,7 +324,7 @@ status_html.cma: status.cmi statusCommon.cmo status_html.ml
 	$(OCAMLC) -custom -g -a -o $@ statusCommon.cmo status.ml $(MKLIBOPT) \
 	$(CCOPT) $(PROFILE)
 
-status_flat.cma: status.cmi statusCommon.cmo status_flat.ml
+status_flat.cma: statusCommon.cmo status.cmi status_flat.ml
 	cp status_flat.ml status.ml
 	$(OCAMLC) -custom -g -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmo status.ml \
 	$(MKLIBOPT)  $(CCOPT) $(PROFILE)
@@ -536,7 +536,7 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 	$(filter-out $(DOCFILTER), $(wildcard *.ml)) \
 	$(filter-out $(DOCFILTER:.ml=.mli), $(wildcard *.mli)) > .depend 
 	$(OCAMLDEP) $(PREPROCESSOR) $(CAMLP4PROCESSED) $(CAMLP4PROCESSED:.ml=.mli) >> .depend
-	$(OCAMLDEP) $(OPTIONSPREPROCESSOR) $(OPTIONPREPROCESSED) scripting.mli >> .depend
+	$(OCAMLDEP) $(OPTIONSPREPROCESSOR) $(OPTIONPREPROCESSED) status.mli scripting.mli >> .depend
 ifneq ($(USEWIN32), true)
 	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c >> .depend
 endif
