@@ -27,9 +27,26 @@ AC_SUBST(OCAMLDEP)
 AC_SUBST(OCAMLTOP)
 AC_SUBST(OCAMLLEX)
 AC_SUBST(OCAMLYACC)
+AC_SUBST(SVNVERSION)
 AC_SUBST(LIBS)
 AC_SUBST(OCAMLFLAGS)
 AC_SUBST(EXTRAS)
+USEWIN32=false
+# System dependent options
+case `../gnu/config.guess` in
+    x86_64*)
+        OCAMLFLAGS="-fno-PIC $OCAMLFLAGS" 
+        ;;
+    *-apple-*)
+        CFLAGS="-I /usr/include/malloc $CFLAGS"
+        ;;
+    *-cygwin*)
+        USEWIN32=true
+        CFLAGS="-mwin32 -mno-cygwin $CFLAGS"
+        ;;
+    *)
+        ;;
+esac
 
 INTERFACE_SELECTED=true
 # Checking the kind of graphics that we intend to support.
@@ -84,25 +101,10 @@ AS_IF([test $USEINTERFACE = "ncurses"],
 
 
 # Time to verify if we can compile with xslt
+XSLT_CONFIG=xslt-config
 AC_ARG_WITH(xslt-config, [Select a different xslt-config program to detect the configuration options of libxslt.],
             [XSLT_CONFIG=$withval], [AC_CHECK_PROGS([XSLT_CONFIG],
                                                     [xslt-config])])
-
-# System dependent options
-case `../gnu/config.guess` in
-    x86_64*)
-        OCAMLFLAGS="-fno-PIC $OCAMLFLAGS" 
-        ;;
-    *-apple-*)
-        CFLAGS="-I /usr/include/malloc $CFLAGS"
-        ;;
-    *-cygwin*)
-        USEWIN32=true
-        CFLAGS="-I /cygdrive/c/gnuwin32/include -mwin32 -mno-cygwin $CFLAGS"
-        ;;
-    *)
-        ;;
-esac
 
 oLIBS="$LIBS"
 NEWLIBS="`$XSLT_CONFIG --libs`"
@@ -134,6 +136,7 @@ AC_CHECK_HEADER(malloc.h,[],[AC_CHECK_HEADER(/usr/include/malloc/malloc.h,[CFLAG
 
 AC_CHECK_PROGS([OCAML], [ocaml])
 AC_CHECK_PROGS([OCAMLC], [ocamlc.opt ocamlc])
+AC_CHECK_PROGS([SVNVERSION], [svnversion])
 AC_CHECK_PROGS([OCAMLYACC], [ocamlyacc])
 AC_CHECK_PROGS([OCAMLLEX], [ocamllex])
 AC_CHECK_PROGS([OCAMLOPT], [ocamlopt.opt ocamlopt])
