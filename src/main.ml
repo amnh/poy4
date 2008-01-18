@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2518 $"
+let () = SadmanOutput.register "Main" "$Revision: 2566 $"
 
-(* $Id: main.ml 2518 2008-01-07 22:44:45Z andres $ *)
+(* $Id: main.ml 2566 2008-01-18 16:32:33Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -56,7 +56,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2518 $"
+let () = SadmanOutput.register "Main" "$Revision: 2566 $"
 
 let () = Status.init ()
 
@@ -65,7 +65,7 @@ let () =
     Arguments.usage 
 
 (** Catch errors or not;  helpful for debugging *)
-let debug_pass_errors = true
+let debug_pass_errors = false
 
 let () =
     let out = Status.user_message Status.Information in
