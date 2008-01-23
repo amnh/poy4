@@ -5,9 +5,47 @@
 export PATH=/home/andres/minglibs/bin:/cygdrive/c/ocamlmgw/3_10_1/bin:$PATH
 source $HOME/.keychain/${HOSTNAME}-sh
 
-if ! svn update; then
-    echo "Repository update failed ... sorry pal!"
-    exit 1
+sequential=0
+parallel=0
+ncurses=0
+configuration=""
+MACHOST=""
+make_installers=0
+update=0
+
+while getopts 'uspnom' OPTION; do
+    case $OPTION in
+        u)
+        update=1
+        ;;
+        s)
+        sequential=1
+        ;;
+        p)
+        parallel=1
+        ;;
+        n)
+        ncurses=1
+        ;;
+        o)
+        configuration="$OPTARG"
+        ;;
+        m)
+        make_installers=1
+        MACHOST="$OPTARG"
+        ;;
+        ?)
+        printf "Usage: \n%s [OPTION]*\n\n-m HOST create installers in the HOST computer (uses ssh for this step)\n-u update from the subversion repository\n-s compile sequential flat \n-p parallel flat version\n-n compile sequential ncurses\n-o CONFIG compile using the CONFIG options in the configure step." $(basename $0)
+        exit 2
+        ;;
+    esac
+done
+
+if [ $update -eq 1 ]; then
+    if ! svn update; then
+        echo "Repository update failed ... sorry pal!"
+        exit 1
+    fi
 fi
 
 function compile_executable {
@@ -32,35 +70,42 @@ fi
 cd ../
 }
 
-# We first compile the regular ncurses interface
-./configure $1 --enable-xslt --enable-interface=ncurses CFLAGS="-O3 -L/home/andres/PDCurses-3.3/win32/ -I /home/andres/PDCurses-3.3/"
-compile_executable
-if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
-    echo "I could not replace the poy executable in the distribution"
-    exit 1
+if [ $ncurses -eq 1 ]; then
+    # We first compile the regular ncurses interface
+    ./configure $configuration --enable-xslt --enable-interface=ncurses CFLAGS="-O3 -L/home/andres/PDCurses-3.3/win32/ -I /home/andres/PDCurses-3.3/"
+    compile_executable
+    if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/ncurses_poy.exe; then
+        echo "I could not replace the poy executable in the distribution"
+        exit 1
+    fi
 fi
 
-# Now we compile the html interface
-./configure $1 --enable-xslt --enable-interface=html CFLAGS="-O3"
-compile_executable
-if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/seq_poy.exe; then
-    echo "I could not replace the executable in the distribution"
-    exit 1
+if [ $sequential -eq 1 ]; then
+    # Now we compile the html interface
+    ./configure $configuration --enable-xslt --enable-interface=html CFLAGS="-O3"
+    compile_executable
+    if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/seq_poy.exe; then
+        echo "I could not replace the executable in the distribution"
+        exit 1
+    fi
 fi
 
-# Now we compile the parallel interface
-./configure $1 --enable-xslt --enable-interface=html --enable-mpi CFLAGS="-O3 -L/cygdrive/c/mpich2/lib -I /cygdrive/c/mpich2/include" LIBS="-lmpi"
-make clean
-make
-if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/par_poy.exe; then
-    echo "I could not replace the executable in the distribution"
-    exit 1
+if [ $parallel -eq 1 ]; then
+    # Now we compile the parallel interface
+    ./configure $configuration --enable-xslt --enable-interface=html --enable-mpi CFLAGS="-O3 -L/cygdrive/c/mpich2/lib -I /cygdrive/c/mpich2/include" LIBS="-lmpi"
+    make clean
+    make
+    if ! cp -f ./src/poy.exe /cygdrive/c/poy_distribution/bin/par_poy.exe; then
+        echo "I could not replace the executable in the distribution"
+        exit 1
+    fi
 fi
 
-rm -f /cygdrive/c/POY_Installer.msi
-./create_installers.bat
-if ! scp /cygdrive/c/POY_Installer.msi ${MACHOST}:poy_distro/distro_generation_scripts/; then
-    echo "I could not copy the resulting executable in newlila2!"
-    exit 1
+if [ $make_installers -eq 1 ]; then
+    rm -f /cygdrive/c/POY_Installer.msi
+    ./create_installers.bat
+    if ! scp /cygdrive/c/POY_Installer.msi ${MACHOST}:poy_distro/distro_generation_scripts/; then
+        echo "I could not copy the resulting executable in newlila2!"
+        exit 1
+    fi
 fi
-
