@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2568 $"
+let () = SadmanOutput.register "Main" "$Revision: 2569 $"
 
-(* $Id: main.ml 2568 2008-01-23 15:50:29Z andres $ *)
+(* $Id: main.ml 2569 2008-01-23 16:05:32Z andres $ *)
 
 
 module Nodes = AllDirNode.AllDirF
@@ -55,7 +55,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2568 $"
+let () = SadmanOutput.register "Main" "$Revision: 2569 $"
 
 let () = Status.init ()
 
@@ -186,9 +186,10 @@ let _ =
         Status.user_message Status.Information 
         ("Running in parallel with " ^ string_of_int (Mpi.comm_size
         Mpi.comm_world) ^ " processes")
-    else 
+    else if tsize = 1 then
         Status.user_message Status.Information
-        "Running sequentially.";
+        "Running sequentially."
+    else ();
     let arr = Array.init tsize (fun x -> seed + x) in
     let seed = Mpi.scatter_int arr 0 Mpi.comm_world in
     Parsimony.process_random_seed_set (Parsimony.empty ()) seed
