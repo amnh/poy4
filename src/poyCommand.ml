@@ -753,7 +753,7 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
             begin match acc, file with
             | (_ :: _), None -> ()
             | (_ :: _), Some _ ->
-                    let msg = "Warning:@ You@ have@ requested@ to@ output@ " ^
+                    let msg = "You@ have@ requested@ to@ output@ " ^
                     "a@ postscript@ file@ in@ a@ flat@ text@ file,@ this@ " ^
                     "is@ probably@ not@ what@ you@ expect.@ If@ you@ want@ " ^
                     "to@ output@ a@ graphical@ " ^
@@ -761,7 +761,7 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
                     "different@ " ^
                     "filename@ to@ the@ graph@ command@ in@ the@ report@ line."
                     in
-                    Status.user_message Status.Error msg
+                    Status.user_message Status.Warning msg
             | _ -> ()
             end;
             (`Graph (file, x)) :: acc, file

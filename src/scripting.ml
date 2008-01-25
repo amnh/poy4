@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2573 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2574 $"
 
 module IntSet = All_sets.Integers
 
@@ -946,8 +946,8 @@ let only_multistatic meth =
 let warn_if_no_trees_in_memory trees = 
     let items = Sexpr.length trees in
     if items = 0 then
-        Status.user_message Status.Error
-        ("@{<b>Warning:@}@ There@ are@ no@ active@ trees@ in@ memory!")
+        Status.user_message Status.Warning
+        ("There@ are@ no@ active@ trees@ in@ memory!")
     else ()
 
 let get_trees_for_support support_class run =
