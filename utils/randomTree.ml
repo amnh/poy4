@@ -19,22 +19,20 @@ let generate_length () =
 let dbg = false
 
 let split_array len arr = 
-    if len <= 2 then assert false
-    else
-        let pos = 
-            if !is_random then
-                1 + (Random.int (len - 2))
-            else len / 2
-        in
-        if dbg then Printf.printf "%d - %d\n%!" len pos;
-        Array.sub arr 0 pos, Array.sub arr pos (len - pos)
-
-let rec generator arr =
     match arr with
-    | [|a; b|] -> 
-            let len1 = generate_length () 
-            and len2 = generate_length () in
-            Printf.sprintf "(%s:%f, %s:%f)" a len1 b len2
+    | [||] | [|_|] -> assert false
+    | [|a; b|] -> [|a|], [|b|]
+    | arr ->
+            let pos = 
+                if !is_random then
+                    1 + (Random.int (len - 2))
+                else len / 2
+            in
+            if dbg then Printf.printf "%d - %d\n%!" len pos;
+            Array.sub arr 0 pos, Array.sub arr pos (len - pos)
+
+let rec generator is_root arr =
+    match arr with
     | [||] -> assert false
     | [|a|] -> 
             Printf.sprintf "%s:%f" a (generate_length ())
@@ -42,12 +40,12 @@ let rec generator arr =
             let len = Array.length arr 
             and len1 = generate_length () in
             let f, s = split_array len arr in
-            match f, s with
-            | b, [|a|]
-            | [|a|], b ->
-                    Printf.sprintf "(%s, %s):%f" (generator f) (generator s) len1
-            | f, s ->
-                    Printf.sprintf "(%s, %s):%f" (generator f) (generator s) len1
+            if is_root then
+                Printf.sprintf "(%s, %s)" (generator false f) 
+                (generator false s) 
+            else
+                Printf.sprintf "(%s, %s):%f" (generator false f) 
+                (generator false s) len1
 
 let create_array size = 
     Array.init size (fun x -> "T" ^ string_of_int x) 
@@ -68,5 +66,5 @@ let () =
     in
     let usage = "randomTree [OPTIONS]\nA program to generate random trees." in
     Arg.parse params (fun _ -> ()) usage;
-    print_endline (generator (create_array !size))
+    print_endline (generator true (create_array !size))
 
