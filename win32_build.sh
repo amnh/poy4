@@ -32,7 +32,7 @@ while getopts 'uspnom' OPTION; do
         ;;
         m)
         make_installers=1
-        MACHOST="$OPTARG"
+        MACHOST="samson"
         ;;
         ?)
         printf "Usage: \n%s [OPTION]*\n\n-m HOST create installers in the HOST computer (uses ssh for this step)\n-u update from the subversion repository\n-s compile sequential flat \n-p parallel flat version\n-n compile sequential ncurses\n-o CONFIG compile using the CONFIG options in the configure step." $(basename $0)
@@ -105,7 +105,7 @@ if [ $make_installers -eq 1 ]; then
     rm -f /cygdrive/c/POY_Installer.msi
     ./create_installers.bat
     if ! scp /cygdrive/c/POY_Installer.msi ${MACHOST}:poy_distro/distro_generation_scripts/; then
-        echo "I could not copy the resulting executable in newlila2!"
+        echo "I could not copy the resulting executable in $MACHOST!"
         exit 1
     fi
 fi
