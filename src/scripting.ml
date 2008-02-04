@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2574 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2586 $"
 
 module IntSet = All_sets.Integers
 
@@ -1243,7 +1243,7 @@ IFDEF USEPARALLEL THEN
                             Mpi.comm_world
                     | _ -> ()
                 in
-                Status.is_parallel (Some printer_function)
+                Status.is_parallel my_rank (Some printer_function)
 
     let debug_parallel = false
     let print_msg msg = 
