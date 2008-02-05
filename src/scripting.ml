@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2586 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2589 $"
 
 module IntSet = All_sets.Integers
 
@@ -1365,8 +1365,8 @@ let rec folder (run : r) meth =
 IFDEF USEPARALLEL THEN
             let my_rank = Mpi.comm_rank Mpi.comm_world in
             if my_rank <> 0 then
-                let _ = Mpi.isend () 0 Methods.barrier Mpi.comm_world in
-                let _ = Mpi.barrier Mpi.comm_world in
+                let () = Mpi.send () 0 Methods.barrier Mpi.comm_world in
+                let () = Mpi.barrier Mpi.comm_world in
                 run
             else
                 let counter_of_barriers = ref (Mpi.comm_size Mpi.comm_world) in
