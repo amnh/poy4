@@ -102,9 +102,9 @@ if [ $parallel -eq 1 ]; then
 fi
 
 if [ $make_installers -eq 1 ]; then
-    rm -f /cygdrive/c/POY_Installer.msi
+    rm -f /cygdrive/c/POY_Installer.exe
     ./create_installers.bat
-    if ! scp /cygdrive/c/POY_Installer.msi ${MACHOST}:poy_distro/distro_generation_scripts/; then
+    if ! scp /cygdrive/c/POY_Installer.exe ${MACHOST}:poy_distro/distro_generation_scripts/; then
         echo "I could not copy the resulting executable in $MACHOST!"
         exit 1
     fi
