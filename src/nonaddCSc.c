@@ -18,7 +18,7 @@
 /* USA                                                                        */
 
 /*
- * $Id: nonaddCSc.c 2511 2008-01-06 17:52:43Z andres $
+ * $Id: nonaddCSc.c 2594 2008-02-07 17:40:49Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -153,6 +153,7 @@ typedef CHARTYPE nac;
 
 
 #if defined( __APPLE_ALTIVEC__ )
+#warning ALTIVEC
 /* To use this, we need the options:
  * -maltivec -mabi=altivec -mpim-altivec */
 
@@ -164,6 +165,8 @@ typedef CHARTYPE nac;
 
 /* characters */
 typedef vector CHARTYPE vect;
+
+#define ZERO_VECTOR (union _vectnac_u)  ((vect ){ 0x0000000000000000ULL, 0x0000000000000000ULL })
 
 /* These are used later for bitwise operations */
 #define VLOOP_BEGIN
@@ -190,6 +193,12 @@ typedef vector CHARTYPE vect;
 
 /* in bits */
 #define VECT_SIZE 64
+
+#ifdef __GNUC__
+#define ZERO_VECTOR (union _vectnac_u) ((vect) 0x0000000000000000ULL)
+#else
+#define ZERO_VECTOR (union _vectnac_u) { (0x0000000000000000ULL) }
+#endif
 
 /* # of characters in vect */
 #define BLOCK_LEN (VECT_SIZE / CHARSIZE)
@@ -224,13 +233,13 @@ nonadd_print_ptr ("alloc", malloc (sizeof(vect) * ((size / BLOCK_LEN) + 1)))
 
 
 #else  /* no MMX */
-
 #ifndef VECT_SIZE
 #define VECT_SIZE 64
 #endif
 
 #define BLOCK_LEN (VECT_SIZE / CHARSIZE)
 
+#define ZERO_VECTOR *_zero_nonadd_vector
 
 typedef nac vect[BLOCK_LEN];
 
@@ -341,6 +350,8 @@ union _vectnac_u {
     nac n;
 };
 
+static union _vectnac_u *_zero_nonadd_vector = NULL;
+
 /** Inline function to calculate the median of two elements. */
 #ifdef _WIN32
 __inline void
@@ -355,7 +366,7 @@ nonadd_make_union_par (const nacat au,
     long i;
     const long upto = (long) ceil (res->len / (float) BLOCK_LEN);
     vect v_int;
-    union _vectnac_u zero;
+    union _vectnac_u zero =  (ZERO_VECTOR);
     nac *res_nacp;
     long nelts = res->len;
 
@@ -397,7 +408,7 @@ nonadd_make_union (const nacat self,
     long i;
     const long upto = (long) ceil (res->len / (float) BLOCK_LEN);
     vect v_int;
-    union _vectnac_u zero;
+    union _vectnac_u zero =  (ZERO_VECTOR);
     nac *res_nacp;
     long nelts = res->len;
 
@@ -439,7 +450,7 @@ nonadd_median (const nacat a,
     const long upto = (long) ceil (res->len / (float) BLOCK_LEN);
     vect v_int;
     vect v_unn;
-    union _vectnac_u zero;
+    union _vectnac_u zero =  (ZERO_VECTOR);
     nac *res_nacp;
     long added_cost = 0;
     long nelts = res->len;
@@ -491,7 +502,7 @@ nonadd_median_3 (const nacat _A,       /** Ancestor */
     long i;
     const long upto = (long) ceil (_F->len / (float) BLOCK_LEN);
     vect intermed, temp, was_union, is_contained;
-    union _vectnac_u zero;
+    union _vectnac_u zero =  (ZERO_VECTOR);
     nac *res_nacp;
 
     res_nacp = (nac *) & (zero.n);
