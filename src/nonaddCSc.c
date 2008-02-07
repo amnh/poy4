@@ -18,7 +18,7 @@
 /* USA                                                                        */
 
 /*
- * $Id: nonaddCSc.c 2594 2008-02-07 17:40:49Z andres $
+ * $Id: nonaddCSc.c 2596 2008-02-07 18:08:39Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -194,10 +194,10 @@ typedef vector CHARTYPE vect;
 /* in bits */
 #define VECT_SIZE 64
 
-#ifdef __GNUC__
-#define ZERO_VECTOR (union _vectnac_u) ((vect) 0x0000000000000000ULL)
-#else
+#ifdef __ICC
 #define ZERO_VECTOR (union _vectnac_u) { (0x0000000000000000ULL) }
+#else
+#define ZERO_VECTOR (union _vectnac_u) ((vect) 0x0000000000000000ULL)
 #endif
 
 /* # of characters in vect */
