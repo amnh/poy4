@@ -975,25 +975,24 @@ let to_single_root root other_code c2 =
 
 let change_to_single med single_seq_arr c2 = 
     let gap = Alphabet.gap in 
-
     let new_seq_arr = Array.mapi 
         (fun idx m ->
              let single_seq = single_seq_arr.(idx) in
              let len = Sequence.length single_seq in               
              let num_dna = ref 0 in 
-    
+             let num_not_gap = UtlPoy.cmp_num_not_gap m.alied_med in
              let single_alied_med = 
-                if len != UtlPoy.cmp_num_not_gap m.alied_med then
-                    UtlPoy.get_single_seq m.alied_med c2
-                else UtlPoy.map
-                     (fun code ->
-                          if code = gap then gap
-                          else begin
+                if len = num_not_gap then begin
+                    UtlPoy.map
+                        (fun code ->    
+                            if code = gap then gap
+                            else begin
                                 let single_code = Sequence.get single_seq !num_dna in 
                                 incr num_dna;
                                 single_code
                             end 
-                     ) m.alied_med
+                         ) m.alied_med
+                end else UtlPoy.get_single_seq m.alied_med c2
              in 
 
              {m with alied_med = single_alied_med;
