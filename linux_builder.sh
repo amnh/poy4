@@ -5,7 +5,7 @@ export PATH=/opt/ocaml-3.10.0/bin:$PATH
 LINUX_DIRECTORY=linux
 mkdir linux
 rm -f linux/*
-if ! ./configure --enable-interface=html CFLAGS="-static -static-libgcc -O3";then
+if ! ./configure --enable-interface=html CFLAGS="-static -static-libgcc -O3 -msse3";then
     echo "Failure in html interface configuration"
     exit 1
 fi
@@ -20,7 +20,7 @@ fi
 cp ./src/poy ./$LINUX_DIRECTORY/seq_poy.command
 
 # Now we make the ncurses interface
-if ! ./configure --enable-interface=ncurses CFLAGS="-static -static-libgcc -O3"; then
+if ! ./configure --enable-interface=ncurses CFLAGS="-static -static-libgcc -msse3 -O3"; then
     echo "Failure in ncurses interface configuration"
     exit 1
 fi
