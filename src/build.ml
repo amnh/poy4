@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2401 $"
+let () = SadmanOutput.register "Build" "$Revision: 2604 $"
 
 let debug_profile_memory = false
 
@@ -266,7 +266,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         res
                 | _ -> 0., [initial_tree]
         in
-        Sexpr.of_list trees
+        Sexpr.of_list (List.map PtreeSearch.uppass trees)
 
     let constrained_build cg data n constraint_tree nodes = 
         let rec randomize_tree tree = 
