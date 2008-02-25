@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2518 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2618 $"
 
 open StdLabels
 
@@ -422,7 +422,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
                 "@[A@ file@ with@ name@ " ^ StatusCommon.escape filename ^ 
                 "@ has@ previously@ " 
                 ^ "been@ loaded.@ Sorry,@ I@ will@ cowardly@ refuse@ to@ "
-                ^ "load@ it's@ contents@ again.@ However,@ I@ will@ continue@ "
+                ^ "load@ its@ contents@ again.@ However,@ I@ will@ continue@ "
                 ^ "loading@ any@ files@ remaining.@]"
             in
             Status.user_message Status.Error msg
