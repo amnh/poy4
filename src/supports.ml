@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 2361 2007-10-18 20:03:26Z andres $ *)
+(* $Id: supports.ml 2622 2008-02-25 20:15:18Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 2361 $"
+let () = SadmanOutput.register "Support" "$Revision: 2622 $"
 
 let infinity = float_of_int max_int
 
@@ -419,7 +419,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                   let cost =
                       try 
                           let res = (List.assoc id alist) in
-                          if res = infinity then Pervasives.infinity
+                          if res >= infinity then Pervasives.infinity
                           else res -. tree_cost
                       with Not_found ->
                           Pervasives.infinity in
@@ -531,7 +531,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                       with Not_found ->
                           (try 
                               let res = (find_cost id parent) in
-                              if res = infinity then Pervasives.infinity
+                              if res >= infinity then Pervasives.infinity
                               else res -. orig_cost
                            with Not_found -> Pervasives.infinity) in
                   Methods.Node (cost,
