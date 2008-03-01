@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2556 2008-01-17 22:51:53Z andres $ *)
+(* $Id: charTransform.ml 2625 2008-03-01 20:41:38Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2556 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2625 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -833,9 +833,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
                         * those *)
                         let chars = 
                             List.fold_left 
-                            (fun acc x -> 
-                                Printf.printf "Adding %d\n%!" x;
-                                All_sets.Integers.add x acc)
+                            (fun acc x -> All_sets.Integers.add x acc)
                             All_sets.Integers.empty
                             chars
                         in
