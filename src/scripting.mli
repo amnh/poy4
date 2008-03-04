@@ -83,7 +83,7 @@ val channel_run : in_channel -> unit
 
 val get_console_run : unit -> r
 
-val update_trees_to_data : r -> r
+val update_trees_to_data : bool -> r -> r
 
     module PhyloTree : sig
         type phylogeny = (a, b) Ptree.p_tree

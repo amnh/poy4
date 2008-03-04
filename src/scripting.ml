@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2589 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2627 $"
 
 module IntSet = All_sets.Integers
 
@@ -98,7 +98,7 @@ module type S = sig
 
     val get_console_run : unit -> r
 
-    val update_trees_to_data : r -> r
+    val update_trees_to_data : bool -> r -> r
 
     module PhyloTree : sig
         type phylogeny = (a, b) Ptree.p_tree
@@ -223,8 +223,11 @@ ELSE
 END
 
 
-let update_trees_to_data run =
-    let data, nodes = Node.load_data run.data in
+let update_trees_to_data load_data run =
+    let data, nodes = 
+        if load_data then Node.load_data run.data 
+        else run.data, run.nodes 
+    in
     let run = { run with nodes = nodes; data = data } in
     let len = Sexpr.length run.trees in
     let st = Status.create "Diagnosis"  (Some len) "Recalculating trees" in
@@ -262,7 +265,7 @@ let process_transform (run : r) (meth : Methods.transform) =
               CT.transform_nodes run.trees run.data run.nodes
                   [meth] 
           in
-          update_trees_to_data { run with nodes = nodes; data = data }
+          update_trees_to_data false { run with nodes = nodes; data = data }
     | #Methods.terminal_transform as meth ->
             let data, htbl = Data.randomize_taxon_codes meth run.data in
             let data, nodes = Node.load_data data in
@@ -275,7 +278,7 @@ let process_transform (run : r) (meth : Methods.transform) =
                         x.Ptree.tree })
                 run.trees 
             in
-            update_trees_to_data 
+            update_trees_to_data false
             { run with nodes = nodes; data = data; trees = trees }
 
 let load_data (meth : Methods.input) data nodes =
@@ -417,7 +420,7 @@ let process_input run (meth : Methods.input) =
     let d, nodes = load_data meth run.data run.nodes in
     let run = { run with data = d; nodes = nodes } in
     (* check whether this read any trees *)
-    if [] = d.Data.trees then run
+    if [] = d.Data.trees then update_trees_to_data false run
     else
         let trees =
             Build.prebuilt run.data.Data.trees (run.data, run.nodes)
@@ -710,7 +713,7 @@ let rec process_application run item =
     | `Logfile file -> StatusCommon.set_information_output file; run
     | `Redraw -> Status.redraw_screen (); run
     | `SetSeed v -> process_random_seed_set run v
-    | `ReDiagnose -> update_trees_to_data run
+    | `ReDiagnose -> update_trees_to_data true run
     | `Help item -> HelpIndex.help item; run
     | `Wipe -> empty ()
     | `Echo (s, c) ->
@@ -1055,8 +1058,10 @@ let update_mergingscript folder mergingscript run tmp =
     let tmp = { tmp with trees = `Empty; stored_trees = tmp.trees } in
     tmp
 
-let on_each_tree folder dosomething mergingscript run tree =
-    let tmp = { run with trees = `Single tree } in
+let on_each_tree folder set_data dosomething mergingscript run tree =
+    let tmp = { run with trees = `Empty } in
+    let tmp = folder tmp set_data in
+    let tmp = { tmp with trees = `Single tree } in
     let tmp = List.fold_left folder tmp dosomething in
     update_mergingscript folder mergingscript run tmp
 
@@ -1129,7 +1134,7 @@ let emit_identifier =
             let nt = Sexpr.map toptree trees in
             { run with trees = nt }
         in
-        update_trees_to_data nrun
+        update_trees_to_data false nrun
 
     let encode_jackknife run = 
         (run.jackknife_support), (run.data.Data.taxon_codes)
@@ -1477,8 +1482,8 @@ END
             let name = emit_identifier () in
             let run = folder run (`Store ([`Data], name)) in
             let run = 
-                Sexpr.fold_left (on_each_tree folder ((`Set ([`Data], name)) ::
-                    dosomething) mergingscript) run run.trees
+                Sexpr.fold_left (on_each_tree folder (`Set ([`Data],
+                name)) dosomething mergingscript) run run.trees
             in
             let run = 
                 { run with trees = run.stored_trees; stored_trees = `Empty } 
@@ -1504,14 +1509,13 @@ END
             warn_if_no_trees_in_memory run.trees;
             process_tree_handling run meth
     | #Methods.characters_handling as meth ->
-            update_trees_to_data (process_characters_handling run meth)
+            update_trees_to_data true (process_characters_handling run meth)
     | #Methods.taxa_handling as meth ->
             process_taxon_filter run meth 
     | #Methods.application as meth ->
             process_application run meth
     | #Methods.input as meth ->
-            let run = process_input run meth in
-            update_trees_to_data run
+            process_input run meth 
     | #Methods.transform as meth ->
             process_transform run meth
     | #Methods.build as meth ->
@@ -1675,7 +1679,7 @@ END
                 let trees = Sexpr.map run_and_untransform runs in
                 choose_best trees)
     | #Methods.runtime_store as meth -> 
-            runtime_store update_trees_to_data run meth 
+            runtime_store (update_trees_to_data false) run meth 
     | `Repeat (n, comm) ->
             let res = ref run in
             for i = 1 to n do
@@ -2036,13 +2040,7 @@ END
             | #Methods.diagnosis as meth ->
                 warn_if_no_trees_in_memory run.trees;
                 let () = 
-                    let run = 
-                        let data, nodes = 
-                            Node.load_data ~classify:false run.data 
-                        in
-                        update_trees_to_data { run with data = data; nodes =
-                            nodes }
-                    in
+                    let run = update_trees_to_data true run in
                     Sexpr.leaf_iter (fun x -> D.diagnosis run.data x meth) run.trees 
                 in
                 run
