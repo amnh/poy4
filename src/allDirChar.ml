@@ -296,8 +296,6 @@ with type b = AllDirNode.OneDirF.n = struct
         in
         pre_codes
 
-
-
     (* A function to assign a unique sequence on each vertex of the ptree in the
     * [AllDirNode.adjusted] field of the node. *)
     let assign_single ptree = 
@@ -790,7 +788,12 @@ with type b = AllDirNode.OneDirF.n = struct
                     | Some (edge, cost, v) ->
                             if cost > c then Some ((a, b), c, data)
                             else acc
-                    | None -> Some ((a, b), c, data)) None edges
+                    | None -> Some ((a, b), c, data)) None 
+                    (List.sort (fun (Tree.Edge (a, b)) (Tree.Edge (c, d)) ->
+                        match c - a with
+                        | 0 -> d - b
+                        | x -> x)
+                        edges)
             with
             | Some (a, b, c) -> 
                     let c = 
