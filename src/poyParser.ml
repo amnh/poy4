@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2618 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2626 $"
 
 open StdLabels
 
@@ -433,7 +433,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
             let msg =
                 let filename = FileStream.filename filename in
                 "@[Reading@ file@ " ^ StatusCommon.escape filename ^ 
-                "@ of@ type@ " ^ StatusCommon.escape str ^ "@]@." 
+                "@ of@ type@ " ^ str ^ "@]@." 
             in
             Status.user_message Status.Information msg
         in
