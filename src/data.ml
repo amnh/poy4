@@ -2792,12 +2792,7 @@ let to_faswincladfile data filename =
                                 failwith 
                                 "Fastwinclad files do not support sequences"
             with
-            | Not_found ->
-                    Status.user_message Status.Error
-                    ("@[I@ could@ not@ find@ the@ character@ with@ code@ " ^ 
-                    string_of_int code ^ ".@ This@ is@ a@ bug,@ so@ please@ " ^
-                    "report@ it@ to@ Andres...");
-                    fo "?%!"
+            | Not_found -> fo "?%!"
         in
         fo sep
     in
