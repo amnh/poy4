@@ -211,6 +211,7 @@ module OutputInformation : sig
     ]
 
     type t = [
+        | `CostMode
         | `TreeInformation of [ treelengths_information | `Number ] list
         | `TaxonInformation
         | `CharacterInformation of character_information list

@@ -200,6 +200,7 @@ module OutputInformation = struct
     ]
 
     type t = [
+        | `CostMode
         | `TreeInformation of [ treelengths_information | `Number ] list
         | `TaxonInformation
         | `CharacterInformation of character_information list
@@ -336,7 +337,7 @@ let empty () =
     files = [];
     specification_index = SpecIndex.empty ();
     character_index = [];
-    search_information = [`TreeInformation [`Summary]];
+    search_information = [`TreeInformation [`Summary]; `CostMode];
     root_at = None;
     complex_schema = [];
 }
