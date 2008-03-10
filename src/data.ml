@@ -2179,7 +2179,7 @@ and get_chars_codes data = function
                         match
                             Hashtbl.fold (fun item code acc ->
                                 if Str.string_match nname item 0 then 
-                                    code :: acc
+                                    code :: []
                                 else acc)
                             data.character_names acc
                         with
