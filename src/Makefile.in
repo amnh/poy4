@@ -44,7 +44,7 @@ OCAMLDEP := @OCAMLDEP@
 OCAMLTOP := @OCAMLTOP@
 OCAMLLEX := @OCAMLLEX@
 OCAMLYACC := @OCAMLYACC@
-SVNVERSION := @SVNVERSION@
+SVNVERSION := @SVNVERSION@ -n ./
 EXTRAS := @EXTRAS@
 
 INCLUDE = `$(OCAMLC) -where`
@@ -284,7 +284,7 @@ ctags: *.c
 
 # Runtime options
 buildNumber.ml: 
-	echo "let build = \" " `$(SVNVERSION) -n ./` "\"" > $@
+	echo "let build = \" " `$(SVNVERSION)` "\"" > $@
 
 compileFlags.ml: ./config.log
 	echo "(** automatically generated description of compile-time flags *)" \
