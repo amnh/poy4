@@ -2350,7 +2350,7 @@ let process_ignore_character report data code_set =
     let data = duplicate data in
     let rep msg = 
         if report then
-            Status.user_message (Status.Output (None, false, [])) msg
+            Status.user_message Status.Information msg
         else ()
     in
     rep "@[Characters@ excluded:@[<v 2>@,@[<v>";
