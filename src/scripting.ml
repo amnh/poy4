@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2627 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2637 $"
 
 module IntSet = All_sets.Integers
 
@@ -1250,7 +1250,7 @@ IFDEF USEPARALLEL THEN
                 in
                 Status.is_parallel my_rank (Some printer_function)
 
-    let debug_parallel = false
+    let debug_parallel = true
     let print_msg msg = 
         if debug_parallel then begin
             let my_rank = Mpi.comm_rank Mpi.comm_world in
@@ -1362,15 +1362,85 @@ let get_character_costs trees =
     let lst = Sexpr.to_list trees in 
     List.map get_character_cost lst
 
+IFDEF USEPARALLEL THEN
+(* A function to create a complete mask *)
+let complete_mask com_size =
+    let rec complete_mask bit com_size =
+        if bit > com_size then bit - 1
+        else complete_mask (bit lsl 1) com_size
+    in
+    complete_mask 1 com_size
+
+let world_size = Mpi.comm_size Mpi.comm_world 
+
+let my_rank = Mpi.comm_rank Mpi.comm_world 
+
+(* A function to flip a given bit *)
+let mask_bit bit complete_mask =
+    if (bit land my_rank) = 0 then my_rank lor bit
+    else my_rank land (max_int lxor bit)
+
+let compute_other_rank bit = world_size --> complete_mask --> mask_bit bit
+
+END
 let rec folder (run : r) meth = 
     check_ft_queue run;
     match meth with
     (* The following methods are only used by the parallel execution *)
     | `Barrier -> (* Wait for synchronization with every other process *)
 IFDEF USEPARALLEL THEN
+            print_msg "Entering barrier";
+            let print_io_messages () =
+                let gotit, rank, tag = 
+                    Mpi.iprobe Mpi.any_source Methods.io Mpi.comm_world
+                in
+                if gotit then
+                    let (t : Status.c), (msg : string) = 
+                        Mpi.receive rank tag Mpi.comm_world in
+                    Status.user_message t msg
+            in
+            let request_barrier rank =
+                Mpi.send () rank Methods.barrier Mpi.comm_world in
+            let send_barrier = request_barrier in
+            let wait_for_barrier rank = 
+                Mpi.receive rank Methods.barrier Mpi.comm_world in
+            let wait_for_request = wait_for_barrier in
+            let rec do_barrier first_time bit =
+                if my_rank = 0 then print_io_messages ();
+                let other_rank = compute_other_rank bit in
+                if bit < world_size then
+                    if other_rank < world_size then
+                        if other_rank < my_rank then
+                            let () = wait_for_request other_rank in
+                            let () = send_barrier other_rank in
+                            Mpi.barrier Mpi.comm_world
+                        else
+                            if my_rank <> 0 then
+                                let () = request_barrier other_rank in
+                                let () = wait_for_barrier other_rank in
+                                do_barrier true (bit lsl 1)
+                            else 
+                                let () =
+                                    if first_time then request_barrier other_rank
+                                in
+                                let gotit, _, _ = 
+                                    Mpi.iprobe other_rank Methods.barrier
+                                    Mpi.comm_world
+                                in
+                                if gotit then
+                                    let () = wait_for_barrier other_rank in
+                                    do_barrier true (bit lsl 1)
+                                else do_barrier false bit
+                    else do_barrier true (bit lsl 1)
+                else Mpi.barrier Mpi.comm_world
+            in
+            do_barrier true 1;
+            run
+            (*
             let my_rank = Mpi.comm_rank Mpi.comm_world in
             if my_rank <> 0 then
                 let () = Mpi.send () 0 Methods.barrier Mpi.comm_world in
+                print_msg "Calling barrier";
                 let () = Mpi.barrier Mpi.comm_world in
                 run
             else
@@ -1402,16 +1472,57 @@ IFDEF USEPARALLEL THEN
                             in
                             test ()
                     else 
+                        let () = print_msg "Calling barrier" in
                         let _ = Mpi.barrier Mpi.comm_world in
                         run
                 in
                 test ()
+            *)
 ELSE 
                 run 
 END
     | `GatherTrees (joiner, continue) ->
 IFDEF USEPARALLEL THEN
             print_msg "Entering Gather Trees";
+            (* We define a function to reduce in parallel the results *)
+            let reduce_in_pairs bit run =
+                let other_rank = compute_other_rank bit in
+                print_msg ("Exchanging between " ^ string_of_int my_rank ^ " and " 
+                ^ string_of_int other_rank);
+                if other_rank < world_size then
+                    if other_rank > my_rank then 
+                        (* I am in charge of doing the reduction *)
+                        let run = 
+                            Mpi.comm_world 
+                            --> Mpi.receive other_rank Methods.do_job
+                            --> (fun x -> decode_trees x run)
+                            --> (fun x -> List.fold_left folder x joiner)
+                        in
+                        Mpi.send (encode_trees run) other_rank Methods.do_job Mpi.comm_world;
+                        run
+                    else
+                        let () =
+                            Mpi.send (encode_trees run) other_rank Methods.do_job 
+                            Mpi.comm_world
+                        in
+                        let run = { run with trees = `Empty; stored_trees =
+                            `Empty }
+                        in
+                        Mpi.comm_world 
+                        --> Mpi.receive other_rank Methods.do_job 
+                        --> (fun x -> decode_trees x run)
+                else run
+            in
+            let rec reduce_them_all bit run =
+                if bit < world_size then
+                    reduce_them_all (bit lsl 1) (reduce_in_pairs bit run)
+                else run
+            in
+            let run = { run with stored_trees = `Empty } in
+            let run = reduce_them_all 1 run in
+            print_msg "Finished all gather";
+            List.fold_left folder run continue
+            (*
             let res = Mpi.allgather (encode_trees run) Mpi.comm_world in
             print_msg "Finished Gather Trees";
             let run = { run with trees = `Empty; stored_trees = `Empty } in
@@ -1424,48 +1535,67 @@ IFDEF USEPARALLEL THEN
                 res
             in
             List.fold_left folder run continue
+            *)
 ELSE 
                 run 
 END
     | `GatherJackknife ->
 IFDEF USEPARALLEL THEN
+            print_msg "Entering jackknife";
             let res = Mpi.allgather (encode_jackknife run) Mpi.comm_world in
-            Array.fold_left 
-            (fun run set ->
-                let jckn = decode_jackknife set run in
-                add_jackknifes run jckn)
+            let run =
+                Array.fold_left 
+                (fun run set ->
+                    let jckn = decode_jackknife set run in
+                    add_jackknifes run jckn)
+                run
+                res
+            in
+            print_msg "Exiting jackknife";
             run
-            res
 ELSE 
                 run 
 END
     | `GatherBremer ->
 IFDEF USEPARALLEL THEN
+            print_msg "Entering bremer";
             let res = Mpi.allgather (encode_bremer run) Mpi.comm_world in
-            Array.fold_left 
-            (fun run set ->
-                let bmr = decode_bremer set run in
-                add_bremers run bmr)
+            let run = 
+                Array.fold_left 
+                (fun run set ->
+                    let bmr = decode_bremer set run in
+                    add_bremers run bmr)
+                run
+                res
+            in
+            print_msg "Exiting bootstrap";
             run
-            res
 ELSE 
                 run 
 END
     | `GatherBootstrap ->
 IFDEF USEPARALLEL THEN
+            print_msg "Entering bootstrap";
             let res = Mpi.allgather (encode_bootstrap run) Mpi.comm_world in
-            Array.fold_left 
-            (fun run set ->
-                let bstp = decode_bootstrap set run in
-                add_boostraps run bstp)
+            let run = 
+                Array.fold_left 
+                (fun run set ->
+                    let bstp = decode_bootstrap set run in
+                    add_boostraps run bstp)
+                run
+                res
+            in
+            print_msg "Exiting bootstrap";
             run
-            res
 ELSE 
                 run 
 END
     | `SelectYourTrees -> 
 IFDEF USEPARALLEL THEN
-            filter_my_trees run
+            print_msg "Entering select trees";
+            let run = filter_my_trees run in
+            print_msg "Exiting select trees";
+            run
 ELSE 
                 run 
 END
