@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2635 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2640 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -3561,7 +3561,17 @@ module SC = struct
             in
             let _, a, b, c, d = List.fold_left (process_command file) (None,
             [||], [||], [||], []) parsed in
-            a, b, c, d, []
+            let taxa, matrix =
+                (* Now it is time to correct the order of the terminals to 
+                * guarantee the default rooting of the tree. *)
+                let tlen = Array.length a
+                and mlen = Array.length c in
+                assert (tlen >= mlen);
+                let taxa = Array.init tlen (fun x -> a.(tlen - x - 1)) 
+                and matrix = Array.init mlen (fun x -> c.(mlen - x - 1)) in
+                taxa, matrix
+            in
+            taxa, b, matrix, d, []
 
     end
 
