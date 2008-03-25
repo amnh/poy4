@@ -288,4 +288,9 @@ val compare_cannonical : u_tree -> u_tree -> bool
 
 val get_unique : ('a * u_tree) list -> ('a * u_tree) list
 
+val exchange_codes : int -> int -> u_tree -> u_tree
+
 val replace_codes : (int -> int) -> u_tree -> u_tree
+
+val destroy_component : int -> u_tree -> u_tree
+val copy_component : int -> u_tree -> u_tree -> u_tree

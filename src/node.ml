@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2567 $"
+let () = SadmanOutput.register "Node" "$Revision: 2643 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -168,6 +168,9 @@ type node_data =
         (** This allows us to count how many taxa from a set are children of the
             given node *)
     }
+
+let recode f n = 
+    { n with taxon_code = f n.taxon_code }
 
 (* Static characters only *)
 let character_costs node = 
@@ -2690,6 +2693,7 @@ module Standard :
         type e = exclude
         type n = node_data
         type nad8 = NonaddCS8.t r
+        let recode f n = recode f n
         let fix_preliminary = all_prelim_to_final
         let distance = distance
         let set_exclude_info a b = { b with exclude_info = a }

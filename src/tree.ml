@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2399 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2643 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -1972,19 +1972,173 @@ let fuse_locations ?(filter=fun _ -> true) sources (taux, target) =
     | [] -> `Empty
     | l -> `Set l
 
+let exchange_codes a b tree =
+    assert (All_sets.IntegerMap.fold (fun key node acc ->
+        match node with
+        | Single _ -> acc
+        | Leaf (a, b) -> (a <> b) && acc
+        | Interior (a, b, c, d) ->
+                (a <> b) && (a <> c) && (a <> d) && acc) tree.u_topo true);
+    let replace_edge a prev next tree =
+        let ((Edge (a, b)) as e) = normalize_edge (Edge (a, prev)) tree in
+        let tree = remove_edge e tree in
+        if a = prev then 
+            add_edge (Edge (next, b)) tree
+        else 
+            add_edge (Edge (a, next)) tree
+    in
+    let replace_neighbor node prev next tree =
+        assert (prev <> node);
+        match get_node node tree with
+        | Leaf (x, y) -> 
+                assert (x = node);
+                assert (y = prev);
+                tree 
+                --> remove_node node
+                --> replace_edge node prev next
+                --> add_node (Leaf (x, next))
+        | Single _ -> assert false
+        | noden ->
+                let a, b = other_two_nbrs prev noden in
+                tree 
+                --> remove_node node
+                --> replace_edge node prev next
+                --> add_node (Interior (node, next, a, b))
+    in
+    let replace_handles a b tree =
+        if is_handle a tree || is_handle b tree then
+            if not (is_handle a tree && is_handle b tree) then
+                let proc_handle x y = 
+                    tree --> remove_handle x --> add_handle y
+                in
+                if is_handle a tree then proc_handle a b
+                else proc_handle b a
+            else tree
+        else tree
+    in
+    if a = b then tree
+    else
+        let an = get_node a tree in
+        if All_sets.IntegerMap.mem b tree.u_topo then
+            let bn = get_node b tree in
+            (* Both are valid codes and we must exchange their respective codes
+            * *)
+            match an, bn with
+            | Single _, _
+            | _, Single _
+            | Leaf _, _
+            | _, Leaf _ -> failwith "Illegal argument"
+            | Interior (_, n, o, p), Interior (_, r, s, t) ->
+                    (* We have to first check if the two vertices are neighbors, if yes
+                    * we better do something different or things will be just incorrect *)
+                    assert (a <> b);
+                    assert (a <> n);
+                    assert (a <> o);
+                    assert (a <> p);
+                    assert (b <> r);
+                    assert (b <> s);
+                    assert (b <> t);
+                    assert (verify_edge (Edge (b, r)) tree);  
+                    assert (verify_edge (Edge (b, s)) tree);  
+                    assert (verify_edge (Edge (b, t)) tree);  
+                    assert (verify_edge (Edge (a, n)) tree);  
+                    assert (verify_edge (Edge (a, o)) tree);  
+                    assert (verify_edge (Edge (a, p)) tree);  
+                    let res =
+                    try
+                        let (Edge (x, y)) as e = normalize_edge (Edge (a, b)) tree in
+                        let a_n1, a_n2 = other_two_nbrs b an in
+                        let b_n1, b_n2 = other_two_nbrs a bn in
+                        tree
+                        --> remove_edge e
+                        --> remove_node a
+                        --> remove_node b 
+                        --> replace_neighbor a_n1 a b
+                        --> replace_neighbor a_n2 a b
+                        --> replace_neighbor b_n1 b a
+                        --> replace_neighbor b_n2 b a
+                        --> add_node (Interior (b, a, a_n1, a_n2))
+                        --> add_node (Interior (a, b, b_n1, b_n2))
+                        --> add_edge (Edge (y, x)) 
+                        --> replace_handles a b
+                    with Invalid_Edge ->
+                        (* OK they are not neighbors, let's keep going with the standard
+                        * replacement *)
+                        tree 
+                        --> remove_node b 
+                        --> remove_node a
+                        --> add_node (Interior (b, n, o, p)) 
+                        --> add_node (Interior (a, r, s, t))
+                        --> replace_neighbor n a b 
+                        --> replace_neighbor o a b
+                        --> replace_neighbor p a b
+                        --> replace_neighbor r b a
+                        --> replace_neighbor s b a
+                        --> replace_neighbor t b a 
+                        --> replace_handles a b
+                    in
+                    assert (a = r || verify_edge (Edge (a, r)) res);  
+                    assert (a = s || verify_edge (Edge (a, s)) res);  
+                    assert (a = t || verify_edge (Edge (a, t)) res);  
+                    assert (b = n || verify_edge (Edge (b, n)) res);  
+                    assert (b = o || verify_edge (Edge (b, o)) res);  
+                    assert (b = p || verify_edge (Edge (b, p)) res);  
+                    res
+        else
+            match an with
+            | Single _
+            | Leaf _ -> failwith "Illegal argument"
+            | Interior (_, x, y, z) ->
+                    tree 
+                    --> remove_node a
+                    --> add_node (Interior (b, x, y, z))
+                    --> replace_neighbor x a b
+                    --> replace_neighbor y a b
+                    --> replace_neighbor z a b 
+                    --> replace_handles a b
+
 let fuse_all_locations ?(filter=fun _ -> true) trees =
     let fps =
         let folder map tree = tree_fps_map_withaux ~map tree in
-        List.fold_left folder CladeFPMap.empty trees in
+        List.fold_left folder CladeFPMap.empty trees 
+    in
+    (* Now we convert them in a list and we sort them by size, so that we can
+    * decide if the clade that we are observing occurs in both and has a
+    * different resolution efficiently *)
+    let fps = 
+        let sort_function (a, _) (b, _) = 
+            (CladeFP.num_leaves a) - (CladeFP.num_leaves b)
+        in
+        [] --> CladeFPMap.fold (fun key value acc -> (key, value) :: acc) fps
+        --> List.sort sort_function 
+    in
     let atleast2 = function
         | a :: b :: _ -> true
-        | _ -> false in
-
-    let locations = CladeFPMap.fold
-        (fun key value sexpr ->
-             if atleast2 value && filter (key, CladeFP.num_leaves key)
-             then (`Single value) :: sexpr
-             else sexpr) fps [] in
+        | _ -> false 
+    in
+    let _, locations = List.fold_left
+        (fun (potential, sexpr) (key, value) ->
+            let my_filter = filter (key, CladeFP.num_leaves key) in
+            if atleast2 value && my_filter then 
+                let has_potential, potential =
+                    CladeSet.fold 
+                    (fun pot (acc, new_pot) -> 
+                        assert (CladeFP.num_leaves pot <= CladeFP.num_leaves
+                        key);
+                        let has_it = All_sets.Integers.subset pot key in
+                        if has_it then true, CladeSet.remove pot new_pot
+                        else acc, new_pot) potential
+                        (false, potential) 
+                in
+                let sexpr = 
+                    if has_potential then 
+                        (`Single value) :: sexpr
+                    else sexpr 
+                in
+                potential, sexpr
+             else if not (atleast2 value) && my_filter then 
+                 (CladeSet.add key potential), sexpr
+             else potential, sexpr) (CladeSet.empty, []) fps  in
     match locations with
     | [] -> `Empty
     | l -> `Set l
@@ -2147,3 +2301,68 @@ let get_unique trees =
         in
         List.rev_map (fun (a, b, _) -> a, b) (remove_duplicated []  trees)
     | x -> x
+
+let destroy_component handle tree =
+    assert (is_handle handle tree);
+    let remove_node a tree =
+        if All_sets.IntegerMap.mem a tree.u_topo then
+            if (is_leaf a tree) then 
+                let u_topo = All_sets.IntegerMap.add a (Single a) tree.u_topo in
+                { tree with u_topo = u_topo }
+            else remove_node a tree
+        else tree
+    in
+    let remove_edge e tree =
+        if EdgeSet.mem e tree.d_edges then remove_edge e tree
+        else tree
+    in
+    let edges = get_edges tree handle in
+    let tree =
+        List.fold_left (fun tree ((Edge (a, b)) as e) ->
+            tree --> remove_node a --> remove_node b --> remove_edge e)
+            tree edges
+    in
+    let handles = 
+        List.fold_left (fun handles (Edge (a, b)) ->
+            handles --> All_sets.Integers.add a --> All_sets.Integers.add b) 
+        tree.handles edges
+    in
+    { tree with handles = handles }
+
+let copy_component handle source target =
+    let edges = get_edges source handle in
+    let add_node a tree =
+        if All_sets.IntegerMap.mem a tree.u_topo then tree
+        else 
+            let u_topo = All_sets.IntegerMap.add a (Single a) tree.u_topo in
+            { tree with u_topo = u_topo }
+    in
+    let add_edge ((Edge (a, b)) as e) tree =
+        assert (All_sets.IntegerMap.mem a tree.u_topo);
+        assert (All_sets.IntegerMap.mem b tree.u_topo);
+        let correct_node x y map =
+            match All_sets.IntegerMap.find x map with
+            | Single x -> All_sets.IntegerMap.add x (Leaf (x, y)) map
+            | Leaf (x, z) -> 
+                    All_sets.IntegerMap.add x (Interior (x, z, y, -1)) map
+            | Interior (a, b, c, d) ->
+                    assert (d = -1);
+                    All_sets.IntegerMap.add x (Interior (a, b, c, y)) map
+        in
+        let u_topo = tree.u_topo --> correct_node a b --> correct_node b a in
+        add_edge e { tree with u_topo = u_topo }
+    in
+    assert (List.fold_left (fun acc (Edge (a, b)) ->
+        acc && (not (All_sets.IntegerMap.mem a target.u_topo)) && 
+        (not (All_sets.IntegerMap.mem b target.u_topo))) true edges);
+    let target = List.fold_left (fun tree ((Edge (a, b)) as e) ->
+        tree --> add_node a --> add_node b --> add_edge e) target edges
+    in
+    let avail, handles = List.fold_left (fun (lst, hdls) (Edge (a, b)) ->
+        List.filter (fun x -> x <> a && x <> b) lst,
+         (hdls --> All_sets.Integers.remove a --> All_sets.Integers.remove b))
+         (target.avail_ids, target.handles) edges
+    in
+    let handles = All_sets.Integers.add handle handles in
+    { target with avail_ids = avail; handles = handles }
+
