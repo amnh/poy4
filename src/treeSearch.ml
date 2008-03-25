@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2588 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2646 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -684,7 +684,6 @@ let forest_search data queue origin_cost search trees =
         Sexpr.of_list trees
 
     let output_consensus data trees filename v graphic = 
-        let _ = incr Data.median_code_count in
         (* We will use a negative number for the root code to avoid
         * any clash *)
         let ntrees = Sexpr.length trees in

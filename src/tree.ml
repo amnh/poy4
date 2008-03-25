@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2643 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2646 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -199,10 +199,6 @@ let replace_codes f tree =
     { tree with u_topo = topo; d_edges = edges; handles = handles; avail_ids =
         avail_ids }
 
-let set_avail_start tree =
-    incr Data.median_code_count;
-    { tree with new_ids = !Data.median_code_count }
-
 let get_available tree =
     match tree.avail_ids with
     | id :: ids ->
@@ -237,13 +233,12 @@ let get_id node =
 
 (** The empty unrooted tree. *)
 let empty () = 
-    incr Data.median_code_count;
     {
         u_topo = All_sets.IntegerMap.empty;
         d_edges = EdgeSet.empty;
         handles = All_sets.Integers.empty;
         avail_ids = [];
-        new_ids = !Data.median_code_count;
+        new_ids = 0;
     }
 
 (** [is_handle id tree]
@@ -705,10 +700,9 @@ let test_tree tree =
 let (-->) a b = b a
 
 let add_tree_to d add_to tree =
-    incr Data.median_code_count;
-    let cg () = 
-        incr Data.median_code_count; 
-        !(Data.median_code_count)
+    let cg = 
+        let code = ref d.Data.number_of_taxa in
+        fun () -> incr code; !code
     in
     let rec assign_codes parent data = function
         | Parser.Tree.Leaf name ->
@@ -821,12 +815,22 @@ let convert_to trees data =
 (** [make_disjoint_tree n]
     @return a disjointed tree with the given nodes and 0 edges *)
 let make_disjoint_tree nodes =
+    let nodes = List.sort (fun a b -> b - a) nodes in
+    let tree = 
+        let t = empty () in
+        let next_avail = 
+            match nodes with
+            | [] -> 0
+            | h :: _ -> h + 1
+        in
+        { t with new_ids = next_avail }
+    in
     let f tr m =
         let tr = (add_node (Single(m)) tr) in
         let tr = (add_handle m tr) in
             tr
     in
-        (List.fold_left f (empty ()) nodes)
+    (List.fold_left f tree nodes)
 
 (** [get_children id tree] returns the two children of node [id] in [tree]
     @raise [Failure] if the node has no children *)

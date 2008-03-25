@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2638 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2646 $"
 
 module IntSet = All_sets.Integers
 
@@ -1075,12 +1075,16 @@ let emit_identifier =
     let extract_tree tree = tree.Ptree.tree
 
     let encode_trees run =
+        run.trees, run.stored_trees
+        (*
         (Sexpr.map extract_tree run.trees), (run.data.Data.taxon_codes)
+        *)
 
     let toptree tree = 
         { Ptree.empty with Ptree.tree = tree } 
 
     let update_codes run tc tree = 
+        let code_ref = ref run.data.Data.number_of_taxa in
         let my_hsh = Hashtbl.create 91 in
         let update_item a = 
             if All_sets.IntegerMap.mem a tc then
@@ -1088,8 +1092,8 @@ let emit_identifier =
             else if Hashtbl.mem my_hsh a then
                 Hashtbl.find my_hsh a
             else 
-                let _ = incr (Data.median_code_count) in
-                let newa = !Data.median_code_count in
+                let _ = incr code_ref in
+                let newa = !code_ref in
                 let _ = Hashtbl.add my_hsh a newa in
                 newa
         in
@@ -1126,15 +1130,19 @@ let emit_identifier =
             tree.Tree.handles All_sets.Integers.empty
         in
         { Tree.u_topo = u_topo; d_edges = d_edges; handles = handles; avail_ids
-        = []; new_ids = 1 + !(Data.median_code_count) }
+        = []; new_ids = run.data.Data.number_of_taxa + 1 }
 
-    let decode_trees (trees, tc) run =
+    let decode_trees (trees, stored_trees) run =
+        { run with trees = Sexpr.union trees run.trees; stored_trees =
+            Sexpr.union stored_trees run.stored_trees }
+        (*
         let trees = Sexpr.map (update_codes run tc) trees in  
         let nrun = 
             let nt = Sexpr.map toptree trees in
             { run with trees = nt }
         in
         update_trees_to_data false nrun
+        *)
 
     let encode_jackknife run = 
         (run.jackknife_support), (run.data.Data.taxon_codes)
@@ -2176,7 +2184,7 @@ END
                 run
             | `Save (fn, comment) ->
                 (try
-                    PoyFile.store_file (comment, run, !Data.median_code_count) fn;
+                    PoyFile.store_file (comment, run) fn;
                     run
                 with
                 | err ->
@@ -2188,8 +2196,7 @@ END
                         run)
             | `Load fn ->
                 (try 
-                    let (comment, run, mcc)  = PoyFile.read_file fn in
-                    Data.median_code_count := mcc;
+                    let (comment, run)  = PoyFile.read_file fn in
                     let descr = 
                         match comment with
                         | None -> "No description available."

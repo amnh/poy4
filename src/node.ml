@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2643 $"
+let () = SadmanOutput.register "Node" "$Revision: 2646 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -559,8 +559,6 @@ let rec cs_median_3 pn nn c1n c2n p n c1 c2 =
     | Set _, _, _, _ ->
           raise (Illegal_argument "cs_median_3")
 
-let new_median_code () = incr Data.median_code_count; !(Data.median_code_count)
-
 let new_node_stats a b =
     let num_child_edges =
         a.num_child_edges + b.num_child_edges + 2 in
@@ -635,13 +633,15 @@ let get_set =
     (function Set x -> x.preliminary, x.final | _ -> assert false)
     `Set
 
-
+let median_counter = ref (-1)
 
 let median code old a b =
     let code =
         match code with
         | Some code -> code
-        | None -> new_median_code ()
+        | None -> 
+                decr median_counter;
+                !median_counter
     in
     let new_characters =
         match old with
@@ -1272,8 +1272,9 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 weights []
             in
             List.fold_left
-                (fun acc (w, lst) -> (character_code_gen (), (List.map (fun x -> w, x) lst)) :: 
-                    acc)
+                (fun acc (w, lst) -> 
+                    (character_code_gen (), 
+                    (List.map (fun x -> w, x) lst)) :: acc)
                 [] res
         in
         let nadd8weights = classify do_classify lnadd8code !data

@@ -37,8 +37,6 @@ type node_data = {
     downpass *)
 }
 
-let my_own_code () = incr Data.median_code_count; !Data.median_code_count
-
 let to_n node = Lazy.lazy_from_val node
 
 let has_code code n =
@@ -411,7 +409,7 @@ type nad8 = Node.Standard.nad8 = struct
         let my_code =
             match my_code with
             | Some code -> code
-            | None -> my_own_code ()
+            | None -> assert false
         in
         let na, nb = 
             match code with

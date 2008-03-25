@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2604 $"
+let () = SadmanOutput.register "Build" "$Revision: 2646 $"
 
 let debug_profile_memory = false
 
@@ -580,9 +580,9 @@ module TS = Ptree.Search (Node) (Edge) (TreeOps)
 
 let rec build_initial_trees trees data nodes (meth : Methods.build) =
     let d = (data, nodes) in
-    let cg () = 
-        incr Data.median_code_count;
-        !Data.median_code_count
+    let cg = 
+        let code = ref data.Data.number_of_taxa in
+        fun () -> incr code; !code
     in
     let built_tree_report acc trees =
         let builder (acc, cnt) t =

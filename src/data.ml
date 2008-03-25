@@ -216,9 +216,9 @@ type alph =
     | GeneralAlphabet of 
         (string * Cost_matrix.Two_D.m * Cost_matrix.Three_D.m * Alphabet.a)
 
-let median_code_count = ref (-1)
-
 type d = {
+    (* The number of terminals currently loaded *)
+    number_of_taxa : int;
     (* The pairs of synonyms for the loaded taxa *)
     synonyms : string All_sets.StringMap.t;
     (* Whether or not fixed states is to be used in the following molecular
@@ -311,35 +311,36 @@ let create_ht () = Hashtbl.create 1667
 (* Empty data! *)
 let empty () = 
     {
-    synonyms = All_sets.StringMap.empty;
-    do_fs = false;
-    current_fs = [];
-    current_fs_file = "";
-    character_code_gen = ref (-1);
-    seg_code_gen = ref 0;
-    taxon_names = All_sets.StringMap.empty;
-    taxon_files = All_sets.StringMap.empty;
-    taxon_codes = All_sets.IntegerMap.empty;
-    taxon_characters = create_ht ();
-    character_names = create_ht ();
-    character_codes = create_ht ();
-    character_specs = create_ht ();
-    ignore_taxa_set = All_sets.Strings.empty;
-    ignore_character_set = [];
-    trees = [];
-    non_additive_8 = [];
-    non_additive_16 = [];
-    non_additive_32 = [];
-    non_additive_33 = [];
-    additive = [];
-    sankoff = [];
-    dynamics = [];
-    files = [];
-    specification_index = SpecIndex.empty ();
-    character_index = [];
-    search_information = [`TreeInformation [`Summary]; `CostMode];
-    root_at = None;
-    complex_schema = [];
+        number_of_taxa = 0;
+        synonyms = All_sets.StringMap.empty;
+        do_fs = false;
+        current_fs = [];
+        current_fs_file = "";
+        character_code_gen = ref 0;
+        seg_code_gen = ref 0;
+        taxon_names = All_sets.StringMap.empty;
+        taxon_files = All_sets.StringMap.empty;
+        taxon_codes = All_sets.IntegerMap.empty;
+        taxon_characters = create_ht ();
+        character_names = create_ht ();
+        character_codes = create_ht ();
+        character_specs = create_ht ();
+        ignore_taxa_set = All_sets.Strings.empty;
+        ignore_character_set = [];
+        trees = [];
+        non_additive_8 = [];
+        non_additive_16 = [];
+        non_additive_32 = [];
+        non_additive_33 = [];
+        additive = [];
+        sankoff = [];
+        dynamics = [];
+        files = [];
+        specification_index = SpecIndex.empty ();
+        character_index = [];
+        search_information = [`TreeInformation [`Summary]; `CostMode];
+        root_at = None;
+        complex_schema = [];
 }
 
 
@@ -353,6 +354,7 @@ let copy_taxon_characters tc =
 
 let duplicate data = 
     { data with
+        character_code_gen = ref !(data.character_code_gen);
         taxon_characters = copy_taxon_characters data.taxon_characters;
         character_names = Hashtbl.copy data.character_names;
         character_codes = Hashtbl.copy data.character_codes;
@@ -706,8 +708,7 @@ let rec process_taxon_code data taxon file =
         (All_sets.StringMap.find taxon data.synonyms) file
     else begin
         (* It is new, so lets assign it a code and add it *)
-        incr median_code_count;
-        let code = !median_code_count in
+        let code = data.number_of_taxa + 1 in
         let taxon_names = 
             All_sets.StringMap.add taxon code data.taxon_names
         in
@@ -719,7 +720,8 @@ let rec process_taxon_code data taxon file =
             data.taxon_files 
         in
         let data = pick_code_for_root code data in
-        { data with taxon_names = taxon_names; taxon_codes = taxon_codes; 
+        { data with number_of_taxa = data.number_of_taxa + 1;
+        taxon_names = taxon_names; taxon_codes = taxon_codes; 
         taxon_files = taxon_files }, code
     end
 
@@ -743,8 +745,102 @@ let report_static_input file (taxa, characters, matrix, tree, _) =
     in
     Status.user_message Status.Information msg
 
-let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet file 
-dyna_state data res =
+let repack_codes data = 
+    (* We verify that all the terminals have consecutive codes, and that all the
+    * characters have consecutive codes. Finally we restore the code generation
+    * reference to the necessary code *)
+    (* We first collect the data about all the taxa that we have and build a map
+    * of codes, then we do the same about all the characters that we have *)
+    let taxa_counter = ref 0
+    and character_counter = ref 0 in
+    let taxa_map = Hashtbl.create 1667
+    and char_map = Hashtbl.create 1667 in
+    let generic_assign table counter code =
+        if Hashtbl.mem table code then Hashtbl.find table code
+        else 
+            let () = Hashtbl.replace table code !counter in
+            let () = incr counter in
+            !counter - 1
+    in
+    let taxa_assign = generic_assign taxa_map taxa_counter
+    and char_assign = generic_assign char_map character_counter in
+    let () =
+        let lst = All_sets.StringMap.fold (fun _ code acc -> code :: acc)
+        data.taxon_names [] in
+        let lst = List.sort compare lst in
+        List.iter (fun x -> ignore (taxa_assign x)) lst
+    in
+    let taxon_names = 
+        All_sets.StringMap.map taxa_assign data.taxon_names in
+    let taxon_codes =
+        All_sets.StringMap.fold (fun name code acc -> All_sets.IntegerMap.add
+        code name acc) taxon_names All_sets.IntegerMap.empty
+    in
+    let character_names, character_codes, character_specs =
+        let names = Hashtbl.create 1667 in
+        let codes = Hashtbl.create 1667 in
+        let specs = Hashtbl.create 1667 in
+        Hashtbl.iter (fun code spec ->
+            let code = char_assign code in
+            Hashtbl.replace specs code spec) data.character_specs;
+        Hashtbl.iter (fun name code ->
+            try 
+                let code = char_assign code in
+                Hashtbl.replace names name code;
+                Hashtbl.replace codes code name;
+            with
+            | Not_found -> ()) data.character_names;
+        names, codes, specs
+    in
+    let taxon_characters =
+        let taxon_characters = Hashtbl.create 1667 in
+        Hashtbl.iter (fun code chars ->
+            let table = Hashtbl.create 1667 in
+            Hashtbl.iter (fun code char ->
+                let code = char_assign code in
+                Hashtbl.add table code
+                (match char with
+                | (Dyna (_, d)), x -> 
+                        ((Dyna (code, d)), x)
+                | (Stat (_, d)), x ->
+                        ((Stat (code, d)), x))) chars;
+            Hashtbl.add taxon_characters (taxa_assign code) table) 
+        data.taxon_characters;
+       taxon_characters
+    in
+    let remap = List.map ~f:char_assign in
+    let non_additive_8 = remap data.non_additive_8
+    and non_additive_16 = remap data.non_additive_16
+    and non_additive_32 = remap data.non_additive_32
+    and non_additive_33 = remap data.non_additive_33
+    and additive = remap data.additive
+    and sankoff = List.map remap data.sankoff
+    and dynamics = remap data.dynamics 
+    and root_at = 
+        match data.root_at with
+        | None -> None
+        | Some x -> Some (taxa_assign x)
+    in
+    { data with
+        taxon_names = taxon_names;
+        taxon_codes = taxon_codes;
+        taxon_characters = taxon_characters;
+        character_names = character_names;
+        character_codes = character_codes;
+        character_specs = character_specs;
+        non_additive_33 = non_additive_33;
+        non_additive_32 = non_additive_32;
+        non_additive_16 = non_additive_16;
+        non_additive_8 = non_additive_8;
+        additive = additive;
+        sankoff = sankoff;
+        dynamics = dynamics;
+        root_at = root_at; 
+        number_of_taxa = !taxa_counter;
+        character_code_gen = ref !character_counter; }
+
+let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet 
+    file dyna_state data res =
     let data = duplicate data in
     let res = 
         (* Place a single sequence together with its taxon *)
@@ -1066,9 +1162,12 @@ let add_static_parsed_file data file triple =
 
 let add_multiple_static_parsed_file data list =
     let data = duplicate data in
-    List.fold_left ~f:(fun acc (file, triple) ->
+    let data = 
+        List.fold_left ~f:(fun acc (file, triple) ->
         gen_add_static_parsed_file false acc file triple)
-    ~init:data list
+        ~init:data list
+    in
+    data
 
 
 let add_static_file ?(report = true) style data file = 
@@ -1219,17 +1318,20 @@ let aux_process_molecular_file tcmfile tcm tcm3 alphabet processor builder dyna_
     end
 
 let process_molecular_file tcmfile tcm tcm3 annotated alphabet is_prealigned dyna_state data file = 
-    aux_process_molecular_file 
-    tcmfile tcm tcm3 alphabet
-    (fun alph parsed -> 
-        process_parsed_sequences tcmfile tcm tcm3 annotated 
-        alph (FileStream.filename file) dyna_state data parsed)
-    (fun x -> 
-        if not is_prealigned then Parser.AlphSeq x
-        else Parser.Prealigned_Alphabet x) 
-    dyna_state 
-    data 
-    file
+    let data =
+        aux_process_molecular_file 
+        tcmfile tcm tcm3 alphabet
+        (fun alph parsed -> 
+            process_parsed_sequences tcmfile tcm tcm3 annotated 
+            alph (FileStream.filename file) dyna_state data parsed)
+        (fun x -> 
+            if not is_prealigned then Parser.AlphSeq x
+            else Parser.Prealigned_Alphabet x) 
+        dyna_state 
+        data
+        file
+    in
+    data
 
 let process_ignore_taxon data taxon =
     let res = All_sets.Strings.add taxon data.ignore_taxa_set in
@@ -1242,11 +1344,13 @@ let process_ignore_taxon data taxon =
     in
     { data with ignore_taxa_set = res; }
 
+
 let process_ignore_file data file = 
     try
         let ch, file = FileStream.channel_n_filename file in
         let taxa = Parser.IgnoreList.of_channel ch in
-        List.fold_left ~f:process_ignore_taxon ~init:data taxa
+        let data = List.fold_left ~f:process_ignore_taxon ~init:data taxa in
+        data
     with
     | Sys_error err ->
             let file = FileStream.filename file in
@@ -1310,7 +1414,8 @@ let rec process_analyze_only_taxa meth data =
                 Array.to_list (Array.map (fun x -> code_taxon x data) 
                 (Array.sub all_codes 0 n)) 
             in
-            List.fold_left ~f:process_ignore_taxon ~init:data taxa
+            let res = List.fold_left ~f:process_ignore_taxon ~init:data taxa in
+            res
     | `Names (dont_complement, taxa) ->
             let taxa = 
                 warn_if_repeated_and_choose_uniquely taxa 
@@ -1320,7 +1425,8 @@ let rec process_analyze_only_taxa meth data =
                 if not dont_complement then taxa
                 else complement_taxa data taxa 
             in
-            List.fold_left ~f:process_ignore_taxon ~init:data taxa
+            let res = List.fold_left ~f:process_ignore_taxon ~init:data taxa in
+            res
     | `Missing (dont_complement, fraction) ->
             Status.user_message Status.Information "Here";
             let fraction = (float_of_int fraction) /. 100. in
@@ -1381,11 +1487,16 @@ let process_analyze_only_file dont_complement data files =
             else taxa, complement_taxa data taxa
         in
         report taxa ignored;
-        List.fold_left ~f:process_ignore_taxon ~init:data ignored
+        let res = List.fold_left ~f:process_ignore_taxon ~init:data ignored in
+        res
     with
     | Failure msg ->
             Status.user_message Status.Error msg;
             data
+
+let process_ignore_taxon data taxon = 
+    (process_ignore_taxon data taxon)
+
 
 let remove_taxa_to_ignore data = 
     let data = duplicate data in
@@ -1400,7 +1511,8 @@ let remove_taxa_to_ignore data =
         | _ -> data
     in
     let data = All_sets.Strings.fold process_data data.ignore_taxa_set data in
-    find_code_for_root_if_removed data
+    let data = find_code_for_root_if_removed data in
+    data
 
 let report_terminals_files filename taxon_files ignored_taxa =
     let files = All_sets.StringMap.empty 
@@ -1549,6 +1661,7 @@ let categorize data =
 
     (* We recategorize the data, so we must clear any already-loaded
        data *)
+    let data = repack_codes data in
     let data = { data with
                      non_additive_8 = [];
                      non_additive_16 = [];
@@ -1769,7 +1882,13 @@ let character_spec_to_formatter enc : Tags.output =
 
 let characters_to_formatter d : Tags.output =
     let create code name acc =
-        let enc = Hashtbl.find d.character_specs code in
+        let enc = 
+            try Hashtbl.find d.character_specs code with
+            | Not_found as err -> 
+                    prerr_int code;
+                    prerr_newline ();
+                    raise err 
+        in
         let res = Tags.Characters.character, 
         [ (Tags.Characters.name, name); ("code", string_of_int
         code) ],
@@ -2408,7 +2527,7 @@ let process_ignore_characters report data characters =
         List.fold_left ~f:(fun acc x -> All_sets.Integers.add x acc)
         ~init:All_sets.Integers.empty codes
     in
-    process_ignore_character report data codes
+    (process_ignore_character report data codes)
 
 let process_analyze_only_characters_file report dont_complement data files =
     let codes = 
@@ -2427,7 +2546,7 @@ let process_analyze_only_characters_file report dont_complement data files =
         if dont_complement then  (`Some codes)
         else complement_characters data (`Some codes) 
     in
-    process_ignore_characters report data items
+    (process_ignore_characters report data items)
 
 let process_ignore_characters_file report data file =
     try
@@ -2435,7 +2554,7 @@ let process_ignore_characters_file report data file =
         let items = Parser.IgnoreList.of_channel ch in
         let items = List.map trim items in
         close_in ch;
-        process_ignore_characters report data (`Names items)
+        (process_ignore_characters report data (`Names items))
     with
     | err ->
             let file = FileStream.filename file in
@@ -3133,8 +3252,11 @@ let make_fixed_states chars data =
     in
     let codes = get_code_from_characters_restricted_comp `Dynamic data chars in
     let data = List.fold_left ~f:convert_and_process ~init:data codes in
-    process_ignore_character false data (List.fold_left ~f:(fun acc x ->
+    let data = 
+        process_ignore_character false data (List.fold_left ~f:(fun acc x ->
         All_sets.Integers.add x acc) ~init:All_sets.Integers.empty codes)
+    in
+    data
 
 let number_of_taxa d = 
     Hashtbl.fold  (fun _ _ num_taxa -> num_taxa + 1) d.taxon_characters 0  

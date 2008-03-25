@@ -379,7 +379,6 @@ module type SEARCH = sig
 
     end
     
-val set_avail_start : ('a, 'b) p_tree -> ('a, 'b) p_tree
 val int_of_id : Tree.id -> int
 val get_id : Tree.node -> int
 val is_handle : int -> ('a, 'b) p_tree -> bool

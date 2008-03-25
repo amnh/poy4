@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2643 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2646 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -105,11 +105,6 @@ let empty = {
     component_root = All_sets.IntegerMap.empty;
     origin_cost = 0.;
 }
-
-(** [set_avail_start ptree id] tells [ptree] to start creating new nodes with
-    ID [id] *)
-let set_avail_start ptree =
-    { ptree with tree = Tree.set_avail_start ptree.tree }
 
 type ('a, 'b) break_fn = Tree.break_jxn -> ('a, 'b) p_tree ->
     (('a, 'b) p_tree * Tree.break_delta * float * int * 'a * incremental list)
@@ -1569,7 +1564,7 @@ let fuse_av source target   =
             assert (all_edges_represented tree);
             tree, tree.tree, edge 
     in
-    let count = !Data.median_code_count in
+    let count = 0 in
     let (stree, sutree, sedge) = maybe_reroot source
     and (ttree, tutree, tedge) = maybe_reroot target in
     let original = stree in
