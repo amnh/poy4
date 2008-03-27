@@ -2978,24 +2978,24 @@ The \poycommand{calculate\_support} command does not output support values by de
             {breakinvtoseq}
 
         \argumentdefinition{seq\_to\_breakinv}{\obligatory{([argument list])}}
-            {Transforms \poyargument{custom\_alphabet} character type into \poyargument{breakinv} character type to allow for rearrangement operations
-            (translocations and inversions; duplications are not currently
-            supported).} This argument is useful, for example, when
-            custom\_alphabet characters are used to define a sequence of
-            individual genes and one is interested in detecting potential
-            change in their order on a chromosome. See the
-            command~\ccross{read} for the description on how to load \poyargument {custom
+            {Transforms \poyargument{custom\_alphabet} character type into \poyargument{breakinv} character type to 
+            allow for rearrangement operations (translocations and inversions; duplications are not currently supported).  
+            This argument is useful, for example, when \poyargument{custom\_alphabet} characters are used to define a sequence of
+            individual genes and one is interested in detecting potential change in their order on a chromosome. 
+            See the command~\ccross{read} for the description on how to load \poyargument{custom\_
             alphabet} and \poyargument{breakinv} character types. The optional list of arguments
             includes the arguments of the \poyargument{dynamic\_pam} that can also
-            be specified subsequently, as a separate step.
+            be specified subsequently, as a separate step.}
+            {seqtobreakinv}
             
         \argumentdefinition{seq\_to\_chrom}{\obligatory{([argument list])}}   
             {Transforms nucleotide type data into \\ chromosome type data to allow
-            rearrangements, inversions, and locus-level indel operations.} The
+            rearrangements, inversions, and locus-level indel operations.  The
             chromosome-specific options (\emph{e.g.} breakpoint,
             locus--insertion, and locus-deletion costs) can be specified by the argument
-            \poyargument{dynamic\_pam}. If no \poyargument{dynamic\_pam} values
-            are specified, its default values are applied.
+            \poyargument{dynamic\_pam} If no \poyargument{dynamic\_pam} values
+            are specified, its default values are applied.}
+            {seqtochrom}
             
         \argumentdefinition{dynamic\_pam}{\obligatory{([argument list])}}
             {Specifies parameters for creating chro\-mosome- and genome-level HTUs (medians).
@@ -3113,6 +3113,8 @@ The \poycommand{calculate\_support} command does not output support values by de
                         all generated rearrangements.}
                         {median}
 
+
+
                     \argumentdefinition{seed\_length}{\obligatory{\poyint}}
                         {Specifies the minimum length of identical (invariant,
                         completely conserved) contiguous sequence fragments
@@ -3131,6 +3133,16 @@ The \poycommand{calculate\_support} command does not output support values by de
                         The default value of \poyargument{seed\_length} is \texttt{9}.}
                         {seedlength}
                         
+         
+         \begin{figure} [!htbp]
+   		 \begin{center}
+        		\includegraphics[width=0.8\textwidth]{figures/chromfig1.pdf}
+    		\end{center}
+    		\caption{The effect of dynamic parameter arguments (\commandstyle{seed\_length, rearranged\_len,} and \commandstyle{sig\_block\_len}) on determining 			homologous blocks in unannotated chromosomal sequences. \emph{Case A} allows for rearrangements between the short homologous blocks within the 			blue brackets constructed upon six nucleotide seeds (red and green), \emph{Case B}  restricts rearrangement between seeds that are less than \texttt{28} 			nucleotides apart. \emph{Case C} restricts rearrangement by requiring homologous blocks at least \texttt{50} nucleotides in length. \emph{Case D} restricts 			recognition of homology between sequences by setting seed length of conserved seeds at \texttt{15}.}
+    		\label{fig:chrom}
+		\end{figure}
+
+         
                       \argumentdefinition{sig\_block\_len}{\obligatory{\poyint}}
                           {Creates a pairwise alignment between two chromosomes and
                           detecting conserved areas (``blocks''). However, only blocks of
@@ -3148,8 +3160,8 @@ The \poycommand{calculate\_support} command does not output support values by de
                              In other words, it is unlikely that rearrangement 
               	           operations can occur between two non-rearranged seeds 
                              if they are connected. The default value is \texttt{100}}{rearrangedlen} 
- 
 
+	
 
                     \argumentdefinition{swap\_med}{\obligatory{\poyint}}
                         {Specifies the maximum number of swapping iterations
@@ -3160,11 +3172,13 @@ The \poycommand{calculate\_support} command does not output support values by de
                         thoroughness. The default value is \texttt{1}.}
                         {swapmed}
 
+
             \end{description}	
 
 	\end{argumentgroup}
 	\end{arguments}
 	
+
     \poydefaults{}{If no arguments are given, this command does nothing.}
 
 	\begin{poyexamples} 
