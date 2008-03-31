@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 2651 $"
+let () = SadmanOutput.register "Block" "$Revision: 2652 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -631,8 +631,8 @@ let connect_pos_consecutive_block (block_ls : block_t list)
     let num_marker2 = Array.length marker2_arr in 
 
     let do_connection (b : block_t) =  
-        let m1 = Utl.binary_search marker1_arr b.en1 in 
-        let m2 = Utl.binary_search marker2_arr b.en2 in 
+        let m1 = Utl.binary_index_search marker1_arr b.en1 in 
+        let m2 = Utl.binary_index_search marker2_arr b.en2 in 
         if (m1 >= 0) && (m1 + 1 < num_marker1) && 
             (m2 >= 0) && (m2 + 1 < num_marker2) then 
             begin

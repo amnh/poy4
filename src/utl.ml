@@ -16,7 +16,7 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "Utl" "$Revision: 2651 $"
+let () = SadmanOutput.register "Utl" "$Revision: 2652 $"
 
 (** This module implements basic functions *)
 
@@ -126,8 +126,11 @@ let invert_subarr (arr :  'a array)
     done    
 
 
-(** Searching the index of looking_val in an non-decreasing sorted array *)
-let binary_search (arr : int array) (looking_val : int) = 
+(** Given a non-decreasing array [arr] and a [looking_val], this
+* function returns an integer as an index of [looking_val]. 
+* if [looking_val] is not in the [arr], return (-1). 
+* To this end, binary search is employed  *)
+let binary_index_search (arr : int array) (looking_val : int) = 
     let rec search l u =
         if l > u then -1
         else begin
@@ -141,7 +144,10 @@ let binary_search (arr : int array) (looking_val : int) =
     search 0 ( (Array.length arr) - 1)
 
 
-(** Searching the index of looking item in the arr using the cmp_fun *)
+(** Given an array [arr], a [looking_item] and a compare
+* function [cmp_fun], this function return an integer as
+* an  index of the [looking_item]. If the [looking_item] is not
+* in the array [arr], return (-1) *)
 let find_index arr looking_item cmp_fun = 
     let len = Array.length arr in 
     let rec find pos = 

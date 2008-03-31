@@ -12,7 +12,7 @@ val is_null : 'a option -> bool
 val compare_non_dec_list : int list -> int list -> bool
 val get_sum_arr : int array -> int -> int -> int
 val invert_subarr : 'a array -> int -> int -> unit
-val binary_search : int array -> int -> int
+val binary_index_search : int array -> int -> int
 val find_index : 'a array -> 'b -> ('b -> 'a -> int) -> int
 val get_common :
   'a array -> 'a array -> ('a -> 'a -> int) -> 'a array * 'a array
