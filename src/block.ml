@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Block" "$Revision: 2265 $"
+let () = SadmanOutput.register "Block" "$Revision: 2651 $"
 (** The module contains default parameters and 
     funtions to create blocks between two chromosomes. *)
 
@@ -263,7 +263,7 @@ let cmp_ali_cost (seq1 : Sequence.s) (seq2 : Sequence.s)
     let len = Sequence.length seq1 in 
     let code1_arr = Sequence.to_array seq1 in          
     let code2_arr = Sequence.to_array seq2 in
-    (if direction = `Negative then Utl.invert_arr code2_arr);
+    (if direction = `Negative then Utl.invert_subarr code2_arr 0 (Array.length code2_arr));
 
     let mat_cost = ali_pam.ChromPam.mat_cost in 
     let mismat_cost = ali_pam.ChromPam.mismat_cost in 

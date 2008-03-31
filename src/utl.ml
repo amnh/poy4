@@ -16,30 +16,50 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
+let () = SadmanOutput.register "Utl" "$Revision: 2651 $"
 
-let () = SadmanOutput.register "Utl" "$Revision: 2310 $"
+(** This module implements basic functions *)
 
-(** This module implements basic utilities *)
-
-let infinity = 100000000;;
+let large_int = 100000000;;
 let max_seq_len = 50000000;;
 let fprintf = Printf.fprintf
 
+(** Each chromosome is assigned an unique chromosome ID, 
+* whenever new chromosome is loaded from input or created during
+* the run,gen_chrom_ref_code is increated *)
 let gen_chrom_ref_code = ref 0
+
+(** Each sequence or segment is assigned an unique sequence ID, 
+* whenever new sequence is loaded from input or created during
+* the run,gen_seq_ref_code is increated *)
 let gen_seq_ref_code = ref 1000000 
+
+(** Each genome is assigned an unique genome ID, whenever
+* new genome is loaded from input or created during
+* the run,gen_genome_ref_code is increated *)
 let gen_genome_ref_code = ref 0
 
+(** When a new chromosome is loaded from input or created
+* during the run, this function returns an integer number 
+* as an unique chromosome ID for this chromosome *)
 let get_new_chrom_ref_code () = 
     let new_chrom_ref_code = !gen_chrom_ref_code in 
     incr gen_chrom_ref_code;
     new_chrom_ref_code
 
 
+(** When a new genome is loaded from input or created
+* during the run, this function returns an integer number 
+* as an unique genome ID for this genome *)
 let get_new_genome_ref_code () = 
     let new_genome_ref_code = !gen_genome_ref_code in 
     incr gen_genome_ref_code;
     new_genome_ref_code
 
+
+(** When a new sequence or segment is loaded from input 
+* or created during the run, this function returns 
+* an integer number as an unique seq ID for this sequence *)
 let get_new_seq_ref_code () = 
     let new_seq_ref_code = !gen_seq_ref_code in 
     incr gen_seq_ref_code;
@@ -57,7 +77,9 @@ let is_null ptr =
     | _ -> false     
 
         
-(** Compare two non-decreasing sorted integer lists *)
+(** Given two integer lists [l1] and [l2]
+* which are sorted non-decreasing. This function returns 
+* true if [l1] is identical [l2], otherwise false *)
 let compare_non_dec_list (l1 : int list) (l2 : int list) : bool = 
     if (List.length l1) != (List.length l2) then 
         false
@@ -71,13 +93,14 @@ let compare_non_dec_list (l1 : int list) (l2 : int list) : bool =
                     else
                         compare t1 t2
                 | _ -> false
-        in
-        
+        in        
         compare l1 l2
     end
         
-
-(** Compute the sume a.(pos1) + a.(pos1 + 1) + ... + a.(pos2) *)
+(** Given an integer array [a], two array indices [pos1] 
+* and [pos2], the function computes an integer number 
+* as  the sum of array elements from [pos1] to [pos2]. 
+* Note that [pos1] is not necessary smaller than [pos2] *)
 let get_sum_arr (a : int array) (pos1 : int) (pos2 : int) = 
     let rec add pos en sum =
         match pos > en with
@@ -89,30 +112,19 @@ let get_sum_arr (a : int array) (pos1 : int) (pos2 : int) =
         | false -> add pos2 pos1 0 
     
     
-(** Convert an array, the direction is kept unconverted*)
-let invert_arr (arr :  'a array) = 
-    let len = Array.length arr in 
-    for pos = 0 to len / 2 - 1 do
-        let tmp = arr.(pos) in
-        arr.(pos) <- arr.(len - pos - 1);
-        arr.(len - pos - 1) <- tmp;
-    done    
 
-(** Convert the subarray from start_pos to end_position. The direction is kept
-    unchanged *)
-let invert_subarr (arr :  'a array) (start_pos : int) (end_pos : int) = 
+(** Given an array [arr], two indices [start_pos] and [end_pos],
+* this function returns an inverted array [arr'] where 
+* orders of elements from [start_pos] to [end_pos] are inverted.
+* Note that element directions (+/-) are kept unchanged *)
+let invert_subarr (arr :  'a array) 
+    (start_pos : int) (end_pos : int) = 
     for offset = 0 to (end_pos - start_pos + 1) / 2 - 1 do
         let tmp = arr.(start_pos + offset) in
         arr.(start_pos + offset) <- arr.(end_pos - offset);
         arr.(end_pos - offset) <- tmp;
     done    
 
-(** The same as convert_subarray, except that the direction is converted *)
-let invert_direction_subarr (arr :  int array) start_pos end_pos = 
-    invert_subarr arr start_pos end_pos;
-    for pos = start_pos to end_pos do
-        arr.(pos) <- - arr.(pos)
-    done
 
 (** Searching the index of looking_val in an non-decreasing sorted array *)
 let binary_search (arr : int array) (looking_val : int) = 
