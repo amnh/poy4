@@ -619,7 +619,7 @@ let find_simple_med2_ls (chrom1: annchrom_t) (chrom2 : annchrom_t)
         let code2_arr = UtlGrappa.get_ordered_permutation re_code2_arr in 
              
         let all_order_ls =   
-            if (Utl.equalArr code2_arr re_code2_arr compare) ||  
+            if (Utl.isEqualArr code2_arr re_code2_arr compare) ||  
                 (ali_pam.keep_median = 1) ||
                 (ali_pam.approx = `First) then [re_code2_arr, recost1, recost2]   
             else [(re_code2_arr, recost1, recost2); (code2_arr, recost2, recost1)]   

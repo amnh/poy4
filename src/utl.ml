@@ -16,9 +16,10 @@
 (* along with this program; if not, write to the Free Software                *)
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
-let () = SadmanOutput.register "Utl" "$Revision: 2652 $"
-
 (** This module implements basic functions *)
+
+let () = SadmanOutput.register "Utl" "$Revision: 2653 $"
+module IntSet = All_sets.Integers
 
 let large_int = 100000000;;
 let max_seq_len = 50000000;;
@@ -158,6 +159,11 @@ let find_index arr looking_item cmp_fun =
     in
     find 0
 
+
+(** Given two arrays [arr1] and [arr2] and compare function [equal], 
+* this function returns [arr1'] and [arr2'] where
+* - [arr1'] includes elements of [arr1] which are also in [arr2],
+* - [arr2'] includes elements of [arr2] which are also in [arr1] *)
 let get_common arr1 arr2 equal = 
     let ls1 = Array.to_list arr1 in
     let ls2 = Array.to_list arr2 in 
@@ -166,43 +172,25 @@ let get_common arr1 arr2 equal =
     Array.of_list ls1, Array.of_list ls2
 
 
+(** Given an array [arr], an array index [pos] and a new element 
+* [new_item], this function returns [arr'] where [new_item] 
+* is inserted into array [arr] at position [pos] *)
 let insert arr pos new_item = 
     let len = Array.length arr in
     Array.init (len + 1) (fun index -> 
       if index < pos then arr.(index)
       else if index = pos then new_item 
       else arr.(index - 1)) 
-
-(** Start_pos < end_pos *)
-let move_forward arr start_pos sublen end_pos =    
-    let new_arr = Array.copy arr in 
-    let cur_pos = ref (-1) in
-    let add s e  =  
-        for pos = s to e do 
-            cur_pos := !cur_pos + 1;
-            new_arr.(!cur_pos) <- arr.(pos)
-        done
-    in       
-
-    add 0 (start_pos - 1);
-    add (start_pos + sublen) (end_pos - 1); 
-    add start_pos (start_pos + sublen - 1);
-    add end_pos ((Array.length arr ) - 1);
-    new_arr
-    
-
-let swap_item pos1 pos2 arr =     
+    let swap_item pos1 pos2 arr =     
     let new_arr = Array.copy arr in  
     new_arr.(pos1) <- arr.(pos2);
     new_arr.(pos2) <- arr.(pos1);
     new_arr
 
 
-
 let printIntArr (arr : int array) = 
     Array.iter (fprintf stdout "%3i") arr;
     print_newline ()
-
 
 let printIntMat (arr : int array array) = 
     Array.iter printIntArr arr;
@@ -210,9 +198,6 @@ let printIntMat (arr : int array array) =
 
 let create_ls len value = 
     Array.to_list (Array.init len (fun _ -> value))
-
-
-module IntSet = All_sets.Integers
 
 (** [remove_nth list n] returns the [n]th element of [list] and [list] with the
     [n]th element removed. *)
@@ -224,12 +209,13 @@ let rec remove_nth ?(acc=[]) list n =
     else raise (Invalid_argument "remove_nth")
 
     
-
+(** Given two arrays [src_arr], [des_arr], and an array index [pos],
+* this function returns [des_arr'] where [src_arr] is inserted
+* into [des_arr] at position [pos] *)
 let insert_arr src_arr des_arr pos =
     let src_len = Array.length src_arr in 
     let des_len = Array.length des_arr in 
     let arr = Array.make (src_len + des_len) 0 in 
-
     let cur_pos = ref 0 in 
     let add act_arr p1 p2 =
         for p = p1 to p2 do
@@ -240,10 +226,10 @@ let insert_arr src_arr des_arr pos =
     add des_arr 0 (pos - 1);
     add src_arr 0 (src_len - 1);
     add des_arr pos (des_len - 1);
-
     arr
-    
 
+(** This function is code by Andres, please ask Andres 
+* for more information *)    
 let rec pairwisep p list =
     match list with
     | l :: ls ->
@@ -254,13 +240,13 @@ let rec pairwisep p list =
     | [] -> true
 
 
-
-
 let filterArr arr f = 
     Array.of_list ( List.filter f  (Array.to_list arr) )
 
 
-
+(** Given a list [elem_ls] and an integer number [k],
+* this function return a list of [k] elements chosen
+* randomly from the list [elem_ls] *)
 let get_k_random_elem elem_ls k = 
     let elem_arr = Array.of_list elem_ls in 
     let len = Array.length elem_arr in 
@@ -292,7 +278,9 @@ let get_k_random_elem elem_ls k =
     end 
 
 
-let equalArr arr1 arr2 cmp_fun = 
+(** Given two arrays [arr1], [arr2] and compare function [cmp_fun],
+* this function returns true if [arr1] and [arr2] are identical, otherwise false *)
+let isEqualArr arr1 arr2 cmp_fun = 
     if Array.length arr1 != Array.length arr2 then false
     else begin
         let len = Array.length arr1 in 
@@ -304,15 +292,14 @@ let equalArr arr1 arr2 cmp_fun =
         in 
         check 0
     end 
-    
-
-
-
-    
+        
 let filterArray fil_fun arr = 
     Array.of_list (List.filter fil_fun (Array.to_list arr))
 
 
+(** Given an array [arr] and a list [break_ls] : (int * int) list,
+* this function returns a list of segments which 
+* are broken arcording to the [break_ls] *)
 let break_array arr break_ls = 
     let rev_seg_ls = 
         List.fold_left 
