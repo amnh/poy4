@@ -44,7 +44,7 @@ exception Node_Is_Handle
 type node =
   | Single of int
   | Leaf of int * int
-  | Interior of int * int * int * int
+  | Interior of (int * int * int * int)
 
 (** In an rooted tree, edges are implicitly directed according to parent
 _ child relationships. The edges in unrooted trees are directed based on
@@ -292,4 +292,5 @@ val exchange_codes : int -> int -> u_tree -> u_tree
 val replace_codes : (int -> int) -> u_tree -> u_tree
 
 val destroy_component : int -> u_tree -> u_tree
+
 val copy_component : int -> u_tree -> u_tree -> u_tree

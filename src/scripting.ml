@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2646 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2659 $"
 
 module IntSet = All_sets.Integers
 
@@ -94,6 +94,8 @@ module type S = sig
 
     val console_run : string -> unit
 
+    val parsed_run : script list -> unit
+
     val channel_run : in_channel -> unit
 
     val get_console_run : unit -> r
@@ -102,6 +104,7 @@ module type S = sig
 
     module PhyloTree : sig
         type phylogeny = (a, b) Ptree.p_tree
+        val get_cost : phylogeny -> float
         val fold_edges : ('a -> Tree.edge -> 'a) -> 'a -> (a, b) Ptree.p_tree -> 'a
         val fold_nodes : ('a -> Tree.node -> 'a) -> 'a -> (a, b) Ptree.p_tree -> 'a
         val fold_vertices : ('a -> int -> 'a) -> 'a -> (a, b) Ptree.p_tree -> 'a
@@ -127,6 +130,17 @@ module type S = sig
             phylogeny list 
         val tbr : ((phylogeny * float) list -> unit) -> Data.d -> phylogeny ->
             phylogeny list 
+    end
+
+    module Runtime : sig
+        type phylogeny = (a, b) Ptree.p_tree
+        val min_cost : unit -> float option
+        val max_cost : unit -> float option
+        val all_costs : unit -> float list
+        val trees : unit -> phylogeny list
+        val data : unit -> Data.d
+        val to_string : bool -> string list list 
+        val of_string : string -> unit
     end
 
 end
@@ -2292,6 +2306,10 @@ let restart ?(file="ft_poy.out") () =
 
 let console_run_val = ref (empty ())
 
+let parsed_run lst = 
+    let res = run ~start:!console_run_val lst in
+    console_run_val := res
+
 let console_run str = 
     let todo = PoyCommand.of_string true str in
     let res = run ~start:!console_run_val todo in
@@ -2308,6 +2326,7 @@ let get_console_run () = !console_run_val
     module PhyloTree  = struct
         module PtreeSearch = Ptree.Search (Node) (Edge) (TreeOps)
         type phylogeny = (a, b) Ptree.p_tree
+        let get_cost x = Ptree.get_cost `Adjusted x
         let fold_edges f acc tree = List.fold_left f acc (Ptree.get_edges_tree tree)
         let fold_nodes f acc tree = List.fold_left f acc (Ptree.get_nodes tree)
         let fold_vertices f acc tree = List.fold_left f acc (Ptree.get_node_ids tree)
@@ -2381,6 +2400,40 @@ let get_console_run () = !console_run_val
         let build data nodes = 
             Sexpr.to_list (Build.build_initial_trees `Empty data nodes 
             (`Build (1, (`Wagner_Rnd (1, `Last, [], `UnionBased None)), [])))
+    end
+
+
+    module Runtime = struct
+        type phylogeny = (a, b) Ptree.p_tree
+        let get_cost cmp () = 
+            let run = get_console_run () in
+            Sexpr.fold_left (fun acc x ->
+                match acc with
+                | None -> Some (PhyloTree.get_cost x)
+                | Some y -> Some (cmp y (PhyloTree.get_cost x))) 
+            None run.trees
+        let min_cost () = get_cost min ()
+        let max_cost () = get_cost max ()
+        let trees () =
+            let run = get_console_run () in
+            Sexpr.to_list run.trees
+        let all_costs () = 
+            let lst = List.rev_map PhyloTree.get_cost (trees ()) in
+            List.sort compare lst
+
+        let data () = 
+            let run = get_console_run () in
+            run.data
+        let to_string bool =
+            let run = get_console_run () in
+            let trees = trees () in
+            List.map (fun x -> PhyloTree.to_string bool x run.data) trees
+
+        let of_string x = 
+            let run = get_console_run () in
+            let trees = PhyloTree.of_string x run.data run.nodes in
+            let trees = Sexpr.of_list trees in
+            console_run_val := { run with trees = trees }
     end
 
 end

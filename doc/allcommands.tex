@@ -2637,12 +2637,11 @@ The \poycommand{calculate\_support} command does not output support values by de
             compared to swapping without it.}
             {recoverarg}
 
-         \argumentdefinition{timeout}{\obligatory{\poyint}}
-	{Specifies the number of seconds after which branch swapping is
-           stopped. Use this argument in association with \poycommand{recover}
-           to keep the best trees found up to \emph{n} seconds after
-           starting the search.}
-                {}
+     \argumentdefinition{timeout}{\obligatory{\poyint}}
+            {Specifies the number of seconds after which tree branch
+            swapping is stopped. The current best tree is the result of the
+            swap after the timeout.} 
+            {}
 
         \argumentdefinition{timedprint}{\obligatory{(\poyint, \poystring)}}
 	{\poyargument{timedprint:(n, "trees.txt")} prints the current

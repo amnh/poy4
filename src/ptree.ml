@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2646 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2659 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -305,7 +305,7 @@ module type SEARCH = sig
 
       (** [spr_simple search] takes each tree in search manager [search] and
           performs rounds of SPR until there is no further improvement *)
-      val spr_simple : searcher
+      val spr_simple : bool -> searcher
       
       (** [tbr_step ptree tabu search] performs one round of TBR searching on
           tree [ptree] using a given tabu manager and search manager. *)
@@ -318,7 +318,7 @@ module type SEARCH = sig
 
       (** [tbr_simple search] takes each tree in search manager [search] and
           performs rounds of TBR until there is no further improvement *)
-      val tbr_simple : searcher
+      val tbr_simple : bool -> searcher
 
       val tbr_join :
           (a, b) search_mgr ->
@@ -343,13 +343,15 @@ module type SEARCH = sig
       val downpass : (a, b) p_tree -> (a, b) p_tree
       val diagnosis : (a, b) p_tree -> (a, b) p_tree
 
-      (** [fuse_generations trees max_trees tree_weight tree_keep iterations
+      (** [fuse_generations trees terminals max_trees tree_weight tree_keep iterations
           process] runs a genetic algorithm-style search using tree fusing.  The function
-          takes a list of trees to start with, the max number of trees and a method for
+          takes a list of trees to start with, the number of terminals on each
+          tree, the max number of trees and a method for
           keeping trees, a method for weighting trees, a number of iterations to perform,
           and a function to process new trees *)
       val fuse_generations :
-          (a, b) p_tree list ->
+          (a, b) p_tree list -> int ->
+
           int ->
           ((a, b) p_tree -> float) ->
           Methods.fusing_keep_method ->
@@ -360,7 +362,7 @@ module type SEARCH = sig
           (a, b) p_tree list
 
       val search_local_next_best : (search_step * string) -> searcher
-      val search : (search_step * string) -> searcher
+      val search : bool -> (search_step * string) -> searcher
 
         val convert_to :
           string Parser.Tree.t list ->
@@ -760,14 +762,19 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
     let all_edges_represented ptree =
         (Tree.EdgeSet.fold (fun key acc ->
-            let res = Tree.EdgeMap.mem key ptree.edge_data in
             let Tree.Edge (a, b) = key in
+            let res = Tree.EdgeMap.mem key ptree.edge_data || 
+                Tree.EdgeMap.mem (Tree.Edge (b, a)) ptree.edge_data in
             if not res then begin
                 Printf.printf "Edge Data doesn't exist: %d, %d\n%!" a b;
             end;
             acc && res)
             ptree.tree.Tree.d_edges true) &&
         (Tree.EdgeMap.fold (fun key _ acc ->
+            let key = 
+                try Tree.normalize_edge key ptree.tree with
+                | _ -> key
+            in
             let res = Tree.EdgeSet.mem key ptree.tree.Tree.d_edges in
             if not res then begin
                 let Tree.Edge (a, b) = key in
@@ -844,14 +851,16 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             in
             match parent with
             | None -> 
-                    code, acc
+                    code + 1, acc
             | Some x -> 
-                    Hashtbl.replace hash (find x) (find code);
-                    Hashtbl.replace hash (find code) (find x);
+                    let new_code = find code 
+                    and new_x = find x in
                     let acc = 
                         { acc with tree = 
-                            Tree.exchange_codes (find x) (find code) acc.tree }
+                            Tree.exchange_codes new_x new_code acc.tree }
                     in
+                    Hashtbl.replace hash code new_x;
+                    Hashtbl.replace hash x new_code;
                     code + 1, acc
         and recursive_call node parent code acc =
             match parent with
@@ -863,8 +872,9 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             | None -> assert false
         in
         let code, tree = process_recode None (a, b) starting ptree in
+        let tree = recode_tree_data tree in
         assert (all_edges_represented tree);
-        hash, code, recode_tree_data tree
+        hash, code, tree
 
     let recode ptree code = 
         let _, ptree = 
@@ -1383,15 +1393,18 @@ type search_step =
             (Tree_Ops.a, Tree_Ops.b) tabu_mgr ->
                 searcher
 
-let search (searcher, name) search =
-    let status = Status.create name None ("Searching") in
-    while search#any_trees do
-        let (ptree, cost, tabu) = search#next_tree in
-        Status.full_report ~adv:(int_of_float cost) status;
-        searcher ptree tabu#clone search;
-    done;
-    Status.finished status;
-    search
+let search passit (searcher, name) search =
+    try
+        let status = Status.create name None ("Searching") in
+        while search#any_trees do
+            let (ptree, cost, tabu) = search#next_tree in
+            Status.full_report ~adv:(int_of_float cost) status;
+            searcher ptree tabu#clone search;
+        done;
+        Status.finished status;
+        search
+    with
+    | Methods.TimedOut when not passit -> search
 
 (* This function will not find the local optimum, it will return as soon as a
 * better tree is found. *)
@@ -1400,12 +1413,15 @@ let search_local_next_best (searcher, name) (search : (Tree_Ops.a, Tree_Ops.b)
         : (Tree_Ops.a, Tree_Ops.b) search_mgr =
     let status = Status.create ("Single " ^ name) None ("Searching") in
     let ptree, cost, tabu = search#next_tree in
-    searcher ptree tabu#clone search;
-    Status.finished status;
-    search
+    try
+        searcher ptree tabu#clone search;
+        Status.finished status;
+        search
+    with
+    | Methods.TimedOut -> search
 
-let spr_simple = search (spr_step, "SPR")
-let tbr_simple = search (tbr_step, "TBR")
+let spr_simple x = search x (spr_step, "SPR")
+let tbr_simple x = search x (tbr_step, "TBR")
 
 let spr_single = search_local_next_best (spr_step, "SPR")
 let tbr_single = search_local_next_best (tbr_step, "TBR")
@@ -1421,31 +1437,42 @@ let alternate spr tbr search =
     | false -> search
     | true ->
           Status.full_report ~msg:("SPR search") status;
-          let search = spr search in
-          (* SPR is done---run TBR steps on the results *)
-          Status.full_report
-              ~msg:"Performing TBR swapping" status;
-          let results = search#results in
-          let best_cost = find_best_cost results in
-          let search = search#clone in
-          let () = search#init
-              (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
-                   results) in
-          let search = tbr search in
-(*           let search = Sexpr.fold_status *)
-(*               "TBR swapping" *)
-(*               (fun search (tree, cost, tabu) -> *)
-(*                    tbr_step tree tabu search) search (Sexpr.of_list results) in *)
-            let new_cost = find_best_cost search#results in
-            if (new_cost < best_cost && new_cost < prev_best) ||
-            search#should_repeat then 
-                let search = search#clone in
-                let () = search#init
-                    (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
-                    results) 
-                in
-                try_spr new_cost search
-            else search
+          let search, timedout = 
+              try spr search, false with 
+              | Methods.TimedOut -> search, true
+          in
+          if timedout then search
+          else
+              (* SPR is done---run TBR steps on the results *)
+              let () = Status.full_report
+                  ~msg:"Performing TBR swapping" status
+              in
+              let results = search#results in
+              let best_cost = find_best_cost results in
+              let search = search#clone in
+              let () = search#init
+                  (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
+                       results) in
+              let search, timedout = 
+                  try tbr search, false with
+                  | Methods.TimedOut -> search, true
+              in
+              if timedout then search
+              else
+    (*           let search = Sexpr.fold_status *)
+    (*               "TBR swapping" *)
+    (*               (fun search (tree, cost, tabu) -> *)
+    (*                    tbr_step tree tabu search) search (Sexpr.of_list results) in *)
+                let new_cost = find_best_cost search#results in
+                if (new_cost < best_cost && new_cost < prev_best) ||
+                search#should_repeat then 
+                    let search = search#clone in
+                    let () = search#init
+                        (List.map (fun (tree, cost, tabu) -> tree, cost, NoCost, tabu)
+                        results) 
+                    in
+                    try_spr new_cost search
+                else search
               
     in
     let search = try_spr max_float search in
@@ -1529,19 +1556,36 @@ let destroy_component handle tree =
             tree.component_root }
         else remove_node_data v tree
     in
+    let my_remove_edge_data edge ptree =
+        let edge2 = 
+            let Tree.Edge (a, b) = edge in 
+            Tree.Edge (b, a) 
+        in
+        let new_edge_data =
+            ptree.edge_data 
+            --> Tree.EdgeMap.remove edge 
+            --> Tree.EdgeMap.remove edge2
+        in
+        { ptree with edge_data = new_edge_data }
+    in
     let edges = Tree.get_pre_order_edges handle tree.tree in
     let tree = { tree with tree = Tree.destroy_component handle tree.tree } in
     List.fold_left (fun acc ((Tree.Edge (a, b)) as e) ->
-        acc --> cleanup_node a --> cleanup_node b --> remove_edge_data e) 
+        acc -->  cleanup_node a --> cleanup_node b -->
+            my_remove_edge_data e) 
         tree edges
 
 let copy_component handle source target =
+    let target = 
+        let tree =
+            target.tree --> Tree.copy_component handle source.tree
+        in
+        { target with tree = tree }
+    in
     let edges = Tree.get_pre_order_edges handle source.tree in
     let target = 
-        { target with tree = Tree.destroy_component handle target.tree } 
-    in
-    let target = 
         List.fold_left (fun acc ((Tree.Edge (a, b)) as e) ->
+            let e = Tree.normalize_edge e source.tree in
             acc
             --> add_edge_data e (get_edge_data e source)
             --> add_node_data a (get_node_data a source)
@@ -1554,57 +1598,77 @@ let copy_component handle source target =
     target.component_root }
 
 
-let fuse_av source target   =
+let fuse source target terminals =
+    let debug = false in
     let maybe_reroot ((tree, utree, (Tree.Edge(efrom, eto) as edge)) as arg) =
         assert (all_edges_represented tree);
         if is_edge edge tree then arg
         else
             let tree, updt = Tree_Ops.reroot_fn false edge tree in
-            let tree = Tree_Ops.incremental_uppass tree updt in
             assert (all_edges_represented tree);
+            let tree = Tree_Ops.incremental_uppass tree updt in
             tree, tree.tree, edge 
     in
-    let count = 0 in
+    let count = 1000000 in
     let (stree, sutree, sedge) = maybe_reroot source
     and (ttree, tutree, tedge) = maybe_reroot target in
     let original = stree in
     let shash, scode, stree = edge_recode stree sedge count
     and thash, tcode, ttree = edge_recode ttree tedge count in
+    let fix_edge tbl (Tree.Edge (a, b)) = 
+        Tree.Edge (Hashtbl.find tbl a, Hashtbl.find tbl b)
+    in
+    let terminals = terminals + 1 in
+    let shash1, scode, stree = 
+        edge_recode stree (fix_edge shash sedge) terminals
+    and thash1, tcode, ttree = 
+        edge_recode ttree (fix_edge thash tedge) terminals 
+    in
     assert (scode = tcode);
     let (sa, sb) as sedge =
         let (Tree.Edge (sa, sb)) = sedge in
-        assert (is_edge sedge stree);
-        (Hashtbl.find shash sa), (Hashtbl.find shash sb)
+        Hashtbl.find shash1 (Hashtbl.find shash sa), 
+        Hashtbl.find shash1 (Hashtbl.find shash sb)
     and (ta, tb) as tedge = 
         let (Tree.Edge (ta, tb)) = tedge in
-        assert (is_edge tedge ttree);
-        (Hashtbl.find thash ta), (Hashtbl.find thash tb) 
+        Hashtbl.find thash1 (Hashtbl.find thash ta),
+        Hashtbl.find thash1 (Hashtbl.find thash tb) 
     in
     assert (ta = sa);
     assert (tb = sb);
+    if debug then prerr_endline "About to break";
     let stree, (sld, srd), _, _, _, sinc = Tree_Ops.break_fn sedge stree 
     and ttree, (tld, trd), _, _, _, tinc = Tree_Ops.break_fn tedge ttree in
     let stree = Tree_Ops.incremental_uppass stree sinc
     and ttree = Tree_Ops.incremental_uppass ttree tinc in
-    match tld, srd with
-    | (`Edge (_, la, lb, _)), (`Edge (_, ra, rb, _)) ->
-            let ttree, _ =
-                ttree 
-                --> destroy_component (handle_of lb ttree) 
-                --> copy_component (handle_of rb stree) stree
-                --> Tree_Ops.join_fn [] (Tree.Edge_Jxn (la, lb)) (Tree.Edge_Jxn (ra,
-                rb)) 
-            in
-            ttree
-    | (`Single _), _
-    | _, (`Single _) -> original
+    if debug then prerr_endline "Finished uppass";
+    let tree, jxn =
+        match trd, srd with
+        | (`Edge (_, la, lb, _)), (`Edge (_, ra, rb, _)) ->
+                let ttree =
+                    ttree 
+                    --> destroy_component (handle_of lb ttree) 
+                    --> copy_component (handle_of rb stree) stree
+                in
+                ttree, (Tree.Edge_Jxn (ra, rb))
+        | (`Single (x, _)), _
+        | _, (`Single (x, _)) -> original, (Tree.Single_Jxn x)
+    in
+    let jxn2 = 
+        match tld with
+        | `Edge (_, la, lb, _) -> (Tree.Edge_Jxn (la, lb))
+        | `Single (x, _) -> Tree.Single_Jxn x
+    in
+    let tree, _ = Tree_Ops.join_fn [] jxn jxn2 tree in
+    let tree =Tree_Ops.uppass tree in
+    tree
 
 (** [fuse_generations trees max_trees tree_weight tree_keep iterations process]
     runs a genetic algorithm-style search using tree fusing.  The function takes a
     list of trees to start with, the max number of trees and a method for keeping
     trees, a method for weighting trees, a number of iterations to perform, and a
     function to process new trees *)
-let fuse_generations trees max_trees tree_weight tree_keep iterations
+let fuse_generations trees terminals max_trees tree_weight tree_keep iterations
         process (cmin, cmax) =
     let () = 
         if 2 > List.length trees then 
@@ -1711,23 +1775,22 @@ let fuse_generations trees max_trees tree_weight tree_keep iterations
                           | (tree, _, _) when tree == source -> t1, t2
                           | (tree, _, _) when tree == target -> t1, t2
                           | _ -> assert false in
-                      let new_tree = fuse t1 t2 in
+                      let new_tree = fuse t1 t2 terminals in
                       Status.full_report ~msg:(msg ^ ": tree with cost "
                                                ^ string_of_float (get_cost `Adjusted new_tree))
                           status;
                           new_tree
                 | _ -> assert false
             in
-            let new_tree = Sexpr.fold_left 
+            let new_tree, _ = Sexpr.fold_left 
                 (fun acc x -> 
                     let new_tree = process_location x in
                     match acc with
-                    | None -> Some new_tree
-                    | Some prev_tree -> 
-                            if get_cost `Adjusted new_tree < 
-                                get_cost `Adjusted prev_tree then
-                                    Some new_tree 
-                            else acc) None locations
+                    | res, cost -> 
+                            let new_cost = get_cost `Adjusted new_tree in
+                            if  new_cost <  cost then
+                                    Some new_tree, new_cost
+                            else acc) (None, get_cost `Adjusted target) locations
             in
             let trees =
                 match new_tree with
