@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2659 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2668 $"
 
 module IntSet = All_sets.Integers
 
@@ -1533,12 +1533,12 @@ IFDEF USEPARALLEL THEN
                         Mpi.comm_world 
                         --> Mpi.receive other_rank Methods.do_job 
                         --> (fun x -> decode_trees x run)
-                else run
+                else List.fold_left folder run joiner
             in
             let rec reduce_them_all bit run =
                 if bit < world_size then
                     reduce_them_all (bit lsl 1) (reduce_in_pairs bit run)
-                else run
+                else List.fold_left folder run joiner
             in
             let run = { run with stored_trees = `Empty } in
             let run = reduce_them_all 1 run in
