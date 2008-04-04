@@ -17,22 +17,11 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2659 $"
+let () = SadmanOutput.register "Main" "$Revision: 2670 $"
 
-(* $Id: main.ml 2659 2008-04-02 12:38:54Z andres $ *)
+(* $Id: main.ml 2670 2008-04-04 17:21:49Z andres $ *)
 
 
-module Nodes = AllDirNode.AllDirF
-module Edges = Edge.LazyEdge
-module TreeOps = AllDirChar.F
-module CharOps = AllDirChar.CharScripting
-
-module Parsimony = 
-    Scripting.Make 
-    (Nodes)
-    (Edges) 
-    (TreeOps)
-    (CharOps)
 let () = Random.self_init ()
 
 let seed = truncate (Unix.time ())
@@ -49,13 +38,13 @@ let () =
 ELSE
 
 let args =
-    let _ = Parsimony.process_random_seed_set (Parsimony.empty ()) seed in
+    let _ = Phylo.process_random_seed_set (Phylo.empty ()) seed in
     (* TODO: Fix the arguments preprocessing *)
     Sys.argv
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2659 $"
+let () = SadmanOutput.register "Main" "$Revision: 2670 $"
 
 let () = Status.init ()
 
@@ -192,13 +181,13 @@ let _ =
     else ();
     let arr = Array.init tsize (fun x -> seed + x) in
     let seed = Mpi.scatter_int arr 0 Mpi.comm_world in
-    Parsimony.process_random_seed_set (Parsimony.empty ()) seed
+    Phylo.process_random_seed_set (Phylo.empty ()) seed
 END
 
 
 let _ = 
     let initial_script = ref script in
-    let script = ref (Parsimony.empty ()) in
+    let script = ref (Phylo.empty ()) in
     let input = ref "" in
     let proc_command str =
         let () = Sys.catch_break true in
@@ -239,7 +228,7 @@ ELSE
 END
             in
             let res = 
-                Parsimony.run 
+                Phylo.run 
                 ~output_file:(!(Arguments.dump_file)) 
                 ~start:!script command 
             in
