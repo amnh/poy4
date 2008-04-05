@@ -85,16 +85,26 @@ add_memstack_initialize (int items, int len) {
 /* In vectorized (altivec and mmx) based architectures, we hold the characters
  * in groups of CAPACITY_CHAR items. Therefore, the total number of elements
  * that we really need to allocate is limited by that size */
-int
+native_int
 add_array_length (native_int len) {
     return ((len + (CAPACITY_CHAR - 1)) / CAPACITY_CHAR);
+}
+
+int 
+add_true_array_length (native_int len) {
+    return (len * CAPACITY_CHAR);
 }
 #else
 /* In non vectorized architectures, we really need to allocate as many elements
  * as len says. */
-int
+native_int
 add_array_length (native_int len) {
     return len;
+}
+
+native_int
+add_true_array_length(native_int len) {
+    return (len * CAPACITY_CHAR);
 }
 #endif
 
@@ -177,24 +187,41 @@ void
 add_CAML_serialize (value c, unsigned long *wsize_32, \
         unsigned long *wsize_64) {
     CAMLparam1(c);
+    native_int real_allocated_len;
     add_stt nc;
     nc = *(Add_st_struct(c));
     *wsize_64 = *wsize_32 = sizeof (add_stt);
-    serialize_int_4(nc->len);
+    real_allocated_len = add_true_array_length(nc->len);
+    serialize_native(nc->len);
+    serialize_native(nc->true_len);
     serialize_int_4(nc->total);
-    serialize_block_4(nc->min, nc->len * 4);
+    serialize_int_4(nc->scode);
+    serialize_block_1(nc->min, real_allocated_len);
+    serialize_block_1(nc->max, real_allocated_len);
+    serialize_block_1(nc->cost, real_allocated_len);
+    serialize_block_1(nc->union_min, real_allocated_len);
+    serialize_block_1(nc->union_max, real_allocated_len);
     CAMLreturn0;
 }
 
 unsigned long
 add_CAML_deserialize (void *v) {
     add_stt *res, final;
-    native_int len;
+    native_int len, true_len, real_allocated_len;
     res = (add_stt *) v;
-    len = deserialize_uint_4();
-    final = *res = add_alloc (len, len);
-    final->total = deserialize_uint_4();
-    deserialize_block_4(final->min, len * 4);
+    len = deserialize_native();
+    true_len = deserialize_native();
+    real_allocated_len = add_true_array_length(len);
+    final = *res = add_alloc (len, true_len);
+    final->len=len;
+    final->true_len=true_len;
+    final->total = deserialize_sint_4();
+    final->scode = deserialize_sint_4();
+    deserialize_block_1(final->min, real_allocated_len);
+    deserialize_block_1(final->max, real_allocated_len);
+    deserialize_block_1(final->cost, real_allocated_len);
+    deserialize_block_1(final->union_min, real_allocated_len);
+    deserialize_block_1(final->union_max, real_allocated_len);
     return (sizeof(add_stt));
 }
 
