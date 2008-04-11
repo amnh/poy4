@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 2693 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2694 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -111,6 +111,8 @@ module type S = sig
 end
 
 
+let timer_interval = ref 1
+
 module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S with type a = Node.n with type b = Edge.e = struct
 
     type a = Node.n
@@ -129,6 +131,23 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
     let data_mining = false
 
     let (-->) a b = b a
+
+    let print_time timer current_time = 
+        if !timer_interval = 0 then 0
+        else
+            let wall = Timer.wall timer in
+            let nt = int_of_float wall in
+            if Status.is_interactive () then
+                if !timer_interval <= nt - current_time then begin
+                    Status.user_message Status.SearchReport 
+                    (SearchInformation.show_information 
+                    None 
+                    None 
+                    (Some (string_of_int nt))
+                    (Some [`Timer]));
+                    nt
+                end else current_time
+            else 0
 
     class virtual ['a, 'b] tabu_base = object (self)
         val my_features : (string * string) list = []
@@ -375,6 +394,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             object (self)
 
         val timer = Timer.start ()
+        val mutable current_time = 0
         val to_compare = Stack.create ()
         val to_calculate_for_compare = to_calculate_for_compare
         val to_do_later = Stack.create ()
@@ -446,6 +466,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         method virtual private should_continue_this_path : Tree.edge option -> bool -> bool
 
         method next_edge = 
+            current_time <- print_time timer current_time;
             has_potential <- false;
             let edge, do_check, depth = 
                 if Stack.is_empty to_calculate_for_compare then 
@@ -1915,6 +1936,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
     class standard_tabu (ptree : (Node.n, Edge.e) Ptree.p_tree) (join : semc) 
     (reroot : semc) (break : emc) = object (self)
         val timer = Timer.start ()
+        val mutable current_time = 0
         val left = new side_manager `Left ptree join reroot
         val right = new side_manager `Right ptree  join reroot
         val break = break ptree
@@ -1927,6 +1949,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         >} :> (Node.n, Edge.e) Ptree.tabu_mgr)
 
         method break_edge = 
+            current_time <- print_time timer current_time;
             break#next_edge
 
         method break_distance x = 

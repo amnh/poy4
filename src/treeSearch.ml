@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2691 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2694 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -548,7 +548,7 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
     in
     let partition_for_other_tabus =
         match join_tabu with
-        | `Partition _ -> Some (Lazy.force sets)
+        | `Partition [] -> Some (Lazy.force sets)
         | _ -> None
     in
     let tabu_manager ptree = 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2693 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2694 $"
 
 module IntSet = All_sets.Integers
 
@@ -732,7 +732,7 @@ let rec process_application run item =
                 ()
             in
             run
-    | `TimerInterval x -> Sampler.timer_interval := x; run
+    | `TimerInterval x -> Tabus.timer_interval := x; run
     | `HistorySize len -> Status.resize_history len; run
     | `Logfile file -> StatusCommon.set_information_output file; run
     | `Redraw -> Status.redraw_screen (); run
