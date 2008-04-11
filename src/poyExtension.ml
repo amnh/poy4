@@ -47,6 +47,23 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 let _loc = Ast.loc_of_expr x in
                 <:expr< [$x$ :: $exSem_of_list xs$] >> 
 
+    let rec exSemCom_of_list = function
+        | [] -> 
+                let _loc = Loc.ghost in
+                <:expr<[]>>
+        | [`S x] -> 
+                let _loc = Ast.loc_of_expr x in
+                <:expr< [$x$]>>
+        | [`L x] -> 
+                let _loc = Ast.loc_of_expr x in
+                <:expr< $x$>>
+        | (`S x) :: xs ->
+                let _loc = Ast.loc_of_expr x in
+                <:expr< [$x$ :: $exSemCom_of_list xs$] >> 
+        | (`L x) :: xs ->
+                let _loc = Ast.loc_of_expr x in
+                <:expr< $x$ @ $exSemCom_of_list xs$ >> 
+
     let handle_optional x = 
         let _loc = Loc.ghost in
         match x with
@@ -56,17 +73,18 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
     EXTEND Gram
         GLOBAL: expr_poy;
         expr_poy: [ [ 
-            x = LIST1 [a = transform -> a 
-                    | a = fuse -> a 
-                    | a = calculate_support -> a 
-                    | a = report -> a 
-                    | a = select -> a 
-                    | a = perturb -> a 
-                    | a = swap -> a 
-                    | a = build -> a 
-                    | a = application_command -> a 
-                    | x = read -> x 
-                    | x = rename -> x ]
+            x = LIST1 [a = transform -> `S a 
+                    | a = fuse -> `S a 
+                    | a = calculate_support -> `S a 
+                    | a = report -> `S a 
+                    | a = select -> `S a 
+                    | a = perturb -> `S a 
+                    | a = swap -> `S a 
+                    | a = build -> `S a 
+                    | a = application_command -> `S a 
+                    | x = read -> `S x 
+                    | x = rename -> `S x
+                    | x = cur_expr -> `L x ]
         -> x] ];
         (* Application commands *)
         cur_expr: [[ "["; x = expr; "]" -> x ]];
@@ -407,7 +425,9 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             [
                 [ x = flex_string -> <:expr<`File $x$>> ] |
                 [ LIDENT "asciitrees" ; y = OPT optional_collapse -> 
-                    <:expr<`Ascii $handle_optional y$>> ] |
+                    match y with
+                    | None -> <:expr<`Ascii False>> 
+                    | Some x -> <:expr<`Ascii $x$>> ] |
                 [ LIDENT "memory" -> <:expr<`Memory>> ] | 
                 [ LIDENT "graphtrees" -> <:expr<`Graph True>> ] |
                 [ LIDENT "trees"; x = OPT tree_information_list -> 
@@ -797,14 +817,13 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
 
     EXTEND Gram
     Syntax.expr : LEVEL "top" [
-        [ "(%"; s = expr_poy; "%)" -> <:expr<PoyCommand.of_parsed False $exSem_of_list s$>> ] |
-        [ "|%"; s = expr_poy; "%|" -> <:expr<PoyCommand.of_parsed True $exSem_of_list s$>> ] |
-        [ "OPOY"; s = expr_poy -> 
-            <:expr<Phylo.parsed_run (PoyCommand.of_parsed True $exSem_of_list s$)>>
-        ] |
+        [ "CPOY"; s = expr_poy -> exSemCom_of_list s ] |
         [ "POY"; s = expr_poy -> 
-            <:expr<Phylo.parsed_run (PoyCommand.of_parsed False $exSem_of_list s$)>>
-        ] |
+            <:expr<Phylo.parsed_run (PoyCommand.of_parsed True 
+            $exSemCom_of_list s$)>> ] |
+        [ "NPOY"; s = expr_poy -> 
+            <:expr<Phylo.parsed_run (PoyCommand.of_parsed False
+            $exSemCom_of_list s$)>> ] |
         [ "GPOY" -> <:expr<Phylo.get_console_run ()>> ] 
     ];
     END;;
