@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2659 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2691 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -546,6 +546,11 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
                             new PhyloQueues.classic_poy_drifting_srch_mgr 1 `Last
                             a b (samplerf ())
     in
+    let partition_for_other_tabus =
+        match join_tabu with
+        | `Partition _ -> Some (Lazy.force sets)
+        | _ -> None
+    in
     let tabu_manager ptree = 
         let get_depth = function
             | None -> max_int 
@@ -554,7 +559,8 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
         let breakfn =
             match break_tabu with
             | `Randomized -> PhyloTabus.random_break
-            | `DistanceSorted -> PhyloTabus.sorted_break
+            | `DistanceSorted -> 
+                    PhyloTabus.sorted_break partition_for_other_tabus
             | `OnlyOnce -> PhyloTabus.only_once_break
         in
         let joinfn =
@@ -576,7 +582,7 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
         let rerootfn =
             match reroot_tabu with
             | `Bfs depth ->
-                    PhyloTabus.reroot (get_depth depth)
+                    PhyloTabus.reroot partition_for_other_tabus (get_depth depth)
         in
         new PhyloTabus.standard_tabu ptree joinfn rerootfn breakfn 
     in
@@ -598,8 +604,10 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
                 try
                     let res = (search_fn queue_manager)#results in
                     List.map (fun (a, _, _) ->
-                        let a = PtreeSearch.uppass a in
-                        (a, Ptree.get_cost `Adjusted a)) res
+                        if a.Ptree.tree <> tree.Ptree.tree then
+                            let a = PtreeSearch.uppass a in
+                            (a, Ptree.get_cost `Adjusted a)
+                        else (a, Ptree.get_cost `Adjusted a)) res
                 with
                 | Methods.TimedOut -> [(tree, Ptree.get_cost `Adjusted tree)]
             in

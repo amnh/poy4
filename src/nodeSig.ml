@@ -249,6 +249,11 @@ module type S = sig
 
     end
 
+    (** [compare a b] compares the preliminary states of the nodes [a] and [b]
+     * only. This function can not be used for the general comparison of the
+     * complete contents of a node. *)
+    val compare : n -> n -> int
+
     val for_support : 
         int -> (int * n) list -> int list -> int list -> n list
 

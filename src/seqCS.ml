@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2177 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2691 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -42,8 +42,6 @@ type t = {
                                     used in the character set *)
     alph : Alphabet.a;              (** The alphabet of the sequence set *)
     code : int;                     (** The set code *)
-    pool : Sequence.Pool.p;         (** The pool of sequences these are produced
-                                    from *)
     priority : int list;            (** The information ordering *)
 }
 
@@ -84,7 +82,7 @@ let prioritize a =
     let x, _ = List.split lst in
     { a with priority = x }
 
-let empty code c2 alph pool = 
+let empty code c2 alph = 
     let c3 = Cost_matrix.Three_D.of_two_dim c2 in
     let emp = Codes.empty in
     {
@@ -96,7 +94,6 @@ let empty code c2 alph pool =
         c3 = c3;
         alph = alph;
         code = code;
-        pool = pool;
         priority = [];
     }
 
@@ -118,7 +115,7 @@ let add t (seq, code) =
 let of_array spec sc code = 
     let no_cost = { min = 0.0; max = 0.0 } in
     let adder (x, y, z, acc) (a, b) = 
-        let a = Sequence.clone_pool spec.Data.pool a in
+        let a = Sequence.clone a in
         (Codes.add b a x), (Codes.add b no_cost y), (Codes.add b (a, a) z), 
         (b :: acc)
     in
@@ -135,7 +132,6 @@ let of_array spec sc code =
         c3 = spec.Data.tcm3d;
         alph = spec.Data.alph;
         code = code;
-        pool = spec.Data.pool;
         priority = priority;
     }
 

@@ -27,11 +27,6 @@ exception Invalid_Sequence of (string * string * int);;
  * [(x, y, z)] where [x] is the sequence where the error was found, [y] is the
  * illegal character in the sequence and [z] is the position where the parsing
  * process stopped. *)
-module Pool : sig
-    type p
-    external create : int -> int -> p = "pool_CAML_create"
-    external flush : p -> unit = "pool_CAML_free_available"
-end
 
 type s
 (** The sequence type *)
@@ -59,9 +54,6 @@ val resize : s ref -> int -> unit
  * less than the original value, the sequence is cut at the end. If the new
  * sequence is longer, the contents doesn't change, but the capacity will grow
  * (ie. the sequence printed or for alignment is still the same). *)
-
-val clone_pool : Pool.p -> s -> s
-(** [clone s1] creates a new fresh clone of [s1]. *)
 
 val clone : s -> s
 (** [clone s1] creates a new fresh clone of [s1]. *)
@@ -125,10 +117,6 @@ val to_array : s -> int array
     [l]. *)
 val create : int -> s
 
-val create_pool : Pool.p -> int -> s
-
-val create_same_pool : s -> int -> s
-
 (** [make_empty a] creates an empty sequence using alphabet [a] *)
 val make_empty : Alphabet.a -> s
 
@@ -148,9 +136,6 @@ val fold_righti : ('a -> int -> int -> 'a) -> 'a -> s -> 'a
 val iter : (int -> unit) -> s -> unit
 
 val fold : ('a -> int -> 'a) -> 'a -> s -> 'a
-
-(** [init f l] creates a fresh sequence [s] such that [s](i) = [f] [i]. *)
-val init_pool : Pool.p -> (int -> int) -> int -> s
 
 (** [init f l] creates a fresh sequence [s] such that [s](i) = [f] [i]. *)
 val init : (int -> int) -> int -> s

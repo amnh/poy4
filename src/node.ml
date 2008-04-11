@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2646 $"
+let () = SadmanOutput.register "Node" "$Revision: 2691 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -2743,6 +2743,55 @@ module Standard :
         let get_add _ = get_add
         let get_sank _ = get_sank
         let get_dynamic _ = get_dynamic
+        let compare a b = 
+            let rec aux_cmt a b =
+                match a, b with
+                | (Nonadd8 ha) :: ta, (Nonadd8 hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Nonadd8 ha) :: ta, _ -> -1
+                | (Nonadd16 ha) :: ta, (Nonadd16 hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Nonadd16 ha) :: ta, _ -> -1
+                | (Nonadd32 ha) :: ta, (Nonadd32 hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Nonadd32 ha) :: ta, _ -> -1
+                | (Add ha) :: ta, (Add hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Add ha) :: ta, _ -> -1
+                | (Sank ha) :: ta, (Sank hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Sank ha) :: ta, _ -> -1
+                | (Dynamic ha) :: ta, (Dynamic hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Dynamic ha) :: ta, _ -> -1
+                | (Set ha) :: ta, (Set hb) :: tb ->
+                        let cmp = compare ha.preliminary hb.preliminary in
+                        if cmp = 0 then 
+                            aux_cmt ta tb
+                        else cmp
+                | (Set ha) :: ta, _ -> 1
+                | [], [] -> 0
+                | [], _ -> -1
+            in
+            aux_cmt a.characters b.characters
 end 
 
 let merge a b =

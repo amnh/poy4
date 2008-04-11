@@ -280,14 +280,14 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
     size = 2 * (1 << (res->lcm)) * (1 << (res->lcm)) * sizeof(int);
     if (0 == size)
         failwith ("Your cost matrix is too large to fit in your memory. I can't continue with your data loading.");
-    res->cost = (int *) malloc (size);
-    res->worst = (int *) malloc (size);
-    res->prepend_cost = (int *) malloc (size);
-    res->tail_cost = (int *) malloc (size);
+    res->cost = (int *) calloc (size, 1);
+    res->worst = (int *) calloc (size, 1);
+    res->prepend_cost = (int *) calloc (size, 1);
+    res->tail_cost = (int *) calloc (size, 1);
     size = 2 * (1 << (res->lcm)) * (1 << (res->lcm)) * sizeof(SEQT);
     if (0 == size)
         failwith ("Your cost matrix is too large to fit in your memory. I can't continue with your data loading.");
-    res->median = (SEQT *) malloc (size);
+    res->median = (SEQT *) calloc (size, 1);
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);
         free (res->median);
@@ -328,8 +328,8 @@ cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
     }
     cm_set_affine_3d (res, do_aff, gap_open);
     size = (1 << (res->lcm + 1)) * (1 << (res->lcm + 1)) * (1 << (res->lcm + 1));
-    res->cost = (int *) malloc (size * sizeof(int));
-    res->median = (SEQT *) malloc (size * sizeof(SEQT));
+    res->cost = (int *) calloc (size * sizeof(int), 1);
+    res->median = (SEQT *) calloc (size * sizeof(SEQT), 1);
     if ((res->cost == NULL) || (res->median == NULL)) {
         free (res->cost);
         free (res->median);
@@ -805,11 +805,11 @@ cm_CAML_deserialize (void *v) {
     n->gap_open = deserialize_uint_4();
     n->is_metric = deserialize_uint_4();
     len = 1 << (n->lcm * 2);
-    n->cost = (int *) malloc (len * sizeof(int));
-    n->median = (SEQT *) malloc (len * sizeof(SEQT));
-    n->worst = (int *) malloc (len * sizeof(int));
-    n->prepend_cost = (int *) malloc (len * sizeof(int));
-    n->tail_cost = (int *) malloc (len * sizeof(int));
+    n->cost = (int *) calloc (len * sizeof(int), 1);
+    n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
+    n->worst = (int *) calloc (len * sizeof(int), 1);
+    n->prepend_cost = (int *) calloc (len * sizeof(int), 1);
+    n->tail_cost = (int *) calloc (len * sizeof(int), 1);
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
     deserialize_block_4(n->cost, len);
     DESERIALIZE_SEQT(n->median, len);
@@ -831,8 +831,8 @@ cm_CAML_deserialize_3d (void *v) {
     n->combinations = deserialize_uint_4();
     n->gap_open = deserialize_uint_4();
     len = (n->a_sz + 1) * (n->a_sz + 1) * (n->a_sz + 1);
-    n->cost = (int *) malloc (len * sizeof(int));
-    n->median = (SEQT *) malloc (len * sizeof(SEQT));
+    n->cost = (int *) calloc (len * sizeof(int), 1);
+    n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
     deserialize_block_4(n->cost, len);
     DESERIALIZE_SEQT(n->median, len);
@@ -908,10 +908,54 @@ cm_CAML_free_3d (value v) {
     return;
 }
 
+int
+cm_compare (cmt a, cmt b) {
+    int cmp;
+    size_t len, len1;
+    if (a->a_sz != b->a_sz) {
+        return (a->a_sz - b->a_sz);
+    }
+    else if (a->combinations != b->combinations) {
+        return (a->combinations - b->combinations);
+    }
+    else if (a->cost_model_type != b->cost_model_type) {
+        return (a->cost_model_type - b->cost_model_type);
+    }
+    else if (a->gap_open != b->gap_open) {
+        return (a->gap_open - b->gap_open);
+    }
+    else if (a->is_metric != b->is_metric) {
+        return (a->is_metric - b->is_metric);
+    }
+    else {
+        len = (a->a_sz + 1) * sizeof(int);
+        len1 = (a->a_sz + 1) * sizeof(SEQT);
+        cmp = memcmp (a->cost, b->cost, len);
+        if (cmp != 0) return (cmp);
+        cmp = memcmp (a->median, b->median, len1);
+        if (cmp != 0) return (cmp);
+        cmp = memcmp (a->worst, b->worst, len);
+        return (cmp);
+    }
+}
+
+int
+cm_CAML_compare (value a, value b) {
+    CAMLparam2(a, b);
+    int res;
+    res = cm_compare (Cost_matrix_struct(a), Cost_matrix_struct(b));
+    CAMLreturn (res);
+}
+
+int
+cm_compare_3d (value a, value b) {
+    return(0);
+}
+
 static struct custom_operations cost_matrix = {
     "http://www.amnh.org/poy/cost_matrix/two_dimensional.0.1",
     &cm_CAML_free,
-    custom_compare_default,
+    &cm_CAML_compare,
     custom_hash_default,
     cm_CAML_serialize, 
     cm_CAML_deserialize
@@ -920,7 +964,7 @@ static struct custom_operations cost_matrix = {
 static struct custom_operations cost_matrix_3d = {
     "http://www.amnh.org/poy/cost_matrix/three_dimensional.0.1",
     &cm_CAML_free_3d,
-    custom_compare_default,
+    &cm_compare_3d,
     custom_hash_default,
     cm_CAML_serialize_3d, 
     cm_CAML_deserialize_3d
@@ -942,7 +986,6 @@ cm_copy_contents_seqt (SEQT *src, SEQT *tgt, int len) {
         *(tgt + i) = *(src + i);
     return;
 }
-
 
 value
 cm_CAML_clone (value v) {

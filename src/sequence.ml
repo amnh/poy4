@@ -24,20 +24,12 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2625 $"
-
-module Pool = struct
-    type p
-    external create : int -> int -> p = "pool_CAML_create"
-    external flush : p -> unit = "pool_CAML_free_available"
-    external register : unit -> unit = "pool_CAML_register"
-end
+let () = SadmanOutput.register "Sequence" "$Revision: 2691 $"
 
 external register : unit -> unit = "seq_CAML_register"
 
 let _ = 
-    register ();
-    Pool.register ()
+    register ()
 
 let ndebug = true;;
 
@@ -46,8 +38,6 @@ type s;;
 external c_reverse : (s -> s -> unit) = "seq_CAML_reverse";;
 external reverse_ip : (s -> unit) = "seq_CAML_reverse_ip";;
 external capacity : (s -> int) = "seq_CAML_get_cap";;
-external create_pool : (Pool.p -> int -> s) = "seq_CAML_create_pool"
-external create_same_pool : s -> int -> s = "seq_CAML_create_same"
 external create : int -> s = "seq_CAML_create"
 
 external copy : (s -> s -> unit) = "seq_CAML_copy";;
@@ -81,7 +71,7 @@ let map_to_array f s =
 
 let mapi f s =
     let len = length s in
-    let new_s = create_same_pool s len in
+    let new_s = create len in
     for i = len - 1 downto 0 do
         prepend new_s (f (get s i) i);
     done;
@@ -89,7 +79,7 @@ let mapi f s =
 
 let map f s =
     let len = length s in
-    let new_s = create_same_pool s len in
+    let new_s = create len in
     for i = len - 1 downto 0 do
         prepend new_s (f (get s i));
     done;
@@ -138,13 +128,6 @@ let iter f s =
     done;
     ()
 
-let init_pool p f len = 
-    let seq = create_pool p len in
-    for i = len - 1 downto 0 do
-        prepend seq (f i);
-    done;
-    seq
-
 let init f len = 
     let seq = create len in
     for i = len - 1 downto 0 do
@@ -153,15 +136,9 @@ let init f len =
     seq
 
 let resize n ns = 
-    let v = create_same_pool !n ns in
+    let v = create ns in
     copy !n v;
     n := v;;
-
-let clone_pool p n =
-    let sz = length n in
-    let res = create_pool p sz in
-    copy n res;
-    res;;
 
 let clone n =
     let sz = length n in
@@ -170,7 +147,7 @@ let clone n =
     res;;
 
 let reverse s1 = 
-    let sp = create_same_pool s1 (length s1) in
+    let sp = create (length s1) in
     c_reverse s1 sp;
     sp;;
 
@@ -780,8 +757,8 @@ module Align = struct
     let create_edited_2 s1 s2 tm c =
         let sz1 = length s1
         and sz2 = length s2 in
-        let s1p = create_same_pool s1 (sz1 + sz2)
-        and s2p = create_same_pool s2 (sz1 + sz2) in
+        let s1p = create (sz1 + sz2)
+        and s2p = create (sz1 + sz2) in
         let size_compared = sz1 >= sz2 in
         if size_compared then 
             extract_edited_2 s1 s2 s1p s2p tm c size_compared
@@ -790,8 +767,8 @@ module Align = struct
         s1p, s2p
 
     let create_edited_2_limit s1 s2 tm c st1 st2 len1 len2 =
-        let s1p = create_same_pool s1 (len1 + len2)
-        and s2p = create_same_pool s2 (len1 + len2) in
+        let s1p = create (len1 + len2)
+        and s2p = create (len1 + len2) in
         let size_compared = len1 >= len2 in
         if size_compared then 
             extract_edited_2_limit s1 s2 s1p s2p tm c st1 st2 len1 len2
@@ -806,9 +783,9 @@ module Align = struct
         and sz2 = length s2
         and sz3 = length s3 in
         let total_len = sz1 + sz2 + sz3 in
-        let s1p = create_same_pool s1 total_len
-        and s2p = create_same_pool s2 total_len 
-        and s3p = create_same_pool s3 total_len in
+        let s1p = create total_len
+        and s2p = create total_len 
+        and s3p = create total_len in
         extract_edited_3 s1 s2 s3 s1p s2p s3p tm cm;
         s1p, s2p, s3p
 
@@ -838,9 +815,9 @@ module Align = struct
             and sz2 = length s2 
             and sz3 = length s3 in
             let sum = sz1 + sz2 + sz3 in
-            let s1p = create_same_pool s1 sum
-            and s2p = create_same_pool s2 sum  
-            and s3p = create_same_pool s3 sum in 
+            let s1p = create sum
+            and s2p = create sum  
+            and s3p = create sum in 
             let c = c_align_3 s1 s2 s3 c m s1p s2p s3p in
             s1p, s2p, s3p, c
         in 
@@ -862,7 +839,7 @@ module Align = struct
         let sz1 = length s1 
         and sz2 = length s2 in
         if (sz1 = sz2) then begin
-            let sp = create_same_pool s1 sz1 in
+            let sp = create sz1 in
             c_median_2_with_gaps s1 s2 c sp;
             sp
         end else 
@@ -873,7 +850,7 @@ module Align = struct
         let sz1 = length s1 
         and sz2 = length s2 in
         if (sz1 = sz2) then begin
-            let sp = create_same_pool s1 (sz1 + 1) in
+            let sp = create (sz1 + 1) in
             c_median_2 s1 s2 c sp;
             sp
         end else 
@@ -887,7 +864,7 @@ module Align = struct
         let sz1 = length s1 
         and sz2 = length s2 in
         if (sz1 = sz2) then begin
-            let sp = create_same_pool s2 (sz2 + 1) in
+            let sp = create (sz2 + 1) in
             c_ancestor_2 s1 s2 c sp;
             sp
         end else 
@@ -900,7 +877,7 @@ module Align = struct
         and sz3 = length s3 in 
         if (sz1 = sz2) && (sz2 = sz3) then begin
             (* Leave space for the initial gap *)
-            let sp = create_same_pool s1 (sz1 + 1) in 
+            let sp = create (sz1 + 1) in 
             c_median_3 s1 s2 s3 c sp;
             sp;
         end else 
@@ -919,7 +896,7 @@ module Align = struct
 
     let union a b =
         let len = length a in
-        let res = create_same_pool a (len + 1) in
+        let res = create (len + 1) in
         c_union a b res;
         res
 
@@ -952,7 +929,7 @@ module Align = struct
                         else seq
                     in
                     fold_right (remove_gaps (Cost_matrix.Two_D.gap cm)) 
-                    (create_same_pool s2' (length s2')) s2'
+                    (create (length s2')) s2'
                 in
                 prepend s2' (Cost_matrix.Two_D.gap cm);
                 s2'
@@ -1034,7 +1011,7 @@ module Align = struct
         in
         let a, b, c, cost = align_3_powell s1 s2 s3 mm go ge in
         let len = length a in
-        let median = create_same_pool a (len + 1) in
+        let median = create (len + 1) in
         for i = len - 1 downto 0 do
             let a = get a i in
             let b = get b i in
@@ -1625,8 +1602,8 @@ module CamlAlign = struct
             and s2l = length s2 in
             let i = ref (s1l - 1)
             and j = ref (s2l - 1) 
-            and seq1 = create_same_pool s1 (s1l + s2l + 1) 
-            and seq2 = create_same_pool s1 (s1l + s2l + 1)
+            and seq1 = create (s1l + s2l + 1) 
+            and seq2 = create (s1l + s2l + 1)
             and dirm = !dirm in
             while (!i <> 0) && (!j <> 0) do
                 match dirm.(!i).(!j) with
@@ -1700,7 +1677,7 @@ let split positions s alph =
         let first = a
         and last = b in
         let total = 1 + (last - first) in
-        let seq = create_same_pool s (total + 1)  in
+        let seq = create (total + 1)  in
         for i = (last - 1) downto first do
             prepend seq (get s i);
         done;
@@ -1816,7 +1793,7 @@ END
         let union a b ua ub cm =
             let new_seq, len = 
                 let c = (length ua.seq) + (length ub.seq) + 2 in
-                create_same_pool ua.seq c, c
+                create c, c
             in
             let u = create_union false new_seq in
             make_union a b ua ub u cm;
@@ -1896,7 +1873,7 @@ external encoding :
 
 let aux_complement start a s = 
     let res =
-        let acc = (create_same_pool s (length s)) in
+        let acc = (create (length s)) in
         for i = start to (length s) - 1 do
             match Alphabet.complement (get s i) a with
             | Some x -> prepend acc x

@@ -445,6 +445,10 @@ let encoding enc x =
     | SeqCS x -> SeqCS.encoding enc x
     | _ -> failwith "Unsupported DynamicCS.encoding"
 
+(* We are turning off iterative for high order characters until the algorithms
+* are properly fixed. *)
+let no_iterative_other_than_for_seqs = true
+
 let readjust to_adjust modified ch1 ch2 parent mine =
     match ch1, ch2, parent, mine with
     | SeqCS ch1, SeqCS ch2, SeqCS parent, SeqCS mine when ch1.SeqCS.alph =
@@ -453,6 +457,10 @@ let readjust to_adjust modified ch1 ch2 parent mine =
                 SeqCS.readjust to_adjust modified ch1 ch2 parent mine in
             let prev_cost = SeqCS.distance ch1 mine +. SeqCS.distance ch2 mine in
             modified, prev_cost, new_cost, (SeqCS nc)
+
+    | _, _, _, mine when no_iterative_other_than_for_seqs ->  
+            let prev_cost = total_cost mine in
+            modified, prev_cost, prev_cost, mine
 
     | ChromCS ch1, ChromCS ch2, ChromCS parent, ChromCS mine when ch1.ChromCS.alph =
         Alphabet.nucleotides -> 

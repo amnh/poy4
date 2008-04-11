@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2668 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2691 $"
 
 module IntSet = All_sets.Integers
 
@@ -244,29 +244,38 @@ let update_trees_to_data load_data run =
     in
     let run = { run with nodes = nodes; data = data } in
     let len = Sexpr.length run.trees in
-    let st = Status.create "Diagnosis"  (Some len) "Recalculating trees" in
-    let nodes = 
-        List.fold_left (fun acc nd -> 
-            let code = Node.taxon_code nd in
-            All_sets.IntegerMap.add code nd acc) All_sets.IntegerMap.empty run.nodes
-    in
-    let trees = 
-        Sexpr.map (fun x -> { x with Ptree.node_data = nodes })
-        run.trees
-    in
-    let replacer nd = 
-        List.find (fun x -> Node.taxon_code x = Node.taxon_code nd) run.nodes
-    in
-    let doit replacer tree = 
-        let res = CT.transform_tree replacer tree in
-        let ach = Status.get_achieved st in
-        Data.flush run.data;
-        Status.full_report ~adv:(ach + 1) st;
-        res
-    in
-    let trees = Sexpr.map (doit replacer) trees in
-    Status.finished st;
-    { run with trees = trees }
+    if len > 0 then
+        let st = Status.create "Diagnosis"  (Some len) "Recalculating trees" in
+        let nodes = 
+            List.fold_left (fun acc nd -> 
+                let code = Node.taxon_code nd in
+                All_sets.IntegerMap.add code nd acc) All_sets.IntegerMap.empty run.nodes
+        in
+        let replacer nd = All_sets.IntegerMap.find (Node.taxon_code nd) nodes in
+        let doit replacer tree = 
+            let are_leaves_different =
+                0 <> 
+                All_sets.IntegerMap.fold (fun code node acc ->
+                    if acc <> 0 then acc
+                    else
+                        let n = Ptree.get_node_data code tree in
+                        Node.compare node n)
+                    nodes 0
+            in
+            let ach = Status.get_achieved st in
+            if are_leaves_different then
+                let tree = { tree with Ptree.node_data = nodes } in
+                let res = CT.transform_tree replacer tree in
+                let () = Status.full_report ~adv:(ach + 1) st in
+                res
+            else 
+                let () = Status.full_report ~adv:(ach + 1) st in
+                tree
+        in
+        let trees = Sexpr.map (doit replacer) run.trees in
+        Status.finished st;
+        { run with trees = trees }
+    else run
 
 let process_transform (run : r) (meth : Methods.transform) =
     match meth with
@@ -2192,7 +2201,6 @@ END
             | #Methods.diagnosis as meth ->
                 warn_if_no_trees_in_memory run.trees;
                 let () = 
-                    let run = update_trees_to_data true run in
                     Sexpr.leaf_iter (fun x -> D.diagnosis run.data x meth) run.trees 
                 in
                 run

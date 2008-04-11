@@ -99,7 +99,6 @@ type dynamic_hom_spec = {
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
     alph : Alphabet.a;
-    pool : Sequence.Pool.p;
     state : dyna_state_t;
     pam : dyna_pam_t;
     weight : float;
@@ -931,7 +930,6 @@ let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet
             tcm2d = tcm;
             tcm3d = tcm3;
             alph = alphabet;
-            pool = Sequence.Pool.create ((max_len * 5) / 4) items;
             state = dyna_state;
             pam = dyna_pam_default;
             weight = 1.0;
@@ -2851,11 +2849,6 @@ let process_complex_terminals data filename =
         end
     else { data with complex_schema = [] }
 
-let get_pool data c =
-    match Hashtbl.find data.character_specs c with
-    | Dynamic dspec -> dspec.pool
-    | _ -> failwith "Data.get_alphabet"
-
 let get_character_state data c =
     match Hashtbl.find data.character_specs c  with
     | Dynamic dspec -> dspec.state
@@ -3136,7 +3129,7 @@ let find_max_seq_id data =
 let flush d = 
     Hashtbl.iter (fun _ item ->
         match  item with
-        | Dynamic dspec -> Sequence.Pool.flush dspec.pool
+        | Dynamic dspec -> ()
         | _ -> ()) d.character_specs 
 
 let set_weight weight spec =

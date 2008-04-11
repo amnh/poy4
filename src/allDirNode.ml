@@ -96,6 +96,9 @@ module OneDirF :
             let n = Lazy.force_val n in
             (Node.Standard.recode f n))
 
+    let compare a b = 
+        Node.Standard.compare (Lazy.force_val a) (Lazy.force_val b)
+
     let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
         let data, nodes = 
             match taxa, codes with
@@ -313,6 +316,26 @@ type nad8 = Node.Standard.nad8 = struct
         }
         in
         { unadjusted = [node_dir]; adjusted = [node_dir]}
+
+    let compare a b =
+        let rec dir_compare lst1 lst2 =
+            match lst1, lst2 with
+            | h1 :: t1, h2 :: t2 ->
+                    if 0 = compare h1.dir h2.dir then
+                        if 0 = compare h1.code h2.code then
+                            let r =
+                                OneDirF.compare h1.lazy_node h2.lazy_node
+                            in
+                            if 0 = r then dir_compare t1 t2
+                            else r
+                        else compare h1.code h2.code
+                    else compare h1.dir h2.dir
+            | [], [] -> 0
+            | [], _ -> -1
+            | _, [] -> 1
+        in
+        dir_compare a.unadjusted b.unadjusted
+        
 
     let recode_anode f n = 
         { 

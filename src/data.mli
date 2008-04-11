@@ -88,7 +88,6 @@ type dynamic_hom_spec = {
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
     alph : Alphabet.a;
-    pool : Sequence.Pool.p;
     state : dyna_state_t;
     pam : dyna_pam_t;
     weight : float;
@@ -436,7 +435,6 @@ val assign_tcm_to_characters_from_file :
 val process_complex_terminals :
     d -> Parser.filename -> d
 
-val get_pool : d -> int -> Sequence.Pool.p
 val get_alphabet : d -> int -> Alphabet.a
 val get_pam : d -> int -> dyna_pam_t
 val get_character_state : d -> int -> dyna_state_t

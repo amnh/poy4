@@ -225,10 +225,41 @@ add_CAML_deserialize (void *v) {
     return (sizeof(add_stt));
 }
 
+int
+add_compare_data (add_stt a, add_stt b) {
+    /* Compare min and max later, the first difference not zero is returned */
+    int i, len;
+    unsigned char *mina, *minb, *maxa, *maxb;
+    unsigned char tmp;
+    len = a->len;
+    mina = (unsigned char *) a->min;
+    minb = (unsigned char *) b->min;
+    maxa = (unsigned char *) a->max;
+    maxb = (unsigned char *) b->min;
+    for (i = 0; i < len; i++) {
+        tmp = mina[i] - minb[i];
+        if ('\0' != tmp) return ((int) tmp);
+    }
+    for (i = 0; i < len; i++) {
+        tmp = maxa[i] - maxb[i];
+        if ('\0' != tmp) return ((int) tmp);
+    }
+    return 0;
+}
+
+int
+add_CAML_compare (value a, value b) {
+    CAMLparam2 (a, b);
+    int res;
+    res = add_compare_data (*(Add_st_struct(a)), \
+            *(Add_st_struct(b)));
+    CAMLreturn (res);
+}
+
 static struct custom_operations additive = {
     "http://www.amnh.org/poy/character_additive/0.1",
     &add_CAML_free,
-    custom_compare_default,
+    &add_CAML_compare,
     custom_hash_default,
     add_CAML_serialize,
     add_CAML_deserialize
@@ -844,27 +875,6 @@ add_median_3 (add_stt p, add_stt n, add_stt c1, add_stt c2, add_stt res) {
 }
 #endif
 
-int
-add_compare_data (add_stt a, add_stt b) {
-    /* Compare min and max later, the first difference not zero is returned */
-    int i, len;
-    unsigned char *mina, *minb, *maxa, *maxb;
-    unsigned char tmp;
-    len = a->len;
-    mina = (unsigned char *) a->min;
-    minb = (unsigned char *) b->min;
-    maxa = (unsigned char *) a->max;
-    maxb = (unsigned char *) b->min;
-    for (i = 0; i < len; i++) {
-        tmp = mina[i] - minb[i];
-        if ('\0' != tmp) return ((int) tmp);
-    }
-    for (i = 0; i < len; i++) {
-        tmp = maxa[i] - maxb[i];
-        if ('\0' != tmp) return ((int) tmp);
-    }
-    return 0;
-}
 /* CAML bindings */
 value 
 add_CAML_distance_and_median (value a, value b) {
