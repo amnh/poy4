@@ -73,18 +73,12 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
         (* Transforming taxa or characters *)
         setting:
             [
-                [ LIDENT "history"; ":"; x = INT -> <:expr<`HistorySize $int:x$>> ] |
-                [ LIDENT "history"; ":"; x = cur_expr -> <:expr<`HistorySize $x$>> ] |
-                [ LIDENT "log"; ":"; x = STRING -> <:expr<`Logfile (Some $str:x$)>> ] |
-                [ LIDENT "log"; ":"; x = cur_expr -> <:expr<`Logfile (Some
-                $x$)>> ]  |
+                [ LIDENT "timer"; ":"; x = flex_integer -> <:expr<`TimerInterval $x$>> ] |
+                [ LIDENT "history"; ":"; x = flex_integer -> <:expr<`HistorySize $x$>> ] |
+                [ LIDENT "log"; ":"; x = flex_string -> <:expr<`Logfile (Some $x$)>> ] |
                 [ LIDENT "nolog" -> <:expr<`Logfile None>> ] |
-                [ LIDENT "seed"; ":"; x = INT -> <:expr<`SetSeed (int_of_string
-                $int:x$)>> ] |
-                [ LIDENT "seed"; ":"; x = cur_expr -> 
-                        <:expr<`SetSeed (int_of_string $x$)>> ] |
-                [ LIDENT "root"; ":"; x = STRING -> <:expr<`RootName $str:x$>> ] |
-                [ LIDENT "root"; ":"; x = cur_expr -> <:expr<`RootName $x$>> ] |
+                [ LIDENT "seed"; ":"; x = flex_integer -> <:expr<`SetSeed $x$>> ] |
+                [ LIDENT "root"; ":"; x = flex_string -> <:expr<`RootName $x$>> ] |
                 [ LIDENT "exhaustive_do" -> <:expr<`Exact>> ] |
                 [ LIDENT "iterative" -> <:expr<`Iterative>> ] |
                 [ LIDENT "normal_do" -> <:expr<`Normal>> ]

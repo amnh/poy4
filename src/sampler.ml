@@ -51,14 +51,40 @@ class type ['a, 'b] search_manager_sampler = object
     method results : (('a, 'b) Ptree.p_tree * float) list -> unit
 end
 
+let timer_interval = ref 1
+
+let print_time timer current_time = 
+    if !timer_interval = 0 then 0
+    else
+        let wall = Timer.wall timer in
+        let nt = int_of_float wall in
+        if Status.is_interactive () then
+            if !timer_interval <= nt - current_time then begin
+                Status.user_message Status.SearchReport 
+                (SearchInformation.show_information 
+                None 
+                None 
+                (Some (string_of_int nt))
+                (Some [`Timer]));
+                nt
+            end else current_time
+        else 0
+
 class ['a, 'b] do_nothing : ['a, 'b] search_manager_sampler = object
+    val mutable current_time = 0
+    val timer = Timer.start ()
     method init _ = ()
     method clone = ({<>} :> ('a, 'b) search_manager_sampler)
     method process _ _ _ _ _ _ _ _ = 
+        current_time <- print_time timer current_time;
         StatusCommon.process_parallel_messages Status.user_message
 
-    method any_trees _ = ()
-    method next_tree _  = ()
+    method any_trees _ = 
+        current_time <- print_time timer current_time;
+        ()
+    method next_tree _  = 
+        current_time <- print_time timer current_time;
+        ()
     method evaluate _ = ()
     method results _ = ()
 end

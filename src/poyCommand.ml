@@ -202,6 +202,7 @@ type internal_memory = [
 ]
 
 type settings = [
+    | `TimerInterval of int
     | `HistorySize of int
     | `Logfile of string option
     | cost_calculation
@@ -1234,6 +1235,8 @@ let create_expr () =
             [ [  ":"; x = STRING -> x ] ];
         setting:
             [
+                [ LIDENT "timer"; ":"; x = INT -> `TimerInterval (int_of_string
+                x) ] |
                 [ LIDENT "history"; ":"; x = INT -> `HistorySize (int_of_string x) ] |
                 [ LIDENT "log"; ":"; x = STRING -> `Logfile (Some x) ] |
                 [ LIDENT "log"; ":"; LIDENT "new"; ":"; x = STRING ->

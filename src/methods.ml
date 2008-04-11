@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2664 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2693 $"
 
 exception TimedOut
 
@@ -618,6 +618,7 @@ type application = [
     | `Graph of (string option * bool)
     | `Ascii of (string option * bool)
     | `Memory of string option
+    | `TimerInterval of int
     | `HistorySize of int
     | `Logfile of string option
     | `Normal
