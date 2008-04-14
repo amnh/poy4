@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2711 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2713 $"
 
 module IntSet = All_sets.Integers
 
@@ -1654,7 +1654,9 @@ END
                 else run
             in
             let run = 
-                Sexpr.fold_left (on_each_tree folder (`Set ([`Data],
+                let eta = true in
+                Sexpr.fold_status "Running pipeline on each tree" ~eta 
+                (on_each_tree folder (`Set ([`Data],
                 name)) dosomething mergingscript) run run.trees
             in
             let run = 
@@ -1669,10 +1671,12 @@ END
             let st = Status.create "Running Pipeline" (Some times) "times" in
             let run = ref run in
             let for_each = todo @ composer in
-            for i = 1 to times do
+            let timer = Timer.start () in
+            for adv = 1 to times do
                 run := folder !run (`Set ([`Data], name));
                 run := List.fold_left folder !run for_each;
-                Status.full_report ~adv:i st;
+                let msg = Timer.status_msg (Timer.wall timer) adv times in
+                Status.full_report ~adv ~msg st;
             done;
             run := folder !run (`Discard ([`Data], name));
             Status.finished st;

@@ -76,3 +76,32 @@ let wall st =
     cur.st_time -. st.st_time
 
 external nanosleep : int -> float -> unit = "sleep_CAML_nanosleep"
+
+let status_msg elapsed_wall adv n =
+    let present remain msg = 
+        (Printf.sprintf "%.0f" remain) ^ " " ^ msg
+    in
+    let tpi = elapsed_wall /. (float_of_int adv) in
+    let remain = tpi *. (float_of_int (n - adv)) in
+    let remain = 
+        let mine_remain v factor = 
+            let mine = floor (v /. factor) in
+            let remain = v -. (mine *. factor) in
+            mine, remain
+        in
+        let rec full_calculation remain =
+            if (remain) < 60. then present remain "s"
+            else if (remain) < 3600. then (* Show minutes *)
+                let mine, remain = mine_remain remain 60. in
+                (present mine "m, ") ^ full_calculation remain
+            else if (remain) < 3600. *. 24. then (* Show days *)
+                let mine, remain = mine_remain remain 3600. in
+                (present mine "h, ") ^ full_calculation remain
+            else 
+                let mine, remain = mine_remain remain (3600. *. 24.) in
+                (present mine "d, ") ^ full_calculation remain
+        in
+        full_calculation remain
+    in
+    "Estimated finish in " ^ remain
+

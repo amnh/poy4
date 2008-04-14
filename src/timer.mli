@@ -25,3 +25,5 @@ val get_user : t -> float
 val get_system : t -> float
 val wall : t -> float
 external nanosleep : int -> float -> unit = "sleep_CAML_nanosleep"
+
+val status_msg : float -> int -> int -> string
