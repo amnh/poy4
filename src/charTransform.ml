@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2707 2008-04-14 16:41:45Z andres $ *)
+(* $Id: charTransform.ml 2712 2008-04-14 20:33:02Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2707 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2712 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -230,7 +230,6 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
 
     let ratchet_tree data probability severity tree =
         let new_data, changed = ratchet data probability severity in
-        assert (new_data <> data);
         let new_data, nodes = new_data --> Data.categorize --> Node.load_data in
         new_data, substitute_nodes nodes tree, changed
 
