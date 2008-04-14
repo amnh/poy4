@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2659 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2701 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -721,9 +721,14 @@ let test_tree tree =
 let (-->) a b = b a
 
 let add_tree_to d add_to tree =
+    let avail_codes = ref add_to.avail_ids in
     let cg = 
-        let code = ref d.Data.number_of_taxa in
-        fun () -> incr code; !code
+        fun () -> 
+            match !avail_codes with
+            | h :: t -> 
+                    avail_codes := t;
+                    h
+            | [] -> assert false
     in
     let rec assign_codes parent data = function
         | Parser.Tree.Leaf name ->
@@ -819,19 +824,33 @@ let add_tree_to d add_to tree =
             in
             let handles = All_sets.Integers.add ca add_to.handles in
             { u_topo = vertices; d_edges = edges; handles = handles;
-            avail_ids = []; new_ids = cg () }
+            avail_ids = !avail_codes; new_ids = cg () }
     | Parser.Tree.Leaf (Leaf (tc, _)), _ -> 
             let vertices = 
                 All_sets.IntegerMap.add tc (Single tc)
                 add_to.u_topo 
             in
             let handles = All_sets.Integers.add tc add_to.handles in
-            { add_to with u_topo = vertices; handles = handles }
+            { add_to with avail_ids = !avail_codes; u_topo = vertices; handles = handles }
     | _ ->failwith "We need trees with more than two taxa"
 
 
 let convert_to trees data = 
-    List.fold_left (add_tree_to data) (empty ()) trees
+    let add_available total tree =
+        let rec aux max av =
+            if max = total then av
+            else aux (max - 1) (max :: av)
+        in
+        { tree with avail_ids = aux (2 * total) [] }
+    in
+    let rec count_leaves = function
+        | Parser.Tree.Leaf _ -> 1
+        | Parser.Tree.Node (cld, _) ->
+                List.fold_left (fun acc x -> (count_leaves x) + acc) 0 cld
+    in
+    let total = List.fold_left (fun acc x -> acc + (count_leaves x)) 0 trees in
+    let tree = add_available total (empty ()) in
+    List.fold_left (add_tree_to data) tree trees
 
 (** [make_disjoint_tree n]
     @return a disjointed tree with the given nodes and 0 edges *)
