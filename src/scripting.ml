@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2708 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2711 $"
 
 module IntSet = All_sets.Integers
 
@@ -43,6 +43,7 @@ type ('a, 'b, 'c) run = {
     tree_store : ('a, 'b) Ptree.p_tree Sexpr.t str_htbl;
     queue : Sampler.ft_queue;
     stored_trees : ('a, 'b) Ptree.p_tree Sexpr.t;
+    original_trees : ('a, 'b) Ptree.p_tree Sexpr.t;
 }
 
 let is_forest = function
@@ -595,19 +596,20 @@ let runtime_store rediagnose run meth =
         | `Jackknife -> Hashtbl.remove run.jackknife_store name
         | `Bootstrap -> Hashtbl.remove run.bootstrap_store name
     in
-    let set name run clas =
+    let set name (changed, run) clas =
         let find hstb = Hashtbl.find hstb name in
         match clas with
         | `Data -> 
-                { run with data = find run.data_store }
+                let d = find run.data_store in
+                (changed || (run.data <> d)), { run with data = find run.data_store }
         | `Trees ->
-                { run with trees = find run.tree_store }
+                true, { run with trees = find run.tree_store }
         | `Bremer ->
-                { run with bremer_support = find run.bremer_store }
+                true, { run with bremer_support = find run.bremer_store }
         | `Jackknife ->
-                { run with jackknife_support = find run.jackknife_store }
+                true, { run with jackknife_support = find run.jackknife_store }
         | `Bootstrap ->
-                { run with bootstrap_support = find run.bootstrap_store }
+                true, { run with bootstrap_support = find run.bootstrap_store }
     in
     let do_rediagnose = function
         | `Data
@@ -618,17 +620,17 @@ let runtime_store rediagnose run meth =
     | `Store (clas, name) -> 
             List.iter (store name run) clas ; run
     | `Set (clas, name) ->
-            let run = 
-                try List.fold_left (set name) run clas with
+            let changed, nrun = 
+                try List.fold_left (set name) (false, run) clas with
                 | Not_found -> 
                         Status.user_message Status.Error ("The@ state@ of@ " ^
                         "search@ " ^ name ^ "@ has@ not@ been@ defined.@ " ^
                         "I@ will@ continue@ with@ the@ current@ state.");
-                        run
+                        false, run
             in
-            if List.exists do_rediagnose clas then
-                rediagnose run
-            else run
+            if changed && List.exists do_rediagnose clas then
+                rediagnose nrun
+            else nrun
     | `Discard (clas, name) -> 
             List.iter (remove name run) clas ; run
     | `Keep_only (num, meth) ->
@@ -666,6 +668,7 @@ let empty () = {
     tree_store = create_hstb ();
     queue = Sampler.create ();
     stored_trees = `Empty;
+    original_trees = `Empty;
 }
 
 let process_random_seed_set run v =
@@ -1201,9 +1204,7 @@ let rec process_application run item =
                 ()
             in
             run
-    | `TimerInterval x -> 
-            print_msg ("Setting the timer interval to " ^ string_of_int x);
-            Tabus.timer_interval := x; run
+    | `TimerInterval x -> Tabus.timer_interval := x; run
     | `HistorySize len -> Status.resize_history len; run
     | `Logfile file -> StatusCommon.set_information_output file; run
     | `Redraw -> Status.redraw_screen (); run
@@ -1647,11 +1648,18 @@ END
             let name = emit_identifier () in
             let run = folder run (`Store ([`Data], name)) in
             let run = 
+                if not (List.exists (function #Methods.transform -> true | _ ->
+                    false) dosomething) then
+                    { run with original_trees = run.trees } 
+                else run
+            in
+            let run = 
                 Sexpr.fold_left (on_each_tree folder (`Set ([`Data],
                 name)) dosomething mergingscript) run run.trees
             in
             let run = 
-                { run with trees = run.stored_trees; stored_trees = `Empty } 
+                { run with trees = run.stored_trees; original_trees = `Empty; 
+                stored_trees = `Empty } 
             in
             let run = folder run (`Discard ([`Data], name)) in
             run
@@ -1794,9 +1802,16 @@ END
                 let module TreeSet = Set.Make (Ptree.Fingerprint) in
                 let no_need, othertrees = 
                     let initialtrees = 
-                        List.fold_left (fun acc x -> 
-                            TreeSet.add (Ptree.Fingerprint.fingerprint x) acc)
-                        TreeSet.empty initialtrees
+                        let add_elements acc x =
+                            TreeSet.add (Ptree.Fingerprint.fingerprint x) acc
+                        in
+                        let a = 
+                            Sexpr.fold_left add_elements TreeSet.empty run.trees
+                        in
+                        let a = 
+                            Sexpr.fold_left add_elements a run.stored_trees in
+                        Sexpr.fold_left add_elements a run.original_trees
+
                     in
                     List.partition (fun x ->
                         let x = Ptree.Fingerprint.fingerprint x in
