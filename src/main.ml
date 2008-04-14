@@ -17,12 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2670 $"
+let () = SadmanOutput.register "Main" "$Revision: 2703 $"
 
-(* $Id: main.ml 2670 2008-04-04 17:21:49Z andres $ *)
-
-
-let () = Random.self_init ()
+(* $Id: main.ml 2703 2008-04-14 13:47:52Z andres $ *)
 
 let seed = truncate (Unix.time ())
 
@@ -38,13 +35,12 @@ let () =
 ELSE
 
 let args =
-    let _ = Phylo.process_random_seed_set (Phylo.empty ()) seed in
     (* TODO: Fix the arguments preprocessing *)
     Sys.argv
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2670 $"
+let () = SadmanOutput.register "Main" "$Revision: 2703 $"
 
 let () = Status.init ()
 
@@ -58,7 +54,6 @@ let debug_pass_errors = false
 let () =
     let out = Status.user_message Status.Information in
     let rephrase str = Str.global_replace (Str.regexp " +") "@ " str in
-    out Version.string;
     out "";
     out "";
     out "";
