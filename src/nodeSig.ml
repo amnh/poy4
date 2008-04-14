@@ -28,6 +28,7 @@ module type S = sig
 
     (** The type of the nodes in the tree. *)
     type n 
+    type other_n 
 
     (** The calculation of the nodes in a tree start in a particular vertex. For
     * this reason we have to do two passes: the downpass and the uppass. The
@@ -272,4 +273,5 @@ module type S = sig
 
     (* Map all the internal codes of a node using the function *)
     val recode : (int -> int) -> n -> n
+    val to_other : n -> other_n
 end

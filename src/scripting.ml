@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2694 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2704 $"
 
 module IntSet = All_sets.Integers
 
@@ -102,6 +102,8 @@ module type S = sig
 
     val update_trees_to_data : bool -> r -> r
 
+    val set_console_run : r -> unit
+
     module PhyloTree : sig
         type phylogeny = (a, b) Ptree.p_tree
         val get_cost : phylogeny -> float
@@ -146,7 +148,7 @@ module type S = sig
 end
 
 
-module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
+module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.EdgeSig with type n = Node.n) 
     (TreeOps : 
         Ptree.Tree_Operations with type a =
             Node.n with type b = Edge.e)
@@ -1784,26 +1786,26 @@ END
             warn_if_no_trees_in_memory run.trees;
             let (`PerturbateNSearch (tr, _, search_meth, _)) = meth in
             let choose_best trees = 
-            (* A function to select the best between the
-            resulting trees and the previously existing trees *)
-            let merged = Sexpr.combine (run.trees, trees) in
-            let initialtrees, othertrees = 
-                Sexpr.fold_left
-                (fun (initialtrees, newtrees) (a, b) ->
-                    a :: initialtrees, 
-                    (Sexpr.to_list b) @ newtrees)
-                ([], []) merged
-            in
-            let othertrees = Sexpr.of_list othertrees in
-            let newres = 
-                folder { run with trees = othertrees } 
-                (search_meth :> script)
-            in
-            let ntrees = List.length initialtrees in
-            let all_trees = 
-                Sexpr.of_list (initialtrees @ (Sexpr.to_list newres.trees)) 
-            in
-            folder {run with trees = all_trees } (`BestN (Some ntrees))
+                (* A function to select the best between the
+                resulting trees and the previously existing trees *)
+                let merged = Sexpr.combine (run.trees, trees) in
+                let initialtrees, othertrees = 
+                    Sexpr.fold_left
+                    (fun (initialtrees, newtrees) (a, b) ->
+                        a :: initialtrees, 
+                        (Sexpr.to_list b) @ newtrees)
+                    ([], []) merged
+                in
+                let othertrees = Sexpr.of_list othertrees in
+                let newres = 
+                    folder { run with trees = othertrees } 
+                    (search_meth :> script)
+                in
+                let ntrees = List.length initialtrees in
+                let all_trees = 
+                    Sexpr.of_list (initialtrees @ (Sexpr.to_list newres.trees)) 
+                in
+                folder {run with trees = all_trees } (`BestN (Some ntrees))
             in
             (match tr with
             | [] ->
@@ -1831,14 +1833,14 @@ END
                     Sexpr.first run.trees
                 in
                 let runs = explode_trees run in
-                let runs =
+                let trees =
                     Sexpr.map_status 
-                    "Transforming each tree independently"
+                    "Transforming and searching each tree independently"
                     ~eta:true
-                    (temporary_transforms trans) 
+                    (fun x ->
+                        run_and_untransform (temporary_transforms trans x))
                     runs 
                 in
-                let trees = Sexpr.map run_and_untransform runs in
                 choose_best trees)
     | #Methods.runtime_store as meth -> 
             runtime_store (update_trees_to_data false) run meth 
@@ -2330,6 +2332,8 @@ let channel_run ch =
     console_run_val := res
 
 let get_console_run () = !console_run_val
+
+let set_console_run r = console_run_val := r
 
 
     module PhyloTree  = struct

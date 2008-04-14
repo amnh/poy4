@@ -173,7 +173,8 @@ val readjust : All_sets.Integers.t option -> node_data -> node_data -> node_data
 val get_active_ref_code : node_data -> All_sets.Integers.t * All_sets.Integers.t *
     All_sets.Integers.t * All_sets.Integers.t 
 
-module Standard : NodeSig.S with type e = exclude and type n = node_data
+module Standard : NodeSig.S with type e = exclude and type n = node_data and
+type other_n = node_data
 
 val merge : node_data -> node_data -> node_data
 

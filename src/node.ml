@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2691 $"
+let () = SadmanOutput.register "Node" "$Revision: 2704 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -2689,10 +2689,13 @@ let compare_downpass = compare_data_preliminary
 let set_node_cost a b = { b with node_cost = a }
 
 module Standard : 
-    NodeSig.S with type e = exclude and type n = node_data = 
+    NodeSig.S with type e = exclude and type n = node_data and type other_n =
+        node_data = 
         struct
         type e = exclude
         type n = node_data
+        type other_n = n
+        let to_other x = x
         type nad8 = NonaddCS8.t r
         let recode f n = recode f n
         let fix_preliminary = all_prelim_to_final

@@ -106,7 +106,7 @@ module type S = sig
         tree -> Methods.implied_alignment list
     
 
-    val to_static_homologies : bool ->
+    val to_static_homologies : string -> bool ->
         (tree -> int list -> tree) ->
             bool  -> Methods.characters -> Data.d -> tree -> Data.d
 

@@ -85,10 +85,14 @@ let not_with code n =
             string_of_int (List.length x) ^ " matching values.")
 
 module OneDirF : 
-    NodeSig.S with type e = exclude with type n = a_node with type
-    nad8 = Node.Standard.nad8 = struct
+    NodeSig.S with type e = exclude with type n = a_node with type other_n =
+        Node.Standard.n with type nad8 = Node.Standard.nad8 = struct
 
     type n = a_node
+    type other_n = Node.Standard.n
+
+    let to_other x = Lazy.force_val x
+
     type e = exclude
 
     let recode f n = 
@@ -303,9 +307,17 @@ module OneDirF :
 end
 
 module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
+type other_n = Node.Standard.n with
 type nad8 = Node.Standard.nad8 = struct
 
     type n = node_data
+    type other_n = Node.Standard.n
+
+    let to_other x = 
+        match x.unadjusted with
+        | [x] -> OneDirF.to_other x.lazy_node
+        | _ -> failwith "illegal argument"
+
     type e = exclude 
 
     let to_n node = 

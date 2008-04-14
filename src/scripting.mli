@@ -87,6 +87,8 @@ val get_console_run : unit -> r
 
 val update_trees_to_data : bool -> r -> r
 
+val set_console_run : r -> unit
+
     module PhyloTree : sig
         type phylogeny = (a, b) Ptree.p_tree
         val get_cost :  phylogeny -> float
@@ -140,7 +142,7 @@ val update_trees_to_data : bool -> r -> r
 end
 
 module Make 
-    (Node : NodeSig.S) 
+    (Node : NodeSig.S with type other_n = Node.Standard.n) 
     (Edge : Edge.EdgeSig with type n = Node.n)
     (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e)

@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 2622 2008-02-25 20:15:18Z andres $ *)
+(* $Id: supports.ml 2704 2008-04-14 14:09:34Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 2622 $"
+let () = SadmanOutput.register "Support" "$Revision: 2704 $"
 
 let infinity = float_of_int max_int
 
@@ -64,7 +64,7 @@ val bremer_of_input_file_but_trust_input_cost : int ->
 end
 (** support.ml *)
 
-module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) 
+module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.EdgeSig with type n = Node.n) 
     (TreeOps : 
         Ptree.Tree_Operations with type a = Node.n with type b = Edge.e) = struct
         type a = Node.n
@@ -721,7 +721,7 @@ module MakeNormal (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
 
 end
 
-module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
+module Make (NodeH : NodeSig.S with type other_n = Node.Standard.n) (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
     (TreeOpsH : 
         Ptree.Tree_Operations with type a = NodeH.n with type b = EdgeH.e) = struct
 

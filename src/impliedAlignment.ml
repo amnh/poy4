@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2265 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2704 $"
 
 exception NotASequence of int
 
@@ -1136,7 +1136,7 @@ module type S = sig
         int list -> Data.d ->
         tree -> Methods.implied_alignment list
 
-    val to_static_homologies : bool ->
+    val to_static_homologies : string -> bool ->
         (tree -> int list -> tree) ->
             bool  -> Methods.characters -> Data.d -> tree -> Data.d
 
@@ -1870,7 +1870,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         in
         codes
     
-    let to_static_homologies ignore filter_fn remove_noninformative 
+    let to_static_homologies prefix ignore filter_fn remove_noninformative 
             (chars : Methods.characters)  data tree = 
         let codes = get_char_codes chars data in
         let all_to_add = 
@@ -1886,7 +1886,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                         incr data.Data.character_code_gen;
                         string_of_int !(data.Data.character_code_gen)
                     in
-                    "ImpliedAlignment" ^ code
+                    prefix ^ code
                 in
                 (to_static_character remove_noninformative name ia data) :: acc) 
             []

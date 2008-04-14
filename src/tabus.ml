@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 2694 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2704 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -79,19 +79,22 @@ module type S = sig
     * starting in the root of the tree, but will not pass the vertices included
     * in the argument set. The procedure will also return edges that occur at
     * distance [int] from the last break position. *)
-    val partitioned_join : All_sets.IntSet.t -> int -> semc
+    val partitioned_join : 
+        [ `Sets of All_sets.IntSet.t | `Height of int ] -> int -> semc
 
     (** A simple depth first search manager to choose the next rerooting
     * position. The manager will return edges up to distance [int] from the last
     * break position *)
-    val reroot : All_sets.IntSet.t option -> int -> semc
+    val reroot : 
+        [ `Sets of All_sets.IntSet.t | `Height of int ] option -> int -> semc
 
     (** Choose at random any non previously selected edge *)
     val random_break : emc
 
     (** Choose the edges to break, starting with those that show greates 
     * length *)
-    val sorted_break : All_sets.IntSet.t option ->  emc
+    val sorted_break : 
+        [ `Sets of All_sets.IntSet.t | `Height of int ] option ->  emc
 
     (** Break an edge once and only once, never again *)
     val only_once_break : emc
@@ -1907,25 +1910,47 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         in
         All_sets.IntegerMap.fold nodes res ([] , [])
 
+    let max_height ptree =
+        let best = ref max_int in
+        let e = 
+            Tree.EdgeMap.fold (fun ((Tree.Edge (a, b)) as edge) data acc ->
+                let data = Edge.to_node (-1) (a, b) data in
+                if !best > Node.num_height None data then 
+                    let () = best := Node.num_height None data in
+                    Some edge
+                else acc) ptree.Ptree.edge_data None
+        in
+        match e with
+        | None -> assert false
+        | Some x -> [x]
+
     let partitioned_join sets max_distance side ptree = 
-        let edges, _ =  generate_partition_edges sets ptree in
+        let edges =
+            match sets with
+            | `Sets sets ->
+                    fst (generate_partition_edges sets ptree)
+            | _ -> max_height ptree
+        in
         new union_dfs side max_distance edges ptree 
 
     let reroot sets max_int side ptree = 
         let dont_cross =
             match sets with
             | None -> []
-            | Some x -> fst (generate_partition_edges x ptree) 
+            | Some (`Sets x) -> fst (generate_partition_edges x ptree) 
+            | Some (`Height x) -> max_height ptree
         in
         new bfs_based side dont_cross max_int ptree
+
     let random_break ptree = new randomized_edges ptree
 
     let sorted_break sets ptree = 
         let dont_cut =
             match sets with
             | None -> []
-            | Some x ->
+            | Some (`Sets x) ->
                     fst (generate_partition_edges x ptree)
+            | Some (`Height x) -> max_height ptree
         in
         new sort_edges_by_cost dont_cut ptree
 

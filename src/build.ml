@@ -17,12 +17,14 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2646 $"
+let () = SadmanOutput.register "Build" "$Revision: 2704 $"
 
-let debug_profile_memory = false
+let debug_profile_memory = true
 
 let current_snapshot x = 
-    if debug_profile_memory then MemProfiler.current_snapshot x
+    if debug_profile_memory then 
+        let () = Printf.printf "%s\n%!" x in
+        MemProfiler.current_snapshot x
     else ()
 
 let rec build_features meth =
@@ -738,7 +740,7 @@ let rec build_initial_trees trees data nodes (meth : Methods.build) =
 
 end
 
-module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
+module Make (NodeH : NodeSig.S with type other_n = Node.Standard.n) (EdgeH : Edge.EdgeSig with type n = NodeH.n) 
     (TreeOps : Ptree.Tree_Operations with type a = NodeH.n with type b = EdgeH.e)
     = struct
 
@@ -769,11 +771,10 @@ module Make (NodeH : NodeSig.S) (EdgeH : Edge.EdgeSig with type n = NodeH.n)
             if Data.has_dynamic data then
                 DH.build_initial_trees trees data n b
             else
-                let data, nodes = NodeS.load_data data in
-                let trees = Sexpr.map (from_h_to_s nodes) trees in
-                let trees = SH.build_initial_trees trees data nodes b in
-                let data, nodes = NodeH.load_data data in
-                Sexpr.map (from_s_to_h nodes) trees
+                let s_nodes = List.map NodeH.to_other n in
+                let trees = Sexpr.map (from_h_to_s s_nodes) trees in
+                let trees = SH.build_initial_trees trees data s_nodes b in
+                Sexpr.map (from_s_to_h n) trees
 
     end
 
