@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2659 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2706 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -2110,8 +2110,6 @@ module Fingerprint = struct
     type t = Tree.Fingerprint.t
     let fingerprint {tree=t} = Tree.Fingerprint.fingerprint t
     let compare = Tree.Fingerprint.compare
-    let to_string = Tree.Fingerprint.to_string
-    let empty = Tree.Fingerprint.empty
 end
 
 let get_leaves ?(init=[]) root t =

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2701 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2706 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -1710,8 +1710,7 @@ let print_forest forest =
                                     print_tree x forest) handles))
 
 module Fingerprint = struct
-    type t = int list
-    let empty : t = []
+    type t = int Parser.Tree.t
 
     let find_smallest_leaf {u_topo = topo} =
         All_sets.IntegerMap.fold
@@ -1722,26 +1721,26 @@ module Fingerprint = struct
     let fingerprint t =
         let smallest = find_smallest_leaf t in
         let t, _ = move_handle smallest t in
-        let parent_id = match get_node smallest t with
-        | Leaf (_, p) -> p
-        | _ -> failwith "Bad leaf node" in
+        let parent_id = 
+            match get_node smallest t with
+            | Leaf (_, p) -> p
+            | _ -> failwith "Bad leaf node" 
+        in
         let rec fp p = function
             | Single _ -> failwith "Strange place to leave a single"
-            | Leaf (myid, _) -> [myid]
+            | Leaf (myid, _) -> myid, Parser.Tree.Leaf myid
             | (Interior (myid, c1, c2, c3)) as node ->
                   let c1, c2 = other_two_nbrs p node in
-                  let c1l = fp myid (get_node c1 t) in
-                  let c2l = fp myid (get_node c2 t) in
-                  let c1h = List.hd c1l in
-                  let c2h = List.hd c2l in
-                  if c1h < c2h
-                  then c1l @ c2l
-                  else c2l @ c1l
-        in smallest :: (fp smallest (get_node parent_id t))
+                  let c1id, c1l = fp myid (get_node c1 t) in
+                  let c2id, c2l = fp myid (get_node c2 t) in
+                  if c1id < c2id then c1id, Parser.Tree.Node ([c1l; c2l], c1id)
+                  else c2id, Parser.Tree.Node ([c2l; c1l], c2id)
+        in 
+        let _, left = fp smallest (get_node parent_id t) in
+        Parser.Tree.Node ([Parser.Tree.Leaf smallest; left], smallest)
 
     let compare = compare
 
-    let to_string t = String.concat ", " (List.map string_of_int t)
 end
 
 
