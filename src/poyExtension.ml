@@ -725,8 +725,8 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 *)
                 [ LIDENT "forest"; a = OPT optional_integer_or_float -> 
                     match a with
-                    | None -> <:expr<$flo:"0."$>>
-                    | Some a -> a ] |
+                    | None -> <:expr<`Forest $flo:"0."$>>
+                    | Some a -> <:expr<`Forest $a$>> ] |
                 [ a = trajectory_method -> a ] |
                 [ a = break_method -> a ] |
                 [ a = reroot_method -> a ] |
