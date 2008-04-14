@@ -155,7 +155,7 @@ let dependency_relations (init : Methods.script) =
                         NonComposable)]
                 | `TimerInterval _
                 | `HistorySize _
-                | `Redraw -> [([], [], init, Linnearizable)]
+                | `Redraw -> [([Data], [Data], init, Linnearizable)]
                 | `Echo _ 
                 | `Help _ -> 
                         let output_files = all !input_files !output_files in
@@ -380,7 +380,6 @@ let dependency_relations (init : Methods.script) =
                         let fn = filename_to_list (Some filename) in
                         [(datantrees, fn, init, Linnearizable)], 
                         Some filename, false
-                | `TimerInterval _
                 | `History _ -> [([], [], init, Linnearizable)], None, false
                 | `Save (filename, _) ->
                         let fn = filename_to_list (Some filename) in
@@ -391,6 +390,7 @@ let dependency_relations (init : Methods.script) =
                         [(fn, [Data; Trees; JackBoot; Bremer], init,
                         NonComposable)], 
                         Some filename, true
+                | `TimerInterval _
                 | `RootName _
                 | `Root _ -> 
                         [([Data; Trees], all !input_files !output_files, init,
@@ -1819,6 +1819,7 @@ let is_master_only (init : Methods.script) =
     | #Methods.runtime_store 
     | `ReadScript _ 
     | `Repeat _ 
+    | `TimerInterval _
     | #Methods.taxa_handling -> false
     | `Graph (_, _)
     | `Ascii (_, _)
@@ -1831,7 +1832,6 @@ let is_master_only (init : Methods.script) =
     | `ExplainScript _
     | `PrintWDir 
     | `Memory _ 
-    | `TimerInterval _
     | `HistorySize _ 
     | `Redraw 
     | `Echo _  

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2707 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2708 $"
 
 module IntSet = All_sets.Integers
 
@@ -700,133 +700,6 @@ let do_recovery run =
     in
     stackadder ();
     { run with trees = adder trees }
-
-let rec process_application run item = 
-    let run = reroot_at_outgroup run in
-    match item with
-    | `Interactive -> run
-    | `Normal | `Exact | `Iterative as meth -> 
-            if !Methods.cost <> meth then
-                let _ = Methods.cost := meth in
-                process_application run `ReDiagnose
-            else run
-    | `Exit -> exit 0
-    | `Version ->
-            Status.user_message Status.Information Version.string;
-            run
-    | `ChangeWDir dir ->
-            let dir = Str.global_replace (Str.regexp "\\\\ ") " " dir in
-            Sys.chdir dir;
-            run
-    | `PrintWDir ->
-            Status.user_message Status.Information 
-            ("The current working directory is " ^ (StatusCommon.escape
-            (Sys.getcwd ())));
-            run
-    | `Recover -> do_recovery run
-    | `ClearRecovered -> Queue.clear run.queue.Sampler.queue; run
-    | `ClearMemory items -> 
-            let has_item item = List.exists (fun x -> x = item) items in
-            Gc.full_major (); 
-            let _ = 
-                if has_item `Matrices then Matrix.flush ();
-                if has_item `SequencePool then Data.flush run.data;
-                ()
-            in
-            run
-    | `TimerInterval x -> Tabus.timer_interval := x; run
-    | `HistorySize len -> Status.resize_history len; run
-    | `Logfile file -> StatusCommon.set_information_output file; run
-    | `Redraw -> Status.redraw_screen (); run
-    | `SetSeed v -> process_random_seed_set run v
-    | `ReDiagnose -> update_trees_to_data true run
-    | `Help item -> HelpIndex.help item; run
-    | `Wipe -> empty ()
-    | `Echo (s, c) ->
-            let s = StatusCommon.escape s in
-            let c = 
-                match c with
-                | `Information -> Status.Information
-                | `Error -> Status.Error
-                | `Output str ->
-                        match str with
-                        | None -> Status.Output (None, false, [])
-                        | Some str -> Status.Output (Some str, false, [])
-            in
-            Status.user_message c (s ^ "@\n%!");
-            run
-     | `Graph (filename, collapse) ->
-             let run = reroot_at_outgroup run in
-             let trees = Sexpr.to_list run.trees in
-             let trees = Array.of_list trees in
-             if 0 = Array.length trees then run
-             else begin
-                 let trees = Array.map (fun x ->
-                     let cost = (Ptree.get_cost `Adjusted x) in
-                     cost, (TS.build_forest_as_tree collapse x
-                     run.data "")) trees
-                 in
-                 match filename with 
-                 | Some filename ->
-                         GraphicsPs.display "" filename trees;
-                         run
-                 | None ->
-
-                         (*
-#if (USEGRAPHICS==1)
-                GraphicsScreen.display trees;
-                run
-#elif (USEGRAPHICS==2)
-                GraphicTK.display trees;
-                run
-#else
-                         *)
-             Status.user_message Status.Information 
-             ("@[Interactive@ graphics@ are@ not@ supported@ in@ this@ " ^
-             "compiled@ version@ of@ POY.@ Here@ is@ the@ ascii@ art@ though:@]");
-             process_application run (`Ascii (None, collapse))
-             (*
-#endif
-             *)
-end
-
-     | `Ascii (filename, collapse) ->
-             let trees = Sexpr.map (fun x ->
-                     let cost = int_of_float (Ptree.get_cost `Adjusted x) in
-                     let str = string_of_int cost in
-                     cost, TS.build_forest_as_tree collapse x run.data str) 
-                    run.trees
-             in
-             Sexpr.leaf_iter (fun (cost, x) -> 
-                 let r = AsciiTree.to_string ~sep:2 ~bd:2 false x in
-                 Status.user_message (Status.Output (filename,false, [])) 
-                 ("@[@[<v>@[Tree@ with@ cost@ " ^ string_of_int cost ^ "@]@,@[");
-                 Status.user_message (Status.Output (filename,false, [])) r;
-              Status.user_message (Status.Output (filename, false, [])) "@]@]@]%!";) trees;
-             run
-
-     | `Memory filename ->
-             let memory_usage = report_memory () in
-             Status.user_message (Status.Output (filename, false,[])) memory_usage;
-             run
-     | `InspectFile str ->
-             try 
-                 let (desc, _, _, _, _, _, _) = PoyFile.read_file str in
-                let desc = 
-                     match desc with
-                     | None -> "No@ description@ available."
-                     | Some d -> d
-                 in
-                 Status.user_message Status.Information ("@[<v 2>" ^
-                 (StatusCommon.escape str) ^ " is a POY file: @,@[" ^ desc ^ "@]@]");
-                 run
-             with
-             | _ -> 
-                     let msg = "The@ file@ " ^ StatusCommon.escape str ^ "@ is@ not@ a@ valid"
-                     ^ "@ POY@ fileformat." in
-                     Status.user_message Status.Information msg;
-                     run
-
                      
 let process_characters_handling (run : r) meth = 
     let data, do_nodes = 
@@ -1294,6 +1167,134 @@ IFDEF USEPARALLEL THEN
 ELSE
     let args = Sys.argv
 END
+
+let rec process_application run item = 
+    let run = reroot_at_outgroup run in
+    match item with
+    | `Interactive -> run
+    | `Normal | `Exact | `Iterative as meth -> 
+            if !Methods.cost <> meth then
+                let _ = Methods.cost := meth in
+                process_application run `ReDiagnose
+            else run
+    | `Exit -> exit 0
+    | `Version ->
+            Status.user_message Status.Information Version.string;
+            run
+    | `ChangeWDir dir ->
+            let dir = Str.global_replace (Str.regexp "\\\\ ") " " dir in
+            Sys.chdir dir;
+            run
+    | `PrintWDir ->
+            Status.user_message Status.Information 
+            ("The current working directory is " ^ (StatusCommon.escape
+            (Sys.getcwd ())));
+            run
+    | `Recover -> do_recovery run
+    | `ClearRecovered -> Queue.clear run.queue.Sampler.queue; run
+    | `ClearMemory items -> 
+            let has_item item = List.exists (fun x -> x = item) items in
+            Gc.full_major (); 
+            let _ = 
+                if has_item `Matrices then Matrix.flush ();
+                if has_item `SequencePool then Data.flush run.data;
+                ()
+            in
+            run
+    | `TimerInterval x -> 
+            print_msg ("Setting the timer interval to " ^ string_of_int x);
+            Tabus.timer_interval := x; run
+    | `HistorySize len -> Status.resize_history len; run
+    | `Logfile file -> StatusCommon.set_information_output file; run
+    | `Redraw -> Status.redraw_screen (); run
+    | `SetSeed v -> process_random_seed_set run v
+    | `ReDiagnose -> update_trees_to_data true run
+    | `Help item -> HelpIndex.help item; run
+    | `Wipe -> empty ()
+    | `Echo (s, c) ->
+            let s = StatusCommon.escape s in
+            let c = 
+                match c with
+                | `Information -> Status.Information
+                | `Error -> Status.Error
+                | `Output str ->
+                        match str with
+                        | None -> Status.Output (None, false, [])
+                        | Some str -> Status.Output (Some str, false, [])
+            in
+            Status.user_message c (s ^ "@\n%!");
+            run
+     | `Graph (filename, collapse) ->
+             let run = reroot_at_outgroup run in
+             let trees = Sexpr.to_list run.trees in
+             let trees = Array.of_list trees in
+             if 0 = Array.length trees then run
+             else begin
+                 let trees = Array.map (fun x ->
+                     let cost = (Ptree.get_cost `Adjusted x) in
+                     cost, (TS.build_forest_as_tree collapse x
+                     run.data "")) trees
+                 in
+                 match filename with 
+                 | Some filename ->
+                         GraphicsPs.display "" filename trees;
+                         run
+                 | None ->
+
+                         (*
+#if (USEGRAPHICS==1)
+                GraphicsScreen.display trees;
+                run
+#elif (USEGRAPHICS==2)
+                GraphicTK.display trees;
+                run
+#else
+                         *)
+             Status.user_message Status.Information 
+             ("@[Interactive@ graphics@ are@ not@ supported@ in@ this@ " ^
+             "compiled@ version@ of@ POY.@ Here@ is@ the@ ascii@ art@ though:@]");
+             process_application run (`Ascii (None, collapse))
+             (*
+#endif
+             *)
+end
+
+     | `Ascii (filename, collapse) ->
+             let trees = Sexpr.map (fun x ->
+                     let cost = int_of_float (Ptree.get_cost `Adjusted x) in
+                     let str = string_of_int cost in
+                     cost, TS.build_forest_as_tree collapse x run.data str) 
+                    run.trees
+             in
+             Sexpr.leaf_iter (fun (cost, x) -> 
+                 let r = AsciiTree.to_string ~sep:2 ~bd:2 false x in
+                 Status.user_message (Status.Output (filename,false, [])) 
+                 ("@[@[<v>@[Tree@ with@ cost@ " ^ string_of_int cost ^ "@]@,@[");
+                 Status.user_message (Status.Output (filename,false, [])) r;
+              Status.user_message (Status.Output (filename, false, [])) "@]@]@]%!";) trees;
+             run
+
+     | `Memory filename ->
+             let memory_usage = report_memory () in
+             Status.user_message (Status.Output (filename, false,[])) memory_usage;
+             run
+     | `InspectFile str ->
+             try 
+                 let (desc, _, _, _, _, _, _) = PoyFile.read_file str in
+                let desc = 
+                     match desc with
+                     | None -> "No@ description@ available."
+                     | Some d -> d
+                 in
+                 Status.user_message Status.Information ("@[<v 2>" ^
+                 (StatusCommon.escape str) ^ " is a POY file: @,@[" ^ desc ^ "@]@]");
+                 run
+             with
+             | _ -> 
+                     let msg = "The@ file@ " ^ StatusCommon.escape str ^ "@ is@ not@ a@ valid"
+                     ^ "@ POY@ fileformat." in
+                     Status.user_message Status.Information msg;
+                     run
 
 let range_timer = ref (Timer.start ())
 
