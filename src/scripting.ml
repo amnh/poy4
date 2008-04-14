@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2704 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2707 $"
 
 module IntSet = All_sets.Integers
 
@@ -1788,24 +1788,40 @@ END
             let choose_best trees = 
                 (* A function to select the best between the
                 resulting trees and the previously existing trees *)
-                let merged = Sexpr.combine (run.trees, trees) in
-                let initialtrees, othertrees = 
-                    Sexpr.fold_left
-                    (fun (initialtrees, newtrees) (a, b) ->
-                        a :: initialtrees, 
-                        (Sexpr.to_list b) @ newtrees)
-                    ([], []) merged
+                let initialtrees = Sexpr.to_list run.trees 
+                and othertrees = Sexpr.to_list trees in
+                let module TreeSet = Set.Make (Ptree.Fingerprint) in
+                let no_need, othertrees = 
+                    let initialtrees = 
+                        List.fold_left (fun acc x -> 
+                            TreeSet.add (Ptree.Fingerprint.fingerprint x) acc)
+                        TreeSet.empty initialtrees
+                    in
+                    List.partition (fun x ->
+                        let x = Ptree.Fingerprint.fingerprint x in
+                        TreeSet.mem x initialtrees) othertrees
                 in
-                let othertrees = Sexpr.of_list othertrees in
-                let newres = 
-                    folder { run with trees = othertrees } 
-                    (search_meth :> script)
+                let othertrees = 
+                    let _, acc =
+                        List.fold_left (fun ((set, acc) as pair) x ->
+                            let fp = Ptree.Fingerprint.fingerprint x in
+                            if TreeSet.mem fp set then pair
+                            else TreeSet.add fp set, x :: acc) 
+                        (TreeSet.empty, []) othertrees
+                    in
+                    Sexpr.of_list acc
                 in
-                let ntrees = List.length initialtrees in
-                let all_trees = 
-                    Sexpr.of_list (initialtrees @ (Sexpr.to_list newres.trees)) 
-                in
-                folder {run with trees = all_trees } (`BestN (Some ntrees))
+                if 0 <> Sexpr.length othertrees then
+                    let newres = 
+                        folder { run with trees = othertrees } 
+                        (search_meth :> script)
+                    in
+                    let ntrees = List.length initialtrees in
+                    let all_trees = 
+                        Sexpr.of_list (initialtrees @ no_need @ (Sexpr.to_list newres.trees)) 
+                    in
+                    folder {run with trees = all_trees } (`BestN (Some ntrees))
+                else run
             in
             (match tr with
             | [] ->
