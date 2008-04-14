@@ -61,7 +61,7 @@ transform(tcm:(1,2),gap_opening:1)
 set(iterative)
 swap()
 select()
-report("all_trees",trees:(total),"constree",graphconsensus,
+report("all_trees",trees:(total),"constree", graphconsensus,
 "diagnosis",diagnosis)
 exit()
 \end{verbatim}
@@ -127,7 +127,7 @@ set( root:"Americhernus")
 build()
 swap()
 select()
-calculate_support(jackknife:(remove:0.50,resample:1000), 
+calculate_support (jackknife:(remove:0.50, resample:1000), 
 build(5),swap(tbr,trees:3))
 report("jacktree",graphsupports)
 exit()
@@ -203,10 +203,10 @@ option when compiling the \texttt{POY4} program.
 
 \begin{verbatim}
 (* Chromosome analysis of unannotated sequences *)
-read(chromosome:("mit5.txt"))
+read(chromosome:("ua15.fas"))
 transform((all,dynamic_pam:(locus_breakpoint:20,locus_indel:
-(10,1.5),circular:true,median:2,seed_length:15,rearranged_len:
-45,sig_block_len:50,median:2,swap_med:1)))
+(10,1.5),circular:true,median:2, min_seed_length:15, 
+min_rearrangement_len:45, min_loci_len:50,median:2,swap_med:1)))
 build()
 swap()
 select()
@@ -217,8 +217,8 @@ exit()
 
 \begin{itemize}
 \item \texttt{(* Chromosome analysis of unannotated sequences *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
-\item \texttt{read(chromosome:("mit5.txt"))} This command imports the unannotated chromosomal sequence file \texttt{mit5.txt}. The argument \poyargument{chromosome} specifies the characters as unannotated chromosomes.
-\item \texttt{transform((all,dynamic\_pam:(locus\_breakpoint:20,locus\_indel:\\(10,1.5),circular:true,seed\_length:15,rearranged\_len:50,sig\_block\_len:50,median:2,swap\_med:1)))}  The \poycommand{trans\-form} followed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating chromosome-level HTUs (medians).  The argument \poyargument{locus\_breakpoint:20} applies a breakpoint distance between chromosome loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  As the type of chromosomal sequences being analyzed are of mitochondrial origin, the argument \poyargument{circular:true} treats each chromosome sequence as a continuous rather than linear. The argument \poyargument{seed\_length:15} sets the minimum length of identical continuous fragments (seeds) at 15.  As seeds are the foundation for larger homologous blocks setting the seed length to an integer appropriate for the data is critical to optimizing the efficiency with which the program correctly identifies chromosomal fragments and detects rearrangements.  The \poyargument{rearranged\_len} argument sets the lower limit for number of nucleotides between two seeds such that each is considered independent of the other.  Independent seeds belong to separate homologous blocks such that rearrangement events between blocks can be detected.  The argument \poyargument{sig\_block\_len} provides the integer value determining the minimum number of nucleotides constituting an homologous block.  In this example, because the data are mitochondrial containing relatively short homologous tRNA sequences, both the \poyargument{rearranged\_len} and the \poyargument{sig\_block\_len} were set to values below the defaults for these arguments.  The \poyargument{median} specifies the number of best cost locus-rearrangements which will be considered for each HTU (median), while the \poyargument{swap\_med} argument specifies the maximum number of swapping iterations performed in searching for the best pairwise alignment between two chromosomes.  Because values for the \poyargument{median} and \poyargument{swap\_med} arguments set above the default (1) will significantly increase the calculation time, the default values are recommended for larger chromosomal data sets.
+\item \texttt{read(chromosome:("ua15.fas"))} This command imports the unannotated chromosomal sequence file \texttt{ua15.fas}. The argument \poyargument{chromosome} specifies the characters as unannotated chromosomes.
+\item \texttt{transform((all,dynamic\_pam:(locus\_breakpoint:20,locus\_indel:\\(10,1.5),circular:true,seed\_length:15,rearranged\_len:50,sig\_block\_len:50,median:2,swap\_med:1)))}  The \poycommand{trans\-form} followed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating chromosome-level HTUs (medians).  The argument \poyargument{locus\_breakpoint:20} applies a breakpoint distance between chromosome loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  As the type of chromosomal sequences being analyzed are of mitochondrial origin, the argument \poyargument{circular:true} treats each chromosome sequence as a continuous rather than linear. The argument \poyargument{min\_seed\_length:15} sets the minimum length of identical continuous fragments (seeds) at 15.  As seeds are the foundation for larger homologous blocks setting the seed length to an integer appropriate for the data is critical to optimizing the efficiency with which the program correctly identifies chromosomal fragments and detects rearrangements.  The \poyargument{min\_rearrangement\_len} argument sets the lower limit for number of nucleotides between two seeds such that each is considered independent of the other.  Independent seeds belong to separate homologous blocks such that rearrangement events between blocks can be detected.  The argument \poyargument{min\_loci\_len} provides the integer value determining the minimum number of nucleotides constituting an homologous block.  In this example, because the data are mitochondrial containing relatively short homologous tRNA sequences, both the \poyargument{min\_rearrangement\_len} and the \poyargument{min\_loci\_len} were set to values below the defaults for these arguments.  The \poyargument{median} specifies the number of best cost locus-rearrangements which will be considered for each HTU (median), while the \poyargument{swap\_med} argument specifies the maximum number of swapping iterations performed in searching for the best pairwise alignment between two chromosomes.  Because values for the \poyargument{median} and \poyargument{swap\_med} arguments set above the default (1) will significantly increase the calculation time, the default values are recommended for larger chromosomal data sets.
 \item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees. It is highly recommended that a greater number of Wagner builds be implemented when analyzing data for purposes other than this demonstration.
 \item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
 \item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
@@ -236,7 +236,7 @@ identification of independent regions delineated by pipes  \texttt{"|"}.
 \begin{verbatim}
 (* Chromosome analysis of annotated sequences *)
 read(annotated:("aninv2"))
-transform((all,dynamic_pam:(inversion:20,locus_indel:(10,
+transform((all,dynamic_pam:(locus_inversion:20,locus_indel:(10,
 1.5),circular:false,median:1,swap_med:1)))
 build()
 swap()
@@ -249,7 +249,7 @@ exit()
 \begin{itemize}
 \item \texttt{(* Chromosome analysis of annotated sequences  *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
 \item \texttt{read(annotated:("aninv2"))} This command imports the annotated chromosomal sequence file \texttt{aninv2}. The argument \poyargument{annotated} specifies the characters. 
-\item \texttt{transform((all,dynamic\_pam:(inversion:20,locus\_indel:\\(10,1.5),median:1,swap\_med:1)))}  The \poycommand{transform} follow\-ed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating chromosome-level HTUs (medians).  The argument \poyargument{inversion:\\20} applies an inversion distance between chromosome loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the arguments \poyargument{circular}  \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments.
+\item \texttt{transform((all,dynamic\_pam:(inversion:20,locus\_indel:\\(10,1.5),median:1,swap\_med:1)))}  The \poycommand{transform} follow\-ed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating chromosome-level HTUs (medians).  The argument \poyargument{locus\_inversion:20} applies an inversion distance between chromosome loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the arguments \poyargument{circular}  \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments.
 \item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees.  It is highly recommended that a greater number of Wagner builds be implemented when analyzing data for purposes other than this demonstration.
 \item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
 \item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
@@ -260,12 +260,12 @@ exit()
 \section{Custom alphabet break inversion characters}{\label{tutorial 8}}
 
 This tutorial illustrates the analysis of the break inversion character type.  Break inversion characters are generated by transforming user-defined \poyargument {custom\_alphabet} characters.  
-For example, observations of developmental stages could be represented in a corresponding array such that for each terminal taxon there is a sequence of observed developmental stages which are represented by a user-defined alphabet.  To allow rearrangement as well as indel events to be considered among alphabet elements, requires transforming the \poyargument {custom\_alphabet} sequences to \poyargument {breakinv} characters. 
+For example, observations of developmental stages could be represented in a corresponding array such that for each terminal taxon there is a sequence of observed developmental stages which are represented by a user-defined alphabet.  To allow rearrangement as well as indel events to be considered among alphabet elements, requires either reading in the data with the \poyargument {breakinv} argument or transforming the \poyargument {custom\_alphabet} sequences read to \poyargument {breakinv} characters. 
 
 \begin{verbatim}
 (* Custom Alphabet to Breakinv characters *)
 read(custom_alphabet:("ca1.fas","m1.fas"))
-transform((all,seq_to_breakinv:()))
+transform(custom_to_breakinv:())
 transform((all,dynamic_pam:(locus_breakpoint:20,
 locus_indel:(10,1.5),median:1,swap_med:1)))
 build()
@@ -279,7 +279,7 @@ exit()
 \begin{itemize}
 \item \texttt{(* Custom Alphabet to Breakinv characters  *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
 \item \texttt{read(custom\_alphabet:("ca1.fas","m1.fas"))} This command imports the user-defined \poyargument {custom\_alphabet} character file \texttt{ca1.fas} and the accompanying transformation matrix \texttt{m1.fas}.
-\item \texttt{transform((all,seq\_to\_breakinv:()))} This command transforms \poyargument {custom\_alphabet} characters to \poyargument {breakinv} characters which allow for rearrangement operations.
+\item \texttt{transform(custom\_to\_breakinv:())} This command transforms \poyargument {custom\_alphabet} characters to \poyargument {breakinv} characters which allow for rearrangement operations.
 \item \texttt{transform((all,dynamic\_pam:(locus\_breakpoint:20,locus\_\\indel:(10,1.5),median:1,swap\_med:1)))}  The \poycommand{transform} follow\-ed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating medians. The argument \poyargument{locus\_breakpoint:20} applies a breakpoint distance calculation where the integer value specifies the rearrangement cost of \poyargument {breakinv} elements. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for each \poyargument {breakinv} element, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments
 \item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees.  It is highly recommended that a greater number of Wagner builds be implemented when analyzing data for purposes other than this demonstration.
 \item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
@@ -297,8 +297,8 @@ option when compiling the \texttt{POY4} program.
 \begin{verbatim}
 (* Genome analysis of multiple chromosomes *)
 read (genome:("gen5bp"))
-transform((all,dynamic_pam:(chrom_breakpoint:80,chrom_indel:
-(15,2.5),inversion:20,locus_indel:(10,1.5),median:1,
+transform((all,dynamic_pam:(chrom_breakpoint:80, chrom_indel:
+(15,2.5),locus_inversion:20,locus_indel:(10,1.5), median:1,
 swap_med:1)))
 build()
 swap()
@@ -311,7 +311,7 @@ exit()
 \begin{itemize}
 \item \texttt{(* Genome analysis of multiple chromosomes*)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
 \item \texttt{read(genome:("gen5bp"))} This command imports the genomic sequence file \texttt{mit5.txt}. The argument \poyargument{genome} specifies the characters as data consisting of multiple chromomsomes.
-\item \texttt{transform((all,dynamic\_pam:(chrom\_breakpoint:80,chrom\_indel:\\(15, 2.5),locus\_breakpoint:20,locus\_indel:(10,1.5),\\median:1,swap\_med:1)))}  The \poycommand{transform} followed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating genome-level HTUs (medians). The argument \poyargument{chrom\_breakpoint:80} applies a breakpoint distance between chromosomes with the integer value determining the rearrangement cost. The argument \poyargument{chrom\_indel:15,1.5} specifies the indel costs for each entire chromosome, whereby the integer sets the gap opening cost and the float sets the gap extension cost.  The argument \poyargument{inversion:20} applies an inversion distance between chromosome loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments
+\item \texttt{transform((all,dynamic\_pam:(chrom\_breakpoint:80,chrom\_indel:(15, 2.5),locus\_breakpoint:20,locus\_indel:(10,1.5),median:1,swap\_med:1)))}  The \poycommand{transform} followed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating genome-level HTUs (medians). The argument \poyargument{chrom\_breakpoint:80} applies a breakpoint distance between chromosomes with the integer value determining the rearrangement cost. The argument \poyargument{chrom\_indel:15,1.5} specifies the indel costs for each entire chromosome, whereby the integer sets the gap opening cost and the float sets the gap extension cost.  The argument \poyargument{locus\_inversion:20} applies an inversion distance between loci with the integer value determining the rearrangement cost. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for the chromosomal segments, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments
 \item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees.  It is highly recommended that a greater number of Wagner builds be implemented when analyzing data for purposes other than this demonstration.
 \item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
 \item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
