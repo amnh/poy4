@@ -1069,7 +1069,7 @@ The \poycommand{calculate\_support} command does not output support values by de
 	\poyargument{init3D:false}. The default option is \texttt{true}.
 	
 	\poycommand{custom\_alphabet}
-	can be transformed into \poycommand{breakinv} using \\ \poycommand{transform()}.}
+	can be transformed into \poycommand{breakinv} using \poycommand{transform}.}
 	 {customalphabet}
         
         \argumentdefinition{genome}{\obligatory{(\poystring list)}}
@@ -2891,7 +2891,11 @@ The \poycommand{calculate\_support} command does not output support values by de
             \begin{statement}
   	  The transformation of dynamic into static homology characters cannot be reverted.
 	  Therefore, caution must be taken when the transformation is applied. For example,
-	  if sequence characters have been transformed into static characters at top level using the command \poycommand{transform((all, static\_approx))}, all commands executed subsequently will be applied to the transformed data. However, if the transformation has been applied \emph{within} another command (as an argument of \poycommand{swap}, for instance, \poycommand{swap(transform((all, static\_approx)))}), the characters will transformed only for that specific operation.
+	  if sequence characters have been transformed into static characters at top level using
+	  the command \poycommand{transform((all, static\_approx))}, all commands executed 
+	  subsequently will be applied to the transformed data. However, if the transformation has 
+	  been applied \emph{within} another command (as an argument of \poycommand{swap}, 
+	  for instance, \poycommand{swap(transform((all, static\_approx)))}), the characters will transformed only for that specific operation.
 	   \end{statement}
 	
 	\begin{statement}
@@ -3005,10 +3009,10 @@ The \poycommand{calculate\_support} command does not output support values by de
             \argumentdefinition{dynamic\_pam}{\obligatory{([argument list])}}
             {Specifies parameters for creating chro\-mosome- and genome-level HTUs (medians).
             The arguments of \poyargument{dynamic\_pam} define homologous blocks within unannotated chromosome sequences using
-            (\poyargument{seed\_length}, \poyargument{min\_loci\_len}, and \poyargument{min\_rearranged\_len}); specify the cost
+            (\poyargument{min\_seed\_length}, \poyargument{min\_loci\_len}, and \poyargument{min\_rearranged\_len}); specify the cost
             of locus-level transformation events: (i.e. \poyargument{locus\_inversion} or \poyargument{locus\_breakpoint},
             and \poyargument{locus\_indel});  specify the cost of chromosome-level transformation events: 
-            (i.e. \poyargument{chrom\_inversion} or \poyargument{chrom\_breakpoint}, and \poyargument{chrom\_indel}); 
+            (i.e. \poyargument{chrom\_breakpoint}, and \poyargument{chrom\_indel}); 
             take into account whether the chromosome is linear or circular (\poyargument{circular}); and implement a number of heuristic
             procedures to accelerate computations (\poyargument{median}, \poyargument{swap\_med}, and \poyargument{med\_approx}).
             Under default settings, the pairwise distance between two chromosome segments or two chromosomes is determined 
@@ -3085,22 +3089,22 @@ The \poycommand{calculate\_support} command does not output support values by de
                        $o + l \times e$. The default values are $o=10, e=1.0$.}
                         {locusindel}
 
-		     \argumentdefinition{seed\_length}{\obligatory{\poyint}}
+		     \argumentdefinition{min\_seed\_length}{\obligatory{\poyint}}
                         {Specifies the minimum length of identical (invariant,
                         completely conserved) contiguous sequence fragments
                         during comparison between two chromosomes. The integer
-                        value of \poyargument{seed\_length} is the number of
+                        value of \poyargument{min\_seed\_length} is the number of
                         nucleotides. Correct identification of such fragments
                         facilitates detecting chromosome rearrangement events and
                         accelerates other operations (such as tree building and
-                        swapping). However, if \poyargument{seed\_length} value
+                        swapping). However, if \poyargument{min\_seed\_length} value
                         is set too low (detecting many short fragments) or
                         too high (such that no identical fragments are detected)
                         the time required for subsequent searching procedures
-                        may significantly increase. The optimal \poyargument{seed\_length} 
+                        may significantly increase. The optimal \poyargument{min\_seed\_length} 
                         value depends on the specifics of  a given dataset (see Figure \ref{fig:chrom}).
-                        The default value of \poyargument{seed\_length} is \texttt{9}.}
-                        {seedlength}
+                        The default value of \poyargument{min\_seed\_length} is \texttt{9}.}
+                        {minseedlength}
 
                           \argumentdefinition{min\_loci\_len}{\obligatory{\poyint}}
                           {Creates a pairwise alignment between two chromosomes to
@@ -3146,15 +3150,6 @@ The \poycommand{calculate\_support} command does not output support values by de
                         how breakpoint distance is calculated see the argument \poyargument{locus\_breakpoint}.  
                         The default value of \poyargument{chrom\_breakpoint} is \texttt{100}.} 
                         {chrombreakpoint}
-     
-                        \argumentdefinition{chrom\_inversion}{\obligatory{\poyint}}
-                       {Calculates the inversion distance~\cite{hanenhalliandpevzner1995}
-                        between chromosomes given the cost for inversion
-                        specified by the integer value. The inversion distance
-                        takes in consideration rearrangements an inversions.  For further discussion on 
-                        how breakpoint distance is calculated see the argument \poyargument {locus\_inversion}.  
-                        This argument \emph{cannot} be used in conjunction with \poyargument{chrom\_breakpoint}.} 
-                        {chrominversion}
 
        
                    \begin{statement}
@@ -3192,7 +3187,7 @@ The \poycommand{calculate\_support} command does not output support values by de
 		      \argumentdefinition{median}{\obligatory{\poyint}}
                         {Specifies the number alternative locus and chromosome
                         rearrangements of the best cost selected (randomly) for
-                        each HTU (median). Limiting the number of rearrangements
+                        each HTU (hypothetical taxon unit) or median. Limiting the number of rearrangements
                         stored in memory (smaller value of \poyargument{median})
                         is heuristic strategy to accelerate calculations at the
                         expense of thoroughness of the search. By default, only 1
@@ -3285,15 +3280,17 @@ The \poycommand{calculate\_support} command does not output support values by de
            	{In this example all custom\_alphabet data is transformed into the breakinv data type 
 		and is treated as a circular chromosome.}
           
-          	\poyexample{transform(seq\_to\_chrom:(locus\_indel:(50, 1.0)))} 
+          	\poyexample{transform(seq\_to\_chrom:(locus\_indel:(50, 1.0), min\_seed\_length:15))} 
           	{All applicable (\emph{i.e.} sequence) data are transformed into chromosome
-          	data and the locus-level gap opening cost is set at \texttt{50} with a gap extension cost at \texttt{1.0}.}
+          	data with the minimum length of identical contiguous sequence fragments which form
+	          the seeds of homologous blocks set at  \texttt{15} nucleotides and the locus-level gap
+	         opening cost is set at \texttt{50} with a gap extension cost at \texttt{1.0}.}
               
-          	\poyexample{read (chromosome:("mito")) transform((all,
-                   dynamic\_pam:\\(locus\_breakpoint:10, min\_rearrangement\_len:60, median:1, \\circular:false)))} 
-             	{This example shows a file read (``mito'') containing mitochondrial chromosome sequences that has been transformed 
-		to set the locus rearrangement (breakpoint) cost at \texttt{10}, and only strings of \texttt{60} or more nucleotides are considered in determining possible
-                   rearrangements between identified seeds.  The chromosome data are treated as linear and only a single set of median rearrangements are stored.}
+          	\poyexample{transform((all, dynamic\_pam:(locus\_breakpoint:10, min\_rearrangement\_len:60, median:1, circular:false)))} 
+             	{This example shows the transformation of chromosomal data using the argument \poyargument{dynamic\_pam}
+		to set the locus rearrangement (breakpoint) cost at \texttt{10}, and only strings of \texttt{60} or more nucleotides 
+		are considered in determining possible rearrangements between identified seeds.  The chromosome data are
+		treated as linear and only a single set of median rearrangements are stored.}
             
 	\end{poyexamples}	    
 
