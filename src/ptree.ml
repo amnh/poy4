@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2706 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2722 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -784,7 +784,6 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
             ptree.edge_data true)
 
     let edge_recode ptree (Tree.Edge (a, b)) starting =
-        assert (all_edges_represented ptree);
         let hash = Hashtbl.create 97 in
         let find x = 
             try Hashtbl.find hash x with Not_found -> x 
@@ -873,7 +872,6 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
         in
         let code, tree = process_recode None (a, b) starting ptree in
         let tree = recode_tree_data tree in
-        assert (all_edges_represented tree);
         hash, code, tree
 
     let recode ptree code = 
@@ -1587,7 +1585,12 @@ let copy_component handle source target =
         List.fold_left (fun acc ((Tree.Edge (a, b)) as e) ->
             let e = Tree.normalize_edge e source.tree in
             acc
-            --> add_edge_data e (get_edge_data e source)
+            --> (fun acc ->
+                try 
+                    let data = get_edge_data e source in
+                    add_edge_data e data acc
+                with
+                | Not_found -> acc)
             --> add_node_data a (get_node_data a source)
             --> add_node_data b (get_node_data b source)
             --> remove_root_of_component a 
@@ -1600,14 +1603,10 @@ let copy_component handle source target =
 
 let fuse source target terminals =
     let debug = false in
-    let maybe_reroot ((tree, utree, (Tree.Edge(efrom, eto) as edge)) as arg) =
-        assert (all_edges_represented tree);
-        if is_edge edge tree then arg
-        else
-            let tree, updt = Tree_Ops.reroot_fn false edge tree in
-            assert (all_edges_represented tree);
-            let tree = Tree_Ops.incremental_uppass tree updt in
-            tree, tree.tree, edge 
+    let maybe_reroot ((tree, utree, (Tree.Edge(efrom, eto) as edge))) =
+        let tree, updt = Tree_Ops.reroot_fn false edge tree in
+        let tree = Tree_Ops.incremental_uppass tree updt in
+        tree, tree.tree, edge 
     in
     let count = 1000000 in
     let (stree, sutree, sedge) = maybe_reroot source
