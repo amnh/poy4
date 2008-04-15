@@ -804,7 +804,7 @@ cm_CAML_deserialize (void *v) {
     n->combinations = deserialize_uint_4();
     n->gap_open = deserialize_uint_4();
     n->is_metric = deserialize_uint_4();
-    len = 1 << (n->lcm * 2);
+    len = 2 * (1 << (n->lcm)) * (1 << n->lcm) ;
     n->cost = (int *) calloc (len * sizeof(int), 1);
     n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
     n->worst = (int *) calloc (len * sizeof(int), 1);
@@ -830,7 +830,7 @@ cm_CAML_deserialize_3d (void *v) {
     n->cost_model_type = deserialize_uint_4();
     n->combinations = deserialize_uint_4();
     n->gap_open = deserialize_uint_4();
-    len = (n->a_sz + 1) * (n->a_sz + 1) * (n->a_sz + 1);
+    len = (1 << (n->lcm + 1)) * (1 << (n->lcm + 1)) * (1 << (n->lcm + 1));
     n->cost = (int *) calloc (len * sizeof(int), 1);
     n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
     if ((n->cost == NULL) || (n->median == NULL)) failwith ("Memory error.");
@@ -858,7 +858,7 @@ cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->gap_open);
     serialize_int_4(c->is_metric);
     *wsize_64 = *wsize_32 = sizeof(struct cm);
-    len = 1 << (c->lcm * 2);
+    len = 2 * (1 << (c->lcm)) * (1 << (c->lcm));
     serialize_block_4(c->cost, len);
     SERIALIZE_SEQT(c->median, len);
     serialize_block_4(c->worst, len);
@@ -881,7 +881,7 @@ cm_CAML_serialize_3d (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->combinations);
     serialize_int_4(c->gap_open);
     *wsize_64 = *wsize_32 = sizeof(struct cm);
-    len = (c->a_sz + 1) * (c->a_sz + 1) * (c->a_sz + 1);
+    len = (1 << (c->lcm + 1)) * (1 << (c->lcm + 1)) * (1 << (c->lcm + 1));
     serialize_block_4(c->cost, len);
     SERIALIZE_SEQT(c->median, len);
     CAMLreturn0;
