@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2691 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2720 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -29,11 +29,15 @@ type cost_tuple = {
     max : float;
 }
 
+type packed_algn = 
+    | Packed of (int * BitSet.t * packed_algn)
+    | Raw of Sequence.s
+
 (** A sequence character type. *)
 type t = { 
     (** The sequences that form the set *)
     sequences : Sequence.s Codes.t;
-    aligned_children : (Sequence.s * Sequence.s) Codes.t;
+    aligned_children : (packed_algn * packed_algn) Codes.t;
     costs : cost_tuple Codes.t; (** The cost of each median *)
     total_cost : float;             (** The total cost of the character set *)
     c2 : Cost_matrix.Two_D.m;       (** The two dimensional cost matrix to 
@@ -106,9 +110,44 @@ let to_union a =
         Some { unions = new_unions; u_c2 = a.c2; u_alph = a.alph }
     else None
 
+let rec bitset_to_seq gap set =
+    match set with
+    | Raw x -> x
+    | Packed (len, bitset, seq) ->
+            let res = Sequence.create len in
+            let seq = bitset_to_seq gap seq in
+            let cnt = ref (Sequence.length seq) in
+            for i = len - 1 downto 0 do
+                let to_prepend =
+                    if BitSet.is_set bitset i then 
+                        let () = decr cnt in
+                        Sequence.get seq !cnt
+                    else gap
+                in
+                Sequence.prepend res to_prepend
+            done;
+            (*
+            assert (
+                if not (res = x) then begin
+                    Printf.printf "I am getting \n%s\n%s\n%!"
+                    (Sequence.to_string res Alphabet.nucleotides)
+                    (Sequence.to_string x Alphabet.nucleotides);
+                    false end else true);
+            *)
+            res
+
+let seq_to_bitset gap seq seqo =
+    let len = Sequence.length seq in
+    let set = BitSet.create len in
+    for i = 0 to len - 1 do
+        if gap <> Sequence.get seq i then BitSet.set set i;
+    done;
+    Packed (len, set, seqo)
+
+
 let add t (seq, code) =
     let ns = Codes.add code seq t.sequences in
-    let na = Codes.add code (seq, seq) t.aligned_children in
+    let na = Codes.add code (Raw seq, Raw seq) t.aligned_children in
     { t with sequences = ns; aligned_children = na;
     priority = code :: t.priority }
 
@@ -116,8 +155,8 @@ let of_array spec sc code =
     let no_cost = { min = 0.0; max = 0.0 } in
     let adder (x, y, z, acc) (a, b) = 
         let a = Sequence.clone a in
-        (Codes.add b a x), (Codes.add b no_cost y), (Codes.add b (a, a) z), 
-        (b :: acc)
+        (Codes.add b a x), (Codes.add b no_cost y), 
+        (Codes.add b (Raw a, Raw a) z), (b :: acc)
     in
     let empty = Codes.empty in
     let seqs, costs, algn_chld, priority = 
@@ -198,6 +237,9 @@ let union self ua ub =
             and c2 = ua.u_c2 in
             let gap = Cost_matrix.Two_D.gap c2 in
             let union code (tmpa, tmpb) res_union =
+                let tmpa = bitset_to_seq gap tmpa 
+                and tmpb = bitset_to_seq gap tmpb 
+                in
                 let uniona = Codes.find code ua.unions
                 and unionb = Codes.find code ub.unions in
                 if Sequence.is_empty uniona.Sequence.Unions.seq gap then
@@ -349,12 +391,12 @@ let median a b =
         if Sequence.is_empty seqa gap then
             let new_costs = Codes.add code no_cost res_costs 
             and new_median = Codes.add code seqb res_medians 
-            and new_algn_chld = Codes.add code (seqb, seqb) res_algn_chld in
+            and new_algn_chld = Codes.add code (Raw seqb, Raw seqb) res_algn_chld in
             new_median, new_algn_chld, new_costs, total
         else if Sequence.is_empty seqb gap then
             let new_costs = Codes.add code no_cost res_costs 
             and new_median = Codes.add code seqa res_medians 
-            and new_algn_chld = Codes.add code (seqa, seqa) res_algn_chld in
+            and new_algn_chld = Codes.add code (Raw seqa, Raw seqa) res_algn_chld in
             new_median, new_algn_chld, new_costs, total
         else 
             let tmpa, tmpb, tmpcost = Sequence.Align.align_2 seqa seqb c2 m in
@@ -364,8 +406,12 @@ let median a b =
                 { min = tmp_cost; max = tmp_cost } 
             in
             let new_median = Codes.add code seqm res_medians
-            and new_costs = Codes.add code rescost res_costs 
-            and new_algn_chld = Codes.add code (tmpa, tmpb) res_algn_chld
+            and new_costs = Codes.add code rescost res_costs in
+            let ba = seq_to_bitset gap tmpa (Raw seqa)
+            and bb = seq_to_bitset gap tmpb (Raw seqb) in
+            assert (tmpa = bitset_to_seq gap ba);
+            assert (tmpb = bitset_to_seq gap bb);
+            let new_algn_chld = Codes.add code (ba, bb) res_algn_chld
             and new_total = total + tmpcost in
             new_median, new_algn_chld, new_costs, new_total
     in
@@ -409,6 +455,8 @@ let median_3 p n c1 c2 =
     let median_union code sp (res_medians, costs) = 
         let res,cost = 
             let a, b = Codes.find code n.aligned_children in
+            let a = bitset_to_seq gap a 
+            and b = bitset_to_seq gap b in
             assert (Sequence.length a = Sequence.length b);
             let res =
                 Sequence.Align.union a b in

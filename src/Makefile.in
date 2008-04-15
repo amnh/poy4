@@ -208,7 +208,7 @@ else
 endif
 endif
 
-TREE = enum.cmo bitSet.cmo tree.cmo rtree.cmo hash_tbl.cmo gen_rtree.cmo \
+TREE = tree.cmo rtree.cmo hash_tbl.cmo gen_rtree.cmo \
 	graphps/graphps.cmo $(TREEOUTPUT) ptree.cmo searchInformation.cmo \
 	chartree.cmo sparceMatrix.cmo unionTree.cmo allDirChar.cmo sampler.cmo \
 	queues.cmo tabus.cmo treeSearch.cmo impliedAlignment.cmo charTransform.cmo \
@@ -229,8 +229,8 @@ ifneq ($(USEWIN32), true)
 	GETRUSAGE := getrusage.o
 endif
 
-BASE_OBJS :=  memProfiler.cmo $(READLINE) sleep.o timer.cmo $(GETRUSAGE) \
-	compileFlags.cmo buildNumber.cmo \
+BASE_OBJS :=  memProfiler.cmo enum.cmo bitSet.cmo $(READLINE) sleep.o \
+	timer.cmo $(GETRUSAGE) compileFlags.cmo buildNumber.cmo \
 	version.cmo sadmanlib.cma $(INTERFACE) \
 	sexpr.cmo tags.cmo poyFormaters.cmo fileStream.cmo sequences.cma  \
 	array_ops.cmo $(PARSER) distances.cma $(CHARACTER) \
