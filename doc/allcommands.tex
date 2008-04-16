@@ -142,7 +142,8 @@
             iteration. The consensus trees are based on best trees recovered in each replicate
             with zero-length branches collapsed.
             All the arguments of \poycommand{calculate\_support} command are optional and
-            their order is arbitrary.
+            their order is arbitrary.  For examples of scripts implementing support measures see 
+            tutorials \texttt{4.3} and \texttt{4.4}. 
             
 The \poycommand{calculate\_support} command does not output support values by default. The output of
             support values must be requested using the command~\ccross{report}. 
@@ -991,7 +992,8 @@ The \poycommand{calculate\_support} command does not output support values by de
             loci. This data type allows for locus-level rearrangements specified by
             the argument \nccross{dynamic\_pam}{dynamicpam} of the command
             \nccross{transform}{transformcommand}. Locus homologies are
-            determined dynamically, but based on annotated regions~\cite{vinh2006}.} 
+            determined dynamically, but based on annotated regions~\cite{vinh2006}
+            (for a sample script using this data type see tutorial \texttt{4.7}.} 
             {}
 
         \argumentdefinition{breakinv}{\obligatory{(STRING, STRING, 
@@ -1013,7 +1015,7 @@ The \poycommand{calculate\_support} command does not output support values by de
             command~\nccross{transform}{transformcommand}.  
             Unlike when using \poycommand{annotated} data type,
             both locus-level and nucleotide-level homologies
-            are determined dynamically~\cite{vinh2007}. If chromosome sequences were imported as
+            are determined dynamically~\cite{vinh2007} (see tutorial \texttt{4.6}). If chromosome sequences were imported as
             nucleotide type data, they can be converted to chromosome type data
             using the argument \poyargument{seq\_to\_chrom} of
             \nccross{transform}{transformcommand}.} 
@@ -1083,7 +1085,7 @@ The \poycommand{calculate\_support} command does not output support values by de
             homologies are determined dynamically using distance
             threshold levels specified by the argument
             \nccross{chrom\_hom}{chromhom}
-            of \nccross{transform}{transformcommand}.} 
+            of \nccross{transform}{transformcommand}(for a sample script using this data type see tutorial \texttt{4.9}.} 
             {}
             
         \argumentdefinition{nucleotides}{\obligatory{(\poystring list)}}
@@ -1657,7 +1659,7 @@ The \poycommand{calculate\_support} command does not output support values by de
                 additive and nonadditive characters currently in memory.  In
                 order to export an implied alignment as a Hennig86 file, the
                 characters must first be transformed into static characters
-                using the \poycommand{transform} command: 
+                using the \poycommand{transform} command (see example in tutorial \texttt{4.2}): 
                 \begin{flushleft}
                     \poycommand{transform ((all, static\_approx))} \\
                     \poycommand{report ("report.ss", phastwinclad)}
@@ -2325,7 +2327,7 @@ The \poycommand{calculate\_support} command does not output support values by de
                 session.}
                 {root}
 
-            \argumentdefinition[timer]{\obligatory{\poyint}}
+            \argumentdefinition{timer}{\obligatory{\poyint}}
                 {Specifies the lapse of time in seconds that should have passed
                 between reporting the total execution time of a swap and build
                 command. If the timer is set to 0, then no time messages are
@@ -2994,7 +2996,7 @@ The \poycommand{calculate\_support} command does not output support values by de
             See the command~\ccross{read} for the description on how to load the \poyargument{custom\_
             alphabet} and \poyargument{breakinv} character types. The optional list of arguments
             includes the arguments of the \poyargument{dynamic\_pam} that can also
-            be specified subsequently, as a separate step.}
+            be specified subsequently, as a separate step (for a sample script using this character transformation see tutorial \texttt{4.8}).}
             {customtobreakinv}
              
         \argumentdefinition{seq\_to\_chrom}{\obligatory{([argument list])}}   
