@@ -63,6 +63,7 @@ swap()
 select()
 report("all_trees",trees:(total),"constree", graphconsensus,
 "diagnosis",diagnosis)
+transform ((all, static_approx))report ("phastwinclad.ss", phastwinclad)
 exit()
 \end{verbatim}
 
@@ -75,6 +76,8 @@ exit()
 \item \texttt{swap(around)} This commands specifies that the the imported tree is subjected to alternating SPR and TBR branch swapping routine (the default of \poy) following the trajectory of search that completely evaluates the neighborhood of the tree (by using \poyargument{around}).
 \item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory.
 \item \texttt{report("all\_trees",trees:(total),"constree",\\graphconsensus,"diagnosis",diagnosis)} This command produces a series of outputs of the results of the search. It includes a file containing best trees in parenthetical notation and their costs (\texttt{all\_trees}), a graphical representation (in PostScript format) of the strict consensus (\texttt{constree}), and the diagnoses for all best trees (\texttt{diagnosis}).
+\item \texttt{transform ((all, "static\_approx"))} This command transforming all data into static homology characters corresponding to their implied alignments is necessary before reporting the data in the Hennig86 format.
+\item \texttt{report ("phastwinclad.ss", phastwinclad)}  This command produces a file in the Hennig86 format which can be imported into other programs, such as WinClada.
 \item \texttt{exit()} This commands ends the \poy session.
 \end{itemize}
 
@@ -85,7 +88,7 @@ calculation on trees constructed using dynamic homology characters
     
    \begin{verbatim}
 (* Bremer support part 1: generating trees *)
-read("18s.fas",28s.fas")
+read("18s.fas","28s.fas")
 set(root:"Americhernus")
 build(200)
 swap(all,visited:"tmp.trees", timeout:3600)
@@ -94,7 +97,7 @@ report("my.tree",trees)
 exit()
 
 (* Bremer support part 2: Bremer calculations *)
-read("18s.fas",28s.fas","my.tree")
+read("18s.fas","28s.fas","my.tree")
 report("support_tree.ps",graphsupports:bremer:"tmp.trees")
 exit()
 \end{verbatim}
@@ -265,7 +268,7 @@ For example, observations of developmental stages could be represented in a corr
 \begin{verbatim}
 (* Custom Alphabet to Breakinv characters *)
 read(custom_alphabet:("ca1.fas","m1.fas"))
-transform(custom_to_breakinv:())
+transform((all,custom_to_breakinv:()))
 transform((all,dynamic_pam:(locus_breakpoint:20,
 locus_indel:(10,1.5),median:1,swap_med:1)))
 build()
@@ -279,7 +282,7 @@ exit()
 \begin{itemize}
 \item \texttt{(* Custom Alphabet to Breakinv characters  *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
 \item \texttt{read(custom\_alphabet:("ca1.fas","m1.fas"))} This command imports the user-defined \poyargument {custom\_alphabet} character file \texttt{ca1.fas} and the accompanying transformation matrix \texttt{m1.fas}.
-\item \texttt{transform(custom\_to\_breakinv:())} This command transforms \poyargument {custom\_alphabet} characters to \poyargument {breakinv} characters which allow for rearrangement operations.
+\item \texttt{transform((all,custom\_to\_breakinv:()))} This command transforms \poyargument {custom\_alphabet} characters to \poyargument {breakinv} characters which allow for rearrangement operations.
 \item \texttt{transform((all,dynamic\_pam:(locus\_breakpoint:20,locus\_\\indel:(10,1.5),median:1,swap\_med:1)))}  The \poycommand{transform} follow\-ed by the argument \poyargument{dynamic\_pam} specifies the conditions to be applied when calculating medians. The argument \poyargument{locus\_breakpoint:20} applies a breakpoint distance calculation where the integer value specifies the rearrangement cost of \poyargument {breakinv} elements. The argument \poyargument{locus\_indel:10,1.5} specifies the indel costs for each \poyargument {breakinv} element, whereby the integer 10 sets the gap opening cost and the float 1.5 sets the gap extension cost.  The default values are applied to the \poyargument{median} and \poyargument{swap\_med} arguments to minimize the time require for these nested search options.   To more exhaustively perform these calculations trees generated from initial builds can be imported to the program and reevaluated with values greater than 1 designated for the \poyargument{median} and \poyargument{swap\_med} arguments
 \item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees.  It is highly recommended that a greater number of Wagner builds be implemented when analyzing data for purposes other than this demonstration.
 \item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
