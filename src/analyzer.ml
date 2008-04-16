@@ -277,6 +277,8 @@ let dependency_relations (init : Methods.script) =
                         [([Trees], [Trees], init, Parallelizable)]
             in
             res
+    | (`StandardSearch _) ->
+            [([Trees;Data], [Trees], init, NonComposable)]
     | #Methods.perturb_method as meth ->
             let res = 
                 match meth with
@@ -1526,6 +1528,8 @@ let script_to_string (init : Methods.script) =
             res
     | #Methods.local_optimum ->
             "@[swap the trees in memory@]"
+    | `StandardSearch _ ->
+            "@[execute an automated search@]"
     | #Methods.perturb_method as meth ->
             let res = 
                 match meth with
@@ -1809,6 +1813,7 @@ let is_master_only (init : Methods.script) =
     | #Methods.transform
     | #Methods.build 
     | #Methods.local_optimum 
+    | `StandardSearch _
     | #Methods.perturb_method 
     | #Methods.char_operations
     | #Methods.escape_local

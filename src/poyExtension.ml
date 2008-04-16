@@ -84,6 +84,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                     | a = application_command -> `S a 
                     | x = read -> `S x 
                     | x = rename -> `S x
+                    | x = search -> `S x
                     | x = cur_expr -> `L x ]
         -> x] ];
         (* Application commands *)
@@ -537,12 +538,23 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ LIDENT "annchrom_to_breakinv"; ":"; left_parenthesis; x = LIST0
                         [x = chromosome_argument -> x] SEP ","; right_parenthesis -> 
                             <:expr<`AnnchromToBreakinv $exSem_of_list x$>> ] | 
-
                 [ LIDENT "dynamic_pam"; ":"; left_parenthesis; x = LIST0 
                         [ x = chromosome_argument -> x] SEP ","; right_parenthesis -> 
                             <:expr<`ChangeDynPam $exSem_of_list x$>> ] | 
                 [ LIDENT "chrom_to_seq" -> <:expr<`ChromToSeq []>> ] |
                 [ LIDENT "breakinv_to_custom" -> <:expr<`BreakinvToSeq []>> ] 
+            ];
+        std_search_argument:
+            [   
+                [ LIDENT "memory"; ":"; x = flex_integer -> <:expr<`MaxRam $x$>> ] |
+                [ LIDENT "hits"; ":"; x = flex_integer -> <:expr<`MinHits $x$>> ] |
+                [ LIDENT "time"; ":"; x = flex_float -> <:expr<`MaxTime $x$>> ]
+            ];
+        search:
+            [
+                [ LIDENT "search"; left_parenthesis; a = LIST0 [ x =
+                    std_search_argument -> x ] SEP ",";  right_parenthesis ->
+                    <:expr<`StandardSearch $exSem_of_list a$>>] 
             ];
         neg_integer_or_float:
             [

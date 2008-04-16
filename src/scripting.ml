@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2713 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2726 $"
 
 module IntSet = All_sets.Integers
 
@@ -1171,6 +1171,179 @@ ELSE
     let args = Sys.argv
 END
 
+let automated_search folder max_time max_memory min_hits run =
+    let timer = Timer.start () in
+    let get_memory () =
+        (Gc.stat ()).Gc.heap_words 
+    in
+    let command_processor = PoyCommand.of_parsed false in
+    let trees = ref run.trees in
+    let best_cost = ref max_float 
+    and hits = ref 0 
+    and memory_change = ref (get_memory ())
+    and memory_limit = ref false 
+    and run = ref { run with trees = `Empty } in
+    let update_information step =
+        match step with
+        | `Initial run ->
+                (* We only update the number of hits and the memory change *)
+                let cost = Ptree.get_cost `Adjusted (Sexpr.first run.trees) in
+                if cost < !best_cost then begin 
+                    best_cost := cost;
+                    hits := 1;
+                end else if cost = !best_cost then incr hits
+                else ();
+                let current_memory = get_memory () in
+                let memory_delta = current_memory - !memory_change in
+                if current_memory + memory_delta > max_memory then 
+                    memory_limit := true
+                else ();
+                memory_change := current_memory;
+        | `Others run ->
+                let cost, hit = 
+                    Sexpr.fold_left (fun (cost, hits) x ->
+                        let nc = Ptree.get_cost `Adjusted x in
+                        if nc = cost then (cost, hits + 1) 
+                        else if nc < cost then (nc, 1)
+                        else (cost, hits)) (max_float, 0) run.trees
+                in
+                best_cost := cost;
+                hits := hit;
+    in
+    let select_if_necessary () =
+        if !memory_limit then
+            let len = Sexpr.length !trees in
+            let com = command_processor (CPOY select (best:[len - 1])) in
+            let nrun = folder { !run with trees = !trees } com in
+            run := nrun
+        else ()
+    in
+    let remaining_time () =
+        max_time -. (Timer.wall timer)
+    in
+    let did_initial = ref false in
+    let stop_if_necessary state =
+        let time = Timer.wall timer in
+        if time >= max_time || !hits >= min_hits then raise Exit
+        else ();
+        let fraction =
+            match state with
+            | `Initial when not !did_initial -> 0.66
+            | `Perturb -> 
+                    did_initial := true;
+                    0.66
+            | _ -> 1.0
+        in
+        if time >= (fraction *. max_time) then raise Exit 
+        else 
+            match state with
+            | `Initial -> if !hits >= (min_hits / 2) then raise Exit
+            | _ -> ()
+    in
+    let get_cost nrun =
+        Ptree.get_cost `Adjusted (Sexpr.first nrun.trees)
+    in
+    let iterations_counter = ref 0 in
+    let fuse_counter = ref 0 in
+    let st = Status.create "Automated Search"  None "" in 
+    try
+    while true do
+    let search_iteration_status = Status.create "RAS + TBR" None "" in
+    Status.full_report search_iteration_status;
+    try
+        (* We run this command in chunks of 10 trees to try to maintain a 
+        * set of trees and run fusing on them often but not too much *)
+        for i = 1 to 10 do
+            incr iterations_counter;
+            Status.message search_iteration_status ("Searching on tree number " ^ string_of_int
+            !iterations_counter);
+            Status.full_report search_iteration_status;
+            let do_build_transform = 0 = i mod 4 in
+            let run_to_use = 
+                if do_build_transform then
+                    let run = 
+                        { !run with trees = `Single (Sexpr.first !trees) }
+                    in
+                    let com = 
+                        command_processor 
+                        (CPOY transform (auto_sequence_partition,
+                        auto_static_approx)) 
+                    in
+                    folder run com
+                else !run
+            in
+            let command = CPOY build (1) in 
+            let trans = command_processor command in
+            let nrun = folder run_to_use trans in
+            let nrun =
+                if do_build_transform then
+                    update_trees_to_data false { !run with trees = nrun.trees }
+                else nrun
+            in
+            let build_cost = get_cost nrun in
+            let nrun = folder nrun (command_processor 
+                (CPOY swap (spr, timeout:[remaining_time ()]))) in
+            let do_perturb = build_cost = get_cost nrun in
+            let prev_trees = !trees in
+            trees := Sexpr.union nrun.trees !trees;
+            update_information (`Initial nrun);
+            if do_perturb || 0.5 < Random.float 1.0 then begin
+                let pert = 
+                    CPOY 
+                    perturb (iterations:4, transform (static_approx), 
+                    swap (spr, timeout:[remaining_time ()]))
+                in
+                let trans = command_processor pert in
+                let nrun = folder nrun trans in
+                trees := Sexpr.union nrun.trees prev_trees;
+                update_information (`Initial nrun);
+            end;
+            select_if_necessary ();
+            stop_if_necessary `Initial;
+        done;
+        raise Exit
+    with
+    | Exit ->
+            Status.finished search_iteration_status;
+            let fuse_iteration_status = 
+                Status.create "Fusing Trees" None "" in
+            try
+                run := { !run with trees = !trees };
+                let len = Sexpr.length !trees in
+                trees := `Empty;
+                for i = 0 to (2 * len) do
+                    incr fuse_counter;
+                    Status.message fuse_iteration_status 
+                    ("Generation " ^ string_of_int !fuse_counter);
+                    update_information (`Others !run);
+                    Status.full_report fuse_iteration_status;
+                    stop_if_necessary `Fuse;
+                    let fus = 
+                        CPOY fuse (iterations:1, swap (spr,
+                        timeout:[remaining_time ()])) 
+                    in
+                    let fus = command_processor fus in
+                    run := folder !run fus;
+                done;
+                trees := (!run).trees;
+                run := { !run with trees = `Empty };
+                Status.finished fuse_iteration_status;
+            with
+            | Exit ->
+                    Status.finished fuse_iteration_status;
+                    raise Exit
+    done;
+    !run
+    with 
+    | Exit -> 
+            Status.finished st;
+            Status.user_message (Status.Output (None, false, []))
+            ("The@ search@ evaluated@ " ^ string_of_int !iterations_counter ^ 
+            "@ independent@ repetitions@ with@ ratchet@ and@ fusing@ " ^
+            "for@ " ^ string_of_int !fuse_counter ^ "@ generations.@\n");
+            !run
+
+
 let rec process_application run item = 
     let run = reroot_at_outgroup run in
     match item with
@@ -1702,7 +1875,6 @@ END
                 let trees = 
                     build_initial run.trees run.data run.nodes meth
                 in
-
                 { run with trees = trees }
             | trans ->
                 let runs = explode_trees run in
@@ -1767,6 +1939,14 @@ END
                 in
                 let trees = Sexpr.map run_and_untransform runs in
                 { run with trees = trees })
+    | `StandardSearch (max_time, min_hits, max_memory) ->
+            let get_default x def = 
+                match x with
+                | None -> def
+                | Some x -> x
+            in
+            automated_search (List.fold_left folder) (get_default max_time 3600.) 
+            (get_default max_memory 550000) (get_default min_hits max_int) run
     | #Methods.perturb_method as meth ->
             warn_if_no_trees_in_memory run.trees;
             { run with trees = CT.perturbe run.data run.trees meth }

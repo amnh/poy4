@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2693 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2726 $"
 
 exception TimedOut
 
@@ -667,6 +667,7 @@ type script = [
     | `GatherBootstrap
     | `GatherBremer
     | `SelectYourTrees
+    | `StandardSearch of (float option * int option * int option)
     | input
     | transform
     | build

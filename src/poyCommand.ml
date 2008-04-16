@@ -313,6 +313,12 @@ type searcha = [
     | `Transform of bool
 ]
 
+type std_searcha = [
+    | `MaxRam of int
+    | `MinHits of int
+    | `MaxTime of float
+]
+
 type command = [
     | `Read of reada list 
     | build
@@ -324,6 +330,7 @@ type command = [
     | `Select of selecta list
     | `Rename of renamea list
     | `Search of searcha list
+    | `StandardSearch of std_searcha list
     | transform
     | `Perturb of perturba list
     | `Repeat of (int * command list)
@@ -967,6 +974,13 @@ let transform_search items =
             else default_search
     | _ -> failwith "Forgot to update the list of options of search?"
 
+let transform_stdsearch items = 
+    `StandardSearch (List.fold_left (fun (a, b, c) x ->
+        match x with
+        | `MaxTime x -> (Some x, b, c)
+        | `MaxRam x -> (a, b, Some x)
+        | `MinHits x -> (a, Some x, c)) (None, None, None) items)
+
 
 let rec transform_command (acc : Methods.script list) (meth : command) : Methods.script list =
     match meth with
@@ -1002,6 +1016,8 @@ let rec transform_command (acc : Methods.script list) (meth : command) : Methods
             (transform_swap_arguments x) :: acc
     | `Search args ->
             (transform_search args) @ acc
+    | `StandardSearch args ->
+            (transform_stdsearch args) :: acc
     | `Fuse x ->
           (transform_fuse x) :: acc
     | `Support x ->
@@ -1444,9 +1460,19 @@ let create_expr () =
                 -> x] SEP ","; 
                     right_parenthesis -> (`Swap a :> swap) ]
             ];
+        std_search_argument:
+            [   
+                [ LIDENT "memory"; ":"; x = INT -> `MaxRam (int_of_string x) ] |
+                [ LIDENT "hits"; ":"; x = INT -> `MinHits (int_of_string x) ] |
+                [ LIDENT "time"; ":"; x = integer_or_float -> `MaxTime (float_of_string x)
+                ]
+            ];
         search:
             [
-                [ LIDENT "search"; left_parenthesis; a = LIST0 [x =
+                [ LIDENT "search"; left_parenthesis; a = LIST0 [ x =
+                    std_search_argument -> x ] SEP ",";  right_parenthesis ->
+                    `StandardSearch a] |
+                [ LIDENT "_search"; left_parenthesis; a = LIST0 [x =
                     search_argument -> x]  SEP
                 ","; right_parenthesis -> `Search a ]
             ];
