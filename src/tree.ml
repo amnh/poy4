@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2706 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2731 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -1673,7 +1673,7 @@ let print_tree id tree =
     let mark_visited node_id visited =
         (All_sets.Integers.add node_id visited) in
     let visit_node node_id prefix =
-        (print_endline (prefix ^ (string_of_int node_id))) in
+        (prerr_endline (prefix ^ (string_of_int node_id))) in
     let rec visit_nbr nbr_id prefix visited =
         if (already_visited nbr_id visited) then
             visited
@@ -1706,7 +1706,7 @@ let print_tree id tree =
     @return () - prints all the trees in the forest. *)
 let print_forest forest =
     let handles = (All_sets.Integers.elements (get_handles forest)) in
-        (ignore (List.map (fun x -> print_newline ();
+        (ignore (List.map (fun x -> prerr_newline ();
                                     print_tree x forest) handles))
 
 module Fingerprint = struct

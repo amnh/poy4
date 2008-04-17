@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2722 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2731 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -730,6 +730,11 @@ let build_consensus maj out_grp rt_id ptrees =
 let get_component_root handle ptree = 
     All_sets.IntegerMap.find handle ptree.component_root
 
+let get_component_root_median handle ptree = 
+    match (get_component_root handle ptree).root_median with
+    | None -> failwith "No root assigned"
+    | Some (_, x) -> x
+
 let get_roots ptree =
     All_sets.Integers.fold (fun x acc -> (get_component_root x ptree) :: acc) 
     ptree.tree.Tree.handles []
@@ -1108,7 +1113,7 @@ let rec joins ?(counter=0) ptree loc tabu joiner =
                       print_endline "Ptree.joins";
                       raise err
           in
-          let status = joiner j1 in
+          let status = joiner tabu j1 in
           match status with
           | Tree.Break -> (Tree.Break, succ counter)
           | Tree.Continue -> joins ~counter:(succ counter) ptree loc tabu joiner
@@ -1129,7 +1134,7 @@ let rec joins ?(counter=0) ptree loc tabu joiner =
 let spr_join search
         (break_delta : float)
         (clade_node : Tree_Ops.a) clade_id incremental j2 tabu ptree =
-    let joiner j1 =
+    let joiner tabu j1 =
         if ndebug_traject_spr
         then odebug ("traj: spr join: " ^ Tree.string_of_jxn j1 ^ " and " ^
                          Tree.string_of_jxn j2);
@@ -1145,6 +1150,46 @@ let spr_join search
             ptree in                    (* post-break tree *)
     joins ptree `Left tabu joiner
 
+let swap_tree_and_clade (ptree, tree_delta, break_delta, clade_id, 
+    clade_node, incremental) : ((Tree_Ops.a, Tree_Ops.b) p_tree * 
+    Tree.break_delta * float * int * 'a * incremental list)=
+    let old_tree_delta, old_clade_delta = tree_delta in
+    match old_tree_delta with
+    | `Edge (v, l1, l2, lst) ->
+            let edge = Tree.Edge (l1, l2) in
+            let ptree, newincr = Tree_Ops.reroot_fn false edge ptree in
+            let new_tree_delta = (old_clade_delta, old_tree_delta) in
+            let ptree = Tree_Ops.incremental_uppass ptree incremental in
+            let clade_root = get_component_root l1 ptree in
+            (match clade_root.root_median with
+            | Some (_, clade_node) ->
+                    (ptree, new_tree_delta, break_delta, v, clade_node, 
+                    newincr)
+            | None -> failwith "Unexpected swap_tree_and_clade")
+    | `Single (v, _) -> 
+            let new_tree_delta = old_clade_delta, old_tree_delta in
+            let ptree = Tree_Ops.incremental_uppass ptree incremental in
+            let clade_node = get_node_data v ptree in
+            (ptree, new_tree_delta, break_delta, v, clade_node, [])
+
+let break_side njoins njoins_last search tabu (ptree, tree_delta, break_delta, clade_id, 
+    clade_node, incremental) =
+    if ndebug_break_delta
+    then odebug ("break_delta is " ^ string_of_float break_delta);
+    let t1_h, t2_h = Tree.get_break_handles tree_delta (ptree.tree) in
+    let t1_h, t2_h = handle_of t1_h ptree, handle_of t2_h ptree in
+    let j2 = Tree.side_to_jxn (let (l, r) = tree_delta in r) in
+    let tabu = tabu#clone in
+    tabu#update_break
+        ptree tree_delta t1_h t2_h clade_id;
+    let res, joins =
+        spr_join search break_delta clade_node clade_id incremental j2 tabu
+            ptree in
+    njoins := !njoins + joins;
+    njoins_last := joins;
+    if ndebug_traject_summary
+    then odebug (string_of_int joins ^ " joins");
+    res
 
 let spr_step
         ptree
@@ -1156,52 +1201,8 @@ let spr_step
     let njoins_last = ref 0 in
     if ndebug_traject_spr
     then odebug "traj: spr: begin";
-    let swap_tree_and_clade (ptree, tree_delta, break_delta, clade_id, 
-        clade_node, incremental) : ((Tree_Ops.a, Tree_Ops.b) p_tree * 
-        Tree.break_delta * float * int * 'a * incremental list)=
-        let old_tree_delta, old_clade_delta = tree_delta in
-        match old_tree_delta with
-        | `Edge (v, l1, l2, lst) ->
-                let edge = Tree.Edge (l1, l2) in
-                let ptree, newincr = Tree_Ops.reroot_fn false edge ptree in
-                let new_tree_delta = (old_clade_delta, old_tree_delta) in
-                let ptree = Tree_Ops.incremental_uppass ptree incremental in
-                let clade_root = get_component_root l1 ptree in
-                (match clade_root.root_median with
-                | Some (_, clade_node) ->
-                        (ptree, new_tree_delta, break_delta, v, clade_node, 
-                        newincr)
-                | None -> failwith "Unexpected swap_tree_and_clade")
-        | `Single (v, _) -> 
-                let new_tree_delta = old_clade_delta, old_tree_delta in
-                let ptree = Tree_Ops.incremental_uppass ptree incremental in
-                let clade_node = get_node_data v ptree in
-                (ptree, new_tree_delta, break_delta, v, clade_node, [])
-    in
     (* break edge (e1, e2) and treat the e2 part as the clade *)
     (* then try to reattach the clade in each tabu#join_edge location *)
-    let break_side (ptree, tree_delta, break_delta, clade_id, 
-        clade_node, incremental) =
-        if ndebug_break_delta
-        then odebug ("break_delta is " ^ string_of_float break_delta);
-        let t1_h, t2_h = Tree.get_break_handles tree_delta (ptree.tree) in
-        let t1_h, t2_h = handle_of t1_h ptree, handle_of t2_h ptree in
-        let j2 = Tree.side_to_jxn (let (l, r) = tree_delta in r) in
-
-        let tabu = tabu#clone in
-        tabu#update_break
-            ptree tree_delta t1_h t2_h clade_id;
-
-        let res, joins =
-            spr_join search break_delta clade_node clade_id incremental j2 tabu
-                ptree in
-        njoins := !njoins + joins;
-        njoins_last := joins;
-        if ndebug_traject_summary
-        then odebug (string_of_int joins ^ " joins");
-        res
-    in
-
     (* Try to break in each possible location *)
     let rec break () =
         match tabu#break_edge with
@@ -1231,7 +1232,7 @@ let spr_step
                       if not (Tree.is_leaf e1 ptree.tree) then begin
                               if ndebug || ndebug_traject_summary
                               then odebug "checking left...";
-                              break_side breakage
+                              break_side njoins njoins_last search tabu#clone breakage
                           end else Tree.Continue
                   in
                   match res with
@@ -1241,7 +1242,7 @@ let spr_step
                               if ndebug || ndebug_traject_summary
                               then odebug "checking right...";
                               let breakage = swap_tree_and_clade breakage in
-                              match break_side breakage with
+                              match break_side njoins njoins_last search tabu#clone breakage with
                               | Tree.Break -> ()
                               | _ -> break ()
                           end else break ()
@@ -1268,16 +1269,15 @@ let rec tbr_join search ?(updt=[]) tabu ?(rerooted=false) ptree j2 clade_node
         break_delta =
     let reroots = ref 0 in
     let original_ptree = ptree in
-    let rec reroot updt tabu rerooted ptree j2 the_node =
-        let joiner j1 =
+    let rec reroot new_break_delta updt tabu rerooted ptree j2 the_node =
+        let joiner tabu j1 =
             if ndebug then odebug "TBR: Joining";
             if ndebug_traject_tbr
             then odebug ("traj: tbr join: " ^ Tree.string_of_jxn j1 ^ " and " ^
                              Tree.string_of_jxn j2);
-            let tabu = tabu#clone in
             search#process
                 Tree_Ops.cost_fn
-                break_delta             (* break delta *)
+                new_break_delta             (* break delta *)
                 the_node                (* clade node *)
                 (* clade_id *)
                 Tree_Ops.join_fn
@@ -1295,8 +1295,11 @@ let rec tbr_join search ?(updt=[]) tabu ?(rerooted=false) ptree j2 clade_node
               | Some reroot_edge -> begin
                     if ndebug then odebug ("TBR: Rerooting");
                     let ptree, updt = 
-                        Tree_Ops.reroot_fn false reroot_edge original_ptree 
+                        Tree_Ops.reroot_fn true reroot_edge original_ptree 
                     in
+                    let new_break_delta = break_delta +.
+                    ((get_cost `Adjusted original_ptree) -. (get_cost `Adjusted
+                    ptree)) in
                     let j2, the_node =
                         let Tree.Edge (e1, e2) = reroot_edge in
                         let (e1, e2) = (get_handle_id e1 ptree,
@@ -1308,10 +1311,10 @@ let rec tbr_join search ?(updt=[]) tabu ?(rerooted=false) ptree j2 clade_node
                         | _ -> failwith "Ptree.tbr_step.reroot"
                     in
                     incr reroots;
-                    reroot updt tabu true ptree j2 the_node
+                    reroot new_break_delta updt tabu true ptree j2 the_node
                 end
     in
-    let res = reroot updt tabu rerooted ptree j2 clade_node in
+    let res = reroot break_delta updt tabu#clone rerooted ptree j2 clade_node in
     if ndebug then 
         odebug ("Total number of reroots performed " ^ string_of_int
                     !reroots);
@@ -1323,20 +1326,24 @@ let tbr_step
         (tabu : (Tree_Ops.a, Tree_Ops.b) tabu_mgr)
         (search : (Tree_Ops.a, Tree_Ops.b) search_mgr) =
 
+    let njoins = ref 0
+    and njoins_last = ref 0 in
     if ndebug_traject_tbr
     then odebug "traj: tbr: begin";
     (* break edge (e1, e2) and treat the e2 part as the clade *)
     (* then try to reattach the clade in each tabu#join_edge location *)
     let break_side_reroot tabu e1 e2 =
         search#breakin (Tree.Edge (e1, e2));
-        let (ptree, tree_delta, break_delta, clade_id, clade_node, incremental) = 
+        let ((ptree, tree_delta, break_delta, clade_id, clade_node, incremental)
+        as breakage) = 
             Tree_Ops.break_fn (e1, e2) ptree in
         (* NOTE: we don't update based on [incremental], so the tree is in a
            slightly inconsistent state.  This is OK in our particular case,
            since we then proceed to reroot the tree. *)
 
         let t1_h, t2_h = Tree.get_break_handles tree_delta (ptree.tree) in
-        let j2 = Tree.side_to_jxn (let (l, r) = tree_delta in r) in
+        let l, r = tree_delta in
+        let j2 = Tree.side_to_jxn r in
 
         if ndebug then odebug ("Breaking at "
                                ^ string_of_int t1_h
@@ -1347,10 +1354,23 @@ let tbr_step
             let len = string_of_int (List.length edges) in
             odebug ("Subtree with " ^ len ^ " edges");
         end;
+        let tabu = tabu#clone in
         tabu#update_break
             ptree tree_delta t1_h t2_h clade_id;
-
-        tbr_join search tabu ptree j2 clade_node break_delta
+        let use_spr_instead =
+            let is_single = function `Single _ -> true | _ -> false in
+            (is_single r) || (is_single l) || 
+            ((Node.num_otus None clade_node) < 3) ||
+            ((Node.num_otus None (get_component_root_median t1_h ptree)) < 3)
+        in
+        if use_spr_instead then
+            let () = if ndebug then odebug "Will do spr" else () in
+            match break_side njoins njoins_last search tabu#clone breakage with
+            | Tree.Break -> Tree.Break
+            | _ -> break_side njoins njoins_last search tabu#clone (swap_tree_and_clade breakage)
+        else 
+            let () = if ndebug then odebug "Will do tbr" else () in
+            tbr_join search tabu#clone ptree j2 clade_node break_delta
     in
 
     (* Try to break in each possible location *)

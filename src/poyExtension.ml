@@ -544,11 +544,30 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ LIDENT "chrom_to_seq" -> <:expr<`ChromToSeq []>> ] |
                 [ LIDENT "breakinv_to_custom" -> <:expr<`BreakinvToSeq []>> ] 
             ];
+        time:
+            [
+                [ days = flex_float; ":"; hours = flex_float; ":";
+                minutes = flex_float ->
+                    <:expr<(int_of_float ((($days$) *. 60. *. 60. *. 24.) +.
+                    ((float_of_string $hours$) *. 60. *. 60.) +.
+                    ((float_of_string $minutes$) *. 60. )))>> ] 
+            ];
+        memory:
+            [
+                [ "gb"; ":"; x = flex_float -> 
+                    <:expr<int_of_float ($x$ *. 1000. *. 1000. *. 1000. /. (float_of_int
+                    (Sys.word_size / 8)))>> ] |
+                [ "mb"; ":"; x = flex_float ->
+                    <:expr<int_of_float ($x$ *. 1000. *. 1000. /. (float_of_int
+                    (Sys.word_size / 8)))>> ]
+            ];
         std_search_argument:
             [   
-                [ LIDENT "memory"; ":"; x = flex_integer -> <:expr<`MaxRam $x$>> ] |
-                [ LIDENT "hits"; ":"; x = flex_integer -> <:expr<`MinHits $x$>> ] |
-                [ LIDENT "time"; ":"; x = flex_float -> <:expr<`MaxTime $x$>> ]
+                [ LIDENT "memory"; ":"; x = memory -> <:expr<`MaxRam $x$>> ] |
+                [ LIDENT "hits"; ":"; x = flex_float -> <:expr<`MinHits $x$>> ] |
+                [ LIDENT "target_cost"; ":"; x = flex_float -> <:expr<`Target $x$>> ] |
+                [ LIDENT "max_time"; ":"; x = time -> <:expr<`MaxTime $x$>> ] |
+                [ LIDENT "min_time"; ":"; x = time -> <:expr<`MinTime $x$>> ]
             ];
         search:
             [

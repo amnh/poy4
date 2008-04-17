@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2726 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2731 $"
 
 module IntSet = All_sets.Integers
 
@@ -1171,14 +1171,15 @@ ELSE
     let args = Sys.argv
 END
 
-let automated_search folder max_time max_memory min_hits run =
+let automated_search folder max_time min_time max_memory min_hits target_cost run =
     let timer = Timer.start () in
-    let get_memory () =
-        (Gc.stat ()).Gc.heap_words 
-    in
+    let get_memory () = (Gc.stat ()).Gc.heap_words in
     let command_processor = PoyCommand.of_parsed false in
     let trees = ref run.trees in
-    let best_cost = ref max_float 
+    let best_cost = ref 
+        (match target_cost with
+        | None -> max_float 
+        | Some x -> x)
     and hits = ref 0 
     and memory_change = ref (get_memory ())
     and memory_limit = ref false 
@@ -1212,10 +1213,17 @@ let automated_search folder max_time max_memory min_hits run =
     in
     let select_if_necessary () =
         if !memory_limit then
+            let () = Printf.printf "I HAVE REACHED THE MEMORY LIMIT!!!\n%!" in
             let len = Sexpr.length !trees in
-            let com = command_processor (CPOY select (best:[len - 1])) in
-            let nrun = folder { !run with trees = !trees } com in
-            run := nrun
+            let com = command_processor (CPOY select (best:[max (len / 2) 1])) in
+            let () = 
+                Gc.full_major ();
+                memory_limit := false;
+                let nrun = folder { !run with trees = !trees } com in
+                run := { nrun with trees = `Empty };
+                trees := nrun.trees;
+            in 
+            ()
         else ()
     in
     let remaining_time () =
@@ -1224,7 +1232,8 @@ let automated_search folder max_time max_memory min_hits run =
     let did_initial = ref false in
     let stop_if_necessary state =
         let time = Timer.wall timer in
-        if time >= max_time || !hits >= min_hits then raise Exit
+        if time >= max_time then raise Exit
+        else if time >= min_time && !hits >= min_hits then raise Exit
         else ();
         let fraction =
             match state with
@@ -1282,7 +1291,7 @@ let automated_search folder max_time max_memory min_hits run =
             in
             let build_cost = get_cost nrun in
             let nrun = folder nrun (command_processor 
-                (CPOY swap (spr, timeout:[remaining_time ()]))) in
+                (CPOY swap (tbr, timeout:[remaining_time ()]))) in
             let do_perturb = build_cost = get_cost nrun in
             let prev_trees = !trees in
             trees := Sexpr.union nrun.trees !trees;
@@ -1291,7 +1300,7 @@ let automated_search folder max_time max_memory min_hits run =
                 let pert = 
                     CPOY 
                     perturb (iterations:4, transform (static_approx), 
-                    swap (spr, timeout:[remaining_time ()]))
+                    swap (tbr, timeout:[remaining_time ()]))
                 in
                 let trans = command_processor pert in
                 let nrun = folder nrun trans in
@@ -1319,7 +1328,7 @@ let automated_search folder max_time max_memory min_hits run =
                     Status.full_report fuse_iteration_status;
                     stop_if_necessary `Fuse;
                     let fus = 
-                        CPOY fuse (iterations:1, swap (spr,
+                        CPOY fuse (iterations:1, swap (tbr,
                         timeout:[remaining_time ()])) 
                     in
                     let fus = command_processor fus in
@@ -1336,12 +1345,33 @@ let automated_search folder max_time max_memory min_hits run =
     !run
     with 
     | Exit -> 
+            let r =
+IFDEF USEPARALLEL THEN
+                let run = folder !run [`Barrier] in
+                let pot_mem =
+                    try
+                        ((get_memory ()) * (Mpi.comm_size Mpi.comm_world)) 
+                    with
+                    | _ -> max_int
+                in
+                    let arr = Mpi.allgather pot_mem Mpi.comm_world in
+                    let mem = Array.fold_left max 0 arr in
+                    if mem < max_memory then
+                        folder run [`GatherTrees ([], [])]
+                    else
+                        let arr = Mpi.allgather (Sexpr.length run.trees) Mpi.comm_world in
+                        let max = Array.fold_left max 0 arr in
+                        folder run [`GatherTrees ([`BestN (Some max)], [])]
+ELSE
+                !run
+END
+            in
             Status.finished st;
-            Status.user_message (Status.Output (None, false, []))
+            Status.user_message Status.Information 
             ("The@ search@ evaluated@ " ^ string_of_int !iterations_counter ^ 
             "@ independent@ repetitions@ with@ ratchet@ and@ fusing@ " ^
-            "for@ " ^ string_of_int !fuse_counter ^ "@ generations.@\n");
-            !run
+            "for@ " ^ string_of_int !fuse_counter ^ "@ generations.");
+            r
 
 
 let rec process_application run item = 
@@ -1939,14 +1969,17 @@ END
                 in
                 let trees = Sexpr.map run_and_untransform runs in
                 { run with trees = trees })
-    | `StandardSearch (max_time, min_hits, max_memory) ->
+    | `StandardSearch (max_time, min_time, min_hits, max_memory, target_cost) ->
             let get_default x def = 
                 match x with
                 | None -> def
                 | Some x -> x
             in
-            automated_search (List.fold_left folder) (get_default max_time 3600.) 
-            (get_default max_memory 550000) (get_default min_hits max_int) run
+            let max_time = get_default max_time 3600. in
+            let min_time = get_default min_time max_time in
+            automated_search (List.fold_left folder) max_time min_time 
+            (get_default max_memory (2 * 1000 * 1000 * (1000 / (Sys.word_size /
+            8)))) (get_default min_hits max_int) target_cost run
     | #Methods.perturb_method as meth ->
             warn_if_no_trees_in_memory run.trees;
             { run with trees = CT.perturbe run.data run.trees meth }
@@ -2613,7 +2646,7 @@ let set_console_run r = console_run_val := r
                 let optarg = 
                     let neigh = `ChainNeighborhoods neigh in
                     (neigh, 0.0, 1, `Last, [], None, `BestFirst,
-                    `DistanceSorted, `UnionBased None, `Bfs None, [])
+                    `DistanceSorted false, `UnionBased None, `Bfs None, [])
                 in
                 PTS.find_local_optimum 
                 ~base_sampler:sampler data (Sampler.create ()) 

@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2726 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2731 $"
 
 exception TimedOut
 
@@ -376,7 +376,7 @@ type search_space = [
 
 type tabu_break_strategy = [
     | `Randomized
-    | `DistanceSorted
+    | `DistanceSorted of bool
     | `OnlyOnce
 ]
 
@@ -667,7 +667,8 @@ type script = [
     | `GatherBootstrap
     | `GatherBremer
     | `SelectYourTrees
-    | `StandardSearch of (float option * int option * int option)
+    | `StandardSearch of 
+        (float option * float option * int option * int option * float option)
     | input
     | transform
     | build

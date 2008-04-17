@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2704 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2731 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -563,8 +563,8 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
         let breakfn =
             match break_tabu with
             | `Randomized -> PhyloTabus.random_break
-            | `DistanceSorted -> 
-                    PhyloTabus.sorted_break partition_for_other_tabus
+            | `DistanceSorted early -> 
+                    PhyloTabus.sorted_break early partition_for_other_tabus
             | `OnlyOnce -> PhyloTabus.only_once_break
         in
         let joinfn =

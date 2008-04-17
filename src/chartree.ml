@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 2296 2007-10-09 17:17:31Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 2296 $"
+(* $Id: chartree.ml 2731 2008-04-17 19:17:50Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 2731 $"
 
 
 (** chartree.ml *)
@@ -1082,8 +1082,10 @@ let rec features meth lst =
         let lst = 
             match break_tabu with
             | `Randomized -> ("tabu.break", "randomized") :: lst
-            | `DistanceSorted -> 
+            | `DistanceSorted true -> 
                     ("tabu.break", "sorted edges by distance") :: lst
+            | `DistanceSorted false -> 
+                    ("tabu.break", "sorted edges by distance with early stop") :: lst
             | `OnlyOnce ->
                     ("tabu.break", "only break once each edge, never again") :: lst
         in

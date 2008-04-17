@@ -1972,69 +1972,51 @@ The \poycommand{calculate\_support} command does not output support values by de
 	\syntax{\obligatory{(\optional{argument list})}}
 
 	\begin{poydescription}
-            The command \poycommand{search} implements a default strategy for a
-             search. The command integrates the \poycommand{build},
-            \poycommand{transform}, and \poycommand{swap} commands for an
-            efficient initial search. Tree building and swapping are executed
-            under default settings; the \poyargument{transform} provides an
-            option of making sequential transformations of characters that
-            substantially speeds up the search, however, at the expense of
-            accuracy in calculating tree cost. The arguments are optional and
-            their order is arbitrary. Even though the entire sequence of the commands
-            can also be specified by setting \poycommand{build},
-            \poycommand{transform}, and \poycommand{swap} individually to
-            corresponding values, the advantage of using \poycommand{search}
-            command is that these steps are already predefined.
+            \poycommand{search} implements a default search strategy that
+            includes tree building, swaping using TBR, perturbation using
+            Ratchet, and tree fusing, with different targets for the search to
+            finish, including a maximum and minimum execution time, the maximum
+            memory used during the search, and the minimum number of times the
+            shortest tree is found, and the expected cost for the shortest
+            tree.
 	\end{poydescription}
 
 	\begin{arguments}
 
-		\argumentdefinition{build}{\optional{\poybool}}
-            {Specifies either to build ten new trees (boolean value
-            \texttt{true}) or to use the trees stored in memory (that is do not
-            build new trees; boolean value \texttt{false}). The default for
-            \poyargument{build} is \texttt{true}.}
-            {buildsearch}
-
-		\argumentdefinition{transform}{\optional{\poybool}}
-            {Specifies to either transform characters as part of the search by
-            sequential execution of commands
-            \poyargument{auto\_sequence\_partition} and
-            \poyargument{auto\_static\_approx} (both arguments of the command
-            \nccross{transform}{transformcommand}) (boolean
-            value \texttt{true}) or not (boolean value \texttt{false}). 
-            This combination of character transformations substantially accelerates the
-            search but at the expense of accuracy in calculating the exact tree cost. The
-            default is \texttt{false} (characters are not transformed).}
-            {transformarg2}
-
+        \argumentdefinition{max\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
+        {Maximum total execution time for the search. The time is specified as
+        days:hours:minutes. For example, executing the search for 1.5 days can
+        be expressed as 1:12:00 or 1.5:00:00.}{maxtime}
+        \argumentdefinition{min\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
+        {Minimum toal execution time for the search. This command is useful when
+        the number of \poyargument{hits} is specified but the actual cost of the
+        tree is unknow. In this case, POY will search for at least the time
+        specified by this argument.}{mintime}
+        \argumentdefinition{memory}{\obligatory{size}}{The maximum ammount of
+        memory that the program should use. POY will \emph{try to maintain this
+        constraint}, but it may surpass it in certain operations. This is used
+        more as a hint for the program to avoid passing the limit, but under
+        certain circumstances it might be required to use more memory to avoid
+        program failures.}{}
+        \argumentdefinition{hits}{\obligatory{\poyint}}{The minimum number of
+        times that the minimum cost should be found before stopping the search.}{}
+        \argumentdefinition{target\_cost}{\obligatory{\poyfloat}}{The user
+        provided upper limit for the cost of the shortest tree. }{}
 	\end{arguments}
 
-    \poydefaults{build:true, transform:false}{Under default settings, 10 trees
-    are built, then subjected
-     to branch swapping using alternating SPR and TBR, keeping one tree per
-     swap (the default of \poycommand{swap}), and without transforming characters.}
+    \poydefaults{max\_time:0:1:0, min\_time:0:1:0, memory:gb:2}{Under default
+    parameters, the program will run a search for at most one hour using at most
+    2 GB of memory.  \emph{If the user doesn't provide a \poyargument{max\_time} argument, 
+    the search will always timeout after one hour.}}
         
     	\begin{poyexamples}
         	
-	\poyexample{search(build:true, transform:false)}
-            {This command builds 10 Wagner trees by random addition sequence (the default
-            of \poycommand{build}), performs alternating SPR and TBR branch swapping,
-            and keeps one tree per swap (the default of \poycommand{swap}). No characters are 
-            transformed during the search. Because the 
-            default of the argument \poycommand{transform}
-            is \texttt{false}, it can be omitted from the list of argument. Therefore this command
-            is equivalent to \poycommand{search(build:true)}. Note that if there are
-            trees in memory, the new trees generated by \poycommand{search} replace
-            them.}
-	
-	\poyexample{search(transform:true)}
-	{This command performs branch swapping on the existing trees in memory
-	under default parameters of \poycommand{swap}, as shown in the examples
-	above. The searches are performed on characters transformed using
-	sequential application of \poycommand{transform} arguments
-	\poyargument{auto\_sequence\_partition} and \poyargument{auto\_static\_approx}
-	to speed up the swapping procedure.}
+	\poyexample{search(hits:100, target\_cost:385, max\_time:1:12:13)}
+            {This command will attempt as many builds, swaps, ratchets, and tree
+            fusings as possible within a time of 1 hour, 12 minutes, and 13
+            seconds, finding at least 100 hits (whichever occurs first, the time
+            limit or the number of hits), knowing that the expected cost of the
+            best hits is at most 385 steps.}
 	
             \end{poyexamples}
 

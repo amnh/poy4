@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 2704 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2731 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -92,9 +92,9 @@ module type S = sig
     val random_break : emc
 
     (** Choose the edges to break, starting with those that show greates 
-    * length *)
+    * length.  *)
     val sorted_break : 
-        [ `Sets of All_sets.IntSet.t | `Height of int ] option ->  emc
+        bool -> [ `Sets of All_sets.IntSet.t | `Height of int ] option ->  emc
 
     (** Break an edge once and only once, never again *)
     val only_once_break : emc
@@ -783,8 +783,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                     Some edge, true, depth
                 end
             in
-            if depth > max_distance then self#next_edge
-            else begin
+            if depth > max_distance then begin
+                self#next_edge
+            end else begin
                 if do_check then begin
                     if self#should_continue_this_path edge has_potential then begin
                         currently_doing <- edge;
@@ -801,7 +802,8 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             begin match currently_doing with
             | Some edge -> 
                     Stack.push (edge, current_depth, x) to_compare;
-            | None -> ()
+            | None -> 
+                    ()
             end;
             currently_doing <- None
 
@@ -818,7 +820,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                 | None -> false
                 | _ -> true
 
-        method clone = ({<
+        method clone = 
+            ({<
+            currently_doing = currently_doing;
             to_compare = Stack.copy to_compare;
             to_calculate_for_compare = Stack.copy to_calculate_for_compare;
             to_do_later = Stack.copy to_do_later;
@@ -841,6 +845,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         val mutable extra_constraints = []
 
         method clone = ({<
+            currently_doing = currently_doing;
             to_compare = Stack.copy to_compare;
             to_calculate_for_compare = Stack.copy to_calculate_for_compare;
             to_do_later = Stack.copy to_do_later;
@@ -1154,10 +1159,12 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         method break_distance (_ : float) = ()
 
         method private add_children_to_queue child parent depth =
-            if depth >= max_depth then ()
+            if depth >= max_depth then Printf.fprintf stderr "Maximum depth?\n%!"
             else 
                 try
-                    let node = Ptree.get_node child current_tree in
+                    match Ptree.get_node child current_tree with
+                    | Tree.Single _ | Tree.Leaf _ -> ()
+                    | node ->
                     let (a, b) = Tree.other_two_nbrs parent node in
                     if List.exists (undirected_edge (a, child)) exclude_edges then
                         ()
@@ -1166,7 +1173,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                         ()
                     else Queue.push (b, child, depth + 1) to_do;
                 with
-                | _ -> ()
+                | err -> 
+                        Printf.fprintf stderr "There is an error?\n%!";
+                        raise err
 
         method private clear_queues = Queue.clear to_do
 
@@ -1439,11 +1448,19 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         let initial_edges = Array.of_list edges in
         Array.map (fun (_, x) -> x) initial_edges
 
-    class sort_edges_by_cost dont_cut ptree =
+    class sort_edges_by_cost early_stop dont_cut ptree =
         object (self)
-            inherit all_edges `Both (create_initial_edges dont_cut ptree) ptree 
+            inherit all_edges `Both (create_initial_edges dont_cut ptree) ptree
+            as super
+
+        val mutable es = early_stop
+
+        method next_edge =
+            if es && (next_edge > (Array.length edges) / 2) then None
+            else super#next_edge
 
         method private update_with_deltas tree tdelta =
+            es <- false;
             let removed = 
                 match break_deltas with
                 | [a; b] -> (Tree.break_to_edge_delta (a, b))
@@ -1944,7 +1961,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
     let random_break ptree = new randomized_edges ptree
 
-    let sorted_break sets ptree = 
+    let sorted_break early_stop sets ptree = 
         let dont_cut =
             match sets with
             | None -> []
@@ -1952,7 +1969,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                     fst (generate_partition_edges x ptree)
             | Some (`Height x) -> max_height ptree
         in
-        new sort_edges_by_cost dont_cut ptree
+        new sort_edges_by_cost early_stop dont_cut ptree
 
     let only_once_break ptree = new only_once_break ptree
     let simple_dfs_from_middle ptree = new simple_dfs ptree
@@ -1966,6 +1983,11 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         val right = new side_manager `Right ptree  join reroot
         val break = break ptree
         val mutable last_side : [`Left | `Right] = `Left
+
+        val mutable left_edge = None
+        val mutable right_edge = None
+
+        val mutable did_reroot = false
 
         method clone = ({< 
             left = left#clone;
@@ -1988,16 +2010,40 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         method join_edge side =
             last_side <- side;
             match side with
-            | `Left -> left#join_edge
-            | `Right -> right#join_edge
+            | `Left -> 
+                    if did_reroot then
+                        (match left_edge with
+                        | (Some x) as e ->
+                                left_edge <- None;
+                                e
+                        | None -> left#join_edge)
+                    else left#join_edge
+            | `Right -> 
+                    if did_reroot then
+                        (match right_edge with
+                        | (Some x) as e ->
+                                right_edge <- None;
+                                e
+                        | None -> right#join_edge)
+                    else right#join_edge
 
 
         method reroot_edge (side : [`Left | `Right]) =
+            did_reroot <- true;
             match side with
             | `Left -> left#reroot_edge 
             | `Right -> right#reroot_edge
 
         method update_break tree (delta : Tree.break_delta) lh rh (_ : int) =
+            did_reroot <- false;
+            let () =
+                let get_side = function
+                    | (`Edge (_, a, b, _)) -> Some (Tree.Edge (a, b))
+                    | _ -> None
+                in
+                left_edge <- get_side (fst delta);
+                right_edge <- get_side (snd delta);
+            in
             let get_component_root item = 
                 let root = Ptree.get_component_root item tree in
                 match root.Ptree.root_median with
