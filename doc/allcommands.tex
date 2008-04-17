@@ -1987,21 +1987,26 @@ The \poycommand{calculate\_support} command does not output support values by de
         {Maximum total execution time for the search. The time is specified as
         days:hours:minutes. For example, executing the search for 1.5 days can
         be expressed as 1:12:00 or 1.5:00:00.}{maxtime}
+
         \argumentdefinition{min\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
         {Minimum toal execution time for the search. This command is useful when
         the number of \poyargument{hits} is specified but the actual cost of the
         tree is unknow. In this case, POY will search for at least the time
         specified by this argument.}{mintime}
+
         \argumentdefinition{memory}{\obligatory{size}}{The maximum ammount of
         memory that the program should use. POY will \emph{try to maintain this
         constraint}, but it may surpass it in certain operations. This is used
         more as a hint for the program to avoid passing the limit, but under
         certain circumstances it might be required to use more memory to avoid
         program failures.}{}
+
         \argumentdefinition{hits}{\obligatory{\poyint}}{The minimum number of
         times that the minimum cost should be found before stopping the search.}{}
+
         \argumentdefinition{target\_cost}{\obligatory{\poyfloat}}{The user
-        provided upper limit for the cost of the shortest tree. }{}
+        provided upper limit for the cost of the shortest tree. }{targetcost}
+
 	\end{arguments}
 
     \poydefaults{max\_time:0:1:0, min\_time:0:1:0, memory:gb:2}{Under default
