@@ -43,7 +43,7 @@ function generate_binary {
 }
 
 OCAMLROOT=/opt/ocaml
-OCAMLVERSION=3.10.0
+OCAMLVERSION=3.10.2
 OCAML_PATH=/opt/ocaml/${OCAMLVERSION}
 
 # Generating for Panther, we don't produce parallel version.

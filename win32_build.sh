@@ -2,7 +2,7 @@
 # The environment MACHOST holds the URL of the macintosh host running the
 # virtual machine. The only argument contains the desired extra flags for the
 # configuration script (for example long sequence support). 
-export PATH=/home/andres/minglibs/bin:/cygdrive/c/ocamlmgw/3_10_1/bin:$PATH
+export PATH=/home/andres/minglibs/bin:/cygdrive/c/ocamlmgw/3_10_2/bin:$PATH
 source $HOME/.keychain/${HOSTNAME}-sh
 
 sequential=0

@@ -1,7 +1,7 @@
 #!/bin/bash
 # MACHOST holdst the URL of the macintosh computer hosting the virtual machine.
 # Script to generate binaries for Linux
-export PATH=/opt/ocaml-3.10.0/bin:$PATH
+export PATH=/opt/ocaml-3.10.2/bin:$PATH
 LINUX_DIRECTORY=linux
 mkdir linux
 rm -f linux/*
