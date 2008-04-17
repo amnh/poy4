@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 2399 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 2734 $"
 
-(* $Id: alphabet.ml 2399 2007-10-24 15:34:07Z andres $ *)
+(* $Id: alphabet.ml 2734 2008-04-17 22:48:42Z andres $ *)
 
 exception Illegal_Character of string
 exception Illegal_Code of int
@@ -94,9 +94,9 @@ let threonine = 17
 let tryptophan = 18
 let tyrosine = 19
 let valine = 20
-let aa_gap = 21
-let unspecified = 22
-let all_aminoacids = 22
+let unspecified = 21
+let all_aminoacids = 21
+let aa_gap = 22
 
 let list_to_a lst gap all kind = 
     let add (s2c, c2s, cmp, cnt) (a, b, c) =
