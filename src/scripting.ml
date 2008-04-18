@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2731 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2741 $"
 
 module IntSet = All_sets.Integers
 
@@ -1200,20 +1200,24 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
                     memory_limit := true
                 else ();
                 memory_change := current_memory;
-        | `Others run ->
+        | `Others (before, run) ->
                 let cost, hit = 
-                    Sexpr.fold_left (fun (cost, hits) x ->
-                        let nc = Ptree.get_cost `Adjusted x in
-                        if nc = cost then (cost, hits + 1) 
-                        else if nc < cost then (nc, 1)
-                        else (cost, hits)) (max_float, 0) run.trees
+                    let get_cost run =
+                        Sexpr.fold_left (fun (cost, hits) x ->
+                            let nc = Ptree.get_cost `Adjusted x in
+                            if nc = cost then (cost, hits + 1) 
+                            else if nc < cost then (nc, 1)
+                            else (cost, hits)) (max_float, 0) run.trees
+                    in
+                    let cost_b, hit_b = get_cost before 
+                    and cost_a, hit_a = get_cost run in
+                    cost_a, (if cost_b = cost_a then hit_a - hit_b else hit_a)
                 in
                 best_cost := cost;
-                hits := hit;
+                hits := !hits + hit;
     in
     let select_if_necessary () =
         if !memory_limit then
-            let () = Printf.printf "I HAVE REACHED THE MEMORY LIMIT!!!\n%!" in
             let len = Sexpr.length !trees in
             let com = command_processor (CPOY select (best:[max (len / 2) 1])) in
             let () = 
@@ -1324,7 +1328,7 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
                     incr fuse_counter;
                     Status.message fuse_iteration_status 
                     ("Generation " ^ string_of_int !fuse_counter);
-                    update_information (`Others !run);
+                    update_information (`Others (!run, !run));
                     Status.full_report fuse_iteration_status;
                     stop_if_necessary `Fuse;
                     let fus = 
@@ -1332,10 +1336,16 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
                         timeout:[remaining_time ()])) 
                     in
                     let fus = command_processor fus in
-                    run := folder !run fus;
+                    let r = folder !run fus in 
+                    update_information (`Others (!run, r));
+                    run := r;
                 done;
-                trees := (!run).trees;
-                run := { !run with trees = `Empty };
+                let r = 
+                    let c = command_processor (CPOY select (unique)) in
+                    folder !run c 
+                in
+                trees := r.trees;
+                run := { r with trees = `Empty };
                 Status.finished fuse_iteration_status;
             with
             | Exit ->
@@ -1368,9 +1378,11 @@ END
             in
             Status.finished st;
             Status.user_message Status.Information 
-            ("The@ search@ evaluated@ " ^ string_of_int !iterations_counter ^ 
-            "@ independent@ repetitions@ with@ ratchet@ and@ fusing@ " ^
-            "for@ " ^ string_of_int !fuse_counter ^ "@ generations.");
+            ("The search evaluated " ^ string_of_int !iterations_counter ^ 
+            " independent repetitions with ratchet and fusing " ^
+            "for " ^ string_of_int !fuse_counter ^ " generations. " ^
+            "The shortest tree was found " ^ string_of_int !hits ^ 
+            " times.");
             r
 
 
