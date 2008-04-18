@@ -21,7 +21,7 @@
  * implemented. The tabu manager specifies the order in which edges are broken by
  * the SPR and TBR search procedures. The list of edges in the tabu should always
  * match the edges in the tree. *)
-let () = SadmanOutput.register "Tabus" "$Revision: 2731 $"
+let () = SadmanOutput.register "Tabus" "$Revision: 2738 $"
 
 (* A module that provides the managers for a local search (rerooting, edge
 * breaking and joining. A tabu manager controls what edges are next ina series
@@ -1974,6 +1974,79 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
     let only_once_break ptree = new only_once_break ptree
     let simple_dfs_from_middle ptree = new simple_dfs ptree
 
+    let add_to_banned_list neigh1 neigh2 b1 b2 map_of_banned tree =
+        let add_to_map_banned a neigh1 b1 b2 map_of_banned =
+            Tree.EdgeMap.add (Tree.Edge (a, neigh1)) 
+            (Tree.EdgeSet.add (Tree.Edge (b1, b2)) 
+            (try Tree.EdgeMap.find (Tree.Edge (a, neigh1)) map_of_banned with
+             Not_found -> Tree.EdgeSet.empty))
+            map_of_banned
+        in
+        let add_one_direction neigh1 neight2 map_of_banned =
+            match Ptree.get_node neigh1 tree with
+            | Tree.Single _ | Tree.Leaf _ -> map_of_banned
+            | node ->
+                    let a, b = Tree.other_two_nbrs neight2 node in
+                    map_of_banned 
+                    --> add_to_map_banned a neigh1 b1 b2 
+                    --> add_to_map_banned b neigh1 b1 b2
+        in
+        map_of_banned
+        --> add_one_direction neigh1 neigh2
+        --> add_one_direction neigh2 neigh1
+
+    let total_banned_size map =
+        Tree.EdgeMap.fold (fun _ set acc ->
+            acc + (Tree.EdgeSet.cardinal set)) map 0
+
+    let add_to_banned_list map_of_banned broken left right tree =
+        match broken with
+        | Some (Tree.Edge (b1, b2)) -> 
+                (*
+                Status.user_message Status.Information ("The initial size is " ^
+                string_of_int (total_banned_size map_of_banned));
+                *)
+                let process_side side map_of_banned =
+                    match side with
+                    | None -> map_of_banned
+                    | Some (Tree.Edge (neigh1, neigh2)) -> 
+                            add_to_banned_list neigh1 neigh2 b1 b2 map_of_banned
+                            tree
+                in
+                let res = map_of_banned --> process_side left --> process_side
+                right in
+                (*
+                Status.user_message Status.Information ("The new size is " ^
+                string_of_int (total_banned_size res));
+                *)
+                res
+        | None -> assert false
+
+    let find_banned_for_broke edge map =
+        match edge with
+        | Some ((Tree.Edge (a, b)) as e) -> 
+                let baned = 
+                    Tree.EdgeSet.union 
+                    (try Tree.EdgeMap.find e map with Not_found ->
+                        Tree.EdgeSet.empty)
+                    (try Tree.EdgeMap.find (Tree.Edge (b, a)) map with Not_found ->
+                        Tree.EdgeSet.empty)
+                in
+                (*
+                Status.user_message Status.Information 
+                ("The current baned has size " ^ string_of_int
+                (Tree.EdgeSet.cardinal baned));
+                *)
+                baned
+        | None -> assert false
+
+    let is_banned did_reroot e set =
+        if not did_reroot then
+            match e with
+            | Some ((Tree.Edge (a, b)) as e) ->
+                    Tree.EdgeSet.mem e set || Tree.EdgeSet.mem (Tree.Edge (b, a)) set
+            | None -> false
+        else false
 
     class standard_tabu (ptree : (Node.n, Edge.e) Ptree.p_tree) (join : semc) 
     (reroot : semc) (break : emc) = object (self)
@@ -1983,6 +2056,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         val right = new side_manager `Right ptree  join reroot
         val break = break ptree
         val mutable last_side : [`Left | `Right] = `Left
+        val banned_map = ref Tree.EdgeMap.empty
+        val mutable current_banned = Tree.EdgeSet.empty
+        val mutable last_edge_to_break = None
 
         val mutable left_edge = None
         val mutable right_edge = None
@@ -1990,6 +2066,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
         val mutable did_reroot = false
 
         method clone = ({< 
+            last_edge_to_break = last_edge_to_break;
             left = left#clone;
             right = right#clone;
             break = break#clone;
@@ -1997,7 +2074,9 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         method break_edge = 
             current_time <- print_time timer current_time;
-            break#next_edge
+            let r = break#next_edge in
+            last_edge_to_break <- r;
+            r
 
         method break_distance x = 
             let mgr = 
@@ -2009,30 +2088,41 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
 
         method join_edge side =
             last_side <- side;
-            match side with
-            | `Left -> 
-                    if did_reroot then
-                        (match left_edge with
-                        | (Some x) as e ->
-                                left_edge <- None;
-                                e
-                        | None -> left#join_edge)
-                    else left#join_edge
-            | `Right -> 
-                    if did_reroot then
-                        (match right_edge with
-                        | (Some x) as e ->
-                                right_edge <- None;
-                                e
-                        | None -> right#join_edge)
-                    else right#join_edge
+            let to_join =
+                match side with
+                | `Left -> 
+                        if did_reroot then
+                            (match left_edge with
+                            | (Some x) as e ->
+                                    left_edge <- None;
+                                    e
+                            | None -> left#join_edge)
+                        else left#join_edge
+                | `Right -> 
+                        if did_reroot then
+                            (match right_edge with
+                            | (Some x) as e ->
+                                    right_edge <- None;
+                                    e
+                            | None -> right#join_edge)
+                        else right#join_edge
+            in
+            if is_banned did_reroot to_join current_banned then 
+                self#join_edge side
+            else to_join
 
 
         method reroot_edge (side : [`Left | `Right]) =
             did_reroot <- true;
             match side with
-            | `Left -> left#reroot_edge 
-            | `Right -> right#reroot_edge
+            | `Left -> 
+                    let new_root = left#reroot_edge in
+                    if new_root = left_edge then self#reroot_edge `Left
+                    else new_root
+            | `Right -> 
+                    let new_root = right#reroot_edge in
+                    if new_root = right_edge then self#reroot_edge `Right
+                    else new_root
 
         method update_break tree (delta : Tree.break_delta) lh rh (_ : int) =
             did_reroot <- false;
@@ -2050,6 +2140,12 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
                 | Some (_, b) -> b
                 | None -> failwith "No root?"
             in
+            banned_map :=
+                add_to_banned_list !banned_map last_edge_to_break
+                left_edge right_edge tree;
+            current_banned <- 
+                find_banned_for_broke last_edge_to_break
+                !banned_map;
             let l_cld = get_component_root lh 
             and r_cld = get_component_root rh in
             left#update_break tree delta lh r_cld;
@@ -2058,6 +2154,7 @@ module Make  (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) : S w
             break#update_break tree delta lh r_cld
 
         method update_join tree jd =
+            banned_map := !banned_map;
             left#update_join tree jd;
             right#update_join tree jd;
             break#update_join tree jd
