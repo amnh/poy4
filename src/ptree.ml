@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2731 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2740 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1412,8 +1412,8 @@ type search_step =
                 searcher
 
 let search passit (searcher, name) search =
+    let status = Status.create name None ("Searching") in
     try
-        let status = Status.create name None ("Searching") in
         while search#any_trees do
             let (ptree, cost, tabu) = search#next_tree in
             Status.full_report ~adv:(int_of_float cost) status;
@@ -1422,7 +1422,12 @@ let search passit (searcher, name) search =
         Status.finished status;
         search
     with
-    | Methods.TimedOut when not passit -> search
+    | Methods.TimedOut when not passit -> 
+            Status.finished status;
+            search
+    | err ->
+            Status.finished status;
+            raise err
 
 (* This function will not find the local optimum, it will return as soon as a
 * better tree is found. *)
