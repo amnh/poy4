@@ -1974,52 +1974,54 @@ The \poycommand{calculate\_support} command does not output support values by de
 	\begin{poydescription}
             \poycommand{search} implements a default search strategy that
             includes tree building, swaping using TBR, perturbation using
-            Ratchet, and tree fusing, with different targets for the search to
-            finish, including a maximum and minimum execution time, the maximum
-            memory used during the search, and the minimum number of times the
-            shortest tree is found, and the expected cost for the shortest
-            tree.
+            ratchet, and tree fusing. The strategy involves specifying targets for 
+            a driven search, such as maximum and minimum execution times, 
+            maximum allowed memory consumption, minimum number of times the
+            shortest tree is found, and an expected cost for the shortest tree.
 	\end{poydescription}
 
 	\begin{arguments}
 
+        \argumentdefinition{hits}{\obligatory{\poyint}}{Specifies the minimum number of
+        times that the minimum cost must be reached before aborting the search.}{}
+        
         \argumentdefinition{max\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
         {Maximum total execution time for the search. The time is specified as
         days:hours:minutes. For example, executing the search for 1.5 days can
         be expressed as 1:12:00 or 1.5:00:00.}{maxtime}
+        
+        \argumentdefinition{memory}{\obligatory{\poylident:\poyfloat}}{Specifies the maximum amount of
+        memory allocated for the search. \poy \emph{attempts} to consume memory within
+        the specified limit, but it may surpass it in certain operations. The lident value expresses the 
+        units of memory (\poyargument{gb} for gigabites and \poyargument{mb} for megabites), 
+        whereas the float value specifies the actual value. Keeping memory consumption 
+        within the limit is approximate and is used as a rough guide to \poy, preventing 
+        the program from overflowing the memory. Under certain circumstances, however, 
+        it might be required to use more memory to avoid program failures.}{}
 
         \argumentdefinition{min\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
-        {Minimum toal execution time for the search. This command is useful when
+        {Specifies the minimum total execution time for the search. The time is specified as
+        days:hours:minutes. This command is useful when
         the number of \poyargument{hits} is specified but the actual cost of the
-        tree is unknow. In this case, POY will search for at least the time
+        tree is unknown. In this case, \poy performs the search for at least the time
         specified by this argument.}{mintime}
 
-        \argumentdefinition{memory}{\obligatory{size}}{The maximum ammount of
-        memory that the program should use. POY will \emph{try to maintain this
-        constraint}, but it may surpass it in certain operations. This is used
-        more as a hint for the program to avoid passing the limit, but under
-        certain circumstances it might be required to use more memory to avoid
-        program failures.}{}
-
-        \argumentdefinition{hits}{\obligatory{\poyint}}{The minimum number of
-        times that the minimum cost should be found before stopping the search.}{}
-
-        \argumentdefinition{target\_cost}{\obligatory{\poyfloat}}{The user
-        provided upper limit for the cost of the shortest tree. }{targetcost}
+        \argumentdefinition{target\_cost}{\obligatory{\poyfloat}}{Specifies the 
+        upper limit for the cost of the shortest tree.}{targetcost}
 
 	\end{arguments}
 
     \poydefaults{max\_time:0:1:0, min\_time:0:1:0, memory:gb:2}{Under default
-    parameters, the program will run a search for at most one hour using at most
-    2 GB of memory.  \emph{If the user doesn't provide a \poyargument{max\_time} argument, 
-    the search will always timeout after one hour.}}
+    parameters, the program performs a search for at most one hour using at most
+    2 GB of memory. \emph{If the user does not specify the value of \poyargument{max\_time}, 
+    the search will be aborted after one hour.}}
         
     	\begin{poyexamples}
         	
 	\poyexample{search(hits:100, target\_cost:385, max\_time:1:12:13)}
             {This command will attempt as many builds, swaps, ratchets, and tree
-            fusings as possible within a time of 1 hour, 12 minutes, and 13
-            seconds, finding at least 100 hits (whichever occurs first, the time
+            fusings as possible within the specified time of 1 day, 12 hours, and 13
+            minutes, finding at least 100 hits (whichever occurs first, the time
             limit or the number of hits), knowing that the expected cost of the
             best hits is at most 385 steps.}
 	

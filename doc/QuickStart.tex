@@ -229,6 +229,33 @@ script can be edited by typing in the commands directly in the \emph{Script Edit
     \label{fig:ScriptEditor_Window}
 \end{figure}
 
+\subsubsection{Timed Search}
+
+Timed search (Figure~\ref{fig:timed_search}) implements a default search strategy that effectively combines tree building with TBR branch swapping, parsimony ratchet, and tree fusing.  The \emph{Timed Search} window has the same four parameter groups described for the \emph{Simple Search}. However, the \emph{Search Parameters} section (called \emph{Search and Perturb Parameters}) contains four fields specifying the search targets instead of the \emph{Repetitions} field. These include the following:
+
+\begin{figure}
+\centering
+\begin{minipage}[c]{0.48\textwidth}
+   		\includegraphics[width=\textwidth]{figures/timedsearch_menu.jpg}
+\end{minipage}
+\quad
+\begin{minipage}[c]{0.48\textwidth}
+	   	\includegraphics[width=\textwidth]{figures/timedsearch_window.jpg}
+   	\end{minipage}
+	
+\caption{The \emph{Timed Search} window. Selecting \emph{Timed Search} from the \emph{Analysis} menu (left) and viewing the \emph{Timed Search} window options (right).}
+\label{fig:timed_search}
+\end{figure}
+
+\begin{description}
+    \item[Maximum time] The maximum total execution time for the search. The time is specified as
+        days:hours:minutes.
+    \item[Minimum time] The minimum total execution time for the search. The time is specified as
+        days:hours:minutes.
+    \item[Maximum memory] The maximum amount of memory allocated for the search.
+    \item[Minimum hits] The minimum number of times that the minimum cost must be reached before aborting the search.
+\end{description}
+
 \subsubsection{Search with Ratchet}
 
 The parsimony ratchet is a heuristic strategy to escape the local optima during tree searching~\cite{Nixon1999}. The \emph{Search with Ratchet} (Figure~\ref{fig:search_with_ratchet_window}) follows the same basic steps of a simple search but includes the ratchet step after the swap. In addition to the same four parameter groups described for the \emph{Simple Search} window, the \emph{Search Parameters} section provides the following ratchet parameters fields:
@@ -417,7 +444,7 @@ Console}. Note that the \emph{Interactive Console} does \emph{not} run in parall
 \end{minipage}
 \quad
 \begin{minipage}[c]{0.48\textwidth}
-	   	\includegraphics[width=\textwidth]{figures/create_script_window.jpg}
+	   	\includegraphics[width=\textwidth]{figures/create_script_menu.jpg}
    	\end{minipage}
 \caption{The \emph{Run Interactive Console} selection (left) opens \poy interactive console in a new window. The \emph{Create Script} selection opens the \emph{Script Editor} window (Figure~\ref{fig:ScriptEditor_Window}).}
 \label{fig:runinteractive}
