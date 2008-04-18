@@ -910,7 +910,7 @@ cm_CAML_free_3d (value v) {
 
 int
 cm_compare (cmt a, cmt b) {
-    int cmp;
+    int cmp, len_g;
     size_t len, len1;
     if (a->a_sz != b->a_sz) {
         return (a->a_sz - b->a_sz);
@@ -928,8 +928,9 @@ cm_compare (cmt a, cmt b) {
         return (a->is_metric - b->is_metric);
     }
     else {
-        len = (a->a_sz + 1) * sizeof(int);
-        len1 = (a->a_sz + 1) * sizeof(SEQT);
+        len_g = 2 * (1 << (a->lcm)) * (1 << (a->lcm));
+        len = len_g * sizeof(int);
+        len1 = len_g * sizeof(SEQT);
         cmp = memcmp (a->cost, b->cost, len);
         if (cmp != 0) return (cmp);
         cmp = memcmp (a->median, b->median, len1);
