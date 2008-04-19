@@ -271,12 +271,12 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                     <:expr<`UnionBased $handle_optional x$>> ]|
                 [ LIDENT "all"; x = OPT optional_integer -> <:expr<`AllBased
                 $handle_optional x$>> ] |
-                [ LIDENT "constraint"; ":"; x = flex_integer ->
+                [ LIDENT "constraint_p" -> <:expr<`Partition []>> ] |
+                [ LIDENT "constraint_p"; ":"; x = flex_integer ->
                     <:expr<`Partition [`MaxDepth $x$]>> ] |
-                [ LIDENT "constraint"; ":"; left_parenthesis; 
+                [ LIDENT "constraint_p"; ":"; left_parenthesis; 
                     x = LIST1 [x = constraint_options -> x] SEP ","; right_parenthesis
-                    -> <:expr<`Partition $exSem_of_list x$>> ] |
-                [ LIDENT "constraint" -> <:expr<`Partition []>> ]
+                    -> <:expr<`Partition $exSem_of_list x$>> ]
             ];
         build_argument:
             [
@@ -366,6 +366,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             ];
         boolean: 
             [
+                [ x = cur_expr -> <:expr<$x$>> ] |
                 [ LIDENT "true" -> <:expr<$str:"True"$>> ] |   
                 [ LIDENT "false" -> <:expr<$str:"False"$>> ]    
             ];
@@ -818,8 +819,11 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             ];
         break_method:
             [
-                [ LIDENT "randomized" -> <:expr<`Randomized>> ] |
-                [ LIDENT "distance" -> <:expr<`DistanceSorted>> ] |
+                [ LIDENT "randomized" -> <:expr<`Randomized>>] |
+                [ LIDENT "distance"; x = OPT optional_boolean -> 
+                    match x with
+                    | None -> <:expr<`DistanceSorted False>>
+                    | Some x -> <:expr<`DistanceSorted $x$>>] |
                 [ LIDENT "once" -> <:expr<`OnlyOnce>> ]
             ];
         constraint_options:
