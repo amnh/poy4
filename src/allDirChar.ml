@@ -1183,11 +1183,13 @@ with type b = AllDirNode.OneDirF.n = struct
     let cost_fn a b c d e =
         match !Methods.cost with
         | `Iterative
-        | `Normal -> cost_fn a b c d e 
-        | `Exact ->
+        | `Normal 
+        | `Exact ->cost_fn a b c d e 
+        (*
                 let pc = Ptree.get_cost `Adjusted e in
                 let nt, _ = join_fn [] a b e in
                 Ptree.Cost (pc -. (Ptree.get_cost `Adjusted nt))
+        *)
 
     let reroot_fn force edge ptree =
         let Tree.Edge (h, n) = edge in
