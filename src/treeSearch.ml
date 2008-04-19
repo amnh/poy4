@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2731 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2748 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -549,9 +549,9 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
     let partition_for_other_tabus =
         match join_tabu with
         | `Partition [] -> 
-                Some (`Height 2)
-                (* TMP
                 Some (`Sets (Lazy.force sets))
+                (* TMP
+                Some (`Height 2)
                 *)
         | _ -> None
     in
@@ -581,10 +581,10 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
                             | _ -> acc)
                         None options
                     in
-                    PhyloTabus.partitioned_join (`Height 4) (get_depth depth)
-                    (* TMP 
                     PhyloTabus.partitioned_join (`Sets (Lazy.force sets)) 
                     (get_depth depth)
+                    (* TMP 
+                    PhyloTabus.partitioned_join (`Height 4) (get_depth depth)
                     *)
         in
         let rerootfn =
@@ -794,14 +794,14 @@ module Make
 
     let collect_nodes data trees =
         let tree = Sexpr.first trees in
-        let rec aux_collect max cur acc = 
-            if cur = max then acc
-            else 
-                aux_collect max (cur + 1) 
-                (try (Ptree.get_node_data cur tree) :: acc with
-                | _ -> acc)
+        let aux_collect key node taxaacc = 
+            match node with
+            | Tree.Single _ | Tree.Leaf _ -> 
+                    (Ptree.get_node_data key tree) :: taxaacc
+            | _ -> taxaacc
         in
-        let nodes = aux_collect data.Data.number_of_taxa 0 [] in
+        let nodes = All_sets.IntegerMap.fold aux_collect 
+            tree.Ptree.tree.Tree.u_topo [] in
         nodes, List.map NodeH.to_other nodes
 
     let replace_contents downpass uppass get_code nodes ptree =
