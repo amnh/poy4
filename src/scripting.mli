@@ -86,7 +86,7 @@ val channel_run : in_channel -> unit
 
 val get_console_run : unit -> r
 
-val update_trees_to_data : bool -> r -> r
+val update_trees_to_data : bool -> bool -> r -> r
 
 val set_console_run : r -> unit
 

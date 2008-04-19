@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2741 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2751 $"
 
 module IntSet = All_sets.Integers
 
@@ -101,7 +101,7 @@ module type S = sig
 
     val get_console_run : unit -> r
 
-    val update_trees_to_data : bool -> r -> r
+    val update_trees_to_data : bool -> bool -> r -> r
 
     val set_console_run : r -> unit
 
@@ -240,7 +240,7 @@ ELSE
 END
 
 
-let update_trees_to_data load_data run =
+let update_trees_to_data force load_data run =
     let data, nodes = 
         if load_data then Node.load_data run.data 
         else run.data, run.nodes 
@@ -266,7 +266,7 @@ let update_trees_to_data load_data run =
                     nodes 0
             in
             let ach = Status.get_achieved st in
-            if are_leaves_different then
+            if force || are_leaves_different then
                 let tree = { tree with Ptree.node_data = nodes } in
                 let res = CT.transform_tree replacer tree in
                 let () = Status.full_report ~adv:(ach + 1) st in
@@ -291,7 +291,7 @@ let process_transform (run : r) (meth : Methods.transform) =
               CT.transform_nodes run.trees run.data run.nodes
                   [meth] 
           in
-          update_trees_to_data false { run with nodes = nodes; data = data }
+          update_trees_to_data false false { run with nodes = nodes; data = data }
     | #Methods.terminal_transform as meth ->
             let data, htbl = Data.randomize_taxon_codes meth run.data in
             let data, nodes = Node.load_data data in
@@ -304,7 +304,7 @@ let process_transform (run : r) (meth : Methods.transform) =
                         x.Ptree.tree })
                 run.trees 
             in
-            update_trees_to_data false
+            update_trees_to_data false false
             { run with nodes = nodes; data = data; trees = trees }
 
 let load_data (meth : Methods.input) data nodes =
@@ -446,7 +446,7 @@ let process_input run (meth : Methods.input) =
     let d, nodes = load_data meth run.data run.nodes in
     let run = { run with data = d; nodes = nodes } in
     (* check whether this read any trees *)
-    if [] = d.Data.trees then update_trees_to_data false run
+    if [] = d.Data.trees then update_trees_to_data false false run
     else
         let trees =
             Build.prebuilt run.data.Data.trees (run.data, run.nodes)
@@ -1290,7 +1290,7 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
             let nrun = folder run_to_use trans in
             let nrun =
                 if do_build_transform then
-                    update_trees_to_data false { !run with trees = nrun.trees }
+                    update_trees_to_data false false { !run with trees = nrun.trees }
                 else nrun
             in
             let build_cost = get_cost nrun in
@@ -1392,8 +1392,16 @@ let rec process_application run item =
     | `Interactive -> run
     | `Normal | `Exact | `Iterative as meth -> 
             if !Methods.cost <> meth then
-                let _ = Methods.cost := meth in
-                process_application run `ReDiagnose
+                match !Methods.cost with
+                | `Normal | `Exact when meth = `Iterative ->
+                        let () = Methods.cost := meth in
+                        process_application run `ReDiagnose
+                | `Iterative -> 
+                        let () = Methods.cost := meth in
+                        process_application run `ReDiagnose
+                | _ -> 
+                        let () = Methods.cost := meth in
+                        run
             else run
     | `Exit -> exit 0
     | `Version ->
@@ -1424,7 +1432,7 @@ let rec process_application run item =
     | `Logfile file -> StatusCommon.set_information_output file; run
     | `Redraw -> Status.redraw_screen (); run
     | `SetSeed v -> process_random_seed_set run v
-    | `ReDiagnose -> update_trees_to_data true run
+    | `ReDiagnose -> update_trees_to_data true true run
     | `Help item -> HelpIndex.help item; run
     | `Wipe -> empty ()
     | `Echo (s, c) ->
@@ -1901,7 +1909,7 @@ END
             warn_if_no_trees_in_memory run.trees;
             process_tree_handling run meth
     | #Methods.characters_handling as meth ->
-            update_trees_to_data true (process_characters_handling run meth)
+            update_trees_to_data false true (process_characters_handling run meth)
     | #Methods.taxa_handling as meth ->
             process_taxon_filter run meth 
     | #Methods.application as meth ->
@@ -2104,7 +2112,7 @@ END
                 in
                 choose_best trees)
     | #Methods.runtime_store as meth -> 
-            runtime_store (update_trees_to_data false) run meth 
+            runtime_store (update_trees_to_data false false) run meth 
     | `Repeat (n, comm) ->
             let res = ref run in
             for i = 1 to n do
