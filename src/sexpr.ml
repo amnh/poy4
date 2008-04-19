@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Sexpr" "$Revision: 2713 $"
+let () = SadmanOutput.register "Sexpr" "$Revision: 2753 $"
 
 type 'a t = [ `Empty | `Set of 'a t list | `Single of 'a ]
 
@@ -335,4 +335,9 @@ let compose_status string ?(eta=true) fn n start =
     else fn 0 start
 
 let union a b =
-    `Set [a; b]
+    match a with
+    | `Empty -> b
+    | _ -> 
+            match b with
+            | `Empty -> a
+            | _ -> `Set [a; b]
