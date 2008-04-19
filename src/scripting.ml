@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2751 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2756 $"
 
 module IntSet = All_sets.Integers
 
@@ -1294,10 +1294,32 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
                 else nrun
             in
             let build_cost = get_cost nrun in
+            let prev_time = Timer.wall timer in
             let nrun = folder nrun (command_processor 
                 (CPOY swap (tbr, timeout:[remaining_time ()]))) in
+            let search_time = (Timer.wall timer) -. prev_time in
             let do_perturb = build_cost = get_cost nrun in
             let prev_trees = !trees in
+            let prev_meth = !Methods.cost in
+            let nrun, do_perturb = 
+                if (not do_perturb) && (0.3 < Random.float 1.) then nrun, do_perturb
+                else
+                    match !Methods.cost with
+                    |  `Normal -> 
+                            Methods.cost := `Exact;
+                            (try
+                                let todo = command_processor
+                                    (CPOY swap (tbr, timeout:[min (remaining_time
+                                    ()) (search_time /. 2.)]))
+                                in
+                                (folder nrun todo), false
+                            with
+                            | err ->
+                                    Methods.cost := prev_meth;
+                                    raise err)
+                    | _ -> nrun, false
+            in
+            Methods.cost := prev_meth;
             trees := Sexpr.union nrun.trees !trees;
             update_information (`Initial nrun);
             if do_perturb || 0.5 < Random.float 1.0 then begin
