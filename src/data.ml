@@ -2296,7 +2296,7 @@ and get_chars_codes data = function
                         match
                             Hashtbl.fold (fun item code acc ->
                                 if Str.string_match nname item 0 then 
-                                    code :: []
+                                    code :: acc
                                 else acc)
                             data.character_names acc
                         with
@@ -2305,7 +2305,7 @@ and get_chars_codes data = function
                                 ("Could@ not@ find@ any@ character@ matching@
                                 the@ expression@ " ^ StatusCommon.escape name);
                                 raise err
-                        | r -> r @ acc
+                        | r -> r 
             in
             List.fold_left ~f:get_code ~init:[] names
     | `AllStatic | `AllDynamic as m -> 
@@ -3403,9 +3403,10 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
 
 let prealigned_characters analyze_tcm data chars =
     let codes = get_chars_codes_comp data chars in
+    let names = List.map (fun x -> code_character x data) codes in
     let res = List.rev_map (process_prealigned analyze_tcm data) codes in
     let d = add_multiple_static_parsed_file data res in
-    process_ignore_characters false d (`Some codes) 
+    process_ignore_characters false d (`Names names) 
 
 let sequence_statistics ch data =
     let codes = get_chars_codes_comp data ch in
