@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2740 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2754 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1771,7 +1771,8 @@ let fuse_generations trees terminals max_trees tree_weight tree_keep iterations
                 List.hd items, 1, List.tl weights, List.tl items
             end
     in
-    let rec gen trees iter = 
+    let module FPSet = Set.Make (Tree.Fingerprint) in
+    let rec gen fp trees iter = 
         if iter > iterations then trees 
         else begin
             let trees = limit_num trees in
@@ -1816,17 +1817,32 @@ let fuse_generations trees terminals max_trees tree_weight tree_keep iterations
                                     Some new_tree, new_cost
                             else acc) (None, get_cost `Adjusted target) locations
             in
-            let trees =
+            let fp, trees =
                 match new_tree with
-                | None -> trees
+                | None -> fp, trees
                 | Some new_tree ->
-                    let new_trees = process new_tree in
-                    keeper new_trees source target trees'
+                        let nfp = Tree.Fingerprint.fingerprint new_tree.tree in
+                        if FPSet.mem nfp fp then 
+                            fp, keeper [new_tree] source target trees'
+                        else
+                            let new_trees = process new_tree in
+                            let fp = 
+                                List.fold_left (fun acc x -> FPSet.add 
+                                    (Tree.Fingerprint.fingerprint x.tree) acc) 
+                                fp new_trees 
+                            in
+                            fp, keeper new_trees source target trees'
             in
-            gen trees (succ iter)
+            gen fp trees (succ iter)
 
     end in
-    let res = gen trees 1 in
+    let res = 
+        let fp = List.fold_left (fun acc x -> 
+            FPSet.add (Tree.Fingerprint.fingerprint x.tree) acc) 
+        FPSet.empty trees 
+        in
+        gen fp trees 1 
+    in
     Status.finished status;
     limit_num res
 
