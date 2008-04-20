@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2712 2008-04-14 20:33:02Z andres $ *)
+(* $Id: charTransform.ml 2758 2008-04-20 21:05:07Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2712 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2758 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -859,13 +859,12 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 (match analyze_sequences sensible data trees with
                 | [] -> data, nodes
                 | chars ->
-                      Status.user_message (Status.Output (None, false, []))
-                    "@.@[I@ will@ make@ static@ the@ characters@[<v 2>@,";
+                      Status.user_message Status.Information 
+                    "I@ will@ make@ static@ the@ characters@,";
                     List.iter (fun x -> 
                         let name = Data.code_character x data in
                         let name = StatusCommon.escape name in
                         Status.user_message Status.Information ("@[" ^ name ^ "@]@,")) chars;
-                    Status.user_message (Status.Output (None, false, [])) "@]@]@.";
                     transform_node_characters trees (data, nodes) (`Static_Aprox (`Some
                     (true, chars), true)))
         | `Prealigned_Transform chars ->
