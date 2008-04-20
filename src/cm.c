@@ -842,7 +842,6 @@ cm_CAML_deserialize_3d (void *v) {
 void
 cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
         unsigned long *wsize_64) {
-    CAMLparam1(vcm);
     cmt c;
     int len;
     if (!NDEBUG) {
@@ -860,17 +859,17 @@ cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
     *wsize_64 = *wsize_32 = sizeof(struct cm);
     len = 2 * (1 << (c->lcm)) * (1 << (c->lcm));
     serialize_block_4(c->cost, len);
+    int i;
     SERIALIZE_SEQT(c->median, len);
     serialize_block_4(c->worst, len);
     serialize_block_4(c->prepend_cost, len);
     serialize_block_4(c->tail_cost, len);
-    CAMLreturn0;
+    return;
 }
 
 void
 cm_CAML_serialize_3d (value vcm, unsigned long *wsize_32, \
         unsigned long *wsize_64) {
-    CAMLparam1(vcm);
     cm_3dt c;
     int len;
     c = Cost_matrix_struct_3d(vcm);
@@ -880,11 +879,11 @@ cm_CAML_serialize_3d (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->cost_model_type);
     serialize_int_4(c->combinations);
     serialize_int_4(c->gap_open);
-    *wsize_64 = *wsize_32 = sizeof(struct cm);
+    *wsize_64 = *wsize_32 = sizeof(struct cm_3d);
     len = (1 << (c->lcm + 1)) * (1 << (c->lcm + 1)) * (1 << (c->lcm + 1));
     serialize_block_4(c->cost, len);
     SERIALIZE_SEQT(c->median, len);
-    CAMLreturn0;
+    return;
 }
 
 void
@@ -942,10 +941,9 @@ cm_compare (cmt a, cmt b) {
 
 int
 cm_CAML_compare (value a, value b) {
-    CAMLparam2(a, b);
     int res;
     res = cm_compare (Cost_matrix_struct(a), Cost_matrix_struct(b));
-    CAMLreturn (res);
+    return (res);
 }
 
 int

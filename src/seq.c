@@ -293,13 +293,12 @@ seq_CAML_length (value v) {
 
 int
 seq_CAML_compare (value a, value b) {
-    CAMLparam2(a, b);
     int cmp;
     seqt ap, bp;
     Seq_custom_val(ap,a);
     Seq_custom_val(bp,b);
     cmp = seq_compare (ap, bp);
-    CAMLreturn(cmp);
+    return (cmp);
 }
 
 unsigned long
@@ -321,7 +320,6 @@ seq_CAML_deserialize (void *v) {
 void
 seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64) 
 {
-    CAMLparam1(vo);
     seqt v;
     SEQT *tmp;
     Seq_custom_val(v,vo);
@@ -330,7 +328,7 @@ seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64)
     tmp = v->begin;
     SERIALIZE_SEQT(tmp,v->len);
     *wsize_64 = *wsize_32 = sizeof(struct seq) + (sizeof(SEQT) * (v -> len));
-    CAMLreturn0;
+    return;
 }
 
 static struct custom_operations sequence_custom_operations  = {

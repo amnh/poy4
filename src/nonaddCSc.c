@@ -18,7 +18,7 @@
 /* USA                                                                        */
 
 /*
- * $Id: nonaddCSc.c 2600 2008-02-08 01:13:19Z andres $
+ * $Id: nonaddCSc.c 2757 2008-04-20 21:03:56Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -678,7 +678,6 @@ void
 nonadd_nacat_serialize (value v,
                       unsigned long *wsize_32, unsigned long *wsize_64)
 {
-    CAMLparam1 (v);
     nacat n;
     nac *data;
 
@@ -692,8 +691,7 @@ nonadd_nacat_serialize (value v,
     caml_serialize_int_4 (n->heur);
     caml_serialize_block (data, n->len);
     caml_serialize_block_4 (n->codes, n->len);
-
-    CAMLreturn0;
+    return;
 }
 
 /** Deserialize a #nacat value */

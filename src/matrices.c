@@ -187,8 +187,8 @@ static struct custom_operations alignment_matrix = {
     &mat_CAML_free,
     custom_compare_default,
     custom_hash_default,
-    mat_CAML_serialize,
-    mat_CAML_deserialize
+    custom_serialize_default,
+    custom_deserialize_default
 };
 
 value 

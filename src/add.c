@@ -186,7 +186,6 @@ add_CAML_free (value v) {
 void
 add_CAML_serialize (value c, unsigned long *wsize_32, \
         unsigned long *wsize_64) {
-    CAMLparam1(c);
     native_int real_allocated_len;
     add_stt nc;
     nc = *(Add_st_struct(c));
@@ -201,7 +200,7 @@ add_CAML_serialize (value c, unsigned long *wsize_32, \
     serialize_block_1(nc->cost, real_allocated_len);
     serialize_block_1(nc->union_min, real_allocated_len);
     serialize_block_1(nc->union_max, real_allocated_len);
-    CAMLreturn0;
+    return;
 }
 
 unsigned long
