@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2759 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2760 $"
 
 module IntSet = All_sets.Integers
 
@@ -2641,13 +2641,14 @@ let run ?(folder=folder) ?(output_file="ft_poy.out") ?(start=(empty ())) lst =
     (* print_endline "We are at the run in Scripting module";
     Methods.print_script_ls lst; *)
     let rec continue run tmp =
-        let my_folder run h =
+        let my_folder printit run h =
             if ndebug_no_catch
             then begin
                 let run = folder run h in
-                Status.user_message (Status.SearchReport)
-                (SearchInformation.show_information
-                (Some run.trees) (Some run.data) None None);
+                if printit then
+                    Status.user_message (Status.SearchReport)
+                    (SearchInformation.show_information
+                    (Some run.trees) (Some run.data) None None);
                 run
             end
             else try 
@@ -2664,7 +2665,7 @@ let run ?(folder=folder) ?(output_file="ft_poy.out") ?(start=(empty ())) lst =
         in
         match tmp with
         | h :: t -> 
-              continue (my_folder run h) t
+              continue (my_folder (t = []) run h) t
         | [] -> run
     in
     continue start lst 
