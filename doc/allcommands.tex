@@ -378,8 +378,10 @@ The \poycommand{calculate\_support} command does not output support values by de
 	\begin{poyexamples}
 
 		\poyexample{cd ("/Users/username/docs/poyfiles")}
-            {Changes the current directory to the directory \\
+            {Changes the current directory to the directory in a Mac environment (when using a 
+            PC the path will the forward slashes will be replaced with backslash characters is the path).\\
             \texttt{/Users/username/docs/poyfiles}.}
+            
 
     \end{poyexamples}
 
@@ -630,10 +632,11 @@ The \poycommand{calculate\_support} command does not output support values by de
 	\syntax{\obligatory{(\poystring)}} 
 
 	\begin{poydescription}
-            Reads and imports a \poy file, the name of which (specified by the command
-             \poycommand{save}) is included in the string argument.
-            All the information of the current \poy session will be replaced
-            with the contents of the \poy file. If the file is not in proper \poy file
+             Imports and inputs \poy files created by the command
+             \poycommand{save}.  The name of the file to be loaded
+              is included in the string argument. All the information of
+               the current \poy session will be replaced with the contents
+              of the \poy file. If the file is not in proper \poy file
             format, an error message is printed in the \emph{POY Output}
             window of the ncurses interface, or the standard error in the flat interface.
             See the description of the command \ccross{save} on the \poy file
@@ -710,14 +713,14 @@ The \poycommand{calculate\_support} command does not output support values by de
 
         \argumentdefinition{ratchet}{\optional{(\poyfloat, \poyint)}}
             {Perturbs the data by implementing a variant of the parsimony
-            ratchet~\cite{Nixon1999}. For unaligned data,
-            \poyargument{ratchet} randomly selects and reweighs a fraction of
+            ratchet~\cite{Nixon1999} by reweighting characters listed in \poycommand{report(data)}. 
+            For unaligned data,\poyargument{ratchet} randomly selects and reweighs a fraction of
             sequence fragments (\emph{not} individual nucleotides) specified
-            by the float
-            (decimal) value, upweighted by a factor specified by the integer
-            value (severity). For static matrices, such as those obtained
-            using the command~\nccross{transform}{transformcommand}, 
-            \poycommand{ratchet} randomly selects and
+            by the float (decimal) value, upweighted by a factor specified by the integer
+            value (severity). Thus, the number of sequence fragments into which the 
+            data is partitioned will impact the effectiveness of using the ratchet on dynamic character matrices.  
+            For static matrices, such as those obtained using the 
+            command~\nccross{transform}{transformcommand},\poycommand{ratchet} randomly selects and
             reweights individual nucleotide positions (column vectors), as in Nixon's
             original implementation ~\cite{Nixon1999}.
             
@@ -872,8 +875,9 @@ The \poycommand{calculate\_support} command does not output support values by de
         Imports data files and tree files.  Supported formats are ASN1, Clustal, FASTA,
         GBSeq, Genbank, Hennig86, Newick, NewSeq, Nexus, PHYLIP, POY3,
         TinySeq, and XML. Filenames should be enclosed in quotes and, if multiple
-        filenames are specified, they must be separated by commas.
-        \poycommand{read} automatically detects the type of the input file.
+        filenames are specified, they must be separated by commas. 
+        All filenames read into \poy should include the appropriate suffix (\emph{e.g.} .fas, .ss, .aln).
+        \poycommand{read} automatically detects the type of the input file. 
         \poycommand{read} can use wildcard expressions (such as *) to
         refer to multiple files in a single step. For example, \poycommand{read("biv*")} 
         imports all data files the names of which start
@@ -959,6 +963,14 @@ The \poycommand{calculate\_support} command does not output support values by de
               from each one of this files, no other commands are currently
               recognized.}
               {}
+              
+            \begin{statement}
+            \poy recognizes the characters \emph{x} and \emph{n} as representing any nucleotide 
+            base (a,c,t, or g).  The \emph{?} symbol inserted in sequence data signifies missing data,
+            a gap, or any nucleotide base may occur in that matrix position.  
+            For prealigned data sequence gaps are recognized by dashes.  
+                    \end{statement}
+
 	
 	\begin{statement}
             Continuous characters can be treated as such by assigning the lower
@@ -1991,12 +2003,14 @@ The \poycommand{calculate\_support} command does not output support values by de
         be expressed as 1:12:00 or 1.5:00:00.}{maxtime}
         
         \argumentdefinition{memory}{\obligatory{\poylident:\poyfloat}}{Specifies the maximum amount of
-        memory allocated for the search. \poy \emph{attempts} to consume memory within
+        memory allocated for the search per processor. \poy \emph{attempts} to consume memory within
         the specified limit, but it may surpass it in certain operations. The lident value expresses the 
         units of memory (\poyargument{gb} for Gigabytes and \poyargument{mb} for Megabytes), 
         whereas the float value specifies the actual value. Keeping memory consumption 
         within the limit is approximate and is used as a rough guide to \poy, preventing 
-        the program from overflowing the memory. Under certain circumstances, however, 
+        the program from overflowing the memory.  Furthermore, it is important to note that 
+        when running \poy in parallel the maximum amount of memory specified by the user is 
+        allocated to each processor being used.  Under certain circumstances, however, 
         it might be required to use more memory to avoid program failures.}{}
 
         \argumentdefinition{min\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
