@@ -18,7 +18,7 @@
 /* USA                                                                        */
 
 /*
- * $Id: nonaddCSc.c 2757 2008-04-20 21:03:56Z andres $
+ * $Id: nonaddCSc.c 2763 2008-04-21 20:50:22Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -312,13 +312,11 @@ const long nonadd_max_size = CHARSIZE;
 */
 struct _naca_t
 {
-    vect *data;                 /** data are stored as \typedef vect elements */
-    long *codes;                /** codes for each element */
     long len;                   /** number of elements total */
     long heur;                  /** heuristic code to use */
     long code;                  /** code for the overall set */
-    long *ref_count;            /** reference counter for deletion */
     long added_cost;            /** cost for making this element as a median */
+    vect *data;                 /** data are stored as \typedef vect elements */
 };
 typedef struct _naca_t * nacat;
 
@@ -330,7 +328,7 @@ nonadd_print (const nacat n, const char *label)
     nac *data = GET_DATA (n);
     printf ("\n%s representation:\n", label);
     for (i = 0; i < n->len; i++) {
-        printf ("%ld\t%ld\n", n->codes[i], (long)data[i]);
+        printf ("%ld\t%ld\n", i, (long)data[i]);
     }
 }
 
@@ -596,21 +594,8 @@ nonadd_reroot_median (const nacat a,
 
     FLOAT_OPERATIONS;
 }
-
-void
-nonadd_nacat_finalize (value v)
-{
-    nacat n = (nacat)Data_custom_val (v);
-    (*(n->ref_count))--;
-
-    /* If we're the last user, free all the allocated types */
-    if(*(n->ref_count) == 0 && n->len > 0) {
-        FREE_DATA (n);
-        free (nonadd_print_ptr("free", (n->codes)));
-        free (nonadd_print_ptr("free", n->ref_count));
-    }
-}
-
+#define Nonadd_Custom_val(v,n) n = (nacat) Data_custom_val(v); \
+                                   n->data = (vect *) ((nacat) (n + 1))
 /** Compare two values.  They should have the same number of elements and the
  * same codes. */
 int
@@ -621,18 +606,12 @@ nonadd_nacat_compare (value v1, value v2)
     long i, diff;
     nac *data1, *data2;
 
-    n1 = (nacat)Data_custom_val (v1);
-    n2 = (nacat)Data_custom_val (v2);
+    Nonadd_Custom_val(v1,n1);
+    Nonadd_Custom_val(v2,n2);
 
     diff = n1->len - n2->len;
     if (diff != 0)
         CAMLreturn (diff);
-
-    for (i = 0; i < n1->len; i++) {
-        diff = n1->codes[i] - n2->codes[i];
-        if (diff != 0)
-            CAMLreturn (diff);
-    }
 
     data1 = GET_DATA (n1);
     data2 = GET_DATA (n2);
@@ -673,6 +652,7 @@ nonadd_nacat_compare (value v1, value v2)
 
 /** @} */
 
+#define compute_size(len) (sizeof (struct _naca_t) + ((sizeof(vect) * ((len / BLOCK_LEN) + 1))))
 /** Serialize a #nacat value */
 void
 nonadd_nacat_serialize (value v,
@@ -681,16 +661,15 @@ nonadd_nacat_serialize (value v,
     nacat n;
     nac *data;
 
-    n = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,n);
     data = GET_DATA (n);
 
     /* We always write the same size */
-    *wsize_32 = *wsize_64 = sizeof(struct _naca_t);
+    *wsize_32 = *wsize_64 = compute_size(n->len);
 
     caml_serialize_int_4 (n->len);
     caml_serialize_int_4 (n->heur);
     caml_serialize_block (data, n->len);
-    caml_serialize_block_4 (n->codes, n->len);
     return;
 }
 
@@ -706,20 +685,9 @@ nonadd_nacat_deserialize (void *dst)
     n->len = caml_deserialize_uint_4 ();
     n->heur = caml_deserialize_uint_4 ();
 
-    n->ref_count = (long *) nonadd_print_ptr("alloc", malloc (sizeof (long)));
-    *(n->ref_count) = 1;
-
-    n->data = ALLOC_DATA (n->len);
-    n->codes = (long *) nonadd_print_ptr("alloc", malloc (n->len * sizeof (long)));
-    if (n->data == NULL || n->codes == NULL)
-        failwith ("Memory error.");
-
-    data = GET_DATA (n);
-
-    caml_deserialize_block (data, n->len);
-    caml_deserialize_block_4 (n->codes, n->len);
-
-    return sizeof(struct _naca_t);
+    n->data = (vect *) ((struct _naca_t *) n + 1);
+    caml_deserialize_block (n->data, n->len);
+    return sizeof(compute_size(n->len));
 }
 
 
@@ -727,7 +695,7 @@ nonadd_nacat_deserialize (void *dst)
 /** Struct to define a nonadditive character set as an OCaml custom block */
 static struct custom_operations naca_custom = {
     "http://www.amnh.org/poy/char_nonadd_/1.0",
-    nonadd_nacat_finalize,
+    custom_finalize_default,
     nonadd_nacat_compare,
     custom_hash_default,
     nonadd_nacat_serialize,
@@ -744,37 +712,20 @@ void char_nonadd_CAML_register_unmarshal()
 
 
 /** Allocates a new #_naca_t structure of given length without initializing the
- * contents.  #_naca_t.len, #_naca_t.heur, #_naca_t.added_cost, and
- * #_naca_t.ref_count are still set.*/
+ * contents.  #_naca_t.len, #_naca_t.heur, #_naca_t.added_cost */
 void
 nonadd_make_new_unsafe (int len, value v)
 {
     nacat art;
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     art->len = len;
     art->heur = 0;
     art->added_cost = 0;
-
-    art->ref_count = 
-        (long *) nonadd_print_ptr("alloc", malloc (sizeof (long)));
-    if (art->ref_count == NULL)
-        failwith ("Memory error.");
-    *(art->ref_count) = 1;
-
-    if(len != 0) {
-        art->data = ALLOC_DATA (len);
-        art->codes = 
-            (long *) nonadd_print_ptr("alloc", malloc (sizeof(long) * len));
-        if (art->data == NULL
-            || art->codes == NULL)
-            failwith ("Memory error.");
-    }
-    else {
-        assert (0 == len);
+    if(len != 0) 
+        art->data = (vect *) ((struct _naca_t *) (art + 1));
+    else 
         art->data = NULL;
-        art->codes = NULL;
-    }
     return;
 }
 
@@ -789,9 +740,8 @@ nonadd_clone (nacat n, value v)
 
     len = n->len;
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     memcpy (art, n, sizeof(struct _naca_t));
-    ++ *(art->ref_count);
     return;
 }
 
@@ -809,19 +759,13 @@ char_nonadd_CAML_make_new (value len, value code)
 
     ilen = Long_val (len);
     icode = Long_val (code);
-    v = caml_alloc_custom (&naca_custom,
-                           sizeof(struct _naca_t), 1, 45000);
+    v = caml_alloc_custom (&naca_custom, (compute_size(ilen)), 1, 45000);
     nonadd_make_new_unsafe (ilen, v);
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     art->code = icode;
 
     data = GET_DATA (art);
-
-    for(i = 0; i < ilen; i ++) {
-        data[i] = 0;
-        art->codes[i] = i;
-    }
 
     CAMLreturn (v);
 }
@@ -837,11 +781,10 @@ char_nonadd_CAML_make_new_unsafe (value len, value code)
 
     ilen = Long_val (len);
     icode = Long_val (code);
-    v = caml_alloc_custom (&naca_custom,
-                           sizeof(struct _naca_t), 1, 45000);
+    v = caml_alloc_custom (&naca_custom, (compute_size(ilen)), 1, 45000);
     nonadd_make_new_unsafe (ilen, v);
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     art->code = icode;
 
     CAMLreturn (v);
@@ -854,12 +797,12 @@ char_nonadd_CAML_code (value v)
     CAMLparam1 (v);
     nacat art;
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     CAMLreturn (Val_long (art->code));
 }
 
 /** Set the code of the current character set.  This function does not mutate
-    the value; instead, it returns a copy. */
+    the value; instead, it returns a copy.
 value
 char_nonadd_CAML_set_code (value v1, value code)
 {
@@ -867,7 +810,7 @@ char_nonadd_CAML_set_code (value v1, value code)
     CAMLlocal1 (v2);
     nacat art1, art2;
 
-    art1 = (nacat)Data_custom_val (v1);
+    Nonadd_Custom_val(v1,art1);
     v2 = caml_alloc_custom (&naca_custom,
                            sizeof(struct _naca_t), 1, 45000);
     nonadd_clone (art1, v2);
@@ -877,6 +820,7 @@ char_nonadd_CAML_set_code (value v1, value code)
 
     CAMLreturn (v2);
 }
+*/
 
 void
 char_nonadd_CAML_set_code_mutate (value v1, value code)
@@ -884,7 +828,7 @@ char_nonadd_CAML_set_code_mutate (value v1, value code)
     CAMLparam2 (v1, code);
     nacat art;
 
-    art = (nacat)Data_custom_val (v1);
+    Nonadd_Custom_val(v1,art);
     art->code = Long_val (code);
 
     CAMLreturn0;
@@ -897,8 +841,8 @@ char_nonadd_CAML_set_elt_code (value v, value vi, value vcode)
     CAMLparam3 (v, vi, vcode);
     nacat art;
 
-    art = (nacat)Data_custom_val (v);
-    art->codes[Long_val (vi)] = Long_val (vcode);
+    failwith ("We don't support codes in nonadditive characters");
+    Nonadd_Custom_val(v,art);
 
     CAMLreturn0;
 }
@@ -922,11 +866,10 @@ char_nonadd_CAML_set_elt_bit (value v, value loc, value val)
     if (ival > nonadd_max_size)
         caml_invalid_argument ("Argument out of machine-imposed bounds");
 
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     data = GET_DATA (art);
 
     /* Check that this is the only copy of data before mutating! */
-    assert (*(art->ref_count) == 1);
     data[iloc] |= nonadd_nac_of_bit (ival);
 
     CAMLreturn0;
@@ -942,7 +885,7 @@ char_nonadd_CAML_set_elt (value v, value vi, value vval)
     nac setto;
 
     setto = Unsigned_long_val (vval);
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     data = GET_DATA (art);
     data[Long_val (vi)] = setto;
     CAMLreturn0;
@@ -955,15 +898,15 @@ char_nonadd_CAML_basic_union (value v, value self, value a, value b)
     nacat na, nb, nself, nres;
     long len;
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
-    nself = (nacat)Data_custom_val (self);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
+    Nonadd_Custom_val(self,nself);
     len = na->len;
     assert (nself->len == na->len);
     assert (na->len == nb->len);
 
     /* performs an allocation */
-    nres = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,nres);
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
@@ -981,14 +924,14 @@ char_nonadd_CAML_basic_union_par (value v, value a, value b)
     nacat na, nb, nres;
     long len;
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
     len = na->len;
     assert (na->len == nb->len);
 
     /* performs an allocation */
     assert (na->len == nb->len);
-    nres = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,nres);
 
     assert (nres->len == nb->len);
     /* Copy the codes and heuristic from a */
@@ -1004,12 +947,12 @@ char_nonadd_CAML_to_union (value v1) {
     CAMLlocal1 (v2);
     nacat art1, art2;
 
-    art1 = (nacat)Data_custom_val (v1);
+    Nonadd_Custom_val(v1,art1);
     assert (art1->len > 0);
     v2 = caml_alloc_custom (&naca_custom,
                            sizeof(struct _naca_t), 1, 45000);
     nonadd_clone (art1, v2);
-    art2 = (nacat)Data_custom_val (v2);
+    Nonadd_Custom_val(v2,art2);
     CAMLreturn (v2);
 }
 
@@ -1020,19 +963,18 @@ char_nonadd_CAML_basic_median (value v, value a, value b)
     nacat na, nb, nres;
     long len;
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
     len = na->len;
     assert (len = nb->len);
 
     /* performs an allocation */
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
-    nres = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
+    Nonadd_Custom_val(v,nres);
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
-    memcpy (nres->codes, na->codes, sizeof(long) * len);
     nres->heur = na->heur;
 
     /* Write the median to nres->data */
@@ -1047,17 +989,16 @@ char_nonadd_CAML_reroot_median (value v, value a, value b)
     nacat na, nb, nres;
     long len;
 
-    na = (nacat)Data_custom_val (a);
+    Nonadd_Custom_val(a,na);
     len = na->len;
 
     /* performs an allocation */
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
-    nres = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
+    Nonadd_Custom_val(v,nres);
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
-    memcpy (nres->codes, na->codes, sizeof(long) * len);
     nres->heur = na->heur;
 
     /* Write the median to nres->data */
@@ -1073,9 +1014,9 @@ char_nonadd_CAML_basic_median_mutate (value a, value b, value res)
     nacat na, nb, nres;
     long len;
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
-    nres = (nacat)Data_custom_val (res);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
+    Nonadd_Custom_val(res,nres);
 
     len = na->len;
 
@@ -1084,7 +1025,6 @@ char_nonadd_CAML_basic_median_mutate (value a, value b, value res)
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
-    memcpy (nres->codes, na->codes, sizeof(long) * len);
     nres->heur = na->heur;
 
     /* Write the median to nres->data */
@@ -1098,18 +1038,16 @@ char_nonadd_CAML_median_3 (value v, value vA, value vN, value vD1, value vD2)
     CAMLparam5 (v, vA, vN, vD1, vD2);
     nacat A, N, D1, D2, F;
 
-    A  = (nacat)Data_custom_val (vA);
 
     /* performs an allocation */
-    A  = (nacat)Data_custom_val (vA );
-    N  = (nacat)Data_custom_val (vN );
-    D1 = (nacat)Data_custom_val (vD1);
-    D2 = (nacat)Data_custom_val (vD2);
-    F  = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(vA,A);
+    Nonadd_Custom_val(vN,N);
+    Nonadd_Custom_val(vD1,D1);
+    Nonadd_Custom_val(vD2,D2);
+    Nonadd_Custom_val(v,F);
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
-    memcpy (F->codes, A->codes, sizeof(long) * A->len);
     F->heur = A->heur;
 
     FLOAT_OPERATIONS;
@@ -1130,17 +1068,16 @@ char_nonadd_CAML_median_3_mutate (value vA, value vN, value vD1, value vD2,
     CAMLparam5 (vA, vN, vD1, vD2, vRes);
     nacat A, N, D1, D2, F;
 
-    A  = (nacat)Data_custom_val (vA );
-    N  = (nacat)Data_custom_val (vN );
-    D1 = (nacat)Data_custom_val (vD1);
-    D2 = (nacat)Data_custom_val (vD2);
-    F  = (nacat)Data_custom_val (vRes);
+    Nonadd_Custom_val(vA,A);
+    Nonadd_Custom_val(vN,N);
+    Nonadd_Custom_val(vD1,D1);
+    Nonadd_Custom_val(vD2,D2);
+    Nonadd_Custom_val(vRes,F);
 
     assert (A->len == F->len);
 
     /* Copy the codes and heuristic from a */
     /* memcpy (dest, source, bytes) */
-    memcpy (F->codes, A->codes, sizeof(long) * A->len);
     F->heur = A->heur;
 
     FLOAT_OPERATIONS;
@@ -1183,8 +1120,8 @@ char_nonadd_CAML_distance (value a, value b)
     nac *adata, *bdata;
     long i;
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
     len = na->len;
 
     if (len == 0) {
@@ -1218,8 +1155,8 @@ char_nonadd_CAML_distance_list (value a, value b)
     d_one = caml_copy_double (1.);
     d_zero = caml_copy_double (0.);
 
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
 
     adata = GET_DATA (na);
     bdata = GET_DATA (nb);
@@ -1228,20 +1165,18 @@ char_nonadd_CAML_distance_list (value a, value b)
 
     assert (na->len == nb->len);
     for (i = na->len - 1; i >= 0; i--) {
-        assert (na->codes[i] == nb->codes[i]);
-
         temp_pair = caml_alloc_tuple (2);
-        na = (nacat)Data_custom_val (a);
-        nb = (nacat)Data_custom_val (b);
-        Store_field (temp_pair, 0, Val_long (na->codes[i]));
+        Nonadd_Custom_val(a,na);
+        Nonadd_Custom_val(b,nb);
+        Store_field (temp_pair, 0, Val_long (0));
         Store_field (temp_pair, 1,
                      ((adata[i] & bdata[i]) ?
                       d_zero :
                       d_one));
 
         temp_list = caml_alloc_tuple (2);
-        na = (nacat)Data_custom_val (a);
-        nb = (nacat)Data_custom_val (b);
+        Nonadd_Custom_val(a,na);
+        Nonadd_Custom_val(b,nb);
         Store_field (temp_list, 0, temp_pair);
         Store_field (temp_list, 1, list);
 
@@ -1260,7 +1195,7 @@ char_nonadd_CAML_median_cost (value a)
     long ltemp;
     double dtemp;
 
-    art = (nacat)Data_custom_val (a);
+    Nonadd_Custom_val(a,art);
 
     ltemp = art->added_cost;
 
@@ -1275,8 +1210,8 @@ char_nonadd_CAML_equal (value a, value b)
 {
     CAMLparam2 (a, b);
     nacat na, nb;
-    na = (nacat)Data_custom_val (a);
-    nb = (nacat)Data_custom_val (b);
+    Nonadd_Custom_val(a,na);
+    Nonadd_Custom_val(b,nb);
 
     if (nonadd_equal (na, nb))
         CAMLreturn (Val_true);
@@ -1289,7 +1224,8 @@ value
 char_nonadd_CAML_cardinal (value a)
 {
     CAMLparam1 (a);
-    nacat na = (nacat)Data_custom_val (a);
+    nacat na;
+    Nonadd_Custom_val(a,na);
     CAMLreturn (Val_long (na->len));
 }
 
@@ -1303,7 +1239,7 @@ char_nonadd_CAML_elt_to_list (value va, value vindex)
     nacat a;
     nac *adata;
 
-    a = (nacat)Data_custom_val (va);
+    Nonadd_Custom_val(va,a);
     index = Long_val (vindex);
     adata = GET_DATA (a);
 
@@ -1338,7 +1274,7 @@ char_nonadd_CAML_to_int (value va, value vindex)
     long i;
     nac *adata;
 
-    a = (nacat)Data_custom_val (va);
+    Nonadd_Custom_val(va,a);
     adata = GET_DATA (a);
     i = Long_val (vindex);
     CAMLreturn (Val_long (adata[i]));
@@ -1358,7 +1294,8 @@ char_nonadd_CAML_to_list (value va)
 
     d_zero = caml_copy_double (0.);
 
-    copy_data = a = (nacat)Data_custom_val (va);
+    Nonadd_Custom_val(va,a);
+    copy_data = a;
     initial_len = a->len;
     adata = GET_DATA (a);
     res = Val_long (0);          /* empty list */
@@ -1367,11 +1304,11 @@ char_nonadd_CAML_to_list (value va)
         assert (a == copy_data);
         assert (a->len == initial_len);
         temp_elt = caml_alloc_tuple (2);
-        Store_field (temp_elt, 0, Val_long (a->codes[i]));
+        Store_field (temp_elt, 0, Val_long (0));
         Store_field (temp_elt, 1, Val_long (adata[i]));
 
         temp_val = caml_alloc_tuple (3);
-        Store_field (temp_val, 0, Val_long (a->codes[i]));
+        Store_field (temp_val, 0, Val_long (0));
         Store_field (temp_val, 1, temp_elt);
         Store_field (temp_val, 2, d_zero);
 
@@ -1395,7 +1332,7 @@ char_nonadd_CAML_poly_items (value c, value pol) {
     int pol_counter;
     
     pol_counter = Int_val(pol);
-    art = (nacat) Data_custom_val (c);
+    Nonadd_Custom_val(c,art);
     data = GET_DATA (art);
     for (i = 0; i < art->len; i++) {
         counter = 0;
@@ -1421,13 +1358,12 @@ char_nonadd_CAML_of_list_helper (value v, value list, value vlen)
     CAMLlocal1 (elt);
 
     len = Int_val (vlen);
-    art = (nacat)Data_custom_val (v);
+    Nonadd_Custom_val(v,art);
     adata = GET_DATA (art);
 
     for (i = 0; i < len; i++) {
         elt = Field (list, 0);
 
-        art->codes[i] = Long_val (Field (elt, 0));
         adata[i] = Unsigned_long_val (Field (Field (elt, 1), 1));
 
         list = Field (list, 1);
@@ -1442,7 +1378,7 @@ char_nonadd_CAML_get_heu (value a)
     CAMLparam1 (a);
     nacat art;
 
-    art = (nacat)Data_custom_val (a);
+    Nonadd_Custom_val(a,art);
 
     CAMLreturn (Val_long (art->heur));
 }
@@ -1457,10 +1393,11 @@ char_nonadd_CAML_set_heu (value h, value a)
     nacat na, nres;
 
     na = (nacat)Data_custom_val (a);
+    Nonadd_Custom_val(a,na);
     res = caml_alloc_custom (&naca_custom,
                            sizeof(struct _naca_t), 1, 45000);
     nonadd_clone (na, res);
-    nres = (nacat)Data_custom_val (res);
+    Nonadd_Custom_val(res,nres);
     nres->heur = Long_val (h);
 
     CAMLreturn (res);
@@ -1472,7 +1409,7 @@ char_nonadd_CAML_set_heu_mutate (value h, value a)
     CAMLparam2 (h,a);
     nacat na;
 
-    na = (nacat)Data_custom_val (a);
+    Nonadd_Custom_val(a,na);
     na->heur = Long_val (h);
 
     CAMLreturn0;
@@ -1488,9 +1425,9 @@ char_nonadd_CAML_dist_2 (value va, value vb, value vc)
     long len;
     long i;
 
-    a = (nacat)Data_custom_val (va);
-    b = (nacat)Data_custom_val (vb);
-    c = (nacat)Data_custom_val (vc);
+    Nonadd_Custom_val(va,a);
+    Nonadd_Custom_val(vb,b);
+    Nonadd_Custom_val(vc,c);
 
     adata = GET_DATA (a);
     bdata = GET_DATA (b);

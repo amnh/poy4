@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2514 2008-01-07 00:31:12Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2514 $"
+(* $Id: nonaddCS.ml 2763 2008-04-21 20:50:22Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2763 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -43,7 +43,13 @@ let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2514 $"
 let ndebug = false
 
 (* This is a custom block *)
-type t
+type ct
+type t = {
+    codes : int array;
+    data : ct;
+}
+type cu = ct
+
 (* The custom block for unions of characters *)
 type u = t
 
@@ -57,14 +63,14 @@ external register_unmarshal : unit -> unit =
 
 let _ = register_unmarshal ()
 
-external cardinal : t -> int = "char_nonadd_CAML_cardinal"
-external union : u -> t -> u -> u -> unit = "char_nonadd_CAML_basic_union"
+external cardinal : ct -> int = "char_nonadd_CAML_cardinal"
+external union : cu -> ct -> cu -> cu -> unit = "char_nonadd_CAML_basic_union"
 
-external union_states :  u -> u -> t -> unit = "char_nonadd_CAML_basic_union_par"
+external union_states :  cu -> cu -> ct -> unit = "char_nonadd_CAML_basic_union_par"
 
 let to_union x = x
 
-external code : t -> int = "char_nonadd_CAML_code"
+external code : ct -> int = "char_nonadd_CAML_code"
 let elt_code (code, _) = code
 let color = Character.Grey
 
@@ -72,25 +78,25 @@ let color = Character.Grey
    given a cost when creating an element, so this is necessary. *)
 let def_cost = 1.
 
-external make_new : int -> int -> t = "char_nonadd_CAML_make_new"
-external make_new_unsafe : int -> int -> t = "char_nonadd_CAML_make_new_unsafe"
-external set_elt : t -> int -> int -> unit = "char_nonadd_CAML_set_elt"
-external set_elt_bit : t -> int -> int -> unit = "char_nonadd_CAML_set_elt_bit"
-external set_elt_code : t -> int -> int -> unit
+external make_new : int -> int -> ct = "char_nonadd_CAML_make_new"
+external make_new_unsafe : int -> int -> ct = "char_nonadd_CAML_make_new_unsafe"
+external set_elt : ct -> int -> int -> unit = "char_nonadd_CAML_set_elt"
+external set_elt_bit : ct -> int -> int -> unit = "char_nonadd_CAML_set_elt_bit"
+external set_elt_code : ct -> int -> int -> unit
     = "char_nonadd_CAML_set_elt_code"
-external basic_median : t -> t -> t -> unit = "char_nonadd_CAML_basic_median"
+external basic_median : ct -> ct -> ct -> unit = "char_nonadd_CAML_basic_median"
 (** [median_3 parent node child1 child2] *)
-external median_3 : t -> t -> t -> t -> t -> unit = "char_nonadd_CAML_median_3"
+external median_3 : ct -> ct -> ct -> ct -> ct -> unit = "char_nonadd_CAML_median_3"
 let median_3 a b c d =
-    let new_item = make_new_unsafe (cardinal a) (code a) in
-    median_3 new_item a b c d;
-    new_item
+    let new_item = make_new_unsafe (cardinal a.data) (code a.data) in
+    median_3 new_item a.data b.data c.data d.data;
+    { codes = a.codes; data = new_item}
 
-external reroot_median : t -> t -> t -> unit = "char_nonadd_CAML_reroot_median"
+external reroot_median : ct -> ct -> ct -> unit = "char_nonadd_CAML_reroot_median"
 let reroot_median a b =
-    let new_item = make_new_unsafe (cardinal a) (code a) in
-    reroot_median new_item a b;
-    new_item
+    let new_item = make_new_unsafe (cardinal a.data) (code a.data) in
+    reroot_median new_item a.data b.data;
+    { codes = a.codes; data = new_item}
 
 (*** random characters: *)
 (* how many in set, value range, code *)
@@ -110,48 +116,55 @@ let make_rand (num, outof, code) =
 
 (*** character and character set functions: *)
 let median _ a b = 
-    let new_item = make_new_unsafe (cardinal a) (code a) in
-    basic_median new_item a b;
-    new_item
+    let new_item = make_new_unsafe (cardinal a.data) (code a.data) in
+    basic_median new_item a.data b.data;
+    { codes = a.codes; data = new_item }
 
-external distance_ext : t -> t -> int = "char_nonadd_CAML_distance"
-let distance a b = float_of_int (distance_ext a b)
-external distance_union_ext : u -> u -> int = "char_nonadd_CAML_distance"
-let distance_union a b = float_of_int (distance_union_ext a b)
-external median_cost : t -> float = "char_nonadd_CAML_median_cost"
+external distance_ext : ct -> ct -> int = "char_nonadd_CAML_distance"
+let distance a b = float_of_int (distance_ext a.data b.data)
+external distance_union_ext : cu -> cu -> int = "char_nonadd_CAML_distance"
+let distance_union a b = float_of_int (distance_union_ext a.data b.data)
+external median_cost : ct -> float = "char_nonadd_CAML_median_cost"
+
+let median_cost x = median_cost x.data
 
 let union a b c =
-    assert (cardinal a = cardinal b);
-    assert (cardinal b = cardinal c);
-    let new_item = make_new_unsafe (cardinal a) (code a) in
-    union new_item a b c;
-    new_item
+    assert (cardinal a.data = cardinal b.data);
+    assert (cardinal b.data = cardinal c.data);
+    let new_item = make_new_unsafe (cardinal a.data) (code a.data) in
+    union new_item a.data b.data c.data;
+    { codes = a.codes; data = new_item} 
 
 let union_states a b = 
-    assert (cardinal a = cardinal b);
-    let new_item = make_new_unsafe (cardinal a) (code a) in
-    union_states new_item a b;
-    new_item
+    assert (cardinal a.data = cardinal b.data);
+    let new_item = make_new_unsafe (cardinal a.data) (code a.data) in
+    union_states new_item a.data b.data;
+    { codes =a.codes; data =new_item }
 
-external poly_items : u -> int -> int = "char_nonadd_CAML_poly_items"
-external cardinal_union : u -> int = "char_nonadd_CAML_cardinal"
+external poly_items : cu -> int -> int = "char_nonadd_CAML_poly_items"
+external cardinal_union : cu -> int = "char_nonadd_CAML_cardinal"
+
+let cardinal_union x = cardinal_union x.data
 
 let poly_saturation u pol =
     let c = cardinal_union u
-    and p = poly_items u pol in
+    and p = poly_items u.data pol in
     (float_of_int p) /. (float_of_int c)
 
-external to_int : t -> int -> int = "char_nonadd_CAML_to_int"
-external elt_to_list : t -> int -> int list = "char_nonadd_CAML_elt_to_list"
+external to_int : ct -> int -> int = "char_nonadd_CAML_to_int"
+external elt_to_list : ct -> int -> int list = "char_nonadd_CAML_elt_to_list"
 
-external dist_2_ext : t -> t -> t -> int = "char_nonadd_CAML_dist_2"
-let dist_2 a b c = float_of_int (dist_2_ext a b c)
-external distance_list : t -> t -> (int * float) list
+external dist_2_ext : ct -> ct -> ct -> int = "char_nonadd_CAML_dist_2"
+let dist_2 a b c = float_of_int (dist_2_ext a.data b.data c.data)
+external distance_list : ct -> ct -> (int * float) list
     = "char_nonadd_CAML_distance_list"
-external to_list : t -> (int * e * float) list = "char_nonadd_CAML_to_list"
+external to_list : ct -> (int * e * float) list = "char_nonadd_CAML_to_list"
+
+(* UPDATE CODES *)
+let to_list x = to_list x.data
 
 (* it's easier to calculate the length of a list on the Caml side *)
-external of_list_helper : t -> (int * e * float) list -> int -> unit
+external of_list_helper : ct -> (int * e * float) list -> int -> unit
     = "char_nonadd_CAML_of_list_helper"
 
 let of_list_helper a b =
@@ -161,15 +174,16 @@ let of_list_helper a b =
     new_item
 
 let of_list l =
-    of_list_helper
-        (List.stable_sort (fun (c1, _, _) (c2, _, _) -> compare c1 c2) l)
-        (List.length l)
+    let lst = List.stable_sort (fun (c1, _, _) (c2, _, _) -> compare c1 c2) l in
+    let codes = Array.of_list (List.map (fun (a, _, _) -> a) lst) in
+    { codes = codes; data = of_list_helper lst (List.length l) }
 
 (* We don't store costs in our data structure, and for many set operations, we
    can use the associative list functions if we omit the cost from the triples
    returned by to_list *)
 let to_simple_list a =
     List.map (fun (code, elt, _) -> (code, elt)) (to_list a)
+
 let of_simple_list l =
     of_list (List.map (fun (code, elt) -> (code, elt, def_cost)) l)
 
@@ -220,8 +234,8 @@ let make_list_iter map from tto =
 let to_string a =
     let strlist =
         make_list_iter
-            (fun i -> list_to_string (List.rev (elt_to_list a i)))
-            0 ((cardinal a) - 1) in
+            (fun i -> list_to_string (List.rev (elt_to_list a.data i)))
+            0 ((cardinal a.data) - 1) in
     "[" ^ String.concat " " strlist ^ "]"
 
 let to_formatter attrs c parent d : Tags.output list =
@@ -250,11 +264,12 @@ let to_formatter attrs c parent d : Tags.output list =
         let contents = `Set (List.map to_sexp res) in 
         (Tags.Characters.nonadditive, attributes, `Structured contents) 
     in
+    (* TODO CHANGE HTE CODES HERE *)
     let c_ls = to_simple_list c in 
     let dist_list =  
         match parent with 
         | None -> Array.to_list (Array.make (List.length c_ls) (0, 0.) ) 
-        | Some parent -> distance_list c parent  
+        | Some parent -> distance_list c.data parent.data
     in 
     List.map2 output_character c_ls dist_list 
  
@@ -351,7 +366,7 @@ let minus a b =
 let random f a =
     of_list (List.filter (fun _ -> f ()) (to_list a))
 
-external get_heu : t -> Character.h = "char_nonadd_CAML_get_heu"
+external get_heu : ct -> Character.h = "char_nonadd_CAML_get_heu"
 
 let fold f s a =
     List.fold_left
@@ -360,15 +375,19 @@ let fold f s a =
         s
         (to_list a)
 
-let filter f a =
+let filter f cf a =
     of_list (List.filter f (to_list a))
 
 let f_codes a codes =
     filter (fun (code, _, _) ->
-                All_sets.Integers.mem code codes) a
+                All_sets.Integers.mem code codes) 
+            (fun code -> All_sets.Integers.mem code codes) 
+            a
 let f_codes_comp a codes =
     filter (fun (code, _, _) ->
-                not (All_sets.Integers.mem code codes)) a
+                not (All_sets.Integers.mem code codes)) 
+            (fun code -> All_sets.Integers.mem code codes) 
+    a
 
 let f_colors a col = empty
 
@@ -385,6 +404,7 @@ let of_parser data (elts, code) n =
     let make_set elts =
         let nelts = Array.length elts in
         let true_nelts = Array.length elts in
+        let codes = Array.make true_nelts 0 in
         let set = make_new_unsafe true_nelts code in
         let rec filler item =
             if item = nelts then ()
@@ -415,12 +435,12 @@ let of_parser data (elts, code) n =
                     List.fold_left (fun acc item -> acc lor (matcher item)) 0 
                     elt
                 in
-                set_elt_code set item eltcode;
+                codes.(item) <- eltcode;
                 set_elt set item elt;
                 filler (item + 1) 
         in
         filler 0;
-        set
+        { codes = codes; data = set }
     in
     (make_set elts, code)
 
@@ -449,6 +469,8 @@ let is_potentially_informative elts =
     | None -> false 
     | Some states ->
             0 = (All_sets.Integers.cardinal states)
+
+let cardinal a = cardinal a.data
 (*
 let min_cost elts =
     let n_elts = List.length elts in
@@ -516,24 +538,6 @@ let min_possible_cost elts =
             All_sets.Integers.add x acc) All_sets.Integers.empty x) elts)
     in
     float_of_int (res - 1)
-
-module Imperative = struct
-    type it = t
-    type ie = int * int
-
-    external median : it -> it -> it -> unit =
-            "char_nonadd_CAML_basic_median_mutate"
-    let of_list = of_list
-    let distance = distance
-    let median_cost = median_cost
-    let compare = compare
-    let cardinal = cardinal
-    external median_3 :
-        it -> it -> it -> it -> unit = "char_nonadd_CAML_median_3_mutate"
-end
-
-
-
 
 (* module Test = struct *)
 (*     external median_3_debug : t -> t -> t -> t -> t = *)
