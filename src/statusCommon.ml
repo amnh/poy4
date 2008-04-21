@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2733 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 2761 $"
 
 (* The common files for all the status interfaces. *)
 
@@ -100,7 +100,7 @@ module CommandCompletion = struct
         "file";
         "files";
         "first";
-        "fixedstates";
+        "fixed_states";
         "forest";
         "fuse";
         "gap_opening";
