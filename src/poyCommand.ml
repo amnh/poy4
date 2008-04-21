@@ -113,7 +113,8 @@ type transform = [
 ]
 
 type cost_calculation = [
-    | `Exact 
+    | `Exhaustive_Weak
+    | `Exhaustive_Strong
     | `Iterative
     | `Normal
 ]
@@ -1269,7 +1270,7 @@ let create_expr () =
                 [ LIDENT "root"; ":"; x = STRING -> `RootName x ] |
                 [ LIDENT "root"; ":"; x = INT -> `Root (Some (int_of_string x))
                 ] |
-                [ LIDENT "exhaustive_do" -> `Exact ] |
+                [ LIDENT "exhaustive_do" -> `Exhaustive_Weak ] |
                 [ LIDENT "iterative" -> `Iterative ] |
                 [ LIDENT "normal_do" -> `Normal ]
             ];

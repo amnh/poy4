@@ -709,7 +709,10 @@ with type b = AllDirNode.OneDirF.n = struct
                 "AllDirChar.internal_downpass.add_vertex_post_order";
                 match Ptree.get_node code ptree with
                 | Tree.Single _
-                | Tree.Leaf (_, _) -> Tree.Continue, ptree
+                | Tree.Leaf (_, _) -> 
+                        assert (All_sets.IntegerMap.mem code
+                        ptree.Ptree.node_data);
+                        Tree.Continue, ptree
                 | (Tree.Interior (_, par, a, b)) as v ->
                         let a, b = 
                             match prev with
@@ -809,7 +812,8 @@ with type b = AllDirNode.OneDirF.n = struct
         current_snapshot "AllDirChar.downpass a";
         let res = 
             match !Methods.cost with
-            | `Exact
+            | `Exhaustive_Strong
+            | `Exhaustive_Weak
             | `Normal -> internal_downpass true ptree
             | `Iterative ->
                     ptree --> internal_downpass true --> 
@@ -822,7 +826,8 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let uppass ptree = 
         match !Methods.cost with
-        | `Exact 
+        | `Exhaustive_Strong
+        | `Exhaustive_Weak
         | `Normal -> 
                 assign_single (pick_best_root ptree)
         | `Iterative -> ptree
@@ -1048,8 +1053,9 @@ with type b = AllDirNode.OneDirF.n = struct
                 Printf.printf "The tree delta cost is %f\n%!" delta_cost;
                 *)
                 new_tree, v, delta_cost, x, y, z
+        | `Exhaustive_Weak
         | `Normal -> break_fn a b
-        | `Exact ->
+        | `Exhaustive_Strong ->
             let c, d, e, f, g, _ = break_fn a b in
             let nt = uppass c in
             nt, d, 
@@ -1134,7 +1140,7 @@ with type b = AllDirNode.OneDirF.n = struct
             (Ptree.get_cost `Adjusted tree);
             *)
             tree, delta
-        | `Exact ->
+        | `Exhaustive_Weak | `Exhaustive_Strong ->
             let tree, delta = join_fn a b c d in
             uppass tree, delta
 
@@ -1183,13 +1189,12 @@ with type b = AllDirNode.OneDirF.n = struct
     let cost_fn a b c d e =
         match !Methods.cost with
         | `Iterative
-        | `Normal 
-        | `Exact ->cost_fn a b c d e 
-        (*
+        | `Exhaustive_Weak
+        | `Normal -> cost_fn a b c d e 
+        | `Exhaustive_Strong ->
                 let pc = Ptree.get_cost `Adjusted e in
-                let nt, _ = join_fn [] a b e in
-                Ptree.Cost (pc -. (Ptree.get_cost `Adjusted nt))
-        *)
+                let (nt, _) = join_fn [] a b e in
+                Ptree.Cost ((Ptree.get_cost `Adjusted nt) -. pc)
 
     let reroot_fn force edge ptree =
         let Tree.Edge (h, n) = edge in
@@ -1202,7 +1207,8 @@ with type b = AllDirNode.OneDirF.n = struct
         in
         let ptree = Ptree.fix_handle_neighbor h n ptree in
         match !Methods.cost with
-        | `Exact
+        | `Exhaustive_Strong
+        | `Exhaustive_Weak
         | `Normal -> 
                 let root = 
                     let new_roots = create_root h n ptree in

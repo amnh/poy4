@@ -3267,8 +3267,9 @@ let change_taxon_codes reorder_function data =
     * for the taxa in data *)
     let htbl =
         let taxon_codes = 
-            All_sets.StringMap.fold (fun _ code acc -> 
-                code :: acc) data.taxon_names []
+            All_sets.StringMap.fold (fun name code acc -> 
+                if All_sets.Strings.mem name data.ignore_taxa_set then acc
+                else code :: acc) data.taxon_names []
         in
         let chars = Array.of_list taxon_codes 
         and chars_org = Array.of_list taxon_codes in
@@ -3281,18 +3282,22 @@ let change_taxon_codes reorder_function data =
     in
     (* Now that we have the assignment, we proceed to modify the contents of the
     * new data. *)
+    let find htbl code =
+        try Hashtbl.find htbl code with
+        | Not_found -> code 
+    in
     let taxon_names = 
         All_sets.StringMap.fold (fun name old_code acc ->
-            All_sets.StringMap.add name (Hashtbl.find htbl old_code) acc)
+            All_sets.StringMap.add name (find htbl old_code) acc)
         data.taxon_names All_sets.StringMap.empty
     and taxon_codes =
         All_sets.IntegerMap.fold (fun old_code name acc ->
-            All_sets.IntegerMap.add (Hashtbl.find htbl old_code) name acc)
+            All_sets.IntegerMap.add (find htbl old_code) name acc)
         data.taxon_codes All_sets.IntegerMap.empty
     and taxon_characters =
         let res = Hashtbl.create 1667 in
         Hashtbl.iter (fun old_code contents ->
-            Hashtbl.add res (Hashtbl.find htbl old_code) contents)
+            Hashtbl.add res (find htbl old_code) contents)
         data.taxon_characters;
         res
     in

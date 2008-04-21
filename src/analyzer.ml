@@ -174,7 +174,8 @@ let dependency_relations (init : Methods.script) =
                         [([Data; Trees; JackBoot; Bremer], [Data; Trees; JackBoot; Bremer], init, NonComposable)]
                 | `Wipe ->
                         [([EntryPoint], [Data; Trees; JackBoot; Bremer], init, NonComposable)]
-                | `Exact
+                | `Exhaustive_Weak
+                | `Exhaustive_Strong
                 | `Iterative
                 | `Normal ->
                         [([Data; Trees], [Trees], init, Linnearizable)]
@@ -1468,8 +1469,9 @@ let script_to_string (init : Methods.script) =
                         "@[eliminate the trees I recovered in a swap@]"
                 | `Wipe ->
                         "@[get rid of all trees and data@]"
-                | `Exact -> 
-                        "@[set the cost calculation to exact DO@]"
+                | `Exhaustive_Strong
+                | `Exhaustive_Weak -> 
+                        "@[set the cost calculation to Exhaustive Weak DO@]"
                 | `Iterative ->
                         "@[set the cost calculation to iterative@]"
                 | `Normal ->
@@ -1792,7 +1794,8 @@ let is_master_only (init : Methods.script) =
     | `Interactive
     | `ChangeWDir _ 
     | `Normal
-    | `Exact
+    | `Exhaustive_Strong
+    | `Exhaustive_Weak
     | `Iterative
     | `ReDiagnose
     | `ClearMemory _ 

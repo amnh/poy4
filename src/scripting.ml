@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2760 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2762 $"
 
 module IntSet = All_sets.Integers
 
@@ -261,8 +261,10 @@ let update_trees_to_data force load_data run =
                 All_sets.IntegerMap.fold (fun code node acc ->
                     if acc <> 0 then acc
                     else
-                        let n = Ptree.get_node_data code tree in
-                        Node.compare node n)
+                        try
+                            let n = Ptree.get_node_data code tree in
+                            Node.compare node n
+                        with Not_found -> 1)
                     nodes 0)
             in
             let ach = Status.get_achieved st in
@@ -304,7 +306,7 @@ let process_transform (run : r) (meth : Methods.transform) =
                         x.Ptree.tree })
                 run.trees 
             in
-            update_trees_to_data false false
+            update_trees_to_data true false
             { run with nodes = nodes; data = data; trees = trees }
 
 let load_data (meth : Methods.input) data nodes =
@@ -1190,7 +1192,8 @@ ELSE
     let args = Sys.argv
 END
 
-let automated_search folder max_time min_time max_memory min_hits target_cost run =
+let automated_search folder max_time min_time max_memory min_hits target_cost 
+run =
     let timer = Timer.start () in
     let get_memory () = (Gc.stat ()).Gc.heap_words in
     let command_processor = PoyCommand.of_parsed false in
@@ -1238,7 +1241,9 @@ let automated_search folder max_time min_time max_memory min_hits target_cost ru
     let select_if_necessary () =
         if !memory_limit then
             let len = Sexpr.length !trees in
-            let com = command_processor (CPOY select (best:[max (len / 2) 1])) in
+            let com = 
+                command_processor (CPOY select (best:[max (len / 2) 1])) 
+            in
             let () = 
                 Gc.full_major ();
                 memory_limit := false;
@@ -1383,7 +1388,7 @@ END
                 else
                     match !Methods.cost with
                     |  `Normal -> 
-                            Methods.cost := `Exact;
+                            Methods.cost := `Exhaustive_Weak;
                             (try
                                 let todo = command_processor
                                     (CPOY swap (tbr, timeout:[min (remaining_time
@@ -1485,10 +1490,10 @@ let rec process_application run item =
     let run = reroot_at_outgroup run in
     match item with
     | `Interactive -> run
-    | `Normal | `Exact | `Iterative as meth -> 
+    | `Normal | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative as meth -> 
             if !Methods.cost <> meth then
                 match !Methods.cost with
-                | `Normal | `Exact when meth = `Iterative ->
+                | `Normal | `Exhaustive_Strong | `Exhaustive_Weak when meth = `Iterative ->
                         let () = Methods.cost := meth in
                         process_application run `ReDiagnose
                 | `Iterative -> 

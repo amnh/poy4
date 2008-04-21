@@ -98,7 +98,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ LIDENT "nolog" -> <:expr<`Logfile None>> ] |
                 [ LIDENT "seed"; ":"; x = flex_integer -> <:expr<`SetSeed $x$>> ] |
                 [ LIDENT "root"; ":"; x = flex_string -> <:expr<`RootName $x$>> ] |
-                [ LIDENT "exhaustive_do" -> <:expr<`Exact>> ] |
+                [ LIDENT "exhaustive_do" -> <:expr<`Exhaustive_Weak>> ] |
                 [ LIDENT "iterative" -> <:expr<`Iterative>> ] |
                 [ LIDENT "normal_do" -> <:expr<`Normal>> ]
             ];
@@ -752,9 +752,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ x = swap_method -> x ] |
                 [ x = keep_method -> x ] |
                 [ x = threshold_and_trees -> x ] |
-                (*
                 [ x = cost_calculation -> x ] |
-                *)
                 [ LIDENT "forest"; a = OPT optional_integer_or_float -> 
                     match a with
                     | None -> <:expr<`Forest $flo:"0."$>>

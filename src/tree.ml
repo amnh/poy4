@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2731 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2762 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -848,8 +848,7 @@ let convert_to trees data =
         | Parser.Tree.Node (cld, _) ->
                 List.fold_left (fun acc x -> (count_leaves x) + acc) 0 cld
     in
-    let total = List.fold_left (fun acc x -> acc + (count_leaves x)) 0 trees in
-    let tree = add_available total (empty ()) in
+    let tree = add_available data.Data.number_of_taxa (empty ()) in
     List.fold_left (add_tree_to data) tree trees
 
 (** [make_disjoint_tree n]
