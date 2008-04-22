@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Sexpr" "$Revision: 2753 $"
+let () = SadmanOutput.register "Sexpr" "$Revision: 2769 $"
 
 type 'a t = [ `Empty | `Set of 'a t list | `Single of 'a ]
 
@@ -220,6 +220,28 @@ let rec filter (f : ('b -> bool)) (m : 'b t) : 'b t =
             | x -> `Set x)
     | `Empty -> `Empty
 
+
+let union a b =
+    match a with
+    | `Empty -> b
+    | _ -> 
+            match b with
+            | `Empty -> a
+            | _ -> `Set [a; b]
+
+let rec split (f : ('b -> bool)) (m : 'b t) : ('b t * 'b t) = 
+    match m with
+    | `Single x ->
+            if f x then `Single x, `Empty
+            else `Empty, `Single x
+    | `Empty -> `Empty, `Empty
+    | `Set lst ->
+            match List.map (split f) lst with
+            | [] -> `Empty, `Empty
+            | h :: t -> 
+                    List.fold_left (fun (a, b) (c, d) ->
+                        (union a c), (union b d)) h t
+
 let rec combine x =
     match x with
     | `Empty, `Empty -> `Empty
@@ -333,11 +355,3 @@ let compose_status string ?(eta=true) fn n start =
             res
         end
     else fn 0 start
-
-let union a b =
-    match a with
-    | `Empty -> b
-    | _ -> 
-            match b with
-            | `Empty -> a
-            | _ -> `Set [a; b]
