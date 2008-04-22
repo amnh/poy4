@@ -274,6 +274,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ LIDENT "constraint_p" -> <:expr<`Partition []>> ] |
                 [ LIDENT "constraint_p"; ":"; x = flex_integer ->
                     <:expr<`Partition [`MaxDepth $x$]>> ] |
+                [ LIDENT "sets"; ":"; x = cur_expr -> <:expr<`Partition [`Sets $x$]>> ] |
                 [ LIDENT "constraint_p"; ":"; left_parenthesis; 
                     x = LIST1 [x = constraint_options -> x] SEP ","; right_parenthesis
                     -> <:expr<`Partition $exSem_of_list x$>> ]

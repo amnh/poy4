@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: chartree.ml 2731 2008-04-17 19:17:50Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 2731 $"
+(* $Id: chartree.ml 2771 2008-04-22 21:30:48Z andres $ *)
+let () = SadmanOutput.register "Chartree" "$Revision: 2771 $"
 
 
 (** chartree.ml *)
@@ -1105,6 +1105,9 @@ let rec features meth lst =
             | `Partition options ->
                     List.fold_left (fun acc x ->
                         match x with
+                        | `Sets sets ->
+                                ("tbu.join", 
+                                "Programmatically provided constraint") :: acc
                         | `MaxDepth depth ->
                                 ("tabu.join", "Consensus based partition") ::
                                     add_depth (Some depth) acc

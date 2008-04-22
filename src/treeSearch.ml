@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2748 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2771 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -127,8 +127,10 @@ let sets_of_parser data tree =
     let sets, _ = process tree All_sets.IntSet.empty in
     sets
 
-let sets meth data trees = 
-    let `LocalOptimum (_, _, _, _, _, _, _, _, join_tabu, _, _) = meth in
+let get_join_tabu (`LocalOptimum (_, _, _, _, _, _, _, _, join_tabu, _, _)) =
+    join_tabu
+
+let sets join_tabu data trees = 
     match join_tabu with
     | `Partition options ->
         (match 
@@ -516,6 +518,20 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
             (search_space, th, max, keep, cost_calculation, origin, 
             trajectory, break_tabu, join_tabu, reroot_tabu, samples)
             = meth in
+    let sets =
+        try
+            match join_tabu with
+            | `Partition opts -> 
+                    (match 
+                        List.find (function `Sets _ -> true | _ -> false)
+                        opts
+                    with
+                    | `Sets x -> x
+                    | _ -> assert false)
+            | _ -> sets
+        with
+        | Not_found -> sets
+    in
     let samplerf = sampler base_sampler data emergency_queue samples in
     let queue_manager =
         match queue with
@@ -641,7 +657,9 @@ let forest_search data queue origin_cost search trees =
             (forest_break_search_tree origin_cost)
             trees in
 
-    let trees = find_local_optimum data queue trees (sets search data trees) search in
+    let trees = 
+        let tabu = get_join_tabu search in
+        find_local_optimum data queue trees (sets tabu data trees) search in
 
     (* TBR joins *)
     let trees = Sexpr.map_status "TBR joining trees" forest_joins trees in

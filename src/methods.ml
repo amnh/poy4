@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2762 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2771 $"
 
 exception TimedOut
 
@@ -309,7 +309,8 @@ type output_class = [
 type tabu_join_strategy = [
     | `UnionBased of int option
     | `AllBased of int option
-    | `Partition of [`MaxDepth of int | `ConstraintFile of filename ] list
+    | `Partition of [`Sets of (All_sets.IntSet.t Lazy.t) | 
+    `MaxDepth of int | `ConstraintFile of filename ] list
 ]
 
 (* New tree build_method methods.

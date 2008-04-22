@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 2704 2008-04-14 14:09:34Z andres $ *)
+(* $Id: supports.ml 2771 2008-04-22 21:30:48Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 2704 $"
+let () = SadmanOutput.register "Support" "$Revision: 2771 $"
 
 let infinity = float_of_int max_int
 
@@ -269,7 +269,10 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
                     { x with Ptree.node_data = node_data })) trees
         in
         let perturbed = B.build_initial_trees trees data new_otus build in
-        let set = TreeSearch.sets search data perturbed in
+        let set = 
+            let tabu = TreeSearch.get_join_tabu search in
+            TreeSearch.sets tabu data perturbed 
+        in
         let res_trees = 
             PTS.find_local_optimum data queue perturbed set search 
         in
@@ -375,7 +378,10 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
                     Sexpr.fold_left (fun acc x ->
                         let x = 
                             let x = CT.substitute_nodes nodes x in
-                            let set = TreeSearch.sets search data (`Single x) in
+                            let set = 
+                                let tabu = TreeSearch.get_join_tabu search in
+                                TreeSearch.sets tabu data (`Single x) 
+                            in
                             PTS.find_local_optimum data queue (`Single x) set search 
                         in
                         Sexpr.fold_left (fun acc x ->
@@ -508,7 +514,9 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
             status, nbhood_count, orig_cost')
         in
         Status.full_report ~msg:"Performing neighborhood search" status;
-        let set = TreeSearch.sets search data (`Single tree') in
+        let set = 
+            let tabu = TreeSearch.get_join_tabu search in
+            TreeSearch.sets tabu data (`Single tree') in
         let _ = 
             PTS.find_local_optimum ~queue data emergency_queue (`Single
             tree') set search in

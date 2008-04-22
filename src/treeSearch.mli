@@ -17,8 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
+val get_join_tabu : Methods.local_optimum -> Methods.tabu_join_strategy
 val sets : 
-    Methods.local_optimum -> 
+    Methods.tabu_join_strategy -> 
         Data.d ->
         ('a, 'b) Ptree.p_tree Sexpr.t -> All_sets.IntSet.t Lazy.t
 
