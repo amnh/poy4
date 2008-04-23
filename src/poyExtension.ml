@@ -550,9 +550,9 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             [
                 [ days = flex_float; ":"; hours = flex_float; ":";
                 minutes = flex_float ->
-                    <:expr<(int_of_float ((($days$) *. 60. *. 60. *. 24.) +.
-                    ((float_of_string $hours$) *. 60. *. 60.) +.
-                    ((float_of_string $minutes$) *. 60. )))>> ] 
+                    <:expr<(((($days$) *. 60. *. 60. *. 24.) +.
+                    (($hours$) *. 60. *. 60.) +.
+                    (($minutes$) *. 60. )))>> ] 
             ];
         memory:
             [
