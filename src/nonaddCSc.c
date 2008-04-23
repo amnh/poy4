@@ -1,24 +1,5 @@
-/* POY 4.0 Beta. A phylogenetic analysis program using Dynamic Homologies.    */
-/* Copyright (C) 2007  Andrés Varón, Le Sy Vinh, Illya Bomash, Ward Wheeler,  */
-/* and the American Museum of Natural History.                                */
-/*                                                                            */
-/* This program is free software; you can redistribute it and/or modify       */
-/* it under the terms of the GNU General Public License as published by       */
-/* the Free Software Foundation; either version 2 of the License, or          */
-/* (at your option) any later version.                                        */
-/*                                                                            */
-/* This program is distributed in the hope that it will be useful,            */
-/* but WITHOUT ANY WARRANTY; without even the implied warranty of             */
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              */
-/* GNU General Public License for more details.                               */
-/*                                                                            */
-/* You should have received a copy of the GNU General Public License          */
-/* along with this program; if not, write to the Free Software                */
-/* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   */
-/* USA                                                                        */
-
 /*
- * $Id: nonaddCSc.c 2763 2008-04-21 20:50:22Z andres $
+ * $Id: nonaddCSc.c 2773 2008-04-23 12:30:13Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -30,7 +11,7 @@
 #include <caml/custom.h>
 #include <caml/alloc.h>
 #include <caml/intext.h>
-#define NDEBUG 1
+#define NDEBUG 0
 #include <assert.h>
 #include "nonaddCSc.h"
 #include <stdio.h>
@@ -595,7 +576,8 @@ nonadd_reroot_median (const nacat a,
     FLOAT_OPERATIONS;
 }
 #define Nonadd_Custom_val(v,n) n = (nacat) Data_custom_val(v); \
-                                   n->data = (vect *) ((nacat) (n + 1))
+                                if (n->len > 0) n->data = (vect *) ((nacat) (n + 1)); \
+                                else n->data = NULL;
 /** Compare two values.  They should have the same number of elements and the
  * same codes. */
 int
@@ -629,6 +611,13 @@ nonadd_nacat_compare (value v1, value v2)
     @{
     We need to use the correct serialization functions for our element types.
  */
+#if __LP64__
+#define caml_serialize_long caml_serialize_int_8
+#define caml_deserialize_long caml_deserialize_sint_8
+#else
+#define caml_serialize_long caml_serialize_int_4
+#define caml_deserialize_long caml_deserialize_sint_4
+#endif
 
 #if CHARSIZE == 8
 #define caml_serialize_int caml_serialize_int_1
@@ -666,10 +655,12 @@ nonadd_nacat_serialize (value v,
 
     /* We always write the same size */
     *wsize_32 = *wsize_64 = compute_size(n->len);
-
-    caml_serialize_int_4 (n->len);
-    caml_serialize_int_4 (n->heur);
-    caml_serialize_block (data, n->len);
+    caml_serialize_long (n->len);
+    caml_serialize_long (n->heur);
+    caml_serialize_long (n->code);
+    caml_serialize_long (n->added_cost);
+    if (n->len > 0) 
+        caml_serialize_block_1 (data, (sizeof(vect) * ((n->len / BLOCK_LEN) + 1)));
     return;
 }
 
@@ -681,13 +672,15 @@ nonadd_nacat_deserialize (void *dst)
     nac *data;
 
     n = (nacat) dst;
-
-    n->len = caml_deserialize_uint_4 ();
-    n->heur = caml_deserialize_uint_4 ();
-
-    n->data = (vect *) ((struct _naca_t *) n + 1);
-    caml_deserialize_block (n->data, n->len);
-    return sizeof(compute_size(n->len));
+    n->len = caml_deserialize_long();
+    n->heur = caml_deserialize_long();
+    n->code = caml_deserialize_long();
+    n->added_cost = caml_deserialize_long();
+    n->data = (vect *) ((struct _naca_t *) (n + 1));
+    if (n->len > 0)
+        caml_deserialize_block_1 (n->data, (sizeof(vect) * ((n->len / BLOCK_LEN) + 1)));
+    else n->data = NULL;
+    return (compute_size(n->len));
 }
 
 
@@ -726,22 +719,6 @@ nonadd_make_new_unsafe (int len, value v)
         art->data = (vect *) ((struct _naca_t *) (art + 1));
     else 
         art->data = NULL;
-    return;
-}
-
-/** Makes a copy of a #_naca_t structure, incrementing the reference count.  The
- * fields #_naca_t.data and #_naca_t.codes are now shared, so they should
- * <em>never</em> be modified, to maintain the illusion of immutability. */
-void
-nonadd_clone (nacat n, value v)
-{
-    nacat art;
-    long len;
-
-    len = n->len;
-
-    Nonadd_Custom_val(v,art);
-    memcpy (art, n, sizeof(struct _naca_t));
     return;
 }
 
@@ -939,21 +916,6 @@ char_nonadd_CAML_basic_union_par (value v, value a, value b)
     /* Write the median to nres->data */
     nonadd_make_union_par (na, nb, nres);
     CAMLreturn (Val_unit);
-}
-
-value 
-char_nonadd_CAML_to_union (value v1) {
-    CAMLparam1 (v1);
-    CAMLlocal1 (v2);
-    nacat art1, art2;
-
-    Nonadd_Custom_val(v1,art1);
-    assert (art1->len > 0);
-    v2 = caml_alloc_custom (&naca_custom,
-                           sizeof(struct _naca_t), 1, 45000);
-    nonadd_clone (art1, v2);
-    Nonadd_Custom_val(v2,art2);
-    CAMLreturn (v2);
 }
 
 value
@@ -1383,37 +1345,6 @@ char_nonadd_CAML_get_heu (value a)
     CAMLreturn (Val_long (art->heur));
 }
 
-/* We make a cheap copy of our structure and set the heuristic in that, to
- * preserve immutability. */
-value
-char_nonadd_CAML_set_heu (value h, value a)
-{
-    CAMLparam2 (h,a);
-    CAMLlocal1 (res);
-    nacat na, nres;
-
-    na = (nacat)Data_custom_val (a);
-    Nonadd_Custom_val(a,na);
-    res = caml_alloc_custom (&naca_custom,
-                           sizeof(struct _naca_t), 1, 45000);
-    nonadd_clone (na, res);
-    Nonadd_Custom_val(res,nres);
-    nres->heur = Long_val (h);
-
-    CAMLreturn (res);
-}
-
-void
-char_nonadd_CAML_set_heu_mutate (value h, value a)
-{
-    CAMLparam2 (h,a);
-    nacat na;
-
-    Nonadd_Custom_val(a,na);
-    na->heur = Long_val (h);
-
-    CAMLreturn0;
-}
 
 value
 char_nonadd_CAML_dist_2 (value va, value vb, value vc)

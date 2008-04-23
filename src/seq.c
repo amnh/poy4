@@ -307,8 +307,8 @@ seq_CAML_deserialize (void *v) {
     SEQT *head, *end;
     n = (seqt) v;
     head = (SEQT *) ((seqt) n + 1);
-    n->cap = deserialize_uint_4();
-    n->len = deserialize_uint_4();
+    n->cap = deserialize_sint_4();
+    n->len = deserialize_sint_4();
     n->head = head;
     n->begin = head;
     n->end = n->head + n->cap - 1;
