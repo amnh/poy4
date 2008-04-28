@@ -1,5 +1,5 @@
 /*
- * $Id: nonaddCSc.c 2773 2008-04-23 12:30:13Z andres $
+ * $Id: nonaddCSc.c 2786 2008-04-28 15:41:39Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -11,7 +11,7 @@
 #include <caml/custom.h>
 #include <caml/alloc.h>
 #include <caml/intext.h>
-#define NDEBUG 0
+#define NDEBUG 1
 #include <assert.h>
 #include "nonaddCSc.h"
 #include <stdio.h>
@@ -577,7 +577,7 @@ nonadd_reroot_median (const nacat a,
 }
 #define Nonadd_Custom_val(v,n) n = (nacat) Data_custom_val(v); \
                                 if (n->len > 0) n->data = (vect *) ((nacat) (n + 1)); \
-                                else n->data = NULL;
+                                else n->data = NULL
 /** Compare two values.  They should have the same number of elements and the
  * same codes. */
 int
@@ -641,7 +641,7 @@ nonadd_nacat_compare (value v1, value v2)
 
 /** @} */
 
-#define compute_size(len) (sizeof (struct _naca_t) + ((sizeof(vect) * ((len / BLOCK_LEN) + 1))))
+#define compute_size(len) ((sizeof (struct _naca_t) + ((sizeof(vect) * ((len / BLOCK_LEN) + 1)))))
 /** Serialize a #nacat value */
 void
 nonadd_nacat_serialize (value v,
@@ -1246,8 +1246,7 @@ value
 char_nonadd_CAML_to_list (value va)
 {
     CAMLparam1 (va);
-    CAMLlocal4 (res, temp_list, temp_val, temp_elt);
-    CAMLlocal1 (d_zero);
+    CAMLlocal5 (res, temp_list, temp_val, temp_elt, d_zero);
     nacat a;
     long i;
     nac *adata;
