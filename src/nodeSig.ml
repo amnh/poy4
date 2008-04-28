@@ -274,4 +274,5 @@ module type S = sig
     (* Map all the internal codes of a node using the function *)
     val recode : (int -> int) -> n -> n
     val to_other : n -> other_n
+    val force : n -> n
 end

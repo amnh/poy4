@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2771 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2789 $"
 
 module IntSet = All_sets.Integers
 
@@ -994,10 +994,10 @@ let emit_identifier =
         *)
 
     let encode_trees run =
-        run.trees, run.stored_trees
         (*
-        (Sexpr.map extract_tree run.trees), (Sexpr.map extract_tree run.stored_trees)
+        run.trees, run.stored_trees
         *)
+        (Sexpr.map extract_tree run.trees), (Sexpr.map extract_tree run.stored_trees)
 
     let toptree tree = 
         { Ptree.empty with Ptree.tree = tree } 
@@ -1052,12 +1052,13 @@ let emit_identifier =
         = []; new_ids = run.data.Data.number_of_taxa + 1 }
 
     let decode_trees (trees, stored_trees) run =
+        (*
         { run with trees = Sexpr.union trees run.trees; stored_trees =
             Sexpr.union stored_trees run.stored_trees }
-        (*
         let trees = Sexpr.map (update_codes run tc) trees in  
         *)
-        (*
+        let my_trees = run.trees 
+        and my_stored = run.stored_trees in
         let nrun = 
             let nt = Sexpr.map toptree trees 
             and nst = Sexpr.map toptree stored_trees in
@@ -1065,7 +1066,6 @@ let emit_identifier =
         in
         { run with trees = Sexpr.union my_trees nrun.trees; stored_trees =
             Sexpr.union my_stored nrun.stored_trees }
-        *)
 
     let encode_jackknife run = 
         (run.jackknife_support), (run.data.Data.taxon_codes)
@@ -1876,6 +1876,107 @@ END
 IFDEF USEPARALLEL THEN
             print_msg "Entering Gather Trees";
             (* We define a function to reduce in parallel the results *)
+            let receive_trees run other_rank =
+                print_msg "It is time for me to receive the trees!!!!";
+                let tbl = Queue.create () in
+                let got_size = ref false in
+                let trees = ref [||] in
+                let stored_trees = ref [||] in
+                let get_arr a = 
+                    if a = 0 then trees
+                    else stored_trees 
+                in
+                let msg_cntr = ref 0 in
+                let expected_messages = ref max_int in
+                let process_msg msg = 
+                    incr msg_cntr;
+                    print_msg ("Received message number " ^ string_of_int
+                    !msg_cntr);
+                    match msg with
+                    | (a, b, `Arrays) ->
+                            got_size := true;
+                            trees := Array.make a Ptree.empty;
+                            stored_trees := Array.make b Ptree.empty;
+                            expected_messages := ((a * 4) + (b * 4) + 1);
+                            print_msg ("I expect " ^ string_of_int
+                            !expected_messages);
+                    | x when not !got_size ->
+                            Queue.push x tbl;
+                    | (a, b, `Topology x) ->
+                            let arr = get_arr a in
+                            !arr.(b) <- { !arr.(b) with Ptree.tree = x }
+                    | (a, b, `Component_Root (root, origin_cost)) ->
+                            let arr = get_arr a in
+                            !arr.(b) <- { !arr.(b) with Ptree.component_root = root
+                            ; origin_cost = origin_cost };
+                    | (a, b, `EdgeData x) ->
+                            let arr = get_arr a in
+                            !arr.(b) <- { !arr.(b) with Ptree.edge_data = x }
+                    | (a, b, `NodeData x) ->
+                            let arr = get_arr a in
+                            !arr.(b) <- { !arr.(b) with Ptree.node_data = x }
+                    | (a, b, _) -> failwith "Invalid message"
+                in
+                while !expected_messages > !msg_cntr do
+                    print_msg "I expect a new message";
+                    process_msg (Mpi.receive other_rank Methods.do_job
+                    Mpi.comm_world)
+                done;
+                print_msg "I received all the messages";
+                while not (Queue.is_empty tbl) do
+                    process_msg (Queue.pop tbl);
+                done;
+                let trees = Sexpr.of_list (Array.to_list !trees) 
+                and stored_trees = Sexpr.of_list (Array.to_list !stored_trees) in
+                { run with trees = Sexpr.union run.trees trees; stored_trees =
+                    Sexpr.union run.stored_trees stored_trees }
+            in
+            let map_root r =
+                let nr = 
+                    match r.Ptree.root_median with
+                    | None -> None
+                    | Some (x, y) -> Some (x, Node.force y)
+                in
+                { r with Ptree.root_median = nr }
+            in
+            let send_trees run other_rank =
+                let send_msg msg = Mpi.send msg other_rank Methods.do_job
+                Mpi.comm_world
+                in
+                let sexpr_to_arr x = Array.of_list (Sexpr.to_list x) in
+                let trees = sexpr_to_arr run.trees 
+                and stored_trees = sexpr_to_arr run.stored_trees in
+                let send_tree a b tree = 
+                    print_msg "Sending topology";
+                    send_msg (a, b, `Topology tree.Ptree.tree);
+                    print_msg "Sending component";
+                    send_msg (a, b, `Component_Root 
+                    ((All_sets.IntegerMap.map map_root tree.Ptree.component_root),
+                    tree.Ptree.origin_cost));
+                    print_msg "Sending edge data";
+                    send_msg (a, b, `EdgeData (Tree.EdgeMap.map Edge.force
+                    tree.Ptree.edge_data));
+                    print_msg "Sending node data";
+                    send_msg (a, b, `NodeData (All_sets.IntegerMap.map
+                    Node.force tree.Ptree.node_data));
+                in
+                print_msg "Sending array size";
+                send_msg (Array.length trees, Array.length stored_trees,
+                `Arrays);
+                Array.iteri (send_tree 0) trees;
+                Array.iteri (send_tree 1) stored_trees;
+                ()
+            in
+            (*
+            let send_trees run other_rank =
+                Mpi.send (encode_trees run) other_rank Methods.do_job
+                Mpi.comm_world
+            and receive_trees run other_rank =
+                decode_trees 
+                (Mpi.receive other_rank Methods.do_job Mpi.comm_world)
+                run
+            in
+            *)
             let reduce_in_pairs bit run =
                 let other_rank = compute_other_rank bit in
                 print_msg ("Exchanging between " ^ string_of_int my_rank ^ " and " 
@@ -1883,25 +1984,20 @@ IFDEF USEPARALLEL THEN
                 if other_rank < world_size then
                     if other_rank > my_rank then 
                         (* I am in charge of doing the reduction *)
+                        let () = print_msg "I'm in charge of the reduction" in
                         let run = 
-                            Mpi.comm_world 
-                            --> Mpi.receive other_rank Methods.do_job
-                            --> (fun x -> decode_trees x run)
+                            receive_trees run other_rank 
                             --> (fun x -> List.fold_left folder x joiner)
                         in
-                        Mpi.send (encode_trees run) other_rank Methods.do_job Mpi.comm_world;
+                        let () = send_trees run other_rank in
                         run
                     else
-                        let () =
-                            Mpi.send (encode_trees run) other_rank Methods.do_job 
-                            Mpi.comm_world
-                        in
+                        let () = print_msg "I will wait for reduction" in
+                        let () = send_trees run other_rank in
                         let run = { run with trees = `Empty; stored_trees =
                             `Empty }
                         in
-                        Mpi.comm_world 
-                        --> Mpi.receive other_rank Methods.do_job 
-                        --> (fun x -> decode_trees x run)
+                        receive_trees run other_rank 
                 else List.fold_left folder run joiner
             in
             let rec reduce_them_all bit run =

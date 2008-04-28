@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2704 $"
+let () = SadmanOutput.register "Node" "$Revision: 2789 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -1346,7 +1346,7 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                     List.fold_left (get_character_with_code_n_weight gen_new) 
                     (1., [], 0) y
                 in
-                x, (a, b)
+                x, (a, b), Array.of_list (List.map snd y)
             in
             let ladd_chars    = List.map (addmapper gen_add)  laddcode    
             and lnadd8_chars  = 
@@ -1389,20 +1389,22 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             in
             let result = 
                 List.fold_left 
-                (add_characters (NonaddCS8.of_parser !data)
-                (fun c w -> Nonadd8 (make_with_w c w)))
+                (fun acc (a, b, c) -> 
+                    add_characters (NonaddCS8.of_parser !data c)
+                    (fun c w -> Nonadd8 (make_with_w c w)) acc (a, b))
                 result lnadd8_chars
             in
             let result =
                 List.fold_left 
-                (add_characters (NonaddCS16.of_parser !data)
-                (fun c w -> Nonadd16 (make_with_w c w)))
+                (fun acc (a, b, c) -> 
+                    add_characters (NonaddCS16.of_parser !data c)
+                    (fun c w -> Nonadd16 (make_with_w c w)) acc (a, b))
                 result lnadd16_chars
             in
             let result =
                 List.fold_left 
-                (add_characters (NonaddCS32.of_parser !data)
-                (fun c w -> Nonadd32 (make_with_w c w)))
+                (fun acc (a, b, c) -> add_characters (NonaddCS32.of_parser !data c)
+                (fun c w -> Nonadd32 (make_with_w c w)) acc (a, b))
                 result lnadd32_chars
             in
             let result = 
@@ -1411,8 +1413,8 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             in
             let result = 
                 List.fold_left 
-                (add_characters (AddCS.of_parser !data)
-                (fun c w -> Add (make_with_w c w)))
+                (fun acc (a, b, _) -> add_characters (AddCS.of_parser !data)
+                (fun c w -> Add (make_with_w c w)) acc (a, b))
                 result ladd_chars
             in
             let result = 
@@ -2795,6 +2797,8 @@ module Standard :
                 | [], _ -> -1
             in
             aux_cmt a.characters b.characters
+
+        let force x = x
 end 
 
 let merge a b =

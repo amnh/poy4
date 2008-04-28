@@ -37,7 +37,7 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let (-->) a b = b a
 
-    let force_node x = Lazy.force_val x.AllDirNode.lazy_node
+    let force_node x = AllDirNode.force_val x.AllDirNode.lazy_node
 
     let get_one ptree code x =
         ptree 
@@ -53,7 +53,7 @@ with type b = AllDirNode.OneDirF.n = struct
         and datab = get_one ptree code b 
         and ncode = Some code in
         let node = 
-            Lazy.lazy_from_fun 
+            AllDirNode.lazy_from_fun 
             (fun () -> Node.Standard.median ncode ncode None dataa datab)
         in
         { AllDirNode.lazy_node = node; dir = Some (a, b); code = code }
@@ -74,7 +74,7 @@ with type b = AllDirNode.OneDirF.n = struct
         in
         let dataa = get_one a b 
         and datab = get_one b a in
-        Lazy.lazy_from_fun 
+        AllDirNode.lazy_from_fun 
         (fun () -> Node.Standard.median None None None dataa datab)
 
     (* Creates a valid vertex that only has the downpass information *)
@@ -102,7 +102,7 @@ with type b = AllDirNode.OneDirF.n = struct
                 Tree.normalize_edge (Tree.Edge (a, b)) ptree.Ptree.tree 
             in
             let node = Ptree.get_edge_data norm ptree in
-            let nnode = Lazy.force_val node in
+            let nnode = AllDirNode.force_val node in
             let node = {AllDirNode.lazy_node = node; code = 0; dir = None} in
             let node = { AllDirNode.unadjusted = [node]; adjusted = [node] } in
             { 
@@ -139,8 +139,8 @@ with type b = AllDirNode.OneDirF.n = struct
                 new_tree).AllDirNode.adjusted)).AllDirNode.lazy_node
             in
             let dist = Node.distance_of_type Node.has_to_single
-                (Lazy.force_val nda)
-                (Lazy.force_val ndb) 
+                (AllDirNode.force_val nda)
+                (AllDirNode.force_val ndb) 
             in
 (*            
             Status.user_message Status.Information
@@ -165,7 +165,7 @@ with type b = AllDirNode.OneDirF.n = struct
                         List.fold_left (fun acc y ->
                             acc -.
                         (Node.total_cost_of_type y
-                        (Lazy.force_val x.AllDirNode.lazy_node))) cost 
+                        (AllDirNode.force_val x.AllDirNode.lazy_node))) cost 
                         Node.has_to_single
                 | _ -> failwith "What?")
         in
@@ -187,7 +187,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     let data = Ptree.get_node_data curr tree in
                     AllDirNode.not_with prev data.AllDirNode.unadjusted
                 in
-                Ptree.add_node_data curr (Lazy.force_val
+                Ptree.add_node_data curr (AllDirNode.force_val
                 node.AllDirNode.lazy_node) acc
             in
             All_sets.IntegerMap.fold (fun _ root acc ->
@@ -209,7 +209,7 @@ with type b = AllDirNode.OneDirF.n = struct
                         in
                         Ptree.assign_root_to_connected_component
                         a (Some ((`Edge (a, b)), 
-                        Lazy.force_val r.AllDirNode.lazy_node))
+                        AllDirNode.force_val r.AllDirNode.lazy_node))
                         root.Ptree.component_cost 
                         (Some root.Ptree.adjusted_component_cost)
                         acc
@@ -221,7 +221,7 @@ with type b = AllDirNode.OneDirF.n = struct
                         in
                         Ptree.assign_root_to_connected_component
                         a (Some ((`Single a), 
-                        Lazy.force_val r.AllDirNode.lazy_node))
+                        AllDirNode.force_val r.AllDirNode.lazy_node))
                         root.Ptree.component_cost 
                         (Some root.Ptree.adjusted_component_cost)
                         acc
@@ -254,7 +254,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     in
 
                     let _, pre_codes, _, _ = Node.get_active_ref_code 
-                        (Lazy.force_val current_d.AllDirNode.lazy_node)                        
+                        (AllDirNode.force_val current_d.AllDirNode.lazy_node)                        
                     in 
                     let pre_child1 = get_subtree current a IntSet.empty in 
                     let pre_child2 = get_subtree current b IntSet.empty in
@@ -270,7 +270,7 @@ with type b = AllDirNode.OneDirF.n = struct
         let get_handle handle pre_codes =
             let get_root_direction root = 
                 match root.AllDirNode.unadjusted with
-                | [x] -> Lazy.force_val (x.AllDirNode.lazy_node), x
+                | [x] -> AllDirNode.force_val (x.AllDirNode.lazy_node), x
                 | _ -> failwith "get_handle at allDirChar"
             in
             let comp = Ptree.get_component_root handle ptree in
@@ -312,12 +312,12 @@ with type b = AllDirNode.OneDirF.n = struct
             in
             let nd, original = 
                 current_d.AllDirNode.lazy_node
-                --> Lazy.force_val 
+                --> AllDirNode.force_val 
                     --> fun x -> Node.to_single (pre_ref_codes, fi_ref_codes)
                         None parentd x, x
             in
             let nnd = 
-                { current_d with AllDirNode.lazy_node = Lazy.lazy_from_val nd }
+                { current_d with AllDirNode.lazy_node = AllDirNode.lazy_from_val nd }
             in
             let final_d = { initial_d with AllDirNode.adjusted = [nnd] } in
             let ptree = Ptree.add_node_data current final_d ptree in
@@ -338,7 +338,7 @@ with type b = AllDirNode.OneDirF.n = struct
         let assign_single_handle handle ptree =
             let get_root_direction root = 
                 match root.AllDirNode.unadjusted with
-                | [x] -> Lazy.force_val (x.AllDirNode.lazy_node), x
+                | [x] -> AllDirNode.force_val (x.AllDirNode.lazy_node), x
                 | _ -> 
                         failwith "more than one root? \
                         AllDirChar.assign_single_handle 2"
@@ -353,11 +353,11 @@ with type b = AllDirNode.OneDirF.n = struct
                 let handle_node = 
                     (AllDirNode.not_with b (Ptree.get_node_data a
                     ptree).AllDirNode.unadjusted)
-                    --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
+                    --> (fun x -> AllDirNode.force_val x.AllDirNode.lazy_node)
                 and other_node = 
                     (AllDirNode.not_with a (Ptree.get_node_data b
                     ptree).AllDirNode.unadjusted)
-                    --> (fun x -> Lazy.force_val x.AllDirNode.lazy_node)
+                    --> (fun x -> AllDirNode.force_val x.AllDirNode.lazy_node)
                 in
                 let root = 
                     Node.to_single  (pre_ref_codes, fi_ref_codes)
@@ -367,7 +367,7 @@ with type b = AllDirNode.OneDirF.n = struct
                 ("My assignment for the root is " ^ Node.to_string root);
                 *)
                 let rooti = [{ rooth with AllDirNode.lazy_node =
-                    lazy (root) }]
+                    AllDirNode.lazy_from_val (root) }]
                 in
                 let readjusted = { rootg with AllDirNode.adjusted = rooti} in
                 Ptree.assign_root_to_connected_component 
@@ -431,7 +431,7 @@ with type b = AllDirNode.OneDirF.n = struct
     let get_single, get_unadjusted =
         let general_get f parent node =
             let nd = AllDirNode.not_with parent (f node) in
-            Lazy.force_val nd.AllDirNode.lazy_node
+            AllDirNode.force_val nd.AllDirNode.lazy_node
         in
         (general_get (fun x -> x.AllDirNode.adjusted)),
         (general_get (fun x -> x.AllDirNode.unadjusted))
@@ -506,7 +506,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     else
                         let mine = 
                             mine
-                            --> Lazy.lazy_from_val 
+                            --> AllDirNode.lazy_from_val 
                             --> (fun x -> { mine' with AllDirNode.lazy_node = x })
                             --> (fun x -> { mineo with AllDirNode.adjusted = [x] })
                         in
@@ -606,7 +606,7 @@ with type b = AllDirNode.OneDirF.n = struct
                               Node.characters = (Node.to_single (pre_ref_codes, fi_ref_codes) 
                                                      (Some new_root) bd ad).Node.characters }
                         --> fun x -> [{ 
-                            AllDirNode.lazy_node = lazy x;
+                            AllDirNode.lazy_node = AllDirNode.lazy_from_val x;
                             dir = Some (a, b);
                             code = (-1);}]
                     in
@@ -924,7 +924,7 @@ with type b = AllDirNode.OneDirF.n = struct
 
     let get_edge_n_force a b ptree =
         let data = Ptree.get_edge_data (Tree.Edge (a, b)) ptree in
-        Lazy.force_val data
+        AllDirNode.force_val data
 
     let replace_topology tree ptree = { ptree with Ptree.tree = tree } 
 
@@ -1150,7 +1150,7 @@ with type b = AllDirNode.OneDirF.n = struct
         let rec forcer edge =
             match edge with
             | Edge (a, b) ->
-                    Lazy.force_val (Ptree.get_edge_data (Tree.Edge (a, b)) tree)
+                    AllDirNode.force_val (Ptree.get_edge_data (Tree.Edge (a, b)) tree)
             | Clade x -> 
                     (match x.AllDirNode.unadjusted with
                     | [x] -> force_node x
@@ -1429,7 +1429,7 @@ module CharScripting : CharacterScripting.S with type cs =
         let median = CharacterScripting.Standard.median
         let convert =
             List.map 
-            (fun x -> Lazy.force_val (List.hd x.AllDirNode.unadjusted).AllDirNode.lazy_node)
+            (fun x -> AllDirNode.force_val (List.hd x.AllDirNode.unadjusted).AllDirNode.lazy_node)
 
         let scriptchar_operations nodes = 
             CharacterScripting.Standard.scriptchar_operations (convert nodes)

@@ -23,7 +23,21 @@ type exclude = Node.exclude
 
 type direction = (int * int) option
 
-type a_node = Node.node_data Lazy.t
+type 'a my_lazy = 
+    | Lazy of 'a Lazy.t
+    | Eager of 'a
+
+type a_node = Node.node_data my_lazy
+
+let force_val = function
+    | Lazy x -> Lazy.force_val x
+    | Eager x -> x
+
+let lazy_from_fun x = Lazy (Lazy.lazy_from_fun x)
+
+let lazy_from_val x = Eager x
+
+let force x = Eager (force_val x)
 
 type node_dir = {
     lazy_node : a_node;
@@ -37,7 +51,7 @@ type node_data = {
     downpass *)
 }
 
-let to_n node = Lazy.lazy_from_val node
+let to_n node = Eager node
 
 let has_code code n =
     match n.dir with
@@ -91,17 +105,17 @@ module OneDirF :
     type n = a_node
     type other_n = Node.Standard.n
 
-    let to_other x = Lazy.force_val x
+    let to_other x = force_val x
 
     type e = exclude
 
     let recode f n = 
-        Lazy.lazy_from_fun (fun () -> 
-            let n = Lazy.force_val n in
+        lazy_from_fun (fun () -> 
+            let n = force_val n in
             (Node.Standard.recode f n))
 
     let compare a b = 
-        Node.Standard.compare (Lazy.force_val a) (Lazy.force_val b)
+        Node.Standard.compare (force_val a) (force_val b)
 
     let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
         let data, nodes = 
@@ -117,49 +131,49 @@ module OneDirF :
     let fix_preliminary x = x
 
     let apply_f_on_lazy f a b = 
-        let a = Lazy.force_val a
-        and b = Lazy.force_val b in
+        let a = force_val a
+        and b = force_val b in
         f a b
 
     let distance ?(para=None) ?(parb=None) a b =
         apply_f_on_lazy Node.Standard.distance a b
 
     let character_costs x n = 
-        Node.Standard.character_costs x (Lazy.force_val n)
+        Node.Standard.character_costs x (force_val n)
 
     let get_nonadd_8 x n =
-        Node.Standard.get_nonadd_8 x (Lazy.force_val n)
+        Node.Standard.get_nonadd_8 x (force_val n)
 
     let get_nonadd_16 x n =
-        Node.Standard.get_nonadd_16 x (Lazy.force_val n)
+        Node.Standard.get_nonadd_16 x (force_val n)
 
     let get_nonadd_32 x n =
-        Node.Standard.get_nonadd_32 x (Lazy.force_val n)
+        Node.Standard.get_nonadd_32 x (force_val n)
 
     let get_add x n =
-        Node.Standard.get_add x (Lazy.force_val n)
+        Node.Standard.get_add x (force_val n)
 
     let get_sank x n =
-        Node.Standard.get_sank x (Lazy.force_val n)
+        Node.Standard.get_sank x (force_val n)
 
     let get_dynamic x n =
-        Node.Standard.get_dynamic x (Lazy.force_val n)
+        Node.Standard.get_dynamic x (force_val n)
 
     let median code my_code old a b = 
-        Lazy.lazy_from_fun 
+        lazy_from_fun 
         (fun () -> apply_f_on_lazy 
         (Node.Standard.median None my_code None) a b)
 
     let median_3 x par cur a b = 
-        Lazy.lazy_from_val
+        lazy_from_val
         (apply_f_on_lazy
-        (Node.Standard.median_3 x (Lazy.force_val par) (Lazy.force_val cur))
+        (Node.Standard.median_3 x (force_val par) (force_val cur))
         a b)
 
-    let to_string v = Node.Standard.to_string (Lazy.force_val v)
+    let to_string v = Node.Standard.to_string (force_val v)
 
     let apply_single_f_on_lazy f a = 
-        f (Lazy.force_val a)
+        f (force_val a)
 
     let total_cost x n =
         apply_single_f_on_lazy (Node.Standard.total_cost x) n
@@ -208,7 +222,7 @@ module OneDirF :
     let reprioritize _ x = x
 
     let f_codes ints n = 
-        Lazy.lazy_from_val (apply_single_f_on_lazy (Node.Standard.f_codes ints) n)
+        lazy_from_val (apply_single_f_on_lazy (Node.Standard.f_codes ints) n)
 
     let min_child_code code n = 
         apply_single_f_on_lazy (Node.Standard.min_child_code code) n
@@ -218,13 +232,13 @@ module OneDirF :
     let new_characters = Node.Standard.new_characters
 
     let build_node static_characters chars n = 
-        Lazy.lazy_from_val 
+        lazy_from_val 
         (apply_single_f_on_lazy 
         (Node.Standard.build_node static_characters chars) 
         n)
 
     let set_exclude_info e n = 
-        Lazy.lazy_from_val 
+        lazy_from_val 
         (apply_single_f_on_lazy (Node.Standard.set_exclude_info e) n)
 
     let excludes_median code a b = 
@@ -236,23 +250,23 @@ module OneDirF :
 
         let add_exclude set = 
             fun x ->
-                Lazy.lazy_from_val (Node.Standard.T.add_exclude set 
-                (Lazy.force_val x))
+                lazy_from_val (Node.Standard.T.add_exclude set 
+                (force_val x))
     end
 
     module Union = struct
-        type u = Node.Standard.Union.u Lazy.t
+        type u = Node.Standard.Union.u my_lazy
 
         let union code a b c =
-            let a = Lazy.force_val a 
-            and b = Lazy.force_val b 
-            and c = Lazy.force_val c in
-            Lazy.lazy_from_val (Node.Standard.Union.union code a b c)
+            let a = force_val a 
+            and b = force_val b 
+            and c = force_val c in
+            lazy_from_val (Node.Standard.Union.union code a b c)
 
         let union_one which code a b =
-            let a = Lazy.force_val a
-            and b = Lazy.force_val b in
-            Lazy.lazy_from_val (which code a b)
+            let a = force_val a
+            and b = force_val b in
+            lazy_from_val (which code a b)
 
         let union_preliminary a b c =
             union_one Node.Standard.Union.union_preliminary a b c
@@ -261,49 +275,51 @@ module OneDirF :
             union_one Node.Standard.Union.union_final a b c
 
         let leaf taxon_code code a = 
-            Lazy.lazy_from_val 
-                (Node.Standard.Union.leaf taxon_code code (Lazy.force_val a))
+            lazy_from_val 
+                (Node.Standard.Union.leaf taxon_code code (force_val a))
 
         let distance a b = 
             Node.Standard.Union.distance 
-            (Lazy.force_val a)
-            (Lazy.force_val b)
+            (force_val a)
+            (force_val b)
 
         let saturation a = 
-            Node.Standard.Union.saturation (Lazy.force_val a)
+            Node.Standard.Union.saturation (force_val a)
 
         let distance_node code n u =
             Node.Standard.Union.distance_node code
-            (Lazy.force_val n)
-            (Lazy.force_val u)
+            (force_val n)
+            (force_val u)
 
         let compare a b =
-            Node.Standard.Union.compare (Lazy.force_val a) (Lazy.force_val b)
+            Node.Standard.Union.compare (force_val a) (force_val b)
 
         let get_sequence a b c = 
-            Node.Standard.Union.get_sequence a b (Lazy.force_val c)
+            Node.Standard.Union.get_sequence a b (force_val c)
     end
 
     let for_support a b c d : n list =
         let nb = 
             List.map (fun (a, (b : n)) ->
-                a, Lazy.force_val b) b
+                a, force_val b) b
         in
         let res = Node.Standard.for_support a nb c d in
-        List.map Lazy.lazy_from_val res
+        List.map lazy_from_val res
 
 
     let root_cost a = 
-        Node.Standard.root_cost (Lazy.force_val a)
+        Node.Standard.root_cost (force_val a)
 
     let to_single root a b c d =       
         let root' = match root with
-        | Some root -> Some (Lazy.force_val root) 
+        | Some root -> Some (force_val root) 
         | None -> None
         in
-        let b' = (Lazy.force_val b) in
-        let d' = (Lazy.force_val d) in
-        lazy (Node.Standard.to_single root' a b' c d')
+        let b' = (force_val b) in
+        let d' = (force_val d) in
+        lazy_from_val (Node.Standard.to_single root' a b' c d')
+
+    let force x = force x
 end
 
 module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
@@ -328,6 +344,12 @@ type nad8 = Node.Standard.nad8 = struct
         }
         in
         { unadjusted = [node_dir]; adjusted = [node_dir]}
+
+    let force x =
+        let force_item lst = 
+            List.map (fun x -> { x with lazy_node = OneDirF.force x.lazy_node }) lst
+        in
+        { unadjusted = force_item x.unadjusted; adjusted = force_item x.adjusted }
 
     let compare a b =
         let rec dir_compare lst1 lst2 =
@@ -557,8 +579,7 @@ type nad8 = Node.Standard.nad8 = struct
 
     let run_any f n =
         match n with
-        | h :: _ ->
-                Lazy.lazy_from_val (f h.lazy_node)
+        | h :: _ -> lazy_from_val (f h.lazy_node)
         | [] -> failwith "AllDirNode.run_any"
 
     let run_all f n =
@@ -608,7 +629,7 @@ type nad8 = Node.Standard.nad8 = struct
         get_something (OneDirF.support_chars starting) code n.unadjusted
 
     let n_chars ?(acc=0) n =
-        Lazy.force_val (run_any (OneDirF.n_chars ~acc) n.unadjusted)
+        force_val (run_any (OneDirF.n_chars ~acc) n.unadjusted)
 
     let prioritize x = x
 
@@ -726,14 +747,14 @@ type nad8 = Node.Standard.nad8 = struct
         let nb = 
             List.map (fun (a, (b : n)) ->
                 match b.unadjusted with
-                | [b] -> a, Lazy.force_val b.lazy_node
+                | [b] -> a, force_val b.lazy_node
                 | _ -> failwith "AllDirNode.for_support") b 
         in
         let res = Node.Standard.for_support a nb c d in
         let rec merge a b =
             match a, b with
             | (_, [ha]) :: ta, hb :: tb ->
-                    [{ ha with lazy_node = Lazy.lazy_from_val hb }] ::
+                    [{ ha with lazy_node = lazy_from_val hb }] ::
                         merge ta tb
             | [], [] -> []
             | _, _ -> failwith "AllDirNode.for_support 2"
