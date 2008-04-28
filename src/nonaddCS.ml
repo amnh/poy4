@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2763 2008-04-21 20:50:22Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2763 $"
+(* $Id: nonaddCS.ml 2787 2008-04-28 15:44:27Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2787 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -160,8 +160,14 @@ external distance_list : ct -> ct -> (int * float) list
     = "char_nonadd_CAML_distance_list"
 external to_list : ct -> (int * e * float) list = "char_nonadd_CAML_to_list"
 
-(* UPDATE CODES *)
-let to_list x = to_list x.data
+
+let to_list x = 
+    let len = Array.length x.codes in
+    let res = ref [] in
+    for i = len - 1 downto 0 do
+        res := (x.codes.(i), (x.codes.(i), to_int x.data i), 0.) :: !res;
+    done;
+    !res
 
 (* it's easier to calculate the length of a list on the Caml side *)
 external of_list_helper : ct -> (int * e * float) list -> int -> unit
@@ -400,11 +406,10 @@ let map f a =
 let is_empty a =
     cardinal a = 0
 
-let of_parser data (elts, code) n =
+let of_parser data codes (elts, code) n =
     let make_set elts =
         let nelts = Array.length elts in
         let true_nelts = Array.length elts in
-        let codes = Array.make true_nelts 0 in
         let set = make_new_unsafe true_nelts code in
         let rec filler item =
             if item = nelts then ()
@@ -435,7 +440,6 @@ let of_parser data (elts, code) n =
                     List.fold_left (fun acc item -> acc lor (matcher item)) 0 
                     elt
                 in
-                codes.(item) <- eltcode;
                 set_elt set item elt;
                 filler (item + 1) 
         in
