@@ -1,5 +1,4 @@
 /* POY 4.0 Beta. A phylogenetic analysis program using Dynamic Homologies.    */
-/* Copyright (C) 2007  Andrés Varón, Le Sy Vinh, Illya Bomash, Ward Wheeler,  */
 /* and the American Museum of Natural History.                                */
 /*                                                                            */
 /* This program is free software; you can redistribute it and/or modify       */
@@ -309,9 +308,12 @@ seq_CAML_deserialize (void *v) {
     head = (SEQT *) ((seqt) n + 1);
     n->cap = deserialize_sint_4();
     n->len = deserialize_sint_4();
+    n->magic_number = deserialize_sint_4();
+    assert (n->magic_number == POY_SEQ_MAGIC_NUMBER);
     n->head = head;
     n->begin = head;
     n->end = n->head + n->cap - 1;
+    assert (n->len > 0);
     DESERIALIZE_SEQT(n->begin,n->len);
     n->my_pool = NULL;
     return ((n->len * sizeof(SEQT)) + sizeof(struct seq));
@@ -325,9 +327,10 @@ seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64)
     Seq_custom_val(v,vo);
     serialize_int_4(v->len);
     serialize_int_4(v->len);
+    serialize_int_4(v->magic_number);
     tmp = v->begin;
     SERIALIZE_SEQT(tmp,v->len);
-    *wsize_64 = *wsize_32 = sizeof(struct seq) + (sizeof(SEQT) * (v -> len));
+    *wsize_64 = *wsize_32 = sizeof(struct seq) + ((sizeof(SEQT) * (v -> len)));
     return;
 }
 
@@ -374,7 +377,7 @@ seq_CAML_create (value cap) {
     if (tmp2->head == NULL) failwith ("Memory error.");
     tmp2->end = tmp2->begin = tmp2->head + len - 1;
     tmp2->begin++;
-    /*assert (tmp2 == Seq_struct(res));*/
+    assert (tmp2 == Seq_pointer(res));
     CAMLreturn(res);
 }
 
