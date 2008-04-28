@@ -41,14 +41,23 @@ type dependency_class =
 let thread_table = Hashtbl.create 13
 
 let get_dependencies list =
+    let has_it = Hashtbl.create 13 in
+    let not_has_it x = not (Hashtbl.mem has_it x) 
+    and add_it x = Hashtbl.add has_it x 1 in
     let dep_relations_to_storage_class (a, parent) =
-        let dependency_to_storage_class = function
-            | Channel _ -> []
-            | Data -> [`Data]
-            | Trees -> [`Trees]
-            | JackBoot -> [`Jackknife; `Bootstrap]
-            | Bremer -> [`Bremer]
-            | EntryPoint -> []
+        let dependency_to_storage_class x = 
+            let res = 
+                match x with
+                | Channel _ -> []
+                | Data when not_has_it `Data -> [`Data]
+                | Trees when not_has_it `Trees -> [`Trees]
+                | JackBoot when not_has_it `Jackknife -> [`Jackknife; `Bootstrap]
+                | Bremer when not_has_it `Bremer -> [`Bremer]
+                | EntryPoint -> []
+                | _ -> [] 
+            in
+            List.iter add_it res;
+            res
         in
         `Set ((List.flatten (List.map dependency_to_storage_class a)), 
             try Hashtbl.find thread_table parent with
@@ -1002,6 +1011,9 @@ let simplify_store_set script =
                 `OnEachTree (script1, script2) :: result, used_items, 
                 modified
         | `ParallelPipeline (c, l1, l2, l3) ->
+                let stores = 
+                    List.find_all (function `Store _ -> true | _ -> false) l2
+                in
                 let l3, used_items, modified =
                     List.fold_right simplify_one l3
                     ([], used_items, modified)
@@ -1016,8 +1028,9 @@ let simplify_store_set script =
                 in
                 let l3 =
                     match l3 with
-                    | `GetStored :: `Set _ :: t -> `GetStored :: t
-                    | t -> t
+                    | `GetStored :: `Set _ :: t -> `GetStored :: (stores @ t)
+                    | `GetStored :: t -> `GetStored :: (stores @ t)
+                    | t -> stores @ t
                 and l2 = List.filter (function `Set _ -> false | _ -> true) l2 
                 and l1 = 
                     match List.rev l1 with
