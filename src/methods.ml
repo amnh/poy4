@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2771 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2790 $"
 
 exception TimedOut
 
@@ -110,7 +110,7 @@ type transform_cost_matrix = [
 ]
 
 
-
+(** parameters used in determining the medians between two chromosomes or genomes *)
 type chromosome_pam_t = [
     | `Locus_Inversion of int
     | `Locus_Breakpoint of int
