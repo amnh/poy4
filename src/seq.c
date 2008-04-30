@@ -341,7 +341,7 @@ seq_CAML_hash (value v) {
     int i;
     Seq_custom_val(s,v);
     for (i = (seq_get_len(s)) - 1; i >= 0; i--) {
-        x ^= (x << 5) + (x >> 2) ^ seq_get(s,i);
+        x ^= (((x << 5) + (x >> 2)) ^ seq_get(s,i));
     }
     return x;
 }
