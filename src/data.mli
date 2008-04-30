@@ -108,6 +108,10 @@ type dynamic_hom_spec = {
     fs : string;
     tcm : string;
     fo : string;
+    initial_assignment : [ 
+        | `DO 
+        | `FS of ((float array array) * (Sequence.s
+        array) * ((int, int) Hashtbl.t))  ];
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
     alph : Alphabet.a;
@@ -486,6 +490,8 @@ val transform_weight : [ `ReWeight of (bool_characters * float) | `WeightFactor 
 val file_exists : d -> Parser.filename -> bool
 
 val make_fixed_states : bool_characters -> d -> d
+
+val make_direct_optimization : bool_characters -> d -> d
 
 val has_dynamic : d -> bool 
 

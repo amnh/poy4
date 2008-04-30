@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2790 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2794 $"
 
 exception TimedOut
 
@@ -150,6 +150,7 @@ type char_transform = [
     | `Static_Aprox of (characters * bool)
     | `Search_Based of characters
     | `Fixed_States of characters
+    | `Direct_Optimization of characters
     | `Automatic_Sequence_Partition of (characters * bool * (int option))
     | `Automatic_Static_Aprox of bool
     | `Prioritize

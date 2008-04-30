@@ -2872,10 +2872,23 @@ The \poycommand{calculate\_support} command does not output support values by de
             long sequences greatly accelerates searching. This method is applicable only to dynamic homology characters.}
             {autosequencepartition}
 
+        \argumentdefinition{direct\_optimization}{}
+          {Transforms the characters specified so that the initial assignment of sequences to 
+          the internal vertices of a tree use direct
+          optimization~\cite{wheeler1996}. This method is recommended for small
+          alphabets (less than 7 elements). Otherwise fixed states is
+          recommended. It is only applicable to dynamic homology
+          characters.}
+          {directoptimization}
+
         \argumentdefinition{fixed\_states}{}
           {Transforms the characters specified in fixed state characters~\cite{wheeler1999a}
-          with distances equal to the edition distance between their observed values.
-          This method is applicable only to dynamic homology characters.}
+          where the initial assignment of sequences to the internal vertices of
+          the tree is one of the observed sequences. If the observed sequences
+          contain ambiguities, only those that resolve closest to another
+          sequence are added to the set of valid states. This method is
+          recommended for large alphabets (more than or equal to 7 elements). It is only
+          applicable to dynamic homology characters.}
           {fixedstates}
           
         \argumentdefinition{gap\_opening}{\obligatory{\poyint}}

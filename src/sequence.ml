@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2780 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2794 $"
 
 external register : unit -> unit = "seq_CAML_register"
 
@@ -902,14 +902,38 @@ module Align = struct
         res
 
     let closest s1 s2 cm m =
+        let remove_gaps s2' =
+            (* We first define a function to eliminate gaps from the 
+            * final selection *)
+            let remove_gaps gap seq base = 
+                if base <> gap then 
+                    let _ = prepend seq base in
+                    seq
+                else seq
+            in
+            let res = 
+                fold_right (remove_gaps (Cost_matrix.Two_D.gap cm)) 
+                (create (length s2')) s2'
+            in
+            prepend res (Cost_matrix.Two_D.gap cm);
+            res
+        in
         if is_empty s2 (Cost_matrix.Two_D.gap cm) then
             s2, 0
         else
         let (s, _) as res = 
         if 0 = Cost_matrix.Two_D.combine cm then 
             (* We always have just one sequence per type s *)
-            let _, _, cst = align_2 s1 s2 cm m in
-            s2, cst
+            let s1', s2', cst = align_2 s1 s2 cm m in
+            let get_closest v i =
+                let v' = get s1' i in
+                let all = Cost_matrix.Two_D.get_all_elements cm in
+                if v = all then 
+                    if v' = all then 1 (* We pick one, any will be fine *)
+                    else v'
+                else v
+            in
+            remove_gaps (mapi get_closest s2'), cst
         else
             let s1', s2', _ = align_2 s1 s2 cm m in
             let s2' =
@@ -920,20 +944,7 @@ module Align = struct
                     in
                     mapi get_closest s2' 
                 in
-                let s2' = 
-                    (* We first define a function to eliminate gaps from the 
-                    * final selection *)
-                    let remove_gaps gap seq base = 
-                        if base <> gap then 
-                            let _ = prepend seq base in
-                            seq
-                        else seq
-                    in
-                    fold_right (remove_gaps (Cost_matrix.Two_D.gap cm)) 
-                    (create (length s2')) s2'
-                in
-                prepend s2' (Cost_matrix.Two_D.gap cm);
-                s2'
+                remove_gaps s2' 
             in
             (* We must recalculate the distance between sequences because the
             * set ditance calculation is an upper bound in the affine gap cost

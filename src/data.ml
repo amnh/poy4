@@ -130,6 +130,10 @@ type dynamic_hom_spec = {
     fs : string;
     tcm : string;
     fo : string;
+    initial_assignment : [ 
+        | `DO 
+        | `FS of ((float array array) * (Sequence.s
+        array) * ((int, int) Hashtbl.t))  ];
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
     alph : Alphabet.a;
@@ -430,6 +434,14 @@ let set_sequence_defaults seq_alph data =
                 current_alphabet = seq_alph; 
             }
 *)
+
+let is_fs data code =
+    match Hashtbl.find data.character_specs code with
+    | Set | Static _ -> false
+    | Dynamic x -> 
+            match x.initial_assignment with
+            | `FS _ -> true
+            | `DO -> false
 
 let get_empty_seq alph = 
     let seq = Sequence.create 1 in
@@ -937,6 +949,7 @@ let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet
             fs = data.current_fs_file;
             tcm = tcmfile;
             fo = "0";
+            initial_assignment = `DO;
             tcm2d = tcm;
             tcm3d = tcm3;
             alph = alphabet;
@@ -2671,6 +2684,99 @@ let transform_chrom_to_rearranged_seq data meth tran_code_ls
     in 
     categorize data
 
+let compute_fixed_states data code =
+    let dhs =
+        match Hashtbl.find data.character_specs code with
+        | Dynamic dhs -> dhs
+        | _ -> assert false
+    in
+    let taxon_sequences = Hashtbl.create 1667 in
+    let sequences_taxon = Hashtbl.create 1667 in
+    let states = ref 0 in
+    let process_taxon tcode chars acc =
+        try
+            let (tc, _) = Hashtbl.find chars code in
+            match tc with
+            | Dyna (_, c) -> (tcode, (c.seq_arr.(0)).seq)  :: acc
+            | _ -> failwith "Impossible?"
+        with
+        | Not_found -> acc
+    in
+    let taxa = 
+        Array.of_list
+            (Hashtbl.fold process_taxon 
+            data.taxon_characters [])
+    in
+    let taxa = Array.map fst taxa
+    and initial_sequences = Array.map snd taxa in
+    let () = 
+        for x = 0 to (Array.length taxa) - 1 do
+            for y = 0 to (Array.length taxa) - 1 do
+                let b, _ = 
+                    Sequence.Align.closest 
+                    initial_sequences.(x) 
+                    initial_sequences.(y) dhs.tcm2d  
+                    Matrix.default 
+                in
+                let a, cost = 
+                    Sequence.Align.closest
+                    b initial_sequences.(x) dhs.tcm2d
+                    Matrix.default
+                in
+                Hashtbl.add taxon_sequences taxa.(y) b;
+                Hashtbl.add taxon_sequences taxa.(x) a;
+                if not (Hashtbl.mem sequences_taxon b) then begin
+                    Hashtbl.add sequences_taxon b !states;
+                    incr states;
+                end;
+                if not (Hashtbl.mem sequences_taxon a) then
+                    begin
+                    Hashtbl.add sequences_taxon a !states;
+                    incr states;
+                end;
+                (* We also add medians 
+                let a'= Sequence.Align.full_median_2 a b dhs.tcm2d
+                Matrix.default in
+                let a', _ = 
+                    Sequence.Align.closest a' a' dhs.tcm2d
+                    Matrix.default
+                in
+                if not (Hashtbl.mem sequences_taxon a') then
+                    begin
+                        Hashtbl.add sequences_taxon a'
+                        !states;
+                        incr states;
+                    end;
+                *)
+            done;
+        done;
+    in
+    let states = !states in
+    let sequences = 
+        Array.init states (fun _ -> Sequence.create 1) 
+    in
+    let distances = Array.make_matrix states states 0. in
+    Hashtbl.iter 
+    (fun seq pos -> sequences.(pos) <- seq) sequences_taxon;
+    for x = 0 to states - 1 do
+        for y = x + 1 to states - 1 do
+            let cost = 
+                Sequence.Align.cost_2 sequences.(x) 
+                sequences.(y) dhs.tcm2d Matrix.default 
+            in
+            distances.(x).(y) <- float_of_int cost;
+            distances.(y).(x) <- float_of_int cost;
+        done;
+    done;
+    let taxon_codes = Hashtbl.create 97 in
+    Hashtbl.iter (fun code seq ->
+        Hashtbl.add taxon_codes code (Hashtbl.find
+        sequences_taxon seq)) taxon_sequences;
+    Hashtbl.replace data.character_specs code (Dynamic { dhs
+    with initial_assignment = `FS (distances, sequences,
+    taxon_codes) })
+
+
 let assign_tcm_to_characters data chars tcmfile foname tcm =
     (* Get the character codes and filter those that are of the sequence class.
     * This allows simpler specifications by the users, for example, even though
@@ -2731,6 +2837,8 @@ let assign_tcm_to_characters data chars tcmfile foname tcm =
     List.iter ~f:(fun (spec, code) -> 
         Hashtbl.replace data.character_specs code spec) 
     new_charspecs;
+    List.iter ~f:(fun (spec, code) ->
+        if is_fs data code then compute_fixed_states data code) new_charspecs;
     { data with files = files }
 
 let assign_tcm_to_characters_from_file data chars file =
@@ -3220,62 +3328,32 @@ let complement_taxa data taxa =
 
 let make_fixed_states chars data =
     let data = duplicate data in
-    let convert_and_process data code =
-        let name = Hashtbl.find data.character_codes code in
+    let convert_and_process code =
         match Hashtbl.find data.character_specs code with
         | Dynamic dhs -> 
-                let process_taxon tcode chars acc =
-                    try
-                        let tname = code_taxon tcode data in
-                        let (tc, _) = Hashtbl.find chars code in
-                        let seq =
-                            match tc with
-                            | Dyna (_, c) -> (c.seq_arr.(0)).seq
-                            | _ -> failwith "Impossible?"
-                        in
-                        (seq, tname) :: acc
-                    with
-                    | Not_found -> acc
-                in
-                let taxa = 
-                    Hashtbl.fold process_taxon 
-                    data.taxon_characters []
-                in
-                let file = 
-                    Parser.FixedStatesDict.create_dp_read_file "" taxa [] 
-                    dhs.tcm2d 
-                in
-                Status.user_message Status.Information 
-                ("I@ will@ store@ the@ fixed@ states@ dpread@ file@ of@ " ^
-                "character@ " ^ StatusCommon.escape name ^ "@ in@ " ^
-                StatusCommon.escape file);
-                begin try
-                    let char_name = data --> code_character code in
-                    let ch, file = 
-                        FileStream.channel_n_filename (`Local file) 
-                    in
-                    let r = Parser.OldHennig.of_channel ch in
-                    let r = Parser.SC.of_old_parser file None r in
-                    close_in ch;
-                    gen_add_static_parsed_file false data char_name r
-                with
-                | Sys_error err ->
-                        let msg = "Couldn't@ open@ file@ " ^ file 
-                        ^ "@ to@ load@ the@ " ^
-                        "data.@ @ The@ system@ error@ message@ is@ "
-                            ^ err ^
-                        "." in
-                        output_error msg;
-                        data
-                end
+                (match dhs.initial_assignment with
+                | `FS _ -> ()
+                | `DO -> compute_fixed_states data code)
         | _ -> failwith "How could this happen?"
     in
     let codes = get_code_from_characters_restricted_comp `Dynamic data chars in
-    let data = List.fold_left ~f:convert_and_process ~init:data codes in
-    let data = 
-        process_ignore_character false data (List.fold_left ~f:(fun acc x ->
-        All_sets.Integers.add x acc) ~init:All_sets.Integers.empty codes)
+    List.iter ~f:convert_and_process codes;
+    data
+
+let make_direct_optimization chars data =
+    let data = duplicate data in
+    let convert_and_process code =
+        match Hashtbl.find data.character_specs code with
+        | Dynamic dhs ->
+                (match dhs.initial_assignment with
+                | `FS _ -> 
+                        Hashtbl.replace data.character_specs code 
+                        (Dynamic { dhs with initial_assignment = `DO })
+                | `DO -> ())
+        | _ -> ()
     in
+    let codes = get_code_from_characters_restricted_comp `Dynamic data chars in
+    List.iter ~f:convert_and_process codes;
     data
 
 let number_of_taxa d = 

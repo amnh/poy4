@@ -130,6 +130,8 @@ module Two_D : sig
     * not. *)
     val is_metric : m -> bool
 
+    val get_all_elements : m -> int
+
     (** [alphabet_size cm] gets the total alphabet size in the cost matrix cm. *)
     external alphabet_size : m -> int = "cm_CAML_get_a_sz"
 

@@ -506,6 +506,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 = flex_integer; ")" -> <:expr<`Gap ($x$, $y$)>> ] |
                 [ LIDENT "tcm"; ":";  x = flex_string -> <:expr<`Tcm $x$>> ] |
                 [ LIDENT "fixed_states" -> <:expr<`Fixed_States>> ] |
+                [ LIDENT "direct_optimization" -> <:expr<`Direct_Optimization>> ] |
                 [ LIDENT "gap_opening"; ":"; x = flex_integer -> <:expr<`AffGap $x$>> ] |
                 [ LIDENT "static_approx"; x = OPT informative_characters -> 
                     match x with 

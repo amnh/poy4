@@ -239,6 +239,7 @@ let dependency_relations (init : Methods.script) =
                 | `Change_Dyn_Pam _
                 | `Breakinv_to_Custom _
                 | `Fixed_States _
+                | `Direct_Optimization _
                 | `Prioritize
                 | `ReWeight _
                 | `WeightFactor _
@@ -1509,6 +1510,7 @@ let script_to_string (init : Methods.script) =
                 | `Chrom_to_Seq _
                 | `Breakinv_to_Custom _
                 | `Fixed_States _
+                | `Direct_Optimization _
                 | `Prioritize
                 | `ReWeight _
                 | `WeightFactor _

@@ -97,6 +97,7 @@ type transform_method = [
     | `Prioritize
     | `SearchBased
     | `Fixed_States
+    | `Direct_Optimization
     | `SeqToChrom of chromosome_args list
     | `ChangeDynPam of chromosome_args list
     | `CustomToBreakinv of chromosome_args list
@@ -379,6 +380,7 @@ let transform_transform acc (id, x) =
             | `Prioritize -> `Prioritize :: acc
             | `SearchBased -> (`Search_Based id) :: acc
             | `Fixed_States -> (`Fixed_States id) :: acc
+            | `Direct_Optimization -> (`Direct_Optimization id) :: acc
             | `SeqToChrom x -> (`Seq_to_Chrom (id, x)) :: acc
             | `CustomToBreakinv x -> (`Custom_to_Breakinv (id, x)) :: acc
             | `AnnchromToBreakinv x -> (`Annchrom_to_Breakinv (id, x)) :: acc
@@ -1080,6 +1082,7 @@ let create_expr () =
                 [ LIDENT "alphabetic_terminals" -> `AlphabeticTerminals ] |
                 [ LIDENT "tcm"; ":";  x = STRING -> `Tcm x ] |
                 [ LIDENT "fixed_states" -> `Fixed_States ] |
+                [ LIDENT "direct_optimization" -> `Direct_Optimization ] |
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
                     right_parenthesis -> `Gap (int_of_string x, int_of_string y) ] |
                 [ LIDENT "gap_opening"; ":"; x = INT -> `AffGap (int_of_string x) ] |

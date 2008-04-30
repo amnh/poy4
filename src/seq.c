@@ -334,11 +334,22 @@ seq_CAML_serialize (value vo, unsigned long *wsize_32, unsigned long *wsize_64)
     return;
 }
 
+long
+seq_CAML_hash (value v) {
+    long x = 0;
+    seqt s;
+    int i;
+    Seq_custom_val(s,v);
+    for (i = (seq_get_len(s)) - 1; i >= 0; i--) {
+        x ^= (x << 5) + (x >> 2) ^ seq_get(s,i);
+    }
+    return x;
+}
 static struct custom_operations sequence_custom_operations  = {
     "http://www.amnh.org/poy/seq/seq.0.2",
     custom_finalize_default,
     (&seq_CAML_compare), 
-    custom_hash_default, 
+    (&seq_CAML_hash), 
     (&seq_CAML_serialize),
     (&seq_CAML_deserialize)
 };

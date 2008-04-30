@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2771 2008-04-22 21:30:48Z andres $ *)
+(* $Id: charTransform.ml 2794 2008-04-30 18:40:51Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2771 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2794 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -968,7 +968,11 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 --> Data.make_fixed_states chars
                 --> Data.categorize
                 --> Node.load_data ~taxa:nc
-             
+        | `Direct_Optimization chars ->
+                data 
+                --> Data.make_direct_optimization chars
+                --> Data.categorize
+                --> Node.load_data ~taxa:nc
         | #Methods.dynamic_char_transform as meth -> begin
               let status = 
                   Status.create "Tranform" None 

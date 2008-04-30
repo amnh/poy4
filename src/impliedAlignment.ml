@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2780 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2794 $"
 
 exception NotASequence of int
 
@@ -239,7 +239,6 @@ codea codeb cm alph achld bchld =
     let lena = Sequence.length a.seq
     and lenb = Sequence.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
-
     let create_gaps len = Sequence.init (fun _ -> gap) len 
     and aempty = (Sequence.is_empty a.seq gap) && (state = `Seq)
     and bempty = (Sequence.is_empty b.seq gap) && (state = `Seq) in
@@ -1051,19 +1050,29 @@ let analyze_tcm tcm alph =
                         (fun y -> 
                             Cost_matrix.Two_D.cost (1 lsl x) (1 lsl y) tcm)) 
                 | Alphabet.Sequential ->
-                      let tcm_size = Cost_matrix.Two_D.alphabet_size tcm in                          
+                      let tcm_size = Cost_matrix.Two_D.alphabet_size tcm in
+                      let all = 
+                          match Alphabet.get_all alph with
+                          | None -> (-1)
+                          | Some x -> x
+                      in
                       Array.init size 
                           (fun x -> 
                                Array.init size 
                                    (fun y -> 
                                         let x = min (x + 1) tcm_size in 
                                         let y = min (y + 1) tcm_size in
+                                        let x =
+                                            if x = all then x + 1
+                                            else x
+                                        and y =
+                                            if y = all then y + 1
+                                            else y
+                                        in
                                         Cost_matrix.Two_D.cost x y tcm))
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.make_tcm"
             in
-
-
             let enc = 
                 let alph = Alphabet.to_sequential alph in
                 let res = Parser.OldHennig.Encoding.default () in
@@ -1096,7 +1105,7 @@ let analyze_tcm tcm alph =
                             else match_bit v (pos + 1) (mask lsl 1) acc
                         in
                         match_bit x 1 1 []
-                | Alphabet.Sequential -> [x]
+                | Alphabet.Sequential -> [x - 1]
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.convert_to_list"
             in
@@ -1212,7 +1221,16 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                     | None -> Some (Ptree.get_parent taxon_id ptree)
                 in
                 if Tree.is_leaf id ptree.Ptree.tree then
-                    Node.get_dynamic_preliminary par data
+                    (* In a leaf we have to do something more complex, if we are
+                    * dealing with simplified alphabets, not bitsets, we must
+                    * pick the dynamic adjusted *)
+                    let pre = Node.get_dynamic_preliminary par data
+                    and adj = Node.get_dynamic_adjusted par data in
+                    List.map2 (fun pre adj ->
+                        if 0 = Cost_matrix.Two_D.combine (DynamicCS.c2 pre)
+                        then
+                            adj
+                        else pre) pre adj
                 else get_dynamic_data par data
             in
             let data = convert_data taxon_id data in
@@ -1275,7 +1293,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 and other_data = Ptree.get_node_data other ptree
                                 in
                                 let single = 
-                                    Node.to_single (Some root) (Some self) 
+                                    Node.to_single `Left (Some root) (Some self) 
                                     other_data (Some other) self_data 
                                 in
                                 Ptree.add_node_data self single ptree
@@ -1395,8 +1413,10 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
               let add_result ias =
                   Hashtbl.iter (fun pos code -> 
                       let base = Sequence.get ias.seq pos in
-                      let col = column code in
-                      let col = len - col in
+                      let col = 
+                          let col = column code in
+                          len - col 
+                      in
                       results.(col) <- base;
                       pos_results.(col) <- pos) 
                   ias.codes
