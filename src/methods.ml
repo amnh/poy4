@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2794 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2797 $"
 
 exception TimedOut
 
@@ -30,7 +30,7 @@ let io = 3
 let debugging = 4
 let barrier = 5
 
-let cost : [ `Normal | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative ] ref = 
+let cost : [ `Normal | `Normal_plus_Vitamines | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative ] ref = 
     ref `Normal
 
 type filename = [ `Local of string | `Remote of string ]
@@ -625,6 +625,7 @@ type application = [
     | `HistorySize of int
     | `Logfile of string option
     | `Normal
+    | `Normal_plus_Vitamines
     | `Exhaustive_Weak
     | `Exhaustive_Strong
     | `Iterative

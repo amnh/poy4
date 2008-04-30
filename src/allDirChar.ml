@@ -301,7 +301,6 @@ with type b = AllDirNode.OneDirF.n = struct
     let assign_single ptree = 
         (* We first define a function that can traverse the tree and assign
         * a single sequence to each vertex on it. *)
-
         let pre_ref_codes = get_pre_active_ref_code ptree in  
         let fi_ref_codes = pre_ref_codes in 
 
@@ -821,6 +820,7 @@ with type b = AllDirNode.OneDirF.n = struct
             match !Methods.cost with
             | `Exhaustive_Strong
             | `Exhaustive_Weak
+            | `Normal_plus_Vitamines
             | `Normal -> internal_downpass true ptree
             | `Iterative ->
                     ptree --> internal_downpass true --> 
@@ -835,6 +835,7 @@ with type b = AllDirNode.OneDirF.n = struct
         match !Methods.cost with
         | `Exhaustive_Strong
         | `Exhaustive_Weak
+        | `Normal_plus_Vitamines
         | `Normal -> 
                 assign_single (pick_best_root ptree)
         | `Iterative -> ptree
@@ -1061,6 +1062,7 @@ with type b = AllDirNode.OneDirF.n = struct
                 *)
                 new_tree, v, delta_cost, x, y, z
         | `Exhaustive_Weak
+        | `Normal_plus_Vitamines
         | `Normal -> break_fn a b
         | `Exhaustive_Strong ->
             let c, d, e, f, g, _ = break_fn a b in
@@ -1147,6 +1149,9 @@ with type b = AllDirNode.OneDirF.n = struct
             (Ptree.get_cost `Adjusted tree);
             *)
             tree, delta
+        | `Normal_plus_Vitamines ->
+            let tree, delta = join_fn a b c d in
+            assign_single tree, delta
         | `Exhaustive_Weak | `Exhaustive_Strong ->
             let tree, delta = join_fn a b c d in
             uppass tree, delta
@@ -1197,6 +1202,7 @@ with type b = AllDirNode.OneDirF.n = struct
         match !Methods.cost with
         | `Iterative
         | `Exhaustive_Weak
+        | `Normal_plus_Vitamines
         | `Normal -> cost_fn a b c d e 
         | `Exhaustive_Strong ->
                 let pc = Ptree.get_cost `Adjusted e in
@@ -1216,6 +1222,7 @@ with type b = AllDirNode.OneDirF.n = struct
         match !Methods.cost with
         | `Exhaustive_Strong
         | `Exhaustive_Weak
+        | `Normal_plus_Vitamines
         | `Normal -> 
                 let root = 
                     let new_roots = create_root h n ptree in

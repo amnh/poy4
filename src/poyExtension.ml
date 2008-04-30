@@ -100,6 +100,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ LIDENT "root"; ":"; x = flex_string -> <:expr<`RootName $x$>> ] |
                 [ LIDENT "exhaustive_do" -> <:expr<`Exhaustive_Weak>> ] |
                 [ LIDENT "iterative" -> <:expr<`Iterative>> ] |
+                [ LIDENT "normal_do_plus" -> <:expr<`Normal_plus_Vitamines>> ] |
                 [ LIDENT "normal_do" -> <:expr<`Normal>> ]
             ];
         application_command:

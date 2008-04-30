@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2792 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2797 $"
 
 module IntSet = All_sets.Integers
 
@@ -1372,7 +1372,7 @@ END
                     nrun, do_perturb
                 else
                     match !Methods.cost with
-                    |  `Normal -> 
+                    | `Normal_plus_Vitamines | `Normal -> 
                             Methods.cost := `Exhaustive_Weak;
                             (try
                                 let cmd = 
@@ -1434,7 +1434,7 @@ END
                 let prev = !Methods.cost in
                 match prev with
                 | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative -> r
-                | `Normal ->
+                | `Normal | `Normal_plus_Vitamines ->
                         try
                             let potential, not_potential = 
                                 Sexpr.split (fun x ->
@@ -1522,10 +1522,10 @@ let rec process_application run item =
     let run = reroot_at_outgroup run in
     match item with
     | `Interactive -> run
-    | `Normal | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative as meth -> 
+    | `Normal | `Normal_plus_Vitamines | `Exhaustive_Weak | `Exhaustive_Strong | `Iterative as meth -> 
             if !Methods.cost <> meth then
                 match !Methods.cost with
-                | `Normal | `Exhaustive_Strong | `Exhaustive_Weak when meth = `Iterative ->
+                | `Normal_plus_Vitamines | `Normal | `Exhaustive_Strong | `Exhaustive_Weak when meth = `Iterative ->
                         let () = Methods.cost := meth in
                         process_application run `ReDiagnose
                 | `Iterative -> 

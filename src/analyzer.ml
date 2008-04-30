@@ -186,6 +186,7 @@ let dependency_relations (init : Methods.script) =
                 | `Exhaustive_Weak
                 | `Exhaustive_Strong
                 | `Iterative
+                | `Normal_plus_Vitamines
                 | `Normal ->
                         [([Data; Trees], [Trees], init, Linnearizable)]
                 | `ReDiagnose ->
@@ -1488,6 +1489,8 @@ let script_to_string (init : Methods.script) =
                         "@[set the cost calculation to Exhaustive Weak DO@]"
                 | `Iterative ->
                         "@[set the cost calculation to iterative@]"
+                | `Normal_plus_Vitamines ->
+                        "@[set the cost calculation to normal+ DO@]"
                 | `Normal ->
                         "@[set the cost calculation to normal DO@]"
                 | `ReDiagnose ->
@@ -1808,6 +1811,7 @@ let is_master_only (init : Methods.script) =
     | `Exit 
     | `Interactive
     | `ChangeWDir _ 
+    | `Normal_plus_Vitamines
     | `Normal
     | `Exhaustive_Strong
     | `Exhaustive_Weak

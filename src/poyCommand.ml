@@ -117,6 +117,7 @@ type cost_calculation = [
     | `Exhaustive_Weak
     | `Exhaustive_Strong
     | `Iterative
+    | `Normal_plus_Vitamines
     | `Normal
 ]
 
@@ -1275,7 +1276,8 @@ let create_expr () =
                 ] |
                 [ LIDENT "exhaustive_do" -> `Exhaustive_Weak ] |
                 [ LIDENT "iterative" -> `Iterative ] |
-                [ LIDENT "normal_do" -> `Normal ]
+                [ LIDENT "normal_do" -> `Normal ] | 
+                [ LIDENT "normal_do_plus" -> `Normal_plus_Vitamines ]
             ];
         (* Reporting *)
         report:
