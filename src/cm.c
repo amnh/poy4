@@ -18,6 +18,7 @@
 /* USA                                                                        */
 
 #include <stdio.h>
+#include <string.h>
 
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
@@ -244,6 +245,68 @@ cm_get_combinations_3d (cm_3dt c) {
     return (c->combinations);
 }
 
+void
+cm_set_all_elements (cmt c, int v) {
+    assert (c != NULL);
+    c->all_elements = v;
+    return;
+}
+
+void
+cm_set_all_elements_3d (cm_3dt c, int v) {
+    assert (c != NULL);
+    c->all_elements = v;
+    return;
+}
+
+int
+cm_get_all_elements (cmt c) {
+    return (c->all_elements);
+}
+
+int
+cm_get_all_elements_3d (cm_3dt c) {
+    return (c->all_elements);
+}
+
+value
+cm_CAML_set_all_elements (value cm, value v) {
+    CAMLparam2(cm, v);
+    cmt c;
+    int i;
+    c = Cost_matrix_struct(cm);
+    i = Int_val(v);
+    cm_set_all_elements (c, i);
+    CAMLreturn(Val_unit);
+}
+
+value
+cm_CAML_set_all_elements_3d (value cm, value v) {
+    CAMLparam2(cm, v);
+    cm_3dt c;
+    int i;
+    c = Cost_matrix_struct_3d(cm);
+    i = Int_val(v);
+    cm_set_all_elements_3d (c, i);
+    CAMLreturn(Val_unit);
+}
+
+value
+cm_CAML_get_all_elements_3d (value cm) {
+    CAMLparam1(cm);
+    cm_3dt c;
+    c = Cost_matrix_struct_3d(cm);
+    CAMLreturn(Val_int(cm_get_all_elements_3d(c)));
+}
+
+value
+cm_CAML_get_all_elements (value cm) {
+    CAMLparam1(cm);
+    cmt c;
+    c = Cost_matrix_struct(cm);
+    CAMLreturn(Val_int(cm_get_all_elements(c)));
+}
+
 /* 
  * Creates a cost matrix with memory allocated for an alphabet of size a_sz
  * (not including the gap representation which is internally chosen), and whose
@@ -254,7 +317,7 @@ cm_get_combinations_3d (cm_3dt c) {
  */
 cmt 
 cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
-        int is_metric, cmt res) {
+        int is_metric, int all_elements, cmt res) {
     size_t size;
 #ifndef USE_LARGE_ALPHABETS
     if (a_sz > 255) 
@@ -275,6 +338,7 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
         cm_set_lcm (res, ceil_log_2 (a_sz + 1));
         cm_unset_combinations (res);
     }
+    cm_set_all_elements (res, all_elements);
     cm_set_affine (res, do_aff, gap_open);
     res->is_metric = is_metric;
     size = 2 * (1 << (res->lcm)) * (1 << (res->lcm)) * sizeof(int);
@@ -306,7 +370,7 @@ cm_set_val (int a_sz, int combinations, int do_aff, int gap_open, \
  */
 cm_3dt 
 cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
-        cm_3dt res) {
+        int all_elements, cm_3dt res) {
     int size;
     if (!NDEBUG) {
         printf ("Allocating a three dimensional matrix:\n");
@@ -326,6 +390,7 @@ cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
         cm_set_lcm_3d (res, ceil_log_2 (a_sz + 1));
         cm_unset_combinations_3d (res);
     }
+    cm_set_all_elements_3d (res, all_elements);
     cm_set_affine_3d (res, do_aff, gap_open);
     size = (1 << (res->lcm + 1)) * (1 << (res->lcm + 1)) * (1 << (res->lcm + 1));
     res->cost = (int *) calloc (size * sizeof(int), 1);
@@ -804,6 +869,7 @@ cm_CAML_deserialize (void *v) {
     n->combinations = deserialize_sint_4();
     n->gap_open = deserialize_sint_4();
     n->is_metric = deserialize_sint_4();
+    n->all_elements = deserialize_sint_4();
     len = 2 * (1 << (n->lcm)) * (1 << n->lcm) ;
     n->cost = (int *) calloc (len * sizeof(int), 1);
     n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
@@ -830,6 +896,7 @@ cm_CAML_deserialize_3d (void *v) {
     n->cost_model_type = deserialize_sint_4();
     n->combinations = deserialize_sint_4();
     n->gap_open = deserialize_sint_4();
+    n->all_elements = deserialize_sint_4();
     len = (1 << (n->lcm + 1)) * (1 << (n->lcm + 1)) * (1 << (n->lcm + 1));
     n->cost = (int *) calloc (len * sizeof(int), 1);
     n->median = (SEQT *) calloc (len * sizeof(SEQT), 1);
@@ -856,6 +923,7 @@ cm_CAML_serialize (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->combinations);
     serialize_int_4(c->gap_open);
     serialize_int_4(c->is_metric);
+    serialize_int_4(c->all_elements);
     *wsize_64 = *wsize_32 = sizeof(struct cm);
     len = 2 * (1 << (c->lcm)) * (1 << (c->lcm));
     serialize_block_4(c->cost, len);
@@ -878,6 +946,7 @@ cm_CAML_serialize_3d (value vcm, unsigned long *wsize_32, \
     serialize_int_4(c->cost_model_type);
     serialize_int_4(c->combinations);
     serialize_int_4(c->gap_open);
+    serialize_int_4(c->all_elements);
     *wsize_64 = *wsize_32 = sizeof(struct cm_3d);
     len = (1 << (c->lcm + 1)) * (1 << (c->lcm + 1)) * (1 << (c->lcm + 1));
     serialize_block_4(c->cost, len);
@@ -997,10 +1066,10 @@ cm_CAML_clone (value v) {
     c = Cost_matrix_struct(v);
     if (c->combinations)
         cm_set_val (c->lcm, c->combinations, c->cost_model_type, \
-                c->gap_open, c->is_metric, clone2);
+                c->gap_open, c->is_metric, c->all_elements, clone2);
     else
         cm_set_val (c->a_sz, c->combinations, c->cost_model_type, \
-                c->gap_open, c->is_metric, clone2);
+                c->gap_open, c->is_metric, c->all_elements, clone2);
     len = (c->a_sz + 1) * (c->a_sz + 1);
     cm_copy_contents (c->cost, clone2->cost, len);
     cm_copy_contents_seqt (c->median, clone2->median, len);
@@ -1021,7 +1090,7 @@ cm_CAML_clone_3d (value v) {
     clone2 = Cost_matrix_struct_3d(clone);
     c = Cost_matrix_struct_3d(v);
     cm_set_val_3d (c->lcm, c->combinations, c->cost_model_type, \
-            c->gap_open, clone2);
+            c->gap_open, c->all_elements, clone2);
     len = (c->a_sz + 1) * (c->a_sz + 1) * (c->a_sz + 1);
     cm_copy_contents (c->cost, clone2->cost, len);
     cm_copy_contents_seqt (c->median, clone2->median, len);
@@ -1297,27 +1366,32 @@ cm_CAML_get_tail (value a, value v) {
 }
 
 value
-cm_CAML_create_3d (value a_sz, value combine, value aff, value go, value d) {
+cm_CAML_create_3d (value a_sz, value combine, value aff, value go, value d, value all) {
     CAMLparam5(a_sz, combine, aff, go, d);
-    CAMLxparam1(d);
+    CAMLxparam1(all);
     value tmp;
     cm_3dt tmp2;
     tmp = alloc_custom (&cost_matrix_3d, sizeof(struct cm_3d), 1, 1000000);
     tmp2 = Cost_matrix_struct_3d(tmp);
     cm_set_val_3d (Int_val(a_sz), Bool_val(combine), Int_val(aff), \
-            Int_val(go), tmp2);
+            Int_val(go), Int_val(all), tmp2);
     CAMLreturn(tmp);
 }
 
+value 
+cm_CAML_create_3d_bc (value *argv, int argn) {
+    return (cm_CAML_create_3d (argv[0], argv[1], argv[2], argv[3], argv[4], argv[5]));
+}
+
 value
-cm_CAML_create (value a_sz, value combine, value aff, value go) {
-    CAMLparam4(a_sz, combine, aff, go);
+cm_CAML_create (value a_sz, value combine, value aff, value go, value all) {
+    CAMLparam5(a_sz, combine, aff, go, all);
     value tmp;
     cmt tmp2;
     tmp = alloc_custom (&cost_matrix, sizeof(struct cm), 1, 1000000);
     tmp2 = Cost_matrix_struct(tmp);
     cm_set_val (Int_val(a_sz), Bool_val(combine), Int_val(aff), Int_val(go), \
-            0, tmp2);
+            0, Int_val(all), tmp2);
     CAMLreturn(tmp);
 }
 
@@ -1365,7 +1439,7 @@ cm_CAML_clone_to_3d (value c) {
     res = alloc_custom (&cost_matrix_3d, sizeof(struct cm_3d), 1, 1000000);
     final = Cost_matrix_struct_3d(res);
     cm_set_val_3d (init->lcm, init->combinations, init->cost_model_type, \
-            init->gap_open, final);
+            init->gap_open, init->all_elements, final);
     CAMLreturn(res);
 }
 

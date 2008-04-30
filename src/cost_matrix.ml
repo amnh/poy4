@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2169 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2792 $"
 
 
 exception Illegal_Cm_Format;;
@@ -42,6 +42,8 @@ let _ =
 module Two_D = struct
     type m
     external set_gap : m -> int -> unit = "cm_CAML_set_gap"
+    external set_all_elements : m -> int -> unit = "cm_CAML_set_all_elements"
+    external get_all_elements : m -> int = "cm_CAML_get_all_elements"
     external alphabet_size : m -> int = "cm_CAML_get_a_sz"
     external lcm : m -> int = "cm_CAML_get_lcm"
     external set_lcm : m -> int -> unit = "cm_CAML_set_lcm"
@@ -66,7 +68,7 @@ module Two_D = struct
     external set_tail : int -> int -> m -> unit = "cm_CAML_set_tail"
     external get_tail : int -> m -> int = "cm_CAML_get_tail"
     external get_prepend : int -> m -> int = "cm_CAML_get_prepend"
-    external create : int -> bool -> int -> int -> m = "cm_CAML_create"
+    external create : int -> bool -> int -> int -> int -> m = "cm_CAML_create"
     external clone : m -> m = "cm_CAML_clone"
 
     let use_combinations = true
@@ -165,14 +167,20 @@ module Two_D = struct
             | [] -> raise Illegal_Cm_Format;
         end
 
-    let rec store_input_list_in_cost_matrix_no_comb m l el1 el2 a_sz =
+    let rec store_input_list_in_cost_matrix_no_comb m l el1 el2 a_sz
+    all_elements =
         if ((el1 > a_sz) || (el2 > a_sz)) then 
             if (el1 <= a_sz) then
                 store_input_list_in_cost_matrix_no_comb m l (el1 + 1) 1 a_sz
+                all_elements
             else ()
         else 
             match l with
             | h :: t ->
+                    let h =
+                        if el1 = all_elements || el2 = all_elements then 0
+                        else h
+                    in
                     if debug then
                         let m = "Setting " ^ string_of_int el1 ^ " and " ^
                         string_of_int el2 ^ " to " ^ string_of_int h in
@@ -181,14 +189,14 @@ module Two_D = struct
                     set_cost el1 el2 m h;
                     set_worst el1 el2 m h;
                     store_input_list_in_cost_matrix_no_comb m t el1 (el2 + 1)
-                    a_sz
+                    a_sz all_elements
             | [] -> raise Illegal_Cm_Format
 
-    let store_input_list_in_cost_matrix use_comb m l a_sz =
+    let store_input_list_in_cost_matrix use_comb m l a_sz all_elements =
         if use_comb then 
             store_input_list_in_cost_matrix_all_combinations m l 1 1 a_sz
         else 
-            store_input_list_in_cost_matrix_no_comb m l 1 1 a_sz
+            store_input_list_in_cost_matrix_no_comb m l 1 1 a_sz all_elements
 
     let rec split_integer_in_list_of_bits v bit a_sz l = 
         if bit == a_sz then l
@@ -358,15 +366,24 @@ module Two_D = struct
             for j = 1 to a_sz do
                 let best = ref max_int 
                 and res = ref [] in
-                for k = 1 to a_sz do
-                    let c = (cost k j m) + (cost i k m) in
-                    if c < !best then begin
-                        best := c;
-                        res := [k];
-                    end else if c = !best then
-                        res := k :: !res
-                    else ()
-                done;
+                if i = get_all_elements m then begin
+                    best := 0;
+                    res := [j];
+                end else if j = get_all_elements m then begin
+                    best := 0;
+                    res := [i];
+                end else
+                    for k = 1 to a_sz do
+                        if k = get_all_elements m then ()
+                        else
+                            let c = (cost k j m) + (cost i k m) in
+                            if c < !best then begin
+                                best := c;
+                                res := [k];
+                            end else if c = !best then
+                                res := k :: !res
+                            else ()
+                    done;
                 matrix.(i).(j) <- !res;
             done;
         done;
@@ -375,8 +392,7 @@ module Two_D = struct
                 Array.map (fun x -> 
                     let len = List.length x in
                     if len = 0 then 0
-                    else
-                        List.nth x (Random.int len)) 
+                    else List.nth x (Random.int len)) 
                 arr) 
             matrix
         in
@@ -507,12 +523,12 @@ module Two_D = struct
         is_triangle_inequality arr &&
         is_identity arr
 
-    let fill_cost_matrix ?(use_comb=true) l a_sz =
+    let fill_cost_matrix ?(use_comb=true) l a_sz all_elements =
         let m = 
             create a_sz use_comb (cost_mode_to_int use_cost_model) 
-            use_gap_opening 
+            use_gap_opening all_elements
         in
-        store_input_list_in_cost_matrix use_comb m l a_sz;
+        store_input_list_in_cost_matrix use_comb m l a_sz all_elements;
         if use_comb then
             if input_is_metric l a_sz then
                 let () = set_metric m in
@@ -527,15 +543,30 @@ module Two_D = struct
         fill_default_prepend_tail m;
         m
 
-    let of_channel ?(orientation=false) ?(use_comb = true) ch =
+    let of_channel ?(orientation=false) ?(use_comb = true) all_elements ch =
         match load_file_as_list ch with
         | [] -> failwith "No Alphabet"
         | l ->
                 let w = calculate_alphabet_size l in
+                let w, l =
+                    if w = all_elements then
+                        (* We must add a placeholder for the all elements item
+                        * *)
+                        let rec add_every cnt lst =
+                            match lst with
+                            | [] -> []
+                            | h :: t -> 
+                                    if 0 = cnt mod w then 
+                                        1 :: h :: (add_every (cnt + 1) t)
+                                    else h :: (add_every (cnt + 1) t)
+                        in
+                        w + 1, add_every 1 l
+                    else w, l
+                in
                 let m = 
                     match orientation with 
                     | false ->
-                          fill_cost_matrix ~use_comb:use_comb l w 
+                          fill_cost_matrix ~use_comb:use_comb l w all_elements
                     | true ->
                           let l_arr = Array.of_list l in          
                           let w2 = w * 2 - 1 in  
@@ -549,27 +580,27 @@ module Two_D = struct
                               done;  
                           done; 
                           let l2 = List.rev !l2 in 
-                          fill_cost_matrix ~use_comb:use_comb l2 w2
+                          fill_cost_matrix ~use_comb:use_comb l2 w2 all_elements
                 in  
                 m;;
 
 
-    let of_list ?(use_comb=true) l =
+    let of_list ?(use_comb=true) l all_elements =
         (* This function assumes that the list is a square matrix, list of
         * lists, all of the same size *)
         let w = List.length l in
         let l = List.flatten l in 
-        fill_cost_matrix ~use_comb:use_comb l w
+        fill_cost_matrix ~use_comb:use_comb l w all_elements
 
     let of_channel_nocomb ?(orientation=false) ch =
         of_channel ~orientation:orientation ~use_comb:false ch
 
-    let of_list_nocomb l =
+    let of_list_nocomb l all_elements =
         (* This function assumes that the list is a square matrix, list of
         * lists, all of the same size *)
         let w = List.length l in
         let l = List.flatten l in 
-        fill_cost_matrix ~use_comb:false l w
+        fill_cost_matrix ~use_comb:false l w all_elements
 
     let default = 
         of_list [
@@ -578,34 +609,35 @@ module Two_D = struct
             [1;1;0;1;2];
             [1;1;1;0;2];
             [2;2;2;2;0];
-        ]
+        ] 31
 
     let default_nucleotides = default
 
     let default_aminoacids =
         of_list_nocomb [
-            [0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 2];
-            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 2];
-            [2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 0];
-        ]
+            [0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 1; 2];
+            [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 2];
+            [2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 0];
+        ] 21
 
     let of_transformations_and_gaps use_combinations alph_size trans gaps =
         let list_with_zero_in_position pos =
@@ -670,6 +702,8 @@ module Three_D = struct
     external set_gap : m -> int -> unit = "cm_CAML_set_gap_3d"
     external c_set_aff :
         m -> int -> int -> unit = "cm_CAML_set_affine_3d"
+    external set_all_elements : m -> int -> unit = "cm_CAML_set_all_elements_3d"
+    external get_all_elements : m -> int = "cm_CAML_get_all_elements_3d"
     external alphabet_size : m -> int = "cm_CAML_get_a_sz_3d"
     external set_alphabet_size : int -> m -> unit = "cm_CAML_set_a_sz_3d"
     external lcm : m -> int = "cm_CAML_get_lcm_3d"
@@ -694,7 +728,7 @@ module Three_D = struct
     the a_sz. IF dim is true the matrix will be three dimensional,
     otherwise it will be two dimensional. *)
     external create : 
-        int -> bool -> int -> int -> int -> m = "cm_CAML_create_3d"
+        int -> bool -> int -> int -> int -> int -> m = "cm_CAML_create_3d_bc" "cm_CAML_create_3d"
     external make_three_dim : Two_D.m -> m = "cm_CAML_clone_to_3d"
 
     let use_combinations = true

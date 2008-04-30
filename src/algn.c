@@ -3086,7 +3086,7 @@ algn_remove_gaps (int gap, seqt s) {
 
 void
 algn_correct_blocks_affine (int gap, seqt s, seqt a, seqt b) {
-    int i, len, in_gap_block = 0, ab, bb, sb, extending_gap, 
+    int i, len, ab, bb, sb, extending_gap, 
         inside_block = 0, prev_block = 0;
     len = seq_get_len (s);
     extending_gap = 0;
@@ -3134,7 +3134,7 @@ inline void
 algn_ancestor_2 (seqt s1, seqt s2, cmt m, seqt sm ) {
     SEQT *begin1, *begin2;
     int interm;
-    int i, gap, is_combinations, cost_model, on_gap_block;
+    int i, gap, is_combinations, cost_model;
     begin1 = seq_get_begin (s1);
     begin2 = seq_get_begin (s2);
     gap = cm_get_gap (m);

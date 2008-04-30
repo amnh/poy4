@@ -303,7 +303,7 @@ seq_CAML_compare (value a, value b) {
 unsigned long
 seq_CAML_deserialize (void *v) {
     seqt n;
-    SEQT *head, *end;
+    SEQT *head;
     n = (seqt) v;
     head = (SEQT *) ((seqt) n + 1);
     n->cap = deserialize_sint_4();
@@ -351,7 +351,6 @@ seq_CAML_create (value cap) {
     CAMLparam1(cap);
     CAMLlocal1(res);
     seqt tmp2;
-    seqt *tmp3;
     int len;
     size_t s;
     len = Int_val(cap);

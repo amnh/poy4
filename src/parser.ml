@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2640 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2792 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -3674,9 +3674,9 @@ module TransformationCostMatrix = struct
 
     let of_channel = Cost_matrix.Two_D.of_channel
 
-    let of_file ?(use_comb = true) file =
+    let of_file ?(use_comb = true) file all_elements =
         let ch = FileStream.Pervasives.open_in file in
-        let res = of_channel ~use_comb:use_comb ch in
+        let res = of_channel ~use_comb all_elements ch in
         ch#close_in;
         res
 
@@ -3704,18 +3704,22 @@ module PAlphabet = struct
         in
         let tcm = 
             try
+                let all_elements = -1 (* we don't allow ambiguities here *) in
                 if do_comb then
                     TransformationCostMatrix.of_channel 
-                    ~orientation:orientation file
+                    ~orientation:orientation all_elements  file
                 else
                     TransformationCostMatrix.of_channel_nocomb
-                    ~orientation:orientation file
+                    ~orientation:orientation all_elements file
             with
-            | Failure "No Alphabet" ->
+            | Failure "No Alphabet" -> 
+                    assert false 
+                    (*
                     let size = Alphabet.size alph in
                     Status.user_message Status.Information ("I'm following this
                     path with size " ^ string_of_int size ^ "!");
                     Cost_matrix.Two_D.of_transformations_and_gaps false size 1 1
+                    *)
         in
         let tcm3 = 
             match init3D with

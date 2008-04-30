@@ -345,9 +345,6 @@ val process_molecular_file : string -> Cost_matrix.Two_D.m ->
 
 val add_static_file : ?report:bool -> [`Hennig | `Nexus] -> d -> Parser.filename -> d
 
-val process_tcm : Parser.filename -> 
-    Cost_matrix.Two_D.m * Cost_matrix.Three_D.m * string
-
 val process_trees : d -> Parser.filename -> d
 
 val process_fixed_states : d -> Parser.filename option -> d

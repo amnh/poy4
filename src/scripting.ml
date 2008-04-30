@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2789 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2792 $"
 
 module IntSet = All_sets.Integers
 
@@ -2980,13 +2980,14 @@ module DNA = struct
 
     module CM = struct
         type cm2 = Cost_matrix.Two_D.m
-        let of_list = Cost_matrix.Two_D.of_list ~use_comb:true 
+        let of_list l = Cost_matrix.Two_D.of_list ~use_comb:true l 31
         let of_array arr = 
             let lst = Array.map (Array.to_list) arr in
             let lst = Array.to_list lst in
             of_list lst
 
-        let of_sub_indel = Cost_matrix.Two_D.of_transformations_and_gaps true 5
+        let of_sub_indel = 
+            Cost_matrix.Two_D.of_transformations_and_gaps true 5 31
 
         let of_sub_indel_affine a b c = 
             let mt = of_sub_indel a b in
@@ -2998,7 +2999,7 @@ module DNA = struct
             try 
                 let res = 
                     Cost_matrix.Two_D.of_channel ~orientation:false
-                    ~use_comb:true ch 
+                    ~use_comb:true 31 ch
                 in
                 ch#close_in;
                 res
