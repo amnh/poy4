@@ -310,14 +310,14 @@ module OneDirF :
     let root_cost a = 
         Node.Standard.root_cost (force_val a)
 
-    let to_single side root a b c d =       
+    let to_single root a b c d =       
         let root' = match root with
         | Some root -> Some (force_val root) 
         | None -> None
         in
         let b' = (force_val b) in
         let d' = (force_val d) in
-        lazy_from_val (Node.Standard.to_single side root' a b' c d')
+        lazy_from_val (Node.Standard.to_single root' a b' c d')
 
     let force x = force x
 end
@@ -399,7 +399,7 @@ type nad8 = Node.Standard.nad8 = struct
 
     let fix_preliminary x = x
 
-    let to_single side root a b c d =
+    let to_single root a b c d =
         let get_code x = 
             match x with
             | Some x -> x
@@ -417,7 +417,7 @@ type nad8 = Node.Standard.nad8 = struct
         | None -> None
         in  
 
-        let lazy_node = OneDirF.to_single side root a b'.lazy_node c d'.lazy_node in
+        let lazy_node = OneDirF.to_single root a b'.lazy_node c d'.lazy_node in
         let node = { d' with lazy_node = lazy_node } in
         { d with unadjusted = [node] }
 

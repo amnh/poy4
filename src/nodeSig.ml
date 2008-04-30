@@ -259,7 +259,7 @@ module type S = sig
         int -> (int * n) list -> int list -> int list -> n list
 
     val root_cost : n -> float    
-    val to_single : [`Left | `Right ] -> n option -> int option -> n -> int option -> n -> n
+    val to_single : n option -> int option -> n -> int option -> n -> n
     val character_costs : int option -> n -> ([`NonAdd | `Add | `Sank] * int * float) list
     (* The following group of functions return the preliminary and final
     * assignments for a given vertex for each type, in the sets as grouped for

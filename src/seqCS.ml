@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2794 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2795 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -84,27 +84,17 @@ module DOS = struct
         Packed (len, set, seqo)
 
     type do_single_sequence = {
-            code : int;
             sequence : Sequence.s;
             aligned_children : packed_algn * packed_algn;
             costs : cost_tuple;
             position : int;
-            code_left : int;
-            code_right : int;
-            position_left : int;
-            position_right : int;
         }
 
-    let create code seq = {
-        code = code;
+    let create seq = {
         sequence = seq;
         aligned_children = Raw seq, Raw seq;
         costs = { min = 0.0; max = 0.0 };
         position = 0;
-        code_left = 0;
-        code_right = 0;
-        position_left = 0;
-        position_right = 0;
     }
 
     let to_union a = Sequence.Unions.leaf a.sequence
@@ -118,9 +108,9 @@ module DOS = struct
         let gap = Cost_matrix.Two_D.gap c2 in
         let res, cost = 
             if Sequence.is_empty ch1.sequence gap then 
-                create mine.code ch2.sequence, 0
+                create ch2.sequence, 0
             else if Sequence.is_empty ch2.sequence gap then 
-                create mine.code ch1.sequence, 0
+                create ch1.sequence, 0
             else 
                 let tmpcost, seqm, changed =
                     Sequence.Align.readjust_3d ch1.sequence ch2.sequence
@@ -134,7 +124,7 @@ module DOS = struct
     let to_single h parent mine =
         let gap = Cost_matrix.Two_D.gap h.c2 in
         if Sequence.is_empty parent.sequence gap then
-            create mine.code mine.sequence, 0
+            create mine.sequence, 0
         else if Sequence.is_empty mine.sequence gap then
             parent, 0
         else 
@@ -148,9 +138,9 @@ module DOS = struct
     let median code h a b =
         let gap = Cost_matrix.Two_D.gap h.c2 in 
         if Sequence.is_empty a.sequence gap then
-            create code b.sequence, 0 
+            create b.sequence, 0 
         else if Sequence.is_empty b.sequence gap then
-            create code a.sequence, 0
+            create a.sequence, 0
         else 
             let tmpa, tmpb, tmpcost = 
                 Sequence.Align.align_2 a.sequence b.sequence h.c2 Matrix.default
@@ -161,9 +151,8 @@ module DOS = struct
             and bb = seq_to_bitset gap tmpb (Raw b.sequence) in
             assert (tmpa = bitset_to_seq gap ba);
             assert (tmpb = bitset_to_seq gap bb);
-            { code = code ; sequence = seqm; aligned_children = (ba, bb); costs = rescost;
-            position = 0; code_left = a.code; code_right = b.code; position_left = 0; position_right = 0 },
-            tmpcost
+            { sequence = seqm; aligned_children = (ba, bb); costs = rescost;
+            position = 0 }, tmpcost
 
     let median_3_no_union h p n c1 c2 =
         let with_parent c =
@@ -263,12 +252,9 @@ module RL = struct
     }
 
     type fs_sequences = {
-        code : int;
-        code_left : int;
-        code_right : int;
         states : float array;
-        left : int * (int array);
-        right : int * (int array);
+        left : int array;
+        right : int array;
     }
 
 
@@ -284,91 +270,30 @@ module RL = struct
         if (-1) = !min_pos then failwith "Empty set"
         else !min_pos
 
-
-    let to_single side (parentb, parents) (childtb, childs) =
-        let parentmin = find_smallest parents in
-        let side =
-            if childs.code = fst parents.left then snd parents.left
-            else if childs.code = fst parents.right then snd parents.right
-            else assert false
-            (*
-            match side with
-            | `Left -> 
-                    Printf.printf "The %d and the %d\n%!" (fst parents.left)
-                    childs.code;
-                    assert ((fst parents.left) = childs.code);
-                    snd parents.left
-            | `Right -> 
-                    Printf.printf "The %d and the %d\n%!" (fst parents.right)
-                    childs.code;
-                    assert ((fst parents.right) = childs.code);
-                    snd parents.right
-            *)
-        in
-        let pos = side.(parentmin) in
-        (*
-        Status.user_message Status.Information
-        ("The minimum cost in to_single is " ^ string_of_float parents.states.(parentmin) ^ 
-        " and I am assigned " ^ string_of_int pos);
-        *)
-        { DOS.create childs.code (childtb.sequence_table.(pos)) with
-        DOS.position = pos;
-        DOS.code_left = childs.code_left;
-        DOS.code_right = childs.code_right;
-        DOS.position_left = (snd childs.left).(pos); DOS.position_right =
-            (snd childs.right).(pos) }, 0
-
-    let to_single_parent_done side parent (childtbl, childs) =
-        (*
-        Status.user_message Status.Information 
-        (Printf.sprintf "Code of parent %d and code of child is %d. The parent has left %d and right %d with his %d"
-        parent.DOS.code childs.code parent.DOS.position_left parent.DOS.position_right parent.DOS.position);
-        *)
-        let pos = 
-            let pos = ref (-1) 
-            and cost = ref max_float in
-            for i = (Array.length childs.states) - 1 downto 0 do
-                let dst = childtbl.distance_table.(parent.DOS.position).(i)
-                in
-                if !cost > (childs.states.(i) +. dst)
-                then begin
-                    pos := i;
-                    cost := (childs.states.(i) +. dst);
-                end;
-            done;
-            !pos
-            (*
-            if childs.code = parent.DOS.code_left then
-                parent.DOS.position_left
-            else if childs.code = parent.DOS.code_right then
-                parent.DOS.position_right
-            else 
-                let () =
-                    Printf.printf "The codes are left %d right %d self %d\n%!"
-                    parent.DOS.code_left parent.DOS.code_right childs.code
-                in
-                assert false
-            *)
-        in
-        (*
-            match side with
-            | `Left ->  
-            | `Right -> 
-        in
-        *)
-        (*
-        Status.user_message Status.Information
-        ("The minimum cost is " ^ string_of_float childs.states.(pos) ^ 
-        " and I am assigned " ^ string_of_int pos);
-        *)
-        { DOS.create childs.code (childtbl.sequence_table.(pos)) with
-            DOS.code_left = childs.code_left;
-            DOS.code_right = childs.code_right;
-            DOS.position_left = (snd childs.left).(pos);
-            position_right = (snd childs.right).(pos); position = pos }, 
-            let c =  childtbl.distance_table.(parent.DOS.position).(pos)
+    let find_single_position par_pos (childtbl, childs) =
+        let pos = ref (-1) 
+        and cost = ref max_float in
+        for i = (Array.length childs.states) - 1 downto 0 do
+            let dst = childtbl.distance_table.(par_pos).(i)
             in
-            int_of_float c
+            if !cost > (childs.states.(i) +. dst)
+            then begin
+                pos := i;
+                cost := (childs.states.(i) +. dst);
+            end;
+        done;
+        !pos
+
+    let to_single (parentb, parents) ((childtb, childs) as ch) =
+        let parentmin = find_smallest parents in
+        let pos = find_single_position parentmin ch in
+        { DOS.create (childtb.sequence_table.(pos)) with
+        DOS.position = pos}, 0
+
+    let to_single_parent_done parent ((childtbl, childs) as ch) =
+        let pos = find_single_position parent.DOS.position ch in
+        { DOS.create (childtbl.sequence_table.(pos)) with DOS.position = pos }, 
+        (int_of_float childtbl.distance_table.(parent.DOS.position).(pos))
 
     let median code (at, ast) (bt, bst) =
         (*
@@ -404,9 +329,7 @@ module RL = struct
             left.(i) <- !best_left;
             right.(i) <- !best_right;
         done;
-        let res = { code = code; code_left = ast.code; code_right = bst.code; 
-        states = states; left = (ast.code, left); right
-        = (bst.code, right) } in
+        let res = { states = states; left = left; right = right } in
         let min_res = find_smallest res
         and min_a = find_smallest ast
         and min_b = find_smallest bst in
@@ -619,7 +542,7 @@ let to_string a =
                     let res = 
                         Array_ops.map_3 (fun a b c ->
                             Printf.sprintf "Cost: %f - left: %d - right: %d" a b
-                            c) b.RL.states (snd b.RL.left) (snd b.RL.right)
+                            c) b.RL.states b.RL.left b.RL.right
                     in
                     String.concat "--" (Array.to_list res)
         in
@@ -630,9 +553,9 @@ let to_string a =
 let of_array spec sc code taxon =
     let c3 = spec.Data.tcm3d in
     let heur = make_default_heuristic ~c3 spec.Data.tcm2d in
-    let create_item x =
+    let create_item (x, _) =
         match spec.Data.initial_assignment with
-        | `DO -> Heuristic_Selection (DOS.create taxon (fst x))
+        | `DO -> Heuristic_Selection (DOS.create x)
         | `FS (distances, sequences, taxon_codes) ->
                 let tbl = { RL.distance_table = distances; sequence_table =
                     sequences } 
@@ -648,10 +571,9 @@ let of_array spec sc code taxon =
                     if is_empty || List.exists (fun y -> y = x) seqs then
                         0.
                     else max_float)
-                and left = (taxon, Array.init len (fun x -> x)) in
+                and left = Array.init len (fun x -> x) in
                 Relaxed_Lifted 
-                (tbl, {RL.states =states; code_left = 0; code_right = 0; 
-                left = left; right = left; code = taxon})
+                (tbl, {RL.states =states; left = left; right = left })
     in
     let codes = Array.map snd sc in
     let characters = Array.map create_item sc in
@@ -711,7 +633,7 @@ let readjust to_adjust modified ch1 ch2 parent mine =
     modified, total_cost,
     { mine with characters = adjusted; total_cost = total_cost }
 
-let to_single side parent mine =
+let to_single parent mine =
     let total_cost = ref 0 in
     let characters =
         Array_ops.map_2 (fun a b ->
@@ -721,11 +643,11 @@ let to_single side parent mine =
                     total_cost := c + !total_cost;
                     Heuristic_Selection res
             | Relaxed_Lifted a, Relaxed_Lifted b ->
-                    let res, c = RL.to_single side a b in
+                    let res, c = RL.to_single a b in
                     total_cost := c + !total_cost;
                     Heuristic_Selection res
             | Heuristic_Selection a, Relaxed_Lifted b ->
-                    let res, c = RL.to_single_parent_done side a b in
+                    let res, c = RL.to_single_parent_done a b in
                     total_cost := c + !total_cost;
                     Heuristic_Selection res
             | Relaxed_Lifted _, _ -> assert false) parent.characters

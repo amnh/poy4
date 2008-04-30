@@ -156,7 +156,7 @@ val to_formatter_subtree : ChromCS.IntSet.t * ChromCS.IntSet.t -> Tags.attribute
  * Inactive codes are eliminated from diagnosis. 
  * If p is the handle, alied_map is the root containing the aligned map between p
  * and n needed for chromosome stuff, else alied_map is assigned by p *)
-val to_single : [`Left | `Right] -> ChromCS.IntSet.t * ChromCS.IntSet.t -> node_data option ->
+val to_single : ChromCS.IntSet.t * ChromCS.IntSet.t -> node_data option ->
     node_data -> node_data -> node_data
 
 (** [to_single_root n] is equivalent to [to_single n n]. *)

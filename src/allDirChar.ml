@@ -305,7 +305,7 @@ with type b = AllDirNode.OneDirF.n = struct
         let pre_ref_codes = get_pre_active_ref_code ptree in  
         let fi_ref_codes = pre_ref_codes in 
 
-        let rec assign_single_subtree side parentd parent current ptree = 
+        let rec assign_single_subtree parentd parent current ptree = 
             (*
             Printf.printf "Assigning parent %d and child %d with side %s\n%!" 
             parent current (match side with `Left -> "left" | `Right ->
@@ -320,7 +320,6 @@ with type b = AllDirNode.OneDirF.n = struct
                 --> AllDirNode.force_val 
                     --> fun x -> 
                         Node.to_single 
-                        side
                         (pre_ref_codes, fi_ref_codes)
                         None parentd x, x
             in
@@ -330,20 +329,14 @@ with type b = AllDirNode.OneDirF.n = struct
             let final_d = { initial_d with AllDirNode.adjusted = [nnd] } in
             let ptree = Ptree.add_node_data current final_d ptree in
             try 
-                let a, b, side1, side2 = 
+                let a, b =
                     let currentn = Ptree.get_node current ptree in 
                     assert (check_assertion_two_nbrs parent currentn "2");
-                    let a, b = Tree.other_two_nbrs parent currentn in
-                    let ad = Ptree.get_node_data a ptree
-                    and bd = Ptree.get_node_data b ptree in
-                    if AllDirNode.AllDirF.min_child_code (Some current) ad < 
-                        AllDirNode.AllDirF.min_child_code (Some current) bd then
-                            a, b, `Left, `Right
-                    else a, b, `Right, `Left
+                    Tree.other_two_nbrs parent currentn 
                 in
                 ptree
-                --> assign_single_subtree side1 nd current a
-                --> assign_single_subtree side2 nd current b 
+                --> assign_single_subtree nd current a
+                --> assign_single_subtree nd current b 
             with
             | Invalid_argument _ -> ptree
         in
@@ -374,13 +367,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     --> (fun x -> AllDirNode.force_val x.AllDirNode.lazy_node)
                 in
                 let root = 
-                    let side =
-                        if Node.Standard.min_child_code (Some a) handle_node < 
-                            Node.Standard.min_child_code (Some b) other_node then
-                                `Left
-                        else `Right 
-                    in
-                    Node.to_single side (pre_ref_codes, fi_ref_codes)
+                    Node.to_single (pre_ref_codes, fi_ref_codes)
                         (Some root) other_node handle_node in
                 (*
                 Status.user_message Status.Information
@@ -403,17 +390,9 @@ with type b = AllDirNode.OneDirF.n = struct
                     let ptree, root, readjusted = 
                         generate_root_and_assign_it rootg edge ptree 
                     in
-                    let a, b, side1, side2 =
-                        let ad = Ptree.get_node_data a ptree 
-                        and bd = Ptree.get_node_data b ptree in
-                        if AllDirNode.AllDirF.min_child_code (Some b) ad <
-                            AllDirNode.AllDirF.min_child_code (Some a) bd then
-                                a, b, `Right, `Left
-                        else a, b, `Left, `Right
-                    in
                     ptree
-                    --> assign_single_subtree side1 root b a 
-                    --> assign_single_subtree side2 root a b 
+                    --> assign_single_subtree root b a 
+                    --> assign_single_subtree root a b 
                     --> (fun ptree ->
                         Ptree.assign_root_to_connected_component 
                         handle 
@@ -425,7 +404,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     let ptree, root, _ = 
                         generate_root_and_assign_it rootg edge ptree 
                     in
-                    assign_single_subtree `Left root (-1) a ptree
+                    assign_single_subtree root (-1) a ptree
             | None -> failwith "no root? AllDirChar.assign_single_handle"
         in
         (* Finally, we are ready to proceed on all the handles available *)
@@ -630,13 +609,8 @@ with type b = AllDirNode.OneDirF.n = struct
                     (Node.Standard.total_cost None new_root);
                     *)
                     let new_root_p = 
-                        let side =
-                            if ad.Node.min_child_code < bd.Node.min_child_code
-                            then `Left
-                            else `Right
-                        in
                         { new_root with 
-                              Node.characters = (Node.to_single side
+                              Node.characters = (Node.to_single 
                               (pre_ref_codes, fi_ref_codes) (Some new_root) bd ad).Node.characters }
                         --> fun x -> [{ 
                             AllDirNode.lazy_node = AllDirNode.lazy_from_val x;

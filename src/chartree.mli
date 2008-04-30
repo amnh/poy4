@@ -158,7 +158,6 @@ val incremental_downpass :
 * using as attributes of the root of the subtree [b], and as parent contents,
 * and single assignment to the parent contents the tuple [g]. *)
 val subtree_to_formatter : 
-    [`Left | `Right ] ->
     ChromCS.IntSet.t * ChromCS.IntSet.t ->
     Tags.attributes -> Data.d -> Ptree.phylogeny -> int ->
     (Node.node_data * Node.node_data) option -> Tags.output

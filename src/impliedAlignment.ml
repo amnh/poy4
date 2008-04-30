@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2794 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2795 $"
 
 exception NotASequence of int
 
@@ -1293,7 +1293,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 and other_data = Ptree.get_node_data other ptree
                                 in
                                 let single = 
-                                    Node.to_single `Left (Some root) (Some self) 
+                                    Node.to_single (Some root) (Some self) 
                                     other_data (Some other) self_data 
                                 in
                                 Ptree.add_node_data self single ptree

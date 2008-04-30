@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2794 $"
+let () = SadmanOutput.register "Node" "$Revision: 2795 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -1659,7 +1659,7 @@ let pre = [ (Tags.Characters.cclass, Tags.Nodes.preliminary) ]
 let fin = [ (Tags.Characters.cclass, Tags.Nodes.final) ]
 let sing = [ (Tags.Characters.cclass, Tags.Nodes.single) ]
 
-let rec cs_to_single side (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mine : cs =
+let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mine : cs =
     match parent_cs, mine with
     | Dynamic parent, Dynamic mine ->
             (* Do we need this only for dynamic characters? I will first get it
@@ -1669,7 +1669,7 @@ let rec cs_to_single side (pre_ref_code, fi_ref_code) (root : cs option) parent_
           | _ -> None
           in 
           let prev_cost, cost, res = 
-              DynamicCS.to_single side pre_ref_code 
+              DynamicCS.to_single pre_ref_code 
                     root_pre parent.preliminary mine.preliminary 
             in
           Dynamic {preliminary = res; final = res; 
@@ -1679,7 +1679,7 @@ let rec cs_to_single side (pre_ref_code, fi_ref_code) (root : cs option) parent_
               
     | _ -> mine
 
-let to_single side (pre_ref_codes, fi_ref_codes) root parent mine = 
+let to_single (pre_ref_codes, fi_ref_codes) root parent mine = 
     (*
     Printf.printf "Assigning single to %d\n%!" mine.taxon_code;
     *)
@@ -1687,11 +1687,11 @@ let to_single side (pre_ref_codes, fi_ref_codes) root parent mine =
     | Some root ->
           let root_char_opt = List.map (fun c -> Some c) root.characters in 
           { mine with 
-                characters = map3 (cs_to_single side (pre_ref_codes, fi_ref_codes) ) 
+                characters = map3 (cs_to_single (pre_ref_codes, fi_ref_codes) ) 
                   root_char_opt parent.characters mine.characters }
     | None ->
           { mine with 
-                characters = map2 (cs_to_single side (pre_ref_codes, fi_ref_codes) None ) 
+                characters = map2 (cs_to_single (pre_ref_codes, fi_ref_codes) None ) 
                   parent.characters mine.characters }
 
 let readjust to_adjust ch1 ch2 parent mine = 
@@ -1738,7 +1738,7 @@ let readjust to_adjust ch1 ch2 parent mine =
         res, !modified
 
 let to_single_root (pre_ref_codes, fi_ref_codes) mine = 
-    to_single `Left (pre_ref_codes, fi_ref_codes) (Some mine) mine mine
+    to_single (pre_ref_codes, fi_ref_codes) (Some mine) mine mine
 
 (** [get_active_ref_code node_data] returns codes of
 * all active chromosomes which are used for single state process
@@ -2676,7 +2676,7 @@ module Standard :
         module Union = Union
         let for_support = for_support
         let root_cost = root_cost
-        let to_single side root  _ a _ b = to_single side (IntSet.empty, IntSet.empty) root a b
+        let to_single root  _ a _ b = to_single (IntSet.empty, IntSet.empty) root a b
         let get_nonadd_8 _ = get_nonadd_8 
         let get_nonadd_16 _ = get_nonadd_16 
         let get_nonadd_32 _ = get_nonadd_32 

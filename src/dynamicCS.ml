@@ -560,7 +560,7 @@ let readjust to_adjust modified ch1 ch2 parent mine =
  * Inactive codes are eliminated from diagnosis. 
  * If p is the handle, alied_map is the root containing the aligned map between p
  * and n for chromosome stuff, else alied_map is assigned by p *)
-let to_single side ref_codes root parent mine = 
+let to_single ref_codes root parent mine = 
     match parent, mine with
     | SeqCS parent, SeqCS mine -> 
             let parent = 
@@ -569,7 +569,7 @@ let to_single side ref_codes root parent mine =
                 | Some (SeqCS x) -> x
                 | _ -> assert false
             in
-            let prev_cost, new_cost, median = SeqCS.to_single side parent mine in
+            let prev_cost, new_cost, median = SeqCS.to_single parent mine in
             prev_cost, new_cost, SeqCS median
     | ChromCS parent, ChromCS mine -> 
           let root = match root with 
@@ -619,4 +619,4 @@ let to_single side ref_codes root parent mine =
 
 (** [to_single_root ref_codes mine] creates
 * the single states for dynamic character set at root [mine] *)
-let to_single_root ref_codes mine = to_single `Left ref_codes (Some mine) mine mine
+let to_single_root ref_codes mine = to_single ref_codes (Some mine) mine mine
