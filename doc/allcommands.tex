@@ -1989,13 +1989,22 @@ The \poycommand{calculate\_support} command does not output support values by de
             ratchet, and tree fusing. The strategy involves specifying targets for 
             a driven search, such as maximum and minimum execution times, 
             maximum allowed memory consumption, minimum number of times the
-            shortest tree is found, and an expected cost for the shortest tree.
+            shortest tree is found, and an expected cost for the shortest tree.  When executing
+             \poycommand{search} using parallel processing trees are exchanged upon the
+              completion of the command (after fusing).  Because the lowest cost unique trees 
+              generated are selected and stored at the end of a \poycommand{search} 
+              (defined by the user with \poyargument{max\_time}), aggressive use of this 
+              command in a parallel environment consists of implementing several sequential
+               \poycommand{search} commands that will add the pool of selected
+               best trees to subsequent iterations of the command (see the example for parallel processing).
 	\end{poydescription}
 
 	\begin{arguments}
 
         \argumentdefinition{hits}{\obligatory{\poyint}}{Specifies the minimum number of
-        times that the minimum cost must be reached before aborting the search.}{}
+        times that the minimum cost must be reached before aborting the search. 
+        The \poyargument{hits} argument is not used in parallel processing}{}
+        	      
         
         \argumentdefinition{max\_time}{\obligatory{\poyfloat:\poyfloat:\poyfloat}}
         {Maximum total execution time for the search. The time is specified as
@@ -2029,6 +2038,20 @@ The \poycommand{calculate\_support} command does not output support values by de
     parameters, the program performs a search for at most one hour using at most
     2 GB of memory. \emph{If the user does not specify the value of \poyargument{max\_time}, 
     the search will be aborted after one hour.}}
+    
+        \begin{statement}
+                Note that in order to maximize computational efficiency when using \poycommand{search} 
+                in parallel processing environments the \poyargument{hits} argument has been removed from
+                the valid syntax of the command.  Because the number of trees evaluated in search is \poycommand{search} 
+                is multiplicative such that it is doubled in the \poycommand{fuse} stage during each iteration that this 
+                command performs prior to its user defined \poyargument{max\_time}, a strategy in which many 
+                successive \poycommand{search} commands are executed for relatively short amounts of time is more 
+                exhaustive than a single \poycommand{search} executed for a relatively long amount of time.  During each 
+                successive \poycommand{search}, in addition to the trees generated in the \poycommand{build} stage, the set of 
+                best unique trees selected from the previous search round is applied to the current \poycommand{search} at 
+                the \poycommand{fuse} stage and the set of best trees from each processor will be exchanged at the command's completion.
+                \end{statement}
+
         
     	\begin{poyexamples}
         	
@@ -2038,6 +2061,19 @@ The \poycommand{calculate\_support} command does not output support values by de
             minutes, finding at least 100 hits (whichever occurs first, the time
             limit or the number of hits), knowing that the expected cost of the
             best hits is at most 385 steps.}
+	
+	\poyexample {For Parallel Implementation of \poycommand{search}}
+		               {search(max\_time:0:2:0)}\\
+			    {search(max\_time:0:2:0)}\\
+	                       {search(max\_time:0:2:0)}\\
+                                {search(max\_time:0:2:0)}\\
+	                      {search(max\_time:0:2:0)}\\
+	                      {search(max\_time:0:2:0)}\\
+            {This series of commands will attempt as many builds, swaps, ratchets, and tree
+            fusings as possible within the specified time of 16 hours (2 hours allocated
+             for each successive iteration of the command).  Trees are exchanged among
+             processors at the end of each \poycommand{search} and the best unique trees
+              are then selected and applied to the following  \poycommand{search} command.}
 	
             \end{poyexamples}
 
