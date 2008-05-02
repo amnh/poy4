@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2795 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2800 $"
 
 exception NotASequence of int
 
@@ -474,8 +474,10 @@ let ancestor_sequence prealigned calculate_median all_minus_gap
     [|res|]
 
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
+(* [ancestor_chrom prealigned calculate_median all_minus_gap acode bcode 
+*  achld bchld a b cm alpha chrom_pam] merges the implied alignments of two clades and 
+* their respective roots into one common ancestor. This is similar to [ancestor]
+* function, but for chromosome characters  *)
 let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode 
         achld bchld a b cm alpha chrom_pam = 
     let a, b, min_can_code = 
@@ -543,8 +545,6 @@ let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode
              let enb = seg.ChromAli.en2 in 
              let sub_ordb_arr = get_suborder true stab enb b.codes orderb_arr act_ordb_arr in 
 
-(*             fprintf stdout "sta:%i -> (%i, %i), (%i, %i)\n" sta staa ena stab enb; flush stdout;*)
-
              let sub_codes_a = Hashtbl.create 1667 in
              (if staa != -1 then 
                   for p = staa to ena do
@@ -574,14 +574,10 @@ let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode
                  ancestor calculate_median `Chromosome prealigned all_minus_gap sub_a
                      sub_b acode bcode cm alpha achld bchld
              in 
-(*             Sequence.printDNA seg.ChromAli.alied_seq1;
-               Sequence.printDNA seg.ChromAli.alied_seq2; *)
              (if (sta != -1) then 
                   Hashtbl.iter (fun p code ->                                     
                                     Hashtbl.add nascent_ias.codes (p + sta - 1) code) ans.codes);
 
-(*             Sequence.printDNA ans.seq;
-             print_newline ();*)
 
              Hashtbl.iter (fun code hom -> 
                                Hashtbl.replace nascent_ias.homologous code hom) ans.homologous; 
@@ -594,8 +590,10 @@ let ancestor_chrom prealigned calculate_median all_minus_gap acode bcode
 
 
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
+(* [ancestor_annchrom prealigned calculate_median all_minus_gap acode bcode 
+*  achld bchld a b cm alpha annchrom_pam] merges the implied alignments of two clades and 
+* their respective roots into one common ancestor. This is similar to [ancestor]
+* function, but for annotated chromosome characters  *)
 let ancestor_annchrom prealigned calculate_median all_minus_gap acode bcode
         achld bchld a b cm alpha annchrom_pam  = 
 
@@ -650,8 +648,10 @@ let ancestor_annchrom prealigned calculate_median all_minus_gap acode bcode
     let new_ias_arr = Array.map merge_ias med.AnnchromAli.seq_arr in 
     new_ias_arr
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
+(* [ancestor_breakinv prealigned calculate_median all_minus_gap acode bcode 
+*  achld bchld a b cm alpha breakinv_pam] merges the implied alignments of two clades and 
+* their respective roots into one common ancestor. This is similar to [ancestor]
+* function, but for breakinv characters  *)
 let ancestor_breakinv prealigned calculate_median all_minus_gap acode bcode
         achld bchld a b cm alpha breakinv_pam = 
 
@@ -715,8 +715,10 @@ let ancestor_breakinv prealigned calculate_median all_minus_gap acode bcode
     [|{ans with seq = med.BreakinvAli.seq; codes = new_codes}|]
 
 
-(* Merge the implied alignments of two clades and their respective roots into
-* one common ancestor *)
+(* [ancestor_genome prealigned calculate_median all_minus_gap acode bcode 
+*  achld bchld a b cm alpha chrom_pam] merges the implied alignments of two clades and 
+* their respective roots into one common ancestor. This is similar to [ancestor]
+* function, but for genome characters  *)
 let ancestor_genome prealigned calculate_median all_minus_gap acode bcode achld
         bchld a b cm alpha chrom_pam = 
 
