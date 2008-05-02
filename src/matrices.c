@@ -94,7 +94,8 @@ mat_setup_size (matricest m, int w, int d, int h, int k, int a_sz) {
     }
     if (m->len < len_dir) { /* If the other matrices are not enough */
         m->cube_d = m->matrix_d = 
-            (unsigned char *) realloc (m->matrix_d, (len_dir * sizeof(unsigned char)));
+            (DIRECTION_MATRIX *) 
+            realloc (m->matrix_d, (len_dir * sizeof(DIRECTION_MATRIX)));
         if (0 != len_2d) {
             m->pointers_3d = 
                 (int **) realloc (m->pointers_3d, len_2d * sizeof(int));
@@ -132,7 +133,7 @@ mat_get_2d_matrix (matricest m) {
     return (m->matrix);
 }
 
-unsigned char *
+DIRECTION_MATRIX *
 mat_get_2d_direct (const matricest m) {
     return (m->matrix_d);
 }
@@ -147,7 +148,7 @@ mat_get_3d_matrix (matricest m) {
     return (m->cube);
 }
 
-unsigned char *
+DIRECTION_MATRIX *
 mat_get_3d_direct (matricest m) {
     return (m->cube_d);
 }

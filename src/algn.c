@@ -47,7 +47,7 @@
 
 #ifdef DEBUG_ALL_ASSERTIONS
 int *_algn_max_matrix = NULL;
-unsigned char *_algn_max_direction = NULL;
+DIRECTION_MATRIX *_algn_max_direction = NULL;
 #endif
 /******************************************************************************/
 /*                        Pairwise Standard Alignment                         */
@@ -92,7 +92,7 @@ inline void
 #endif
 algn_fill_row (int *mm, const int *pm, const int *gap_row, \
 
-        const int *alg_row, unsigned char *dm, int c, int i, int end) {
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int i, int end) {
 
 
     register int aa, bb, cc;
@@ -373,7 +373,7 @@ __inline void
 inline void 
 #endif
 algn_fill_row (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int st, int end) {
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int st, int end) {
     int i, tmp1, tmp2, tmp3;
 
     for (i = st; i <= end; i++) {
@@ -459,7 +459,7 @@ __inline void
 inline void 
 #endif
 algn_fill_ukk_right_cell (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int pos) {
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int pos) {
     int tmp2, tmp3;
     /* try align with substitution */
     tmp2 = mm[pos - 1] + gap_row[pos];
@@ -505,7 +505,7 @@ __inline void
 inline void 
 #endif
 algn_fill_ukk_left_cell (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int pos) {
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int pos) {
     int tmp1, tmp3;
     /* try align with substitution */
     tmp1 = pm[pos] + c;
@@ -545,7 +545,7 @@ __inline void
 #else
 inline void
 #endif
-algn_fill_last_column (int *mm, const int *pm, int tlc, int l, unsigned char *dm) {
+algn_fill_last_column (int *mm, const int *pm, int tlc, int l, DIRECTION_MATRIX *dm) {
     int cst;
     if (l > 0) {
         cst = tlc + pm[l];
@@ -565,7 +565,7 @@ __inline void
 inline void
 #endif
 algn_fill_full_row (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int tlc, int l) {
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int tlc, int l) {
     /* first entry is delete */
     mm[0] = c + pm[0];
     dm[0] = DELETE;
@@ -581,7 +581,7 @@ algn_fill_full_row (int *mm, const int *pm, const int *gap_row, \
 }
 
 void
-algn_fill_first_row (int *mm, unsigned char *dm, int len, int const *gap_row) {
+algn_fill_first_row (int *mm, DIRECTION_MATRIX *dm, int len, int const *gap_row) {
     int i;
     /* We fill the first cell to start with */
     mm[0] = 0;
@@ -607,7 +607,7 @@ algn_fill_first_row (int *mm, unsigned char *dm, int len, int const *gap_row) {
 }
 
 void
-algn_fill_first_cell (int *mm, int pm, unsigned char *dm, int gap) {
+algn_fill_first_cell (int *mm, int pm, DIRECTION_MATRIX *dm, int gap) {
     *mm = pm + gap;
     *dm = DELETE;
     if ((!NDEBUG) && (!NPRINT_DM))
@@ -635,7 +635,7 @@ algn_fill_first_cell (int *mm, int pm, unsigned char *dm, int gap) {
 
 int *
 algn_fill_extending_right (const seqt s1, int *prec, int s1_len, int s2_len,  \
-        int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, int end_row, int len) {
+        int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, int end_row, int len) {
     int i;
     int *tmp, cur_s1, const_val;
     const int *gap_row, *alg_row;
@@ -673,7 +673,7 @@ algn_fill_extending_right (const seqt s1, int *prec, int s1_len, int s2_len,  \
 
 int *
 algn_fill_extending_left_right (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int start_column, int len) {
     int i;
     int *tmp, cur_s1, const_val;
@@ -715,7 +715,7 @@ algn_fill_extending_left_right (const seqt s1, int *prec, int s1_len, \
 
 int *
 algn_fill_extending_left (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int start_column, int len) {
     int i;
     int *tmp, cur_s1, const_val, const_val_tail;
@@ -769,7 +769,7 @@ algn_fill_extending_left (const seqt s1, int *prec, int s1_len, \
 
 int *
 algn_fill_no_extending (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row) {
     int i;
     int *tmp, cur_s1, const_val, const_val_tail;
@@ -810,7 +810,7 @@ __inline int
 inline int
 #endif
 algn_fill_plane (const seqt s1, int *prec, int s1_len, \
-        int s2_len, int *mm, unsigned char *dm, const cmt c) {
+        int s2_len, int *mm, DIRECTION_MATRIX *dm, const cmt c) {
     int i;
     const int *alg_row;
     int const_val, const_val_tail, *nm, *tmp;
@@ -870,13 +870,13 @@ __inline int
 inline int
 #endif
 algn_fill_plane_2 (const seqt s1, int *prec, int s1_len, int s2_len, int *mm, \
-        unsigned char *dm, const cmt c, int width, int height, int dwidth_height) {
+        DIRECTION_MATRIX *dm, const cmt c, int width, int height, int dwidth_height) {
     int *next_row;
     int *next_pm;
     int *a, *b;
     int const *gap_row;
     int start_row, final_row, start_column, length;
-    unsigned char *to_go_dm;
+    DIRECTION_MATRIX *to_go_dm;
     width = width + dwidth_height;
     if (width > s2_len) width = s2_len;
     height = height + dwidth_height;
@@ -986,7 +986,7 @@ __inline void
 inline void 
 #endif
 algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int cprev, int st, \
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int cprev, int st, \
         int end, int *dnmm, const int *pdnmm, int *htmm, int open_gap) {
     int i, tmp1, tmp2, tmp3, tmp4, tmp5;
 
@@ -1002,7 +1002,7 @@ algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
 #endif
         dm[i] = 0;
         { /* We deal with the difficultness of using an opening gap as 
-             another unsigned character */
+             another DIRECTION_MATRIX */
             if ((0 == cprev) && (0 != c)) {
                 tmp1 = pdnmm[i] + open_gap + c;
                 tmp4 = pm[i] + open_gap + c;
@@ -1129,7 +1129,7 @@ __inline void
 inline void 
 #endif
 algn_fill_ukk_right_cell_aff (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int cprev, int pos, int *dnmm, int *htmm, \
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int cprev, int pos, int *dnmm, int *htmm, \
         int open_gap) {
     int tmp2, tmp3, tmp4;
     /* try align with substitution */
@@ -1205,7 +1205,7 @@ __inline void
 inline void 
 #endif
 algn_fill_ukk_left_cell_aff (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int cprev, int pos, int *dnmm, \
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int cprev, int pos, int *dnmm, \
         int *pdnmm, int *htmm, int open_gap) {
     int tmp1, tmp3, tmp5;
     /* try align with substitution */
@@ -1279,7 +1279,7 @@ __inline void
 inline void
 #endif
 algn_fill_last_column_aff (int *mm, const int *pm, int tlc, int tlcprev, \
-        int l, unsigned char *dm, int *dnmm, const int *pdnmm, int open_gap) {
+        int l, DIRECTION_MATRIX *dm, int *dnmm, const int *pdnmm, int open_gap) {
     int cst, tmp2;
 #ifdef DEBUG_ALL_ASSERTIONS 
         assert ((mm + l) < _algn_max_matrix);
@@ -1318,7 +1318,7 @@ __inline void
 inline void
 #endif
 algn_fill_full_row_aff (int *mm, const int *pm, const int *gap_row, \
-        const int *alg_row, unsigned char *dm, int c, int cprev, int tlc, \
+        const int *alg_row, DIRECTION_MATRIX *dm, int c, int cprev, int tlc, \
         int tlcprev, int l, int *dnmm, const int *pdnmm, int *htmm, \
         int open_gap) {
     /* first entry is delete */
@@ -1338,7 +1338,7 @@ algn_fill_full_row_aff (int *mm, const int *pm, const int *gap_row, \
 }
 
 void
-algn_fill_first_row_aff (int *mm, unsigned char *dm, int len, int const *gap_row, \
+algn_fill_first_row_aff (int *mm, DIRECTION_MATRIX *dm, int len, int const *gap_row, \
         int *dnmm, int *htmm, int open_gap) {
     int i;
     /* We fill the first cell to start with */
@@ -1363,7 +1363,7 @@ algn_fill_first_row_aff (int *mm, unsigned char *dm, int len, int const *gap_row
 }
 
 void
-algn_fill_first_cell_aff (int *mm, int pm, unsigned char *dm, int gap, int *dnmm, \
+algn_fill_first_cell_aff (int *mm, int pm, DIRECTION_MATRIX *dm, int gap, int *dnmm, \
         int *pdnmm, int *htmm) {
     htmm[0] = HIGH_NUM;
     mm[0] += gap;
@@ -1392,7 +1392,7 @@ algn_fill_first_cell_aff (int *mm, int pm, unsigned char *dm, int gap, int *dnmm
 
 int *
 algn_fill_extending_right_aff (const seqt s1, int *prec, int s1_len, \
-        int s2_len, int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len, int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int len, int *dnmm, int *pdnmm, int *htmm, int open_gap) {
     int i;
     int *tmp, *tmp1, cur_s1, const_val, prev_s1, prev_const_val;
@@ -1439,7 +1439,7 @@ algn_fill_extending_right_aff (const seqt s1, int *prec, int s1_len, \
 
 int *
 algn_fill_extending_left_right_aff (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int start_column, int len, int *dnmm, int *pdnmm, \
         int *htmm, int open_gap) {
     int i;
@@ -1489,7 +1489,7 @@ algn_fill_extending_left_right_aff (const seqt s1, int *prec, int s1_len, \
 
 int *
 algn_fill_extending_left_aff (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int start_column, int len, int *dnmm, int *pdnmm, \
         int *htmm, int open_gap) {
     int i;
@@ -1552,7 +1552,7 @@ algn_fill_extending_left_aff (const seqt s1, int *prec, int s1_len, \
 
 int *
 algn_fill_no_extending_aff (const seqt s1, int *prec, int s1_len, \
-        int s2_len,  int *mm, int *pm, unsigned char *dm, const cmt c, int start_row, \
+        int s2_len,  int *mm, int *pm, DIRECTION_MATRIX *dm, const cmt c, int start_row, \
         int end_row, int *dnmm, int *pdnmm, int *htmm, int open_gap) {
     int i;
     int *tmp, cur_s1, const_val, const_val_tail, prev_s1, prev_const_val, \
@@ -1604,7 +1604,7 @@ __inline int
 inline int
 #endif
 algn_fill_plane_aff (const seqt s1, int *prec, int s1_len, \
-        int s2_len, int *mm, unsigned char *dm, const cmt c, int *dnmm, int *htmm, \
+        int s2_len, int *mm, DIRECTION_MATRIX *dm, const cmt c, int *dnmm, int *htmm, \
         int open_gap) {
     int i;
     const int *alg_row;
@@ -1696,13 +1696,13 @@ __inline int
 inline int
 #endif
 algn_fill_plane_2_aff (const seqt s1, int *prec, int s1_len, int s2_len, int *mm, \
-        unsigned char *dm, const cmt c, int width, int height, int dwidth_height, \
+        DIRECTION_MATRIX *dm, const cmt c, int width, int height, int dwidth_height, \
         int *dnmm, int *htmm) {
     int *next_row, *next_pm, *next_dnmm, *next_pdnmm;
     int *a, *b, *d, *e, open_gap;
     int const *gap_row;
     int start_row, final_row, start_column, length;
-    unsigned char *to_go_dm;
+    DIRECTION_MATRIX *to_go_dm;
     open_gap = cm_get_gap_opening_parameter (c);
     width = width + dwidth_height;
     if (width > s2_len) width = s2_len;
@@ -1821,7 +1821,7 @@ static inline void
 #endif
 fill_moved (int s3_len, const int *prev_m, const int *upper_m, \
         const int *diag_m, const int *s1gs3, const int *gs2s3, \
-        const int *s1s2s3, int *mm, unsigned char *dm) {
+        const int *s1s2s3, int *mm, DIRECTION_MATRIX *dm) {
     int k, tmp0, tmp1, tmp;
     for (k = 1; k < s3_len; k++) {
         tmp0 = upper_m[k] + s1gs3[k];
@@ -1849,7 +1849,7 @@ inline void
 #endif
 fill_parallel (int s3_len, const int *prev_m, const int *upper_m, \
         const int *diag_m, int s1gg, int gs2g, int s1s2g, int *mm, \
-        unsigned char *dm) {
+        DIRECTION_MATRIX *dm) {
     int k, tmp1, tmp;
     for (k = 0; k < s3_len; k++) {
         mm[k] = upper_m[k] + s1gg;
@@ -1893,7 +1893,7 @@ __inline int
 inline int
 #endif
 algn_fill_cube (const seqt s1, const seqt s2, const int *prec, \
-        int s1_len, int s2_len, int s3_len, int *mm, unsigned char *dm, int uk, \
+        int s1_len, int s2_len, int s3_len, int *mm, DIRECTION_MATRIX *dm, int uk, \
         int gap, int a_sz) {
     SEQT *s1p, *s2p;
     /* Each of the following arrays hold some precalculated value for the
@@ -1911,7 +1911,7 @@ algn_fill_cube (const seqt s1, const seqt s2, const int *prec, \
     int *diag_m;        /** The upper_m relative to prev_m */
     int *tmp_mm;        /** A temporary pointer to the row that is being filled 
                         currently */
-    unsigned char *tmp_dm;       /** Same as previous for dm */
+    DIRECTION_MATRIX *tmp_dm;       /** Same as previous for dm */
     int i, j, k, tmp;
 
     s1p = seq_get_begin (s1);
@@ -2078,7 +2078,7 @@ __inline int
 inline int
 #endif
 algn_fill_cube_ukk (const seqt s1, const seqt s2, const int *prec, \
-        int s1_len, int s2_len, int s3_len, int *mm, unsigned char *dm, int uk, \
+        int s1_len, int s2_len, int s3_len, int *mm, DIRECTION_MATRIX *dm, int uk, \
         int gap, int a_sz, int w, int d, int h) {
     SEQT *s1p, *s2p;
     /* Each of the following arrays hold some precalculated value for the
@@ -2096,7 +2096,7 @@ algn_fill_cube_ukk (const seqt s1, const seqt s2, const int *prec, \
     int *diag_m;        /** The upper_m relative to prev_m */
     int *tmp_mm;        /** A temporary pointer to the row that is being filled 
                         currently */
-    unsigned char *tmp_dm;       /** Same as previous for dm */
+    DIRECTION_MATRIX *tmp_dm;       /** Same as previous for dm */
     int i, j, k, tmp;
 
     s1p = seq_get_begin (s1);
@@ -2258,7 +2258,7 @@ algn_nw_limit (const seqt s1, const seqt s2, const cmt c, \
         int st_s2, int len_s2) {
     const SEQT *ss1, *ss2;
     int *mm, *prec, s1_len, s2_len;
-    unsigned char *dm;
+    DIRECTION_MATRIX *dm;
     ss1 = seq_get_begin (s1);
     ss2 = seq_get_begin (s2);
     mm = mat_get_2d_matrix (m);
@@ -2301,7 +2301,7 @@ algn_nw_3d (const seqt s1, const seqt s2, const seqt s3,
         const cm_3dt c, matricest m, int w) {
     const SEQT *ss1, *ss2, *ss3;
     int *mm, *prec, s1_len, s2_len, s3_len, gap, res;
-    unsigned char *dm;
+    DIRECTION_MATRIX *dm;
     ss1 = seq_get_begin (s1);
     ss2 = seq_get_begin (s2);
     ss3 = seq_get_begin (s3);
@@ -2491,7 +2491,7 @@ void
 print_bcktrck (const seqt s1, const seqt s2, \
         const matricest m) {
     int i, j;
-    unsigned char *d;
+    DIRECTION_MATRIX *d;
     d = mat_get_2d_direct (m);
     printf ("\n");
     for (i = 0; i < seq_get_len (s1); i++) {
@@ -2536,7 +2536,7 @@ print_dynmtrx (const seqt s1, const seqt s2, \
 }
 
 void
-algn_string_of_2d_direction (unsigned char v) {
+algn_string_of_2d_direction (DIRECTION_MATRIX v) {
     if (v & ALIGN) printf ("A");
     if (v & DELETE) printf ("D");
     if (v & INSERT) printf ("I");
@@ -2563,7 +2563,7 @@ backtrack_2d (const seqt s1, const seqt s2, seqt r1, \
         int st_s2, int algn_s1, int algn_s2, int swaped, \
         value a, value b) {
     int l, l1, l2;
-    unsigned char *beg, *end;
+    DIRECTION_MATRIX *beg, *end;
     int new_item_for_r1 = 0;
     int new_item_for_r2 = 0;
     int shifter = 0;
@@ -2578,7 +2578,7 @@ backtrack_2d (const seqt s1, const seqt s2, seqt r1, \
     l = l2;
 
     if (!NDEBUG && !NPRINT_DM) {
-        unsigned char *beg_debug;
+        DIRECTION_MATRIX *beg_debug;
         int i, j;
         beg_debug = beg;
         printf ("Printing a two dimensional direction matrix.\n");
@@ -2841,7 +2841,7 @@ backtrack_3d (const seqt s1, const seqt s2, seqt s3, \
         const cm_3dt c) {
     int l, l1, l2, l3;
     int a_plane, a_line, a_cell = 1;
-    unsigned char *beg, *end;
+    DIRECTION_MATRIX *beg, *end;
     l1 = seq_get_len (s1);
     l2 = seq_get_len (s2);
     l3 = seq_get_len (s3);
@@ -2851,7 +2851,7 @@ backtrack_3d (const seqt s1, const seqt s2, seqt s3, \
     beg = mat_get_3d_direct (m);
     if (!NDEBUG) {
         char *toprint;
-        unsigned char *beg_debug;
+        DIRECTION_MATRIX *beg_debug;
         int i, j, k;
         beg_debug = beg;
         printf ("Printing a three dimensional direction matrix.\n");
@@ -3310,7 +3310,7 @@ void
 algn_copy_backtrack (int s1, int s2, const matricest m, value res) {
     value row;
     int i, j;
-    unsigned char *d;
+    DIRECTION_MATRIX *d;
     d = mat_get_2d_direct (m);
     for (i = 0; i < s1; i++) {
         row = Field(res, i);
