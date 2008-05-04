@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2803 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2804 $"
 
 external register : unit -> unit = "seq_CAML_register"
 
@@ -44,20 +44,24 @@ external copy : (s -> s -> unit) = "seq_CAML_copy";;
 
 external length : (s -> int) = "seq_CAML_length";;
 
-external c_get : (s -> int -> int) = "seq_CAML_get";;
+external get : (s -> int -> int) = "seq_CAML_get";;
 
 external count : (int -> s -> int) = "seq_CAML_count";;
 
+(*
 let get a b = 
     assert (b >= 0);
     assert (b < length a);
     c_get a b
+*)
 
-external c_set : (s -> int -> int -> unit) = "seq_CAML_set";;
+external set : (s -> int -> int -> unit) = "seq_CAML_set";;
 
+(*
 let set a b c =
     assert (b >= 0);
     c_set a b c
+*)
 
 external prepend : s -> int -> unit = "seq_CAML_prepend";;
 
