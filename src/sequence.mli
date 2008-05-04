@@ -185,6 +185,7 @@ val make_empty : Alphabet.a -> s
 
 (** [map f s] outputs a new sequence [t] such that [t](i) = [f]([s](i)). *)
 val map : (int -> int) -> s -> s
+val mapi : (int -> int -> int) -> s -> s
 
 val fold : ('a -> int -> 'a) -> 'a -> s -> 'a
 
@@ -220,6 +221,8 @@ module Align : sig
      * sequences x and y using the cost matrix z in the alignment matrix u with 
      * ukkonen barrier at distance v if flag is set to true *)
     val cost_2 : ?deltaw:int -> s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int 
+
+    val align_affine_3 : s -> s -> Cost_matrix.Two_D.m -> s * s  * s * int 
 
     val max_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int
     val verify_cost_2 : int -> s -> s -> Cost_matrix.Two_D.m -> int

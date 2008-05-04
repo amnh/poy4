@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Cost_matrix" "$Revision: 2792 $"
+let () = SadmanOutput.register "Cost_matrix" "$Revision: 2803 $"
 
 
 exception Illegal_Cm_Format;;
@@ -151,17 +151,20 @@ module Two_D = struct
             Pervasives.output_string ch "\n";
         done;;
 
-    let rec store_input_list_in_cost_matrix_all_combinations m l el1 el2 a_sz =
+    let rec store_input_list_in_cost_matrix_all_combinations m l el1 el2 a_sz
+    =
         if ((el1 > a_sz) || (el2 > a_sz)) then begin
             if (el2 > a_sz) && (el1 <= a_sz) then 
-                store_input_list_in_cost_matrix_all_combinations m l (el1 + 1) 1 a_sz
+                store_input_list_in_cost_matrix_all_combinations m l (el1 + 1) 1 a_sz 
             else ()
         end else begin
             match l with
             | h :: t -> 
                     let elt1 = 1 lsl (el1 - 1)
                     and elt2 = 1 lsl (el2 - 1) in
-                    set_cost elt1 elt2 m h;
+                    if false then
+                        Printf.printf "Storing the cost %d %d is %d\n" elt1 elt2 h;
+                        set_cost elt1 elt2 m h;
                     store_input_list_in_cost_matrix_all_combinations m t el1 (el2 + 1) 
                     a_sz;
             | [] -> raise Illegal_Cm_Format;
@@ -263,12 +266,6 @@ module Two_D = struct
         (a || b) && (not (a && b))
 
     let fill_best_cost_and_median_for_all_combinations_bitwise m a_sz =
-        let gap = gap m 
-        and go = 
-            match affine m with
-            | Affine x -> x
-            | _ -> 0
-        in
         let find_best_combination get_cost l1 l2 =
             let aux_find_best_combination m i (best, med, worst) j =
                 let mb = get_cost i j in
@@ -308,17 +305,12 @@ module Two_D = struct
                     set_cost i j m 0;
                     set_worst i j m worst;
                 end else begin
-                    let cost_f = 
-                        if xor (0 <> gap land i) (0 <> gap land j) then
-                            (fun a b -> 
-                                if a = gap || b = gap then 
-                                    (cost a b m + go)
-                                else cost a b m)
-                        else  fun a b -> cost a b m
-                    in
+                    let cost_f = fun a b -> cost a b m in
                     let best, median, worst = 
                         find_best_combination cost_f li lj 
                     in
+                    if debug then
+                        Printf.printf "The cost between %d and %d is %d\n" i j best;
                     set_median i j m median;
                     set_cost i j m best;
                     set_worst i j m worst;
@@ -549,7 +541,7 @@ module Two_D = struct
         | l ->
                 let w = calculate_alphabet_size l in
                 let w, l =
-                    if w = all_elements then
+                    if w = all_elements && (not use_comb) then
                         (* We must add a placeholder for the all elements item
                         * *)
                         let rec add_every cnt lst =
@@ -639,7 +631,7 @@ module Two_D = struct
             [2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 0];
         ] 21
 
-    let of_transformations_and_gaps use_combinations alph_size trans gaps =
+    let of_transformations_and_gaps use_combinations alph_size trans gaps all_elements =
         let list_with_zero_in_position pos =
             Array.to_list
             (Array.init alph_size (fun x ->
@@ -650,7 +642,7 @@ module Two_D = struct
         in
         of_list ~use_comb:use_combinations (Array.to_list 
         (Array.init alph_size (fun x ->
-            list_with_zero_in_position x)))
+            list_with_zero_in_position x))) all_elements
 
     let perturbe cm sev prob =
         let cm = clone cm in

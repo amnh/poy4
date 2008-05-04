@@ -610,7 +610,7 @@ type nad8 = Node.Standard.nad8 = struct
         get_something OneDirF.num_otus code n.unadjusted
 
     let get_sequences code n = 
-        get_something OneDirF.get_sequences code n.unadjusted
+        get_something OneDirF.get_sequences code n.adjusted
 
     let get_dynamic_preliminary code n =
         get_something OneDirF.get_dynamic_preliminary code n.unadjusted

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2794 2008-04-30 18:40:51Z andres $ *)
+(* $Id: charTransform.ml 2803 2008-05-04 22:34:57Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2794 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2803 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -524,12 +524,17 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
 
 
     let insert_union parent union_node (a, b, c, d, e) =
-        (a, b, Node.Union.get_sequence parent a union_node, c, d, e)
+        try 
+            Some (a, b, Node.Union.get_sequence parent a union_node, c, d, e)
+        with
+        | Failure "Node.get_sequence: could not find code" -> None
 
     let get_sequence parent code (normal_node, union_node) = 
         let tmp = Node.get_sequences parent normal_node in
         let tmp = List.find (fun (c, _, _, _, _) -> (code = c)) tmp in
-        insert_union parent union_node tmp
+        match insert_union parent union_node tmp with
+        | Some x -> x
+        | None -> failwith "Node.get_sequence: could not find code"
 
     let ever_increasing lst =
         let res, _ = 
@@ -684,6 +689,8 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
         --> Node.get_sequences None
         --> List.filter (fun (c, _, _, _, _) -> All_sets.Integers.mem c codes)
         --> List.map (insert_union None root_union)
+        --> List.filter (function Some _ -> true | _ -> false)
+        --> List.map (function Some x -> x | _ -> assert false)
         --> List.map (get_positions mode)
         --> List.map (produce_partitions data tree)
         --> List.fold_left process_partitions data
@@ -696,10 +703,14 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 --> List.map (fun (x, un) -> List.map (fun x -> (x, un)) x) 
                 --> List.flatten
                 --> List.map (fun (x, un) -> insert_union None un x) 
+                --> List.filter (function Some _ -> true | _ -> false)
+                --> List.map (function Some x -> x | _ -> assert false)
             and sequences = 
                 node 
                 --> Node.get_sequences None
                 --> List.map (insert_union None node_union)
+                --> List.filter (function Some _ -> true | _ -> false)
+                --> List.map (function Some x -> x | _ -> assert false)
             in
             List.fold_left (fun acc (code, _, s, _, _, alph) ->
                 if 0.85 < Sequence.poly_saturation s.Sequence.Unions.seq 1 

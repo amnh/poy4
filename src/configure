@@ -1302,8 +1302,9 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-Add the following object files to the final linking rules (needed for windows).
-Add the following flags to the ocaml compiler.
+  --with-extras           Add the following object files to the final linking
+                          rules (needed for windows).
+  --with-ocaml-flags      Add the following flags to the ocaml compiler.
 Select a different xslt-config program to detect the configuration options of libxslt.
 
 Some influential environment variables:

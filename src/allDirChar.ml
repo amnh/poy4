@@ -27,9 +27,7 @@ let current_snapshot x =
     if debug_profile_memory then MemProfiler.current_snapshot x
     else ()
 
-module F : Ptree.Tree_Operations with 
-type a = AllDirNode.AllDirF.n
-with type b = AllDirNode.OneDirF.n = struct
+module M = struct
 
     type a = AllDirNode.AllDirF.n
     type b = AllDirNode.OneDirF.n
@@ -169,13 +167,17 @@ with type b = AllDirNode.OneDirF.n = struct
                         Node.has_to_single
                 | _ -> failwith "What?")
         in
-        real_cost +. root_minus
+        let new_cost = real_cost +. root_minus in
+        new_cost
 
 
     let check_cost_all_handles ptree = 
-        All_sets.Integers.fold (fun handle cost ->
+        let new_cost = 
+            All_sets.Integers.fold (fun handle cost ->
             (check_cost ptree handle) +. cost) 
-        (Ptree.get_handles ptree) 0.0
+            (Ptree.get_handles ptree) 0.0
+        in
+        new_cost
 
     let convert_three_to_one_dir tree = 
         (* We will convert the tree in a one direction tree, then we will use
@@ -303,7 +305,6 @@ with type b = AllDirNode.OneDirF.n = struct
         * a single sequence to each vertex on it. *)
         let pre_ref_codes = get_pre_active_ref_code ptree in  
         let fi_ref_codes = pre_ref_codes in 
-
         let rec assign_single_subtree parentd parent current ptree = 
             (*
             Printf.printf "Assigning parent %d and child %d with side %s\n%!" 
@@ -400,10 +401,13 @@ with type b = AllDirNode.OneDirF.n = struct
                         (Some (check_cost ptree handle))
                         ptree)
             | Some ((`Single a) as edge, rootg) ->
-                    let ptree, root, _ = 
+                    let ptree, root, readjusted = 
                         generate_root_and_assign_it rootg edge ptree 
                     in
+                    Ptree.add_node_data a readjusted ptree
+                    (*
                     assign_single_subtree root (-1) a ptree
+                    *)
             | None -> failwith "no root? AllDirChar.assign_single_handle"
         in
         (* Finally, we are ready to proceed on all the handles available *)
@@ -782,6 +786,15 @@ with type b = AllDirNode.OneDirF.n = struct
             []
         in
         let process ptree (edges, handle) =
+            let current_root_of_tree =
+                let r = Ptree.get_component_root handle ptree in
+                match r.Ptree.root_median with
+                | Some (`Single _, _) 
+                | None -> None 
+                | Some ((`Edge e), n) ->
+                        Some (e, r.Ptree.adjusted_component_cost, 
+                            Edge.LazyEdge.of_node None n)
+            in
             match
                 List.fold_left (fun acc ((Tree.Edge (a, b)) as e) ->
                     current_snapshot "AllDirChar.uppass edge list fold";
@@ -791,7 +804,7 @@ with type b = AllDirNode.OneDirF.n = struct
                     | Some (edge, cost, v) ->
                             if cost > c then Some ((a, b), c, data)
                             else acc
-                    | None -> Some ((a, b), c, data)) None 
+                    | None -> Some ((a, b), c, data)) current_root_of_tree
                     (List.sort (fun (Tree.Edge (a, b)) (Tree.Edge (c, d)) ->
                         match c - a with
                         | 0 -> d - b
@@ -837,7 +850,9 @@ with type b = AllDirNode.OneDirF.n = struct
         | `Exhaustive_Weak
         | `Normal_plus_Vitamines
         | `Normal -> 
-                assign_single (pick_best_root ptree)
+                let ptree = pick_best_root ptree in
+                let ptree = assign_single ptree in
+                ptree
         | `Iterative -> ptree
 
     let create_edge ptree a b =
@@ -1428,6 +1443,11 @@ with type b = AllDirNode.OneDirF.n = struct
         Chartree.to_formatter atr data tree 
 
 end
+
+module F : Ptree.Tree_Operations with 
+type a = AllDirNode.AllDirF.n
+with type b = AllDirNode.OneDirF.n = M
+
 
 module CharScripting : CharacterScripting.S with type cs =
     CharacterScripting.Standard.cs with type n = AllDirNode.AllDirF.n = struct

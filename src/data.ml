@@ -2894,8 +2894,8 @@ let assign_transformation_gaps data chars transformation gaps =
     List.fold_left ~f:(fun data (size, chars) ->
         let size = size in
         let tcm = 
-            Cost_matrix.Two_D.of_transformations_and_gaps (size < 7) size 
-            transformation gaps
+            Cost_matrix.Two_D.of_transformations_and_gaps (size < 7) size
+            transformation gaps 
         in
         assign_tcm_to_characters data chars (Some name) None tcm) ~init:data alphabet_sizes
 
@@ -2907,15 +2907,17 @@ let get_tcm2d data c =
 let codes_with_same_tcm codes data =
     (* This function assumes that the codes have already been filtered by class
     * *)
-    let rec assign_matching acc ((code : int), tcm) =
+    let rec assign_matching acc ((code : int), tcm, alph) =
         match acc with
-        | (codes, assgn) :: tl when tcm == assgn ->
-                ((code :: codes), assgn) :: tl
+        | (codes, assgn, alph) :: tl when tcm == assgn ->
+                ((code :: codes), assgn, alph) :: tl
         | hd :: tl ->
-                hd :: (assign_matching tl (code, tcm))
-        | [] -> [([code], tcm)]
+                hd :: (assign_matching tl (code, tcm, alph))
+        | [] -> [([code], tcm, alph)]
     in
-    let codes = List.map ~f:(fun x -> x, get_tcm2d data x) codes in
+    let codes = 
+        List.map 
+        ~f:(fun x -> x, get_tcm2d data x, get_alphabet data x) codes in
     List.fold_left ~f:assign_matching ~init:[] codes
 
 let rec assign_affine_gap_cost data chars cost =
@@ -2923,9 +2925,14 @@ let rec assign_affine_gap_cost data chars cost =
         get_code_from_characters_restricted_comp `AllDynamic data chars
     in
     let codes = codes_with_same_tcm codes data in
-    let codes = List.map (fun (a, b) -> 
-        let b = Cost_matrix.Two_D.clone b in
-        Cost_matrix.Two_D.set_affine b cost;
+    let codes = List.map (fun (a, b, alph) -> 
+        let b = 
+            if Alphabet.nucleotides = alph then
+                let b = Cost_matrix.Two_D.clone b in
+                let () = Cost_matrix.Two_D.set_affine b cost in
+                b
+            else b
+        in
         (true, a), (fun _ -> b)) codes
     in
     let cost = 
@@ -2951,7 +2958,7 @@ let rec assign_prep_tail filler data chars filit =
                 get_code_from_characters_restricted_comp `AllDynamic data chars
             in
             let codes = codes_with_same_tcm codes data in
-            let codes = List.map (fun (a, b) -> 
+            let codes = List.map (fun (a, b, _) -> 
                 let b = Cost_matrix.Two_D.clone b in
                 filler arr b;
                 (true, a), (fun _ -> b)) codes

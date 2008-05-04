@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2798 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2803 $"
 
 module IntSet = All_sets.Integers
 
@@ -2992,8 +2992,8 @@ module DNA = struct
             let lst = Array.to_list lst in
             of_list lst
 
-        let of_sub_indel = 
-            Cost_matrix.Two_D.of_transformations_and_gaps true 5 31
+        let of_sub_indel s i = 
+            Cost_matrix.Two_D.of_transformations_and_gaps true 5 s i 31
 
         let of_sub_indel_affine a b c = 
             let mt = of_sub_indel a b in

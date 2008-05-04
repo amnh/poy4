@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2794 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2803 $"
 
 external register : unit -> unit = "seq_CAML_register"
 
@@ -439,6 +439,21 @@ module Align = struct
         s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int -> int =
             "algn_CAML_simple_2"
 
+    external c_align_affine_3 : s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> 
+        s -> s -> s -> int = "algn_CAML_align_affine_3_bc"
+        "algn_CAML_align_affine_3"
+
+    external cost_2_affine : s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int =
+        "algn_CAML_cost_affine_3"
+    
+
+    let align_affine_3 si sj cm =
+        let resi = create (length si + length sj + 2)
+        and resj = create (length si + length sj + 2) 
+        and median = create (length si + length sj + 2) in
+        let cost = c_align_affine_3 si sj cm Matrix.default resi resj median in
+        (median, resi, resj, cost)
+
     external c_cost_2_limit :
         s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int -> int -> int ->
             int -> int -> int -> int = "algn_CAML_limit_2_bc" "algn_CAML_limit_2"
@@ -449,17 +464,6 @@ module Align = struct
         else begin
             assert ((length a) = (length b));
             c_max_cost_2 a b c
-        end
-
-    external c_verify_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int =
-        "algn_CAML_verify_2"
-
-    let verify_cost_2 a b c =
-        let gap = Cost_matrix.Two_D.gap c in
-        if is_empty a gap || is_empty b gap then 0
-        else begin
-            assert ((length a) = (length b));
-            c_verify_cost_2 a b c
         end
 
     type gap_side = NoGap | AGap | BGap
@@ -483,11 +487,29 @@ module Align = struct
                     let get_list x =
                         let base = get x pos in
                         if do_combine then 
-                            Cost_matrix.Two_D.list_of_bits base alph
+                            List.sort (fun a b -> b - a) 
+                            (Cost_matrix.Two_D.list_of_bits base alph)
                         else [base]
+                    in
+                    let put_shared_first lst1 lst2 = 
+                        let shared = 
+                            List.filter 
+                            (fun x -> List.exists (fun y -> y = x) lst1) 
+                            lst2 
+                        in
+                        match shared with
+                        | [] -> lst1, lst2
+                        | _ ->
+                                let filter lst = 
+                                    shared @ (List.filter (fun x -> not
+                                    (List.exists (fun y -> y = x) shared)) lst)
+                                in
+                                (filter lst1), (filter lst2)
                     in
                     let basea_list = get_list a
                     and baseb_list = get_list b in
+                    let basea_list, base_blist = put_shared_first basea_list
+                    baseb_list in
                     let process_pairwise basea baseb (acc, gap_block_side) =
                         let cost = Cost_matrix.Two_D.cost basea baseb c in
                         let acc = cost + acc in
@@ -667,6 +689,16 @@ module Align = struct
             let deltaw = gaps + deltaw_calc ls2 ls1 in
             c_cost_2 s2 s1 m1 m2 deltaw
 
+
+    let cost_2 ?deltaw s1 s2 m1 m2 =
+        match Cost_matrix.Two_D.affine m1 with
+        | Cost_matrix.Affine _ -> 
+                cost_2_affine s1 s2 m1 m2
+        | _ -> 
+                match deltaw with 
+                | None -> cost_2 s1 s2 m1 m2
+                | Some deltaw -> cost_2 ~deltaw s1 s2 m1 m2
+
     external myers : s -> s -> int = "algn_CAML_myers"
 
     external cost_3 :
@@ -793,9 +825,14 @@ module Align = struct
 
     let align_2 ?(first_gap=true) s1 s2 c m =
         let cmp s1 s2 = 
-            let tc = cost_2 s1 s2 c m in   
-            let s1p, s2p = create_edited_2 s1 s2 m c in   
-            s1p, s2p, tc   
+            match Cost_matrix.Two_D.affine c with
+            | Cost_matrix.Affine _ ->
+                    let _, s1p, s2p, tc = align_affine_3 s1 s2 c in
+                    s1p, s2p, tc
+            | _ ->
+                    let tc = cost_2 s1 s2 c m in   
+                    let s1p, s2p = create_edited_2 s1 s2 m c in   
+                    s1p, s2p, tc   
         in 
         match first_gap with
         | true -> cmp s1 s2 
@@ -808,8 +845,6 @@ module Align = struct
               let s2p = del_first_char s2p in 
               s1p, s2p, tc
 
-
-    
     let align_3 ?(first_gap = true) s1 s2 s3 c m =
         let align s1 s2 s3 =
             let sz1 = length s1
@@ -886,8 +921,13 @@ module Align = struct
             (Invalid_Argument "The size of the sequences is not the same.")
 
     let full_median_2 a b cm m = 
-        let a, b, _ = align_2 a b cm m in
-        median_2 a b cm
+        match Cost_matrix.Two_D.affine cm with
+        | Cost_matrix.Affine _ ->
+                let m, _, _, _ = align_affine_3 a b cm in
+                m
+        | _ ->
+                let a, b, _ = align_2 a b cm m in
+                median_2 a b cm
 
     let full_median_3 a b c cm m =
         let a, b, c, _ = align_3 a b c cm m in
@@ -935,7 +975,22 @@ module Align = struct
             in
             remove_gaps (mapi get_closest s2'), cst
         else
-            let s1', s2', _ = align_2 s1 s2 cm m in
+            let s1', s2', comp =
+                if 0 = compare s1 s2 then 
+                    (* We remove all the gaps if we are using combinations *)
+                    if 0 = Cost_matrix.Two_D.combine cm then 
+                        s1, s2, true
+                    else 
+                        let mask = lnot (Cost_matrix.Two_D.gap cm) in
+                        mapi (fun x pos -> 
+                            if pos > 0 then x land mask else x) s1, 
+                        mapi (fun x pos -> 
+                            if pos > 0 then x land mask else x) s2, 
+                        true
+                else
+                    let s1', s2', _ = align_2 s1 s2 cm m in
+                    s1', s2', false
+            in
             let s2' =
                 let s2' = 
                     let get_closest v i =
@@ -949,7 +1004,8 @@ module Align = struct
             (* We must recalculate the distance between sequences because the
             * set ditance calculation is an upper bound in the affine gap cost
             * model *)
-            s2', cost_2 s1 s2' cm m
+            if comp then s2', 0
+            else s2', cost_2 s1 s2' cm m
         in
         res
 

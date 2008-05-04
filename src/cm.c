@@ -1070,7 +1070,7 @@ cm_CAML_clone (value v) {
     else
         cm_set_val (c->a_sz, c->combinations, c->cost_model_type, \
                 c->gap_open, c->is_metric, c->all_elements, clone2);
-    len = (c->a_sz + 1) * (c->a_sz + 1);
+    len = 2 *(1 << (c->lcm)) * (1 << (c->lcm));
     cm_copy_contents (c->cost, clone2->cost, len);
     cm_copy_contents_seqt (c->median, clone2->median, len);
     cm_copy_contents (c->worst, clone2->worst, len);
