@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2803 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2808 $"
 
 module IntSet = All_sets.Integers
 
@@ -101,7 +101,7 @@ module type S = sig
 
     val get_console_run : unit -> r
 
-    val update_trees_to_data : bool -> bool -> r -> r
+    val update_trees_to_data : ?classify:bool -> bool -> bool -> r -> r
 
     val set_console_run : r -> unit
 
@@ -240,9 +240,9 @@ ELSE
 END
 
 
-let update_trees_to_data force load_data run =
+let update_trees_to_data ?(classify=true) force load_data run =
     let data, nodes = 
-        if load_data then Node.load_data run.data 
+        if load_data then Node.load_data ~classify run.data 
         else run.data, run.nodes 
     in
     let run = { run with nodes = nodes; data = data } in
@@ -2609,6 +2609,8 @@ END
                     run
             | `Diagnosis filename ->                                    
                     let trees =                          
+                        let classify = false in
+                        let run = update_trees_to_data ~classify true true run in
                         Sexpr.map (TreeOps.to_formatter [] run.data) run.trees  
                     in 
                     Status.user_message (Status.Output (filename, false, [])) 
