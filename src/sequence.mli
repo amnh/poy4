@@ -121,11 +121,11 @@ val resize : s ref -> int -> unit
 val clone : s -> s
 (** [clone s1] creates a new fresh clone of [s1]. *)
 
-val set : s -> int -> int -> unit
+external set : (s -> int -> int -> unit) = "seq_CAML_set"
 (** [set s1 p v] sets the value v in the position p of s1. If p > (get_capacity
  * s1) raise an Invalid_Argument error. *)
 
-val get : s -> int -> int
+external get : (s -> int -> int) = "seq_CAML_get"
 (** [get s1 p] returns the contents of s1 in position p. If p > (get_capacity
  * s1) raise an Invalid_Argument error. *)
 
