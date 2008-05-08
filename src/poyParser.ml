@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyParser" "$Revision: 2626 $"
+let () = SadmanOutput.register "PoyParser" "$Revision: 2816 $"
 
 open StdLabels
 
@@ -502,7 +502,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
 let explode_filenames files = 
     let explode_filename file = 
         let file = FileStream.filename file in
-        let ch = 
+        let (output, input, error) = 
             let file = 
                 if Sys.os_type = "Win32" then Filename.quote file
                 else if Sys.os_type = "Unix" then
@@ -511,13 +511,13 @@ let explode_filenames files =
             in
             let line = 
                 match Sys.os_type with
-                | "Win32" -> ("dir /B " ^ file)
-                | _ -> "ls -1 " ^ file ^ " 2> /dev/null"
+                | "Win32" -> "dir /B " ^ file
+                | _ -> "ls -1 " ^ file
             in
-            Unix.open_process_in line 
-            in
-        let res = Parser.IgnoreList.of_channel ch in
-        close_in ch;
+            Unix.open_process_full line [||]
+        in
+        let res = Parser.IgnoreList.of_channel output in
+        let _ = Unix.close_process_full (output, input, error) in
         match res with
         | [] -> 
                 let msg = "@[No@ file@ matching@ @{<b>" ^ StatusCommon.escape file ^ 
