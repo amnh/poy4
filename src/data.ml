@@ -3626,12 +3626,14 @@ module Sample = struct
 
     let bootstrap_spec ?(rand = Random.int) arr m =
         let n = Array.length arr in
-        for i = 0 to m do
-            let p = rand n in
-            let (cnt, code, spec) = arr.(p) in
-            arr.(p) <- (cnt + 1, code, spec);
-        done;
-        arr
+        if n > 0 then begin
+            for i = 0 to m do
+                let p = rand n in
+                let (cnt, code, spec) = arr.(p) in
+                arr.(p) <- (cnt + 1, code, spec);
+            done;
+            arr
+        end else arr
 
     (** [jackknife_spec ar m] resamples [Array.length ar - m] characters without
     * replacement uniformly at random *)
