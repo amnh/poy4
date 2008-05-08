@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2762 $"
+let () = SadmanOutput.register "Tree" "$Revision: 2815 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id
@@ -843,13 +843,25 @@ let convert_to trees data =
         in
         { tree with avail_ids = aux (2 * total) [] }
     in
-    let rec count_leaves = function
-        | Parser.Tree.Leaf _ -> 1
+    let rec verify_leaves acc = function
         | Parser.Tree.Node (cld, _) ->
-                List.fold_left (fun acc x -> (count_leaves x) + acc) 0 cld
+                List.fold_left verify_leaves acc cld
+        | Parser.Tree.Leaf name -> 
+                try 
+                    let code = Data.taxon_code name data in
+                    (Hashtbl.mem data.Data.taxon_characters code) && acc
+                with 
+                | Not_found -> 
+                        Status.user_message Status.Error 
+                        ("The@ terminal@ " ^ name ^ "@ has@ no@ characters@ "
+                        ^ "loaded. Please@ verify@ your@ input@ files.");
+                        false
     in
-    let tree = add_available data.Data.number_of_taxa (empty ()) in
-    List.fold_left (add_tree_to data) tree trees
+    if not (List.fold_left verify_leaves true trees) then
+        failwith "Illegal input tree"
+    else
+        let tree = add_available data.Data.number_of_taxa (empty ()) in
+        List.fold_left (add_tree_to data) tree trees
 
 (** [make_disjoint_tree n]
     @return a disjointed tree with the given nodes and 0 edges *)
