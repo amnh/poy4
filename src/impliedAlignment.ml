@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2809 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2814 $"
 
 exception NotASequence of int
 
@@ -1907,6 +1907,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
     let to_static_homologies prefix ignore filter_fn remove_noninformative 
             (chars : Methods.characters)  data tree = 
         let codes = get_char_codes chars data in
+        let names = List.map (fun x -> Data.code_character x data) codes in
         let all_to_add = 
             List.fold_left (fun acc code -> 
                 let _, ia = 
@@ -1927,7 +1928,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             codes
         in
         let d = Data.add_multiple_static_parsed_file data all_to_add in
-        if ignore then Data.process_ignore_characters false d (`Some codes)
+        if ignore then Data.process_ignore_characters false d (`Names names)
         else d
 
 end 
