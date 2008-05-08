@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2808 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2812 $"
 
 module IntSet = All_sets.Integers
 
@@ -36,7 +36,7 @@ type ('a, 'b, 'c) run = {
     jackknife_support : support_class;
     bootstrap_support : support_class;
     runtime_store : (('a, 'b, 'c) run) str_htbl;
-    data_store : Data.d str_htbl;
+    data_store : (Data.d * ('a list)) str_htbl;
     bremer_store : Methods.support_tree Sexpr.t str_htbl;
     bootstrap_store : support_class str_htbl;
     jackknife_store : support_class str_htbl;
@@ -588,7 +588,7 @@ let output_clade_file data fn counter tree =
 let runtime_store rediagnose run meth =
     let store name run clas =
         match clas with
-        | `Data -> Hashtbl.replace run.data_store name run.data
+        | `Data -> Hashtbl.replace run.data_store name (run.data, run.nodes)
         | `Trees -> Hashtbl.replace run.tree_store name run.trees
         | `Bremer -> Hashtbl.replace run.bremer_store name run.bremer_support
         | `Jackknife -> 
@@ -608,8 +608,8 @@ let runtime_store rediagnose run meth =
         let find hstb = Hashtbl.find hstb name in
         match clas with
         | `Data -> 
-                let d = find run.data_store in
-                (changed || (run.data <> d)), { run with data = find run.data_store }
+                let data, nodes = find run.data_store in
+                (changed || (run.data <> data)), { run with data = data; nodes = nodes}
         | `Trees ->
                 true, { run with trees = find run.tree_store }
         | `Bremer ->

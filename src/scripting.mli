@@ -33,7 +33,7 @@ type ('a, 'b, 'c) run = {
     jackknife_support : support_class;
     bootstrap_support : support_class;
     runtime_store : (('a, 'b, 'c) run) str_htbl;
-    data_store : Data.d str_htbl;
+    data_store : (Data.d * 'a list) str_htbl;
     bremer_store : Methods.support_tree Sexpr.t str_htbl;
     bootstrap_store : support_class str_htbl;
     jackknife_store : support_class str_htbl;
