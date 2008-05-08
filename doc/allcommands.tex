@@ -2756,9 +2756,8 @@ The \poycommand{calculate\_support} command does not output support values by de
     
 	\end{arguments}
 
-    \poydefaults{trees:1, alternate, threshold:0, bfs}{By default, current trees are
-    submitted to a round of SPR followed by TBR using breath first search under
-    default setting, and  keeping one best tree per each starting tree.}
+    \poydefaults{trees:1, TBR, threshold:0, bfs}{By default, current trees are
+    submitted to a round of TBR using breadth first search and one best tree per starting tree is kept.}
 
 	\begin{poyexamples} 
 		\poyexample{swap()}
