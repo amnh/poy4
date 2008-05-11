@@ -84,7 +84,7 @@ type matrix_class =
     | AllOne of int
     | AllOneGapSame of (int * int)
     | AffinePartition of (int * int * int)
-    | AllSankoff
+    | AllSankoff of (string -> int) option
 
 val analyze_tcm :
     Cost_matrix.Two_D.m -> Alphabet.a ->

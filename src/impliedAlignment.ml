@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2817 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2820 $"
 
 exception NotASequence of int
 
@@ -882,7 +882,10 @@ type matrix_class =
     | AllOne of int
     | AllOneGapSame of (int * int)
     | AffinePartition of (int * int * int)
-    | AllSankoff
+    | AllSankoff of (string -> int) option 
+    (* If using affine gap cost or non metric tcm (where gaps and substitutions
+    * need to be split), we pass a function to compute
+    * the cost of an indel block to deal with affine. *)
 
 let present_absent_alph = 
     Alphabet.list_to_a 
@@ -896,8 +899,27 @@ let present_absent_alph =
 let analyze_tcm tcm alph =
     let gap = Alphabet.get_gap alph 
     and all = Alphabet.get_all alph in
+    let for_sankoff =
+        let go = 
+            match Cost_matrix.Two_D.affine tcm with
+            | Cost_matrix.No_Alignment 
+            | Cost_matrix.Linnear -> 0
+            | Cost_matrix.Affine go -> go
+        in
+        let to_string string pos = String.make 1 string.[pos] in
+        let rec processor pos max cost string =
+            if max = pos then cost
+            else 
+                let base = Alphabet.find_base (to_string string pos) alph in
+                processor (pos + 1) max 
+                ((Cost_matrix.Two_D.cost gap base tcm) + cost) string
+        in
+        if Cost_matrix.Two_D.is_metric tcm then
+            fun _ -> go
+        else
+            fun string -> processor 0 (String.length string) go string
+    in
     let alph = Alphabet.simplify alph in
-
     let single_compare (_, a) res (_, b) =
         match res with
         | None -> 
@@ -948,6 +970,11 @@ let analyze_tcm tcm alph =
         | Cost_matrix.Linnear -> failwith "not affine"
         | Cost_matrix.Affine go -> go
     in
+    let is_affine tcm =
+        match Cost_matrix.Two_D.affine tcm with
+        | Cost_matrix.Affine _ -> true
+        | _ -> false
+    in
     let all_same_affine () =
         try let _ = get_gap_opening tcm in true with
         | _ -> false
@@ -968,11 +995,21 @@ let analyze_tcm tcm alph =
                         else if all_excepting_gap = 1 then
                             AllOneGapSame 
                             (all_excepting_gap, all_and_gap)
-                        else AllSankoff
-                    else AllSankoff
-            | _ -> AllSankoff
+                        else if is_affine tcm then
+                            AllSankoff (Some for_sankoff)
+                        else AllSankoff None
+                    else if is_affine tcm then
+                        AllSankoff (Some for_sankoff)
+                    else AllSankoff None
+            | _ -> 
+                    if is_affine tcm then 
+                        AllSankoff (Some for_sankoff)
+                    else AllSankoff None
         with
-        | IsSankoff -> AllSankoff
+        | IsSankoff -> 
+                if is_affine tcm then 
+                    AllSankoff (Some for_sankoff)
+                else AllSankoff None
     in
     let extract_all all =
         match all with
@@ -1060,7 +1097,7 @@ let analyze_tcm tcm alph =
             in 
             let to_encoding _ acc = subs :: acc in
             get_case, to_parser, to_encoding
-    | AllSankoff ->
+    | AllSankoff _ ->
             let size = 
                 (* We remove one from the all elements representation *)
                 match Alphabet.get_all alph with
@@ -1068,7 +1105,13 @@ let analyze_tcm tcm alph =
                 | None -> 
                       Alphabet.distinct_size alph
             in
+            let is_metric = Cost_matrix.Two_D.is_metric tcm in
             let make_tcm () =
+                let size = 
+                    (* We will assume that the source of the non metricity is
+                    * the gap *)
+                    if is_metric then size else size - 1
+                in
                 match Alphabet.kind alph with
                 | Alphabet.Simple_Bit_Flags ->
                         Array.init size (fun x -> Array.init size 
@@ -1125,8 +1168,12 @@ let analyze_tcm tcm alph =
                         let rec match_bit v pos mask acc = 
                             if pos = 6 then acc
                             else if 0 <> (v land mask) then
-                                match_bit v (pos + 1) (mask lsl 1) 
-                                ((pos - 1) :: acc)
+                                let acc =
+                                    if is_metric || mask <> gap then
+                                        ((pos - 1) :: acc)
+                                    else acc
+                                in
+                                match_bit v (pos + 1) (mask lsl 1) acc
                             else match_bit v (pos + 1) (mask lsl 1) acc
                         in
                         match_bit x 1 1 []
@@ -1139,12 +1186,13 @@ let analyze_tcm tcm alph =
                 (* Always the last code is the one of a gap in Sankoff *)
                 size - 1
             in
+            let gap_holder = if is_metric then [gap_code] else all in
             let to_parser is_missing states acc = 
                 match is_missing, states with
                 | `Missing, _ ->
                         (Parser.Sankoff_Character (all, false)) :: acc
                 | `Exists, 0 -> 
-                        (Parser.Sankoff_Character ([gap_code], false)) ::
+                        (Parser.Sankoff_Character (gap_holder, false)) ::
                             acc
                 | `Exists, x -> 
                         let tuple = ((convert_to_list x),  false) in
@@ -1622,7 +1670,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
 (** End of of_tree function *)
 
-    let post_process_affine_gap_cost subs gapcost gapopening data (enc, taxa)
+    let post_process_affine_gap_cost f data (enc, taxa)
     all_blocks=
         let all_blocks = `Set all_blocks in
         let process_indel (enc, taxa) (loc, string, length, clas, taxa_list) =
@@ -1646,8 +1694,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 All_sets.Integers.empty taxa_list
             in
             let newenc = 
-                Parser.OldHennig.Encoding.gap_encoding (gapopening + (gapcost *
-                length)) 
+                Parser.OldHennig.Encoding.gap_encoding (f string) 
             in
             ((present_absent_alph, newenc) :: enc),
             List.map (fun (characters, taxon) ->
@@ -1728,7 +1775,17 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                                 | AllOne gapc -> 0, gapc
                                                 | AllOneGapSame (_, gapc) ->  0, gapc
                                                 | AffinePartition (_, ex, op) -> op, ex
-                                                | AllSankoff -> 0, 0
+                                                | AllSankoff _ -> 
+                                                        (* This is an error, but
+                                                        * I am confused with the
+                                                        * handling of seq_ex
+                                                        * below. Somehow it
+                                                        * assumes that
+                                                        * ex = seq_ex? And if
+                                                        * sankoff is used this
+                                                        * should raise an error
+                                                        * ... *)
+                                                        0, 0
                                             in 
                                             let pam = Data.get_pam data code in 
                                             let op, ex = 
@@ -1750,7 +1807,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                             clas,
                             (Array.fold_right (to_parser is_missing) s acc), 
                             (Array.fold_right to_encoding s acc2))
-                        (AllSankoff, [], []) sequence 
+                        (AllSankoff None, [], []) sequence 
                     in 
                     let name = 
                         try Data.code_taxon taxcode data with
@@ -1769,7 +1826,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                 in
                                 Some encf), clas
                 in
-                (match List.fold_left process_each ([], None, AllSankoff) all_taxa with
+                (match List.fold_left process_each ([], None, AllSankoff None) all_taxa with
                 | r, Some enc, clas -> 
                         let arr = 
                             Array.of_list enc, (List.map (fun (x, y) ->
@@ -1781,9 +1838,15 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                                     (* We have to postprocess and check by
                                     * groups of three whether or not we have a
                                     * gap opening indeed *)
+                                    let f string =
+                                        (gapopening + (gapcost * (String.length string))) 
+                                    in
                                     List.fold_left
-                                    (post_process_affine_gap_cost subs gapcost
-                                    gapopening data) arr all_blocks
+                                    (post_process_affine_gap_cost f data) arr all_blocks
+                            | AllSankoff (Some f) -> 
+                                    List.fold_left 
+                                    (post_process_affine_gap_cost f data) arr
+                                    all_blocks
                             | _ -> arr
                         in
                         a, b, []
