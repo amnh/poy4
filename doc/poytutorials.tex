@@ -121,31 +121,30 @@ exit()
 
 \section{Jackknife support}{\label{tutorial4.4}}
 
-This tutorial illustrates calculating Jackknife support values for trees constructed with static homology characters.  Although it is possible to calculate both Jackknife and Bootstrap support values 
-for trees constructed using dynamic homology characters, it is not recommended because resampling of dynamic characters occurs at the fragment (rather than nucleotide) level. Alternately dynamic homology characters can be converted to static characters using the transform argument \poyargument{static\_approx}.  Character transformation, however, may result in a discrepancy between tree costs generated using dyanmic homology characters and those generated using static homology characters. Therefore after such a data transformation is performed, an extra round of swapping is recommended to insure that the local minimum tree length is reached for the static homology characters prior to calculating support values  support values.
+This tutorial illustrates calculating Jackknife support values for trees constructed with static homology characters.  Although it is possible to calculate both Jackknife and Bootstrap support values for trees constructed using dynamic homology characters, it is not recommended because resampling of dynamic characters occurs at the fragment (rather than nucleotide) level. Alternately dynamic homology characters can be converted to static characters using the transform argument \poyargument{static\_approx}, as it is common for biologists to want to  compute support values by resampling the characters from a fixed alignment.  In jackknife support a specified number of pseudo-repicates are performed independently such that in each one a percentage of characters is selected at random, without replacement.  The frequency of clade occurrence is its jackknife value.  
 
 \begin{verbatim}
-(* Jackknife support for static homology trees *)
-read(prealigned:("28s.aln",tcm:(1,2)))
-set( root:"Americhernus")
-build()
-swap()
-select()
-calculate_support (jackknife:(remove:0.50, resample:1000), 
-build(5),swap(tbr,trees:3))
-report("jacktree",graphsupports)
+(* Jackknife support using static nucleotide characters *)
+read ("28s.fas")
+search (max_time:0:0:5)
+select ()
+report ("tree_for_supports.tre", trees)
+transform(static_approx)
+calculate_support (jackknife:(remove:0.50, resample:1000))
+report (supports:jackknife)
+report ("jacktree", graphsupports:jackknife)
 exit()
 \end{verbatim}
-
 \begin{itemize}
-\item \texttt{(* Jackknife support for static homology trees *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
-\item \texttt{read(prealigned:("28s.aln",tcm:(1,2)))} This command imports the prealigned nucleotide sequence file \texttt{28s.aln}, and treats the characters as static with the prescribed transformation cost matrix.
-\item \texttt{set(root:"Americhernus")} The \poycommand{set} command specifies conditions prior to tree searching. The outgroup (\texttt{Americhernus}) is designated by the \poyargument{root}, so that all the reported trees have the desired polarity.     
-\item \texttt{build()} This commands begins the tree-building step of the search that generates by default 10 random-addition trees. It is essential that trees are either specified from a file or that trees are built and loaded in memory before attempting to calculate support values.
-\item \texttt{swap()} The \poycommand{swap} command specifies that each of the trees be subjected to an alternating SPR and TBR branch swapping routine (the default of \poy).
-\item \texttt{select()} Upon completion of branch swapping, this command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
+\item \texttt{(* Jackknife support using static nucleotide characters *)} This first line of the script is a comment. While comments are optional and do not affect the analyses, they provide are useful for housekeeping purposes.
+\item \texttt{read("28s.fas")} This command imports nucleotide sequence file \texttt{28s.fas}.
+\item \texttt{search(max\_time:0:0:5)} This command performs a search (i.e. build, swap, perturb, fuse) of the data \texttt{28s.fas} for a maximum of 5 min (note that the short search time was selected for demonstration purposes to expedite the tutorial and not as a general time recommendation for actual data analyses).   
+\item \texttt{select()} This command retains only optimal and topologically unique trees; all other trees are discarded from memory. 
+\item \texttt{report("tree\_for\_supports.tre", trees)}  This command outputs a parenthetical representation of the tree \texttt{"tree\_for\_supports.tre"}.
+\item \texttt{transform(static\_approx)} This command transforms the data (i.e. build, swap, perturb, fuse) of the data \texttt{28s.fas} for a maximum of 2 hours.
 \item \texttt{calculate\_support(jackknife,(remove:0.50,resample:1000),\\ swap(tbr,trees:3)} The \poycommand{calculate\_support} command generates support values as specified by the \poyargument{jackknife} argument for each tree held in memory. During each pseudoreplicate half of the characters will be deleted as specified in the \poyargument{remove:0.50}.  The total number of of pseudoreplicates to be performed is designated by the \poyargument{resample:1000} argument. The \poyargument{build(5)} argument indicates the number of Wagner trees to be built in each pseudoreplicate, and the \poyargument{swap(tbr,trees:3)} argument subjects each Wagner build to tbr swapping keeping up to three best trees per search round. 
-\item \texttt{report("jacktree",graphsupports)}  The \poycommand{report} command in combination with a file name and the \poyargument{graphsupports} generates a postscript file with jackknife values designated by the name specified (\emph{i.e.} \texttt{jacktree}). 
+\item \texttt{report(supports:jackknife)}  This command outputs a parenthetical representation of a tree with the support values previously calculated with the \poycommand{calculate\_support} command. 
+\item \texttt{report("jacktree",graphsupports:jackknife)}  The \poycommand{report} command in combination with a file name and the \poyargument{graphsupports} generates a postscript file with jackknife values designated by the name specified (\emph{i.e.} \texttt{jacktree}). 
 \item \texttt{exit()} This commands ends the \poy session.
 \end{itemize}
 
