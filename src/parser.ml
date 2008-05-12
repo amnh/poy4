@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2792 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2826 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -2483,10 +2483,14 @@ module SC = struct
             Nexus.DStandard
 
         let make_symbol_alphabet gap symbols form =
+            let cnt = ref (1) in
+            let prepro_symbols = 
+                List.map (fun x -> incr cnt; x, !cnt, None) symbols
+            in
             match get_datatype form with
             | Nexus.Protein ->
                     Alphabet.list_to_a
-                    [("A", 0, None); 
+                    ([("A", 0, None); 
                     ("C", 1, None); 
                     ("D", 2, None); 
                     ("E", 3, None); 
@@ -2507,13 +2511,13 @@ module SC = struct
                     ("W", 18, None); 
                     ("Y", 19, None); 
                     ("*", 20, None);
-                    (gap, 21, None);]
+                    (gap, 21, None);] @ prepro_symbols)
                     gap None Alphabet.Sequential,
                     [("B", ["D"; "N"]); ("Z", ["E"; "Q"])]
             | Nexus.Rna ->
                     Alphabet.list_to_a 
-                    [("A", 0, None); ("C", 1, None); ("G", 2, None); ("U", 3,
-                    None); (gap, 4, None)]
+                    ([("A", 0, None); ("C", 1, None); ("G", 2, None); ("U", 3,
+                    None); (gap, 4, None)] @ prepro_symbols)
                     gap None Alphabet.Sequential,
                     [("R", ["A"; "G"]);
                     ("Y", ["C"; "U"]);
@@ -2529,8 +2533,8 @@ module SC = struct
                     ("X", ["A"; "C"; "G"; "U"])]
             | Nexus.Nucleotide | Nexus.Dna ->
                     Alphabet.list_to_a 
-                    [("A", 0, None); ("C", 1, None); ("G", 2, None); ("T", 3,
-                    None); (gap, 4, None)]
+                    ([("A", 0, None); ("C", 1, None); ("G", 2, None); ("T", 3,
+                    None); (gap, 4, None)] @ prepro_symbols)
                     gap None Alphabet.Sequential,
                     [("R", ["A"; "G"]);
                     ("Y", ["C"; "T"]);
@@ -2623,13 +2627,14 @@ module SC = struct
             done;
             ()
 
-        let uninterleave data = 
+        let uninterleave taxa data = 
             (* The data is a string right now, but I suppose this is not really
             * convenient as we set a hard constraint on the size of the input. We
             * have to change this for a stream, but that will also require changes
             * in the nexusLexer.mll and nexusParser.mly *)
             let hstbl = Hashtbl.create 97 in
             let stream = new FileStream.string_reader data in
+            let started_adding = ref false in
             try while true do
                 let line = stream#read_line in
                 let line = 
@@ -2642,10 +2647,16 @@ module SC = struct
                             Buffer.add_string buf x; 
                             Buffer.add_string buf " "
                         in
-                        if Hashtbl.mem hstbl taxon then
+                        if Hashtbl.mem hstbl taxon then begin
+                            started_adding := true;
                             let buf = Hashtbl.find hstbl taxon in
                             List.iter (adder buf) sequence
-                        else begin
+                        end else begin
+                            if !started_adding then 
+                                failwith
+                                ("There appears to be a name mismatch in your \
+                                interleaved format. I could not find " ^ 
+                                taxon);
                             let buf = Buffer.create 1511 in
                             List.iter (adder buf) sequence;
                             Buffer.add_string buf " ";
@@ -2700,6 +2711,7 @@ module SC = struct
             let rec in_comment pos =
                 let start = ref pos in
                 try while !start < len do
+                    incr start;
                     begin match string.[!start] with
                     | ']' -> raise Exit
                     | '[' -> 
@@ -2707,7 +2719,6 @@ module SC = struct
                             ()
                     | _ -> ()
                     end;
-                    incr start;
                 done;
                 failwith "Finished string and the comments are still there!"
                 with
@@ -2940,7 +2951,7 @@ module SC = struct
                 (* We are ready now to fill the contents of the matrix *)
                 let chars = remove_comments chars.Nexus.chars in
                 let data =
-                    if get_interleaved form then uninterleave chars
+                    if get_interleaved form then uninterleave taxa chars
                     else chars
                 in
                 let get_row_number, assign_item =
