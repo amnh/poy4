@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2822 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2825 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -215,9 +215,11 @@ module MakeNormal
         let report_tree_len = 
             List.exists (function `Total -> true | _ -> false) ic
         in
+        (*
         let newick = 
             (List.exists (function `Newick -> true | _ -> false) ic)
         in
+        *)
         let collapse =
             List.exists (function `Collapse x -> x | _ -> false) ic
         in
