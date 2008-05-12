@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2812 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2822 $"
 
 module IntSet = All_sets.Integers
 
@@ -919,7 +919,7 @@ let rec handle_support_output run meth =
                 let output tree =
                     Status.user_message fo ("@[Support@ tree:@]@,@[");
                     Status.user_message fo 
-                    (AsciiTree.for_formatter false false tree);
+                    (AsciiTree.for_formatter true false tree);
                     Status.user_message fo "@]";
                 in
                 Sexpr.leaf_iter output trees;
@@ -1336,8 +1336,10 @@ IFDEF USEPARALLEL THEN
                     folder run [`GatherTrees ([`Unique], [])]
                 else
                     let arr = Mpi.allgather (Sexpr.length run.trees) Mpi.comm_world in
-                    let max = Array.fold_left max 0 arr in
-                    folder run [`GatherTrees ([`Unique; `BestN (Some max)],
+                    let mmax = Array.fold_left max 0 arr in
+                    let mmax = max 1 (mmax / 2) in
+                    let run = folder run [`Unique; `BestN (Some mmax)] in
+                    folder run [`GatherTrees ([`Unique; `BestN (Some mmax)],
                     [])])
             in
             let run =
@@ -2883,7 +2885,8 @@ let set_console_run r = console_run_val := r
             let res = 
                 PtreeSearch.build_forest_with_names_n_costs collapse tree data cost
             in
-            List.map (AsciiTree.for_formatter false true) res 
+            List.map (AsciiTree.for_formatter true true) res 
+
         let of_file file data nodes =
             let trees = Parser.Tree.of_file (`Local file) in
             Sexpr.to_list (Build.prebuilt trees (data, nodes))

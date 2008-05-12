@@ -1546,7 +1546,7 @@ The \poycommand{calculate\_support} command does not output support values by de
 	     {}
 
             \argumentdefinition{supports}{\optional{argument}}
-                {Outputs a parenthetical representation of a tree with the
+                {Outputs a newick format representation of a tree with the
                 support values has previously been calculated using the
                 command~\nccross{calculate\_support}{calculatesupport},
                 either to the screen or to a file (if specified). If no argument
@@ -1581,7 +1581,9 @@ The \poycommand{calculate\_support} command does not output support values by de
 			\argumentdefinition{trees}{\obligatory{(argument list)}}
                 {Outputs the trees in memory in parenthetical notation. The argument
                 \poyargument{trees} receives an optional list of values
-                specifying the format of the tree that has to be generated. The
+                specifying the format of the tree that has to be generated.
+                Unless \poyargument{hennig} is specified in the list of values, 
+                \poyargument{trees} uses newick format in the tree output. The
                 valid optional arguments are:  
                 
                 \begin{description}
@@ -1994,9 +1996,14 @@ The \poycommand{calculate\_support} command does not output support values by de
               completion of the command (after fusing).  Because the lowest cost unique trees 
               generated are selected and stored at the end of a \poycommand{search} 
               (defined by the user with \poyargument{max\_time}), aggressive use of this 
-              command in a parallel environment consists of implementing several sequential
-               \poycommand{search} commands that will add the pool of selected
+              command in a parallel environment consists of including few sequential
+               \poycommand{search} commands that will allow the processes to
+               exchange trees and add the pool of selected
                best trees to subsequent iterations of the command (see the example for parallel processing).
+
+               Trees that exists in memory prior the \poycommand{search} command
+               are included in the set of trees available for the
+               \poycommand{fuse} but are not swapped.
 	\end{poydescription}
 
 	\begin{arguments}
@@ -2040,17 +2047,20 @@ The \poycommand{calculate\_support} command does not output support values by de
     the search will be aborted after one hour.}}
     
         \begin{statement}
-                Note that in order to maximize computational efficiency when using \poycommand{search} 
-                in parallel processing environments the \poyargument{hits} argument has been removed from
-                the valid syntax of the command.  Because the number of trees evaluated in search is \poycommand{search} 
-                is multiplicative such that it is doubled in the \poycommand{fuse} stage during each iteration that this 
-                command performs prior to its user defined \poyargument{max\_time}, a strategy in which many 
-                successive \poycommand{search} commands are executed for relatively short amounts of time is more 
-                exhaustive than a single \poycommand{search} executed for a relatively long amount of time.  During each 
-                successive \poycommand{search}, in addition to the trees generated in the \poycommand{build} stage, the set of 
-                best unique trees selected from the previous search round is applied to the current \poycommand{search} at 
-                the \poycommand{fuse} stage and the set of best trees from each processor will be exchanged at the command's completion.
-                \end{statement}
+                In order to maximize computational efficiency when using \poycommand{search} 
+                in parallel processing environments the \poyargument{hits}
+                argument is ignored. However, a diverse set of trees which
+                include the current best trees found ammong all the processes is
+                desirable to improve the potential of tree fusing.
+
+                To guarantee that separate processes
+                exchange trees and seed each other's fuse step, it
+                is advisable to use few successive search commands
+                when executing the program in parallel, to ensure
+                proper tree exchange between different processes,
+                increasing their probability of finding better trees
+                during the fuse step.
+        \end{statement}
 
         
     	\begin{poyexamples}
@@ -2063,18 +2073,13 @@ The \poycommand{calculate\_support} command does not output support values by de
             best hits is at most 385 steps.}
 	
 	\poyexample {For Parallel Implementation of \poycommand{search}}
-		               {search(max\_time:0:2:0)}\\
-			    {search(max\_time:0:2:0)}\\
-	                       {search(max\_time:0:2:0)}\\
-                                {search(max\_time:0:2:0)}\\
-	                      {search(max\_time:0:2:0)}\\
-	                      {search(max\_time:0:2:0)}\\
+		               {search(max\_time:0:6:0)}\\
+	                      {search(max\_time:0:6:0)}\\
+	                      {search(max\_time:0:4:0)}\\
             {This series of commands will attempt as many builds, swaps, ratchets, and tree
-            fusings as possible within the specified time of 16 hours (2 hours allocated
-             for each successive iteration of the command).  Trees are exchanged among
+            fusings as possible within the specified total time of 16 hours.  Trees are exchanged among
              processors at the end of each \poycommand{search} and the best unique trees
-              are then selected and applied to the following  \poycommand{search} command.}
-	
+              are then selected and included in the following \poycommand{search} command.}
             \end{poyexamples}
 
 	\begin{poyalso}
@@ -2900,7 +2905,9 @@ The \poycommand{calculate\_support} command does not output support values by de
             $a$, and $indel(x)$ is the cost of inserting (or deleting) a
             base $x$ according to the tcm assigned to the character, the total
             cost of inserting (or deleting) the sequence $s[0...n]$ is $a +
-            indel(s[0]) + indel(s[1]) + ... + indel(s[n - 1]) + indel(s[n]).$ This method is applicable only to dynamic homology characters.} 
+            indel(s[0]) + indel(s[1]) + ... + indel(s[n - 1]) + indel(s[n]).$
+            This method is applicable only to dynamic homology characters with
+            the nucleotide alphabet.} 
             {gapopening}
 
         \argumentdefinition{multi\_static\_approx}{}
@@ -2938,7 +2945,11 @@ The \poycommand{calculate\_support} command does not output support values by de
             
             The LIDENT value \texttt{remove} excludes all uninformative characters
             information (except autapomorphies), whereas the value \texttt{keep}
-            retains these characters. The default is \texttt{remove}. This method is applicable only to dynamic homology characters.}
+            retains these characters. The default is \texttt{remove}. This
+            method is applicable only to dynamic homology characters. If
+            a non-metric transformation cost matrix is in use, this
+            transformation will assume that the non-metricity is due to the
+            individual insertion and deletion cost.}
             {staticapprox}
             
             \begin{statement}

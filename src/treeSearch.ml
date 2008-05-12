@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2771 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2822 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -195,7 +195,7 @@ module MakeNormal
             in
             let output tree =
                 Status.user_message fo "@[";
-                Status.user_message fo (AsciiTree.for_formatter false true tree);
+                Status.user_message fo (AsciiTree.for_formatter true true tree);
                 Status.user_message fo ("[" ^ cost ^ "]");
                 Status.user_message fo "@]@," in
             List.iter output tree
@@ -245,7 +245,8 @@ module MakeNormal
                     Status.user_message fo "@,*@,"
                 else is_first := false;
                 Status.user_message fo "@[";
-                Status.user_message fo (AsciiTree.for_formatter newick leafsonly tree);
+                Status.user_message fo (AsciiTree.for_formatter (not
+                use_hennig_style) leafsonly tree);
                 if leafsonly && report_tree_len then
                     Status.user_message fo ("[" ^ cost ^ "]");
                 if not use_hennig_style then
@@ -769,7 +770,7 @@ let forest_search data queue origin_cost search trees =
             Status.user_message fo "@[<v>";
             Status.user_message fo 
             ("@[" ^ majority_text ^ "@ Majority@ Consensus Tree@]@,@[");
-            Status.user_message fo (AsciiTree.for_formatter false false res);
+            Status.user_message fo (AsciiTree.for_formatter true false res);
             Status.user_message fo "@]@]\n%!";
         end else
             match filename with
