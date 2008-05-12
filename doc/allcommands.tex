@@ -3006,7 +3006,10 @@ The \poycommand{calculate\_support} command does not output support values by de
             The transformation cost matrix file contains five rows and columns
             with values listed in the following order (left to right and top to
             bottom): adenine, cytosine, guanine,
-            thymine/uracil, and indel. The costs must be symmetrical (that is, the
+            thymine/uracil, and indel.  A similar pattern is followed for amino acids
+            where the matrix columns and rows reflect all the amino acid names in alphabetical order
+            (read left to right and top to bottom) with the last row and column containing a gap cost. 
+            The costs must be symmetrical (that is, the
             cost of the A to T substitution is equal to the cost of T to A
             substitution). For example:
 	        \begin{center}
@@ -3192,7 +3195,7 @@ The \poycommand{calculate\_support} command does not output support values by de
 
  			\begin{figure} [!htbp]
    		 	\begin{center}
-        			\includegraphics[width=0.8\textwidth]{figures/chromfig1.pdf}
+        			\includegraphics[width=0.8\textwidth]{figures/chromfig1.jpg}
     			\end{center}
     			\caption{The effect of dynamic parameter arguments (\poyargument{seed\_length, min\_rearrangement\_len}, 
 			and \poyargument{min\_loci\_len}) on determining homologous blocks in unannotated chromosomal sequences.
