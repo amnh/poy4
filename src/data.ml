@@ -756,13 +756,14 @@ let add_static_character_spec data (code, spec) =
     Hashtbl.replace data.character_names spec.Parser.SC.st_name code;
     Hashtbl.replace data.character_codes code spec.Parser.SC.st_name
 
-let report_static_input file (taxa, characters, matrix, tree, _) =
+let report_static_input file (taxa, characters, matrix, tree, unaligned) =
     let characters = Array.length characters 
     and taxa = Array.length taxa in
     let msg =
         "@[The@ file@ " ^ StatusCommon.escape file ^ "@ defines@ " ^ 
         string_of_int characters 
-        ^ "@ characters@ in@ " ^ string_of_int taxa ^ "@ taxa.@]"
+        ^ "@ static@ homology@ characters@ in@ " ^ 
+        string_of_int taxa ^ "@ taxa.@]"
     in
     Status.user_message Status.Information msg
 
@@ -1199,10 +1200,12 @@ let add_multiple_static_parsed_file data list =
 let add_static_file ?(report = true) style data file = 
     try
         let ch, file = FileStream.channel_n_filename file in
-        let r = Parser.SC.of_channel style ch file in
+        let ((_, _, _, _, unaligned) as r) = 
+            Parser.SC.of_channel style ch file 
+        in
         if report then report_static_input file r;
         close_in ch;
-        add_static_parsed_file data file r
+        add_static_parsed_file data file r 
     with
     | Sys_error err ->
             let file = FileStream.filename file in
