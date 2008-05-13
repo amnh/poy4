@@ -165,8 +165,35 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
     \def\tmpa{}
     \def\tmpb{#2}
     \def\tmpc{#4}
-    \index{general}{#1}
-    \index{general}{\@commandname!#1}
+    \def\tmpd{INTEGER}
+    \def\tmpe{#1}
+    \def\tmpg{FLOAT}
+    \def\tmph{STRING}
+    \def\tmpi{BOOL}
+    \def\tmpj{LIDENT}
+    \ifx\tmpd\tmpe
+        \index{general}{\@commandname!#1}
+    \else
+    \ifx\tmpg\tmpe
+        \index{general}{\@commandname!#1}
+    \else
+    \ifx\tmph\tmpe
+        \index{general}{\@commandname!#1}
+    \else
+    \ifx\tmpi\tmpe
+        \index{general}{\@commandname!#1}
+    \else
+    \ifx\tmpj\tmpe
+        \index{general}{\@commandname!#1}
+    \else
+    \index{general}{\commandstyle{\poyargument{#1}}}
+    \def\tmpk{(STRING, STRING)}
+        \index{general}{\@commandname!#1}
+    \fi
+    \fi
+    \fi
+    \fi
+    \fi
     \ifx\tmpa\tmpb
         \item[\poyargument{#1}]
             \ifx\tmpa\tmpc
@@ -259,6 +286,7 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
   \end{titlepage}%
   \setcounter{footnote}{0}%
 }
+
 \makeatother
 
 \include{version}
