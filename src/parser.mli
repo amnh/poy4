@@ -523,7 +523,7 @@ module SC : sig
             static_spec
 
     (** Symmetric to the previous one, but for the observed state of a taxon *)
-    val of_old_atom : static_spec -> OldHennig.Encoding.s -> t -> static_state
+    val of_old_atom : (t, static_state) Hashtbl.t -> static_spec -> OldHennig.Encoding.s -> t -> static_state
 
     (** [of_old_parser filename alphabets old_parsed] converts the [old_parsed]
      * style of static homology parsed file to the new style, with (optional)

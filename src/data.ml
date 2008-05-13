@@ -1690,7 +1690,6 @@ let categorize data =
 
     (* We recategorize the data, so we must clear any already-loaded
        data *)
-    let data = repack_codes data in
     let data = { data with
                      non_additive_8 = [];
                      non_additive_16 = [];
@@ -1700,6 +1699,7 @@ let categorize data =
                      sankoff = [];
                      dynamics = [];
                } in                         
+    let data = repack_codes data in
     let categorizer code spec data =
         match spec with
         | Static enc -> (* Process static characters *)
@@ -3511,11 +3511,12 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
     in
     let matrix = 
         let matrix = Array.of_list matrix in
+        let table = Hashtbl.create 1667 in
         Array.init (Array.length matrix) 
             (fun x -> Array.init (Array.length enc)
             (fun y -> 
                 let _, enc = enc.(y) in
-                Parser.SC.of_old_atom newenc.(y) enc matrix.(x).(y)))
+                Parser.SC.of_old_atom table newenc.(y) enc matrix.(x).(y)))
     in
     let res = (Array.of_list names, newenc, matrix, [], []) in
     Parser.SC.fill_observed res;

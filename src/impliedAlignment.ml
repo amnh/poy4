@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2820 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2834 $"
 
 exception NotASequence of int
 
@@ -1016,6 +1016,16 @@ let analyze_tcm tcm alph =
         | Some all -> all
         | None -> assert false
     in
+    let table = Hashtbl.create 67 in
+    let find_item it =
+        if Hashtbl.mem table it then
+            Hashtbl.find table it
+        else begin
+            let r = Parser.Unordered_Character (it, false) in
+            Hashtbl.add table it r;
+            r
+        end
+    in
     match get_case with
     | AllOne weight ->
             (* We assume that we have dna sequences *)
@@ -1027,10 +1037,9 @@ let analyze_tcm tcm alph =
             in
             let to_parser is_missing states acc = 
                 match is_missing, states with
-                | `Missing, _ -> 
-                        Parser.Unordered_Character (all, false) :: acc
-                | `Exists, 0 -> Parser.Unordered_Character (gap, false) :: acc
-                | `Exists, x -> Parser.Unordered_Character (x, false) :: acc
+                | `Missing, _ -> (find_item all) :: acc
+                | `Exists, 0 -> (find_item gap) :: acc
+                | `Exists, x -> (find_item x) :: acc
             and to_encoding _ acc = encoding :: acc in
             get_case, to_parser, to_encoding
     | AllOneGapSame (subsc, gapcost) ->
@@ -1048,21 +1057,15 @@ let analyze_tcm tcm alph =
             let to_parser is_missing states acc =
                 match is_missing, states with
                 | `Missing, _ ->
-                        Parser.Unordered_Character (all, false) ::
-                            Parser.Unordered_Character (1 lor 2, false) :: acc
+                        (find_item all) :: (find_item (1 lor 2)) :: acc
                 | `Exists, 0 ->
                         (* All characters, and the gap itself, in other words,
                         * we treat the gap as a separate character, and the
                         * state as missing data *)
-                        Parser.Unordered_Character (all, false) ::
-                            Parser.Unordered_Character (1, false) :: acc
+                        (find_item all) :: (find_item 1) :: acc
                 | `Exists, x ->
-                            Parser.Unordered_Character (x land notgap, false) ::
-                                (if x = all then 
-                                    Parser.Unordered_Character (3, false) 
-                                else 
-                                Parser.Unordered_Character (2, false))
-                                :: acc
+                        let r = if x = all then 3 else 2 in
+                        (find_item (x land notgap)) :: (find_item r) :: acc
             and to_encoding _ acc = 
                 subs :: present_absent :: acc
             in
@@ -1088,12 +1091,8 @@ let analyze_tcm tcm alph =
                         (* We have a gap, so we assign both gap opening and
                         * gap extension, we will later cleaunup when gap
                         * opening is not needed *)
-                        Parser.Unordered_Character (all, false) ::
-                            acc
-                | `Exists, x ->
-                        Parser.Unordered_Character ((x land notgap), 
-                        false) :: 
-                            acc
+                        (find_item all) :: acc
+                | `Exists, x -> (find_item (x land notgap)) :: acc
             in 
             let to_encoding _ acc = subs :: acc in
             get_case, to_parser, to_encoding
@@ -1177,26 +1176,37 @@ let analyze_tcm tcm alph =
                             else match_bit v (pos + 1) (mask lsl 1) acc
                         in
                         match_bit x 1 1 []
-                | Alphabet.Sequential -> [x - 1]
+                | Alphabet.Sequential -> 
+                        [x - 1]
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.convert_to_list"
             in
-            let all = generate_all [] (size - 1) in
+            let all = generate_all [] (size - 2) in
             let gap_code =
                 (* Always the last code is the one of a gap in Sankoff *)
                 size - 1
             in
-            let gap_holder = if is_metric then [gap_code] else all in
+            let gap_holder = 
+                if is_metric then [gap_code] else all 
+            in
+            let table = Hashtbl.create 67 in
+            let find_item it =
+                if Hashtbl.mem table it then
+                    Hashtbl.find table it
+                else begin
+                    let r = Parser.Sankoff_Character (it, false) in
+                    Hashtbl.add table it r;
+                    r
+                end
+            in
             let to_parser is_missing states acc = 
                 match is_missing, states with
-                | `Missing, _ ->
-                        (Parser.Sankoff_Character (all, false)) :: acc
+                | `Missing, _ -> 
+                        (find_item all) :: acc
                 | `Exists, 0 -> 
-                        (Parser.Sankoff_Character (gap_holder, false)) ::
-                            acc
+                        (find_item gap_holder) :: acc
                 | `Exists, x -> 
-                        let tuple = ((convert_to_list x),  false) in
-                        (Parser.Sankoff_Character tuple) :: acc
+                        (find_item (convert_to_list x)) :: acc
             and to_encoding _ acc = 
                 enc :: acc 
             in

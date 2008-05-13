@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2830 $"
+let () = SadmanOutput.register "Parser" "$Revision: 2834 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true
@@ -3626,32 +3626,39 @@ module SC = struct
                 { newspec with 
                 st_type = STSankoff spec.OldHennig.cost_matrix }
 
-    let of_old_atom (newspec : static_spec) (oldspec : OldHennig.encoding_spec)  
+    let of_old_atom table_of_atoms 
+    (newspec : static_spec) (oldspec : OldHennig.encoding_spec)  
     data : static_state =
-        match data with
-        | Ordered_Character (_, _, true)
-        | Unordered_Character (_, true)
-        | Sankoff_Character (_, true) -> None
-        | Ordered_Character (min, max, false) -> Some [min; max]
-        | Unordered_Character (x, false) ->
-                let lst_bits = 
-                    let rec process_bits acc pos v =
-                        if v = 0 || pos > 32 then acc
-                        else 
-                            let mask = 1 lsl pos in
-                            let acc = 
-                                if 0 <> v land mask then
-                                    (pos :: acc) 
-                                else acc
-                            in 
-                            let next = (v land (lnot mask)) in
-                            process_bits acc (pos + 1) next
-                    in
-                    process_bits [] 0 x
-                in
-                Some lst_bits
-        | Sankoff_Character (s, false) -> Some s
-        | _ -> assert false
+        if Hashtbl.mem table_of_atoms data then Hashtbl.find table_of_atoms data
+        else
+            let res = 
+                match data with
+                | Ordered_Character (_, _, true)
+                | Unordered_Character (_, true)
+                | Sankoff_Character (_, true) -> None
+                | Ordered_Character (min, max, false) -> Some [min; max]
+                | Unordered_Character (x, false) ->
+                        let lst_bits = 
+                            let rec process_bits acc pos v =
+                                if v = 0 || pos > 32 then acc
+                                else 
+                                    let mask = 1 lsl pos in
+                                    let acc = 
+                                        if 0 <> v land mask then
+                                            (pos :: acc) 
+                                        else acc
+                                    in 
+                                    let next = (v land (lnot mask)) in
+                                    process_bits acc (pos + 1) next
+                            in
+                            process_bits [] 0 x
+                        in
+                        Some lst_bits
+                | Sankoff_Character (s, false) -> Some s
+                | _ -> assert false
+            in
+            let () = Hashtbl.add table_of_atoms data res in
+            res
 
     let of_old_parser filename alphabet (specs, data, trees) : file_output =
         let taxa, data = 
@@ -3670,10 +3677,12 @@ module SC = struct
                     Array.init nchars (fun x ->
                         of_old_spec filename (Some alphs.(x)) specs.(x) x)
         in
+        let table_of_atoms = Hashtbl.create 1667 in
         let new_data : int list option array array =
             Array.init ntaxa (fun x ->
                 Array.init nchars (fun y ->
-                    of_old_atom new_specs.(y) specs.(y) data.(x).(y)))
+                    of_old_atom table_of_atoms 
+                    new_specs.(y) specs.(y) data.(x).(y)))
         in
         Nexus.fill_observed new_specs new_data;
         taxa, new_specs, new_data, trees, []
