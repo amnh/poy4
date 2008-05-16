@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2754 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2848 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -791,7 +791,10 @@ module Search (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n)
     let edge_recode ptree (Tree.Edge (a, b)) starting =
         let hash = Hashtbl.create 97 in
         let find x = 
-            try Hashtbl.find hash x with Not_found -> x 
+            try Hashtbl.find hash x with 
+            | Not_found -> 
+                    Hashtbl.add hash x x;
+                    x 
         in
         let recode_tree_data tree =
             let node_data = 
@@ -1534,7 +1537,12 @@ type ('a, 'b) fuse_locations =
         (('a, 'b) p_tree * Tree.u_tree * Tree.edge) list Sexpr.t
 
 let fuse_all_locations ?min ?max trees =
-    let min = Some 3 in
+    let min = 
+        match min with
+        | Some x when x < 3 -> Some 3
+        | None -> Some 3 
+        | x -> x
+    in
     let filter = match min, max with
     | None, None -> (fun _ -> true)
     | Some min, None -> (fun (_, s) -> s >= min)
@@ -1640,7 +1648,10 @@ let fuse source target terminals =
     let shash, scode, stree = edge_recode stree sedge count
     and thash, tcode, ttree = edge_recode ttree tedge count in
     let fix_edge tbl (Tree.Edge (a, b)) = 
-        Tree.Edge (Hashtbl.find tbl a, Hashtbl.find tbl b)
+        try Tree.Edge (Hashtbl.find tbl a, Hashtbl.find tbl b) with
+        | Not_found as err ->
+                Printf.printf "The codes are %d and %d\n%!" a b;
+                raise err
     in
     let terminals = terminals + 1 in
     let shash1, scode, stree = 

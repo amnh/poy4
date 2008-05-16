@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** [TreeSearch] contains high-level functions to perform tree searches *) 
-let () = SadmanOutput.register "TreeSearch" "$Revision: 2846 $"
+let () = SadmanOutput.register "TreeSearch" "$Revision: 2848 $"
 
 let has_something something (`LocalOptimum (_, _, _, _, cost_calculation, _, _, _, _, _, _)) =
     List.exists (fun x -> x = something) cost_calculation
@@ -704,9 +704,10 @@ let forest_search data queue origin_cost search trees =
         | `Uniform -> (fun _ -> 1.)
         in
         let keep_method = `Best in
-        let max_code = 
-            All_sets.IntegerMap.fold (fun code _ acc -> Pervasives.max code acc)
-            data.Data.taxon_codes 0
+        let max_code, cntr = 
+            All_sets.IntegerMap.fold (fun code _ (acc, cnt) -> 
+                Pervasives.max code acc, cnt + 1)
+            data.Data.taxon_codes (0, 0)
         in
         (* TODO: take only best of these *)
         let process t = Sexpr.to_list (find_local_optimum data queue
@@ -720,7 +721,7 @@ let forest_search data queue origin_cost search trees =
             keep_method
             iterations
             process
-            (min, max)
+            (min, Pervasives.min (cntr - 3) max)
         in
         Sadman.finish [];
         Sexpr.of_list trees

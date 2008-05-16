@@ -810,6 +810,7 @@ let repack_codes data =
         | av :: ta ->
                 if check data used_code then
                     let uc = used_code in
+                    let () = Printf.printf "Recoding %d to %d\n%!" uc av in
                     let data = recode_function data uc av in
                     process_available recode_function check data (uc - 1) ta
                 else 
@@ -853,7 +854,6 @@ let repack_codes data =
                 let name = Hashtbl.find data.character_codes used_code in
                 Hashtbl.remove data.character_names name;
                 Hashtbl.remove data.character_codes used_code;
-                Hashtbl.remove data.character_specs used_code;
                 Hashtbl.replace data.character_codes available_code name;
                 Hashtbl.replace data.character_names name available_code;
             with
@@ -863,6 +863,7 @@ let repack_codes data =
             try 
                 let spec = Hashtbl.find data.character_specs used_code in
                 Hashtbl.replace data.character_specs available_code spec;
+                Hashtbl.remove data.character_specs used_code;
             with
             | Not_found -> ()
         in
@@ -976,6 +977,7 @@ let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet
         in
         incr data.character_code_gen;
         let chcode = !(data.character_code_gen) in
+        Printf.printf "Assigning the character code %d\n%!" chcode;
         let dspec = {
             filename = file;
             fs = data.current_fs_file;
@@ -1395,14 +1397,17 @@ let process_molecular_file tcmfile tcm tcm3 annotated alphabet is_prealigned dyn
 
 let process_ignore_taxon data taxon =
     let res = All_sets.Strings.add taxon data.ignore_taxa_set in
-    let () =
-        try 
-            Hashtbl.remove data.taxon_characters 
-            (Hashtbl.find data.character_names taxon)
-        with
-        | Not_found -> ()
+    let taxon_names, taxon_codes =
+        let code = All_sets.StringMap.find taxon data.taxon_names in
+        let () =
+            try Hashtbl.remove data.taxon_characters code with
+            | Not_found -> ()
+        in
+        All_sets.StringMap.remove taxon data.taxon_names,
+        All_sets.IntegerMap.remove code data.taxon_codes 
     in
-    { data with ignore_taxa_set = res; }
+    { data with ignore_taxa_set = res; taxon_codes = taxon_codes; taxon_names =
+                    taxon_names}
 
 
 let process_ignore_file data file = 
