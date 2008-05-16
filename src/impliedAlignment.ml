@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2844 $"
+let () = SadmanOutput.register "ImpliedAlignment" "$Revision: 2847 $"
 
 exception NotASequence of int
 
@@ -1047,9 +1047,7 @@ let analyze_tcm tcm alph =
                     else AllSankoff None
         with
         | IsSankoff -> 
-                if is_affine tcm then 
                     AllSankoff (Some for_sankoff)
-                else AllSankoff None
     in
     let extract_all all =
         match all with
@@ -1221,13 +1219,15 @@ let analyze_tcm tcm alph =
                 | Alphabet.Extended_Bit_Flags -> 
                         failwith "Impliedalignment.convert_to_list"
             in
-            let all = generate_all [] (size - 2) in
-            let gap_code =
-                (* Always the last code is the one of a gap in Sankoff *)
-                size - 1
-            in
+            let all = 
+                (* The size minus 1 for the codes (starting in 0), and another
+                * one for the gap which we code separated *)
+                generate_all [] (size - 2) in
             let gap_holder = 
+                (* We always use all in the gap because we code it separated for
+                * Sankoff characters 
                 if is_metric then [gap_code] else all 
+                *) all
             in
             let table = Hashtbl.create 67 in
             let find_item it =
