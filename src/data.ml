@@ -977,7 +977,6 @@ let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet
         in
         incr data.character_code_gen;
         let chcode = !(data.character_code_gen) in
-        Printf.printf "Assigning the character code %d\n%!" chcode;
         let dspec = {
             filename = file;
             fs = data.current_fs_file;
