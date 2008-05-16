@@ -1407,8 +1407,22 @@ let analyze (script : Methods.script list) : Methods.script list =
         List.filter is_load channels_subtrees
     in
     let res = entry (post_process_trees (res @ channels_subtrees)) in
-    simplify_store_set (linearize res [])
+    let r = simplify_store_set (linearize res []) in 
+    Hashtbl.clear thread_table;
+    r
 
+let break_in_independent_sections x =
+    let a, b =
+        List.fold_right (fun x (cur, acc) ->
+            match x with
+            | `Wipe | `Set _ -> ([], ((x :: cur) :: acc)) 
+            | _ -> (x :: cur), acc) x ([], [])
+    in
+    a :: b
+
+let analyze script = 
+    let scripts = break_in_independent_sections script in 
+    List.flatten (List.map analyze scripts)
 let script_to_string (init : Methods.script) =
     match init with
     | #Methods.tree_handling as meth ->
