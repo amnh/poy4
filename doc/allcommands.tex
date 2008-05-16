@@ -1990,7 +1990,7 @@ The \poycommand{calculate\_support} command does not output support values by de
             includes tree building, swaping using TBR, perturbation using
             ratchet, and tree fusing. The strategy involves specifying targets for 
             a driven search, such as maximum and minimum execution times, 
-            maximum allowed memory consumption, minimum number of times the
+            maximum allowed memory consumption for tree storage, minimum number of times the
             shortest tree is found, and an expected cost for the shortest tree.  When executing
              \poycommand{search} using parallel processing trees are exchanged upon the
               completion of the command (after fusing).  Because the lowest cost unique trees 
@@ -2019,8 +2019,9 @@ The \poycommand{calculate\_support} command does not output support values by de
         be expressed as 1:12:00 or 1.5:00:00.}{maxtime}
         
         \argumentdefinition{memory}{\obligatory{\poylident:\poyfloat}}{Specifies the maximum amount of
-        memory allocated for the search per processor. \poy \emph{attempts} to consume memory within
-        the specified limit, but it may surpass it in certain operations. The lident value expresses the 
+        memory allocated for the stored trees during the search per processor. \poy \emph{attempts} to consume memory within
+        the specified limit, but it may surpass it in certain operations (most
+        notably during the ratchet). The lident value expresses the 
         units of memory (\poyargument{gb} for Gigabytes and \poyargument{mb} for Megabytes), 
         whereas the float value specifies the actual value. Keeping memory consumption 
         within the limit is approximate and is used as a rough guide to \poy, preventing 

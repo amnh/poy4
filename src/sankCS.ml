@@ -28,7 +28,7 @@
  * handle unrooted trees for this kind of operations (remember the tree module has
  * a handle for "Unrooted" trees, meaning that we can safely keep this meaning
  * properly. *)
-let () = SadmanOutput.register "SankCS" "$Revision: 2819 $"
+let () = SadmanOutput.register "SankCS" "$Revision: 2846 $"
 
 
 let infinity = max_int / 4
@@ -586,7 +586,8 @@ let of_parser tcm (arr, taxcode) mycode =
     let make_elt (elt, ecode) =
         let states = 
             match elt with
-            | Some states -> states
+            | Some (`List states) -> states
+            | Some (`Bits states) -> BitSet.to_list states
             | None -> all_states
         in
         assert (List.fold_left (fun acc x -> acc && x < nstates) true states);
@@ -784,12 +785,13 @@ let get_all_possible_assignments (elts : int list option list) =
     in
     List.map All_sets.Integers.elements x
 
-let min_possible_cost mtx elts = 
+let min_possible_cost mtx (elts : Parser.SC.static_state list) = 
     let all_possible = 
         let rec filter_none acc lst =
             match lst with
             | None :: t -> filter_none acc t
-            | (Some x) :: t -> filter_none (x :: acc) t
+            | (Some x) :: t -> 
+                    filter_none ((Parser.SC.static_state_to_list x) :: acc) t
             | [] -> acc
         in
         filter_none [] elts

@@ -322,3 +322,8 @@ let differentiate_sym t t' =
   let d = sym_diff t t' in
   t.data <- d.data;
   t.len <- d.len
+
+let to_list bs = 
+    let enum = enum bs in
+    List.rev (Enum.fold (fun x acc -> x :: acc) [] enum)
+

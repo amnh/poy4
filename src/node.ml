@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2795 $"
+let () = SadmanOutput.register "Node" "$Revision: 2846 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -1071,7 +1071,7 @@ let extract_dynamic data dyna tcode =
 type ms = All_sets.Integers.t
 
 module OrderedLists = struct
-    type t = float * (int list list)
+    type t = float * (BitSet.t list)
     let rec single_compare a b =
         match a, b with
         | ha :: ta, hb :: tb -> 
@@ -1086,7 +1086,7 @@ module OrderedLists = struct
     let rec list_compare a b = 
         match a, b with
         | ha :: ta, hb :: tb ->
-                let res = single_compare ha hb in
+                let res = BitSet.compare ha hb in
                 if 0 = res then compare ta tb
                 else res
         | [], [] -> 0
@@ -1101,7 +1101,25 @@ end
 
 module SetLists = Map.Make (OrderedLists)
 
-let collapse characters all_static =
+let debug_profile_memory = false
+
+let current_snapshot x = 
+    if debug_profile_memory then MemProfiler.current_snapshot x
+    else ()
+
+let to_bitset size lst = 
+    let set  = BitSet.create (size * (List.length lst)) in
+    let cnt = ref (-1) in
+    List.iter (fun lst ->
+        incr cnt;
+        List.iter (fun x ->
+            BitSet.set set (x + (!cnt * 32))) lst) lst;
+    set
+
+let bitset_table  = Hashtbl.create 1667 
+
+let collapse size characters all_static =
+    (*
     let simplify item = 
         let hash = Hashtbl.create 255 
         and cur_counter = ref 1 in
@@ -1122,23 +1140,43 @@ let collapse characters all_static =
         in
         List.map simplify item
     in
+    *)
     let process_all_lists lists = 
+        current_snapshot "This is before lists";
         let lists = 
             List.fold_left (fun acc x ->
                 let (code, weight, lst) = characters x in
+                let lst = 
+                    List.map (function
+                    | `List x -> 
+                            if Hashtbl.mem bitset_table x then 
+                                Hashtbl.find bitset_table x
+                            else
+                                let set = BitSet.create 31 in
+                                let () = List.iter (BitSet.set set) x in
+                                let () = Hashtbl.add bitset_table x set in
+                                set
+                    | `Bits x -> x) lst 
+                in
+                (*
                 let lst = simplify lst in
+                let lst = to_bitset size lst in
+                *)
                 if SetLists.mem (weight, lst) acc then
                     let code, nweight = SetLists.find (weight, lst) acc in
                     SetLists.add (weight, lst) (code, (weight +. nweight)) acc
                 else SetLists.add (weight, lst) (code, weight) acc) SetLists.empty 
                 all_static
         in
-        SetLists.fold (fun lst (code, weight) acc -> (code, weight, lst) :: acc)
+        current_snapshot "This is before elements";
+        SetLists.fold (fun _ it acc -> it :: acc)
         lists []
     in
-    process_all_lists characters
+    let res = process_all_lists characters in
+    current_snapshot "This is after lists";
+    res
 
-let classify chars data =
+let classify size chars data =
     let all_static = 
         Hashtbl.fold (fun code spec acc ->
             match spec with
@@ -1161,13 +1199,14 @@ let classify chars data =
                 try
                     match Hashtbl.find taxon_chars code with
                     | (Data.Stat (c, (Some v)), `Specified) -> (c, weight, v)
-                    | (Data.Stat (c, v), _) -> (c, weight, observed)
+                    | (Data.Stat (c, v), _) -> (c, weight, `List observed)
                     | _ -> failwith "Impossible 2?"
                 with
-                | Not_found -> (code, weight, observed)
+                | Not_found -> (code, weight, `List observed)
             in
             lst :: acc) data.Data.taxon_characters []
     in
+    current_snapshot "Generating characters";
     let characters = 
         let add_taxon_to_accumulator acc (_, _, v) = v :: acc in
         let reshape chars (a, b, _) = (a, b, chars) in
@@ -1178,14 +1217,18 @@ let classify chars data =
                     reshape chars h
             | [] -> failwith "Nothing?"
         in
-        collapse chars all_static
+        collapse size chars all_static
     in
-    List.fold_left (fun acc (a, b, c) ->
-        All_sets.IntegerMap.add a (b, c) acc) All_sets.IntegerMap.empty
+    current_snapshot "Final fold characters";
+    let r = List.fold_left (fun acc (a, b) ->
+        All_sets.IntegerMap.add a b acc) All_sets.IntegerMap.empty
         characters
+    in
+    current_snapshot "Done fold";
+    r
 
-let classify doit chars data =
-    if doit then Some (classify chars data)
+let classify size doit chars data =
+    if doit then Some (classify size chars data)
     else None
 
 let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms) 
@@ -1208,7 +1251,7 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 match weights with
                 | None -> Data.get_weight c !data
                 | Some v ->
-                        let a, _ = All_sets.IntegerMap.find c v in
+                        let a = All_sets.IntegerMap.find c v in
                         a
             in
             let table = Hashtbl.create 1667 in
@@ -1234,15 +1277,21 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                     (List.map (fun x -> w, x) lst)) :: acc)
                 [] res
         in
-        let nadd8weights = classify do_classify lnadd8code !data
-        and nadd16weights = classify do_classify lnadd16code !data
-        and nadd32weights = classify do_classify lnadd32code !data in
+        current_snapshot "Classifying";
+        let nadd8weights = classify 8 do_classify lnadd8code !data
+        and nadd16weights = classify 16 do_classify lnadd16code !data
+        and nadd32weights = classify 32 do_classify lnadd32code !data in
+        current_snapshot "Weighting";
         let laddcode = group_in_weights None laddcode
         and lnadd8code = group_in_weights nadd8weights lnadd8code
         and lnadd16code = group_in_weights nadd16weights lnadd16code
         and lnadd32code = group_in_weights nadd32weights lnadd32code
         and lsankcode = List.map (fun x -> cg (), x) lsankcode in
-
+        let add_codes ((_, x) as y) = y, Array.map snd (Array.of_list x) in
+        let laddcode = List.map add_codes laddcode 
+        and lnadd8code = List.map add_codes lnadd8code
+        and lnadd16code = List.map add_codes lnadd16code
+        and lnadd32code = List.map add_codes lnadd32code in
         (* We need ways of making empty characters when a character is
            unspecified *)
         let get_static_encoding code =
@@ -1252,16 +1301,15 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             | Data.Static encoding -> encoding
             | Data.Dynamic _
             | Data.Set -> failwith "get_static_encoding" in
-
         let module Enc = Parser.OldHennig.Encoding in
-
         let gen_add code =
             let enc = get_static_encoding code in
-            (Data.Stat (code, Some enc.Parser.SC.st_observed), `Unknown) 
+            (Data.Stat (code, Some (`List enc.Parser.SC.st_observed)), 
+            `Unknown) 
         in
         let gen_nadd code =
             let enc = get_static_encoding code in
-            (Data.Stat (code, Some enc.Parser.SC.st_observed), `Unknown) 
+            (Data.Stat (code, Some (`List enc.Parser.SC.st_observed)), `Unknown) 
         in
         let gen_dynamic code =
             let alph = Data.get_alphabet !data code in
@@ -1270,21 +1318,21 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
             let chrom_data = Data.set_dyna_data [|empty_seq|] in 
             (Data.Dyna (code, chrom_data), `Unknown)
         in
-
         let gen_sank code =
             (* print_endline ("adding sankoff with code " ^ string_of_int code);
             * *)
             let specs = Hashtbl.find !data.Data.character_specs code in
             let states = 
                 match specs with
-                | Data.Static enc -> enc.Parser.SC.st_observed
+                | Data.Static enc -> `List enc.Parser.SC.st_observed
                 | _ -> assert false 
             in
             (Data.Stat (code, Some states), `Unknown)
         in
-
+        current_snapshot "Done";
         !data, 
         fun tcode acc ->
+            current_snapshot "Generating taxon";
             let tcharacters = Hashtbl.find !data.Data.taxon_characters tcode in
             let get_character_with_code_n_weight gen_new (w, acc, cnt) (weight, code) = 
                 try 
@@ -1298,12 +1346,12 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 with
                 | Not_found -> (gen_new code) :: acc
             in
-            let addmapper gen_new (x, y) =
+            let addmapper gen_new ((x, y), arr) =
                 let a, b, cnt = 
                     List.fold_left (get_character_with_code_n_weight gen_new) 
                     (1., [], 0) y
                 in
-                x, (a, b), Array.of_list (List.map snd y)
+                x, (a, b), arr
             in
             let ladd_chars    = List.map (addmapper gen_add)  laddcode    
             and lnadd8_chars  = 
@@ -1321,7 +1369,6 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 [] y) 
                 lsankcode
             in
-
             let result = { 
                 characters = []; 
                 total_cost = 0.;
@@ -1408,6 +1455,7 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                 | [] -> result
                 | _ -> List.fold_left single_lsank_chars_process result lsank_chars
             in
+            let () = current_snapshot "Finished taxon" in
             result :: acc
 
 let node_contents_compare a b =         (* sets? *)
@@ -1528,12 +1576,6 @@ let structure_into_sets data (nodes : node_data list) =
     in
     nodes, !data'
 
-let debug_profile_memory = false
-
-let current_snapshot x = 
-    if debug_profile_memory then MemProfiler.current_snapshot x
-    else ()
-
 let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
     (* Not only we make the list a set, we filter those characters that have
     * weight 0. *)
@@ -1566,6 +1608,7 @@ let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data =
         else belongs_to_code
     in
     let data, generate_taxon = 
+        current_snapshot "start nonadd sets";
         let n8 = List.filter is_mem data.Data.non_additive_8
         and n16 = List.filter is_mem data.Data.non_additive_16
         and n32 = List.filter is_mem data.Data.non_additive_32
@@ -1573,12 +1616,18 @@ let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data =
         and add = List.filter is_mem data.Data.additive
         and sank = List.map (List.filter is_mem) data.Data.sankoff
         and dynamics = List.filter is_mem data.Data.dynamics in
+        current_snapshot "start nonadd set2";
         let n8 = make_set_of_list n8
         and n16 = make_set_of_list n16
         and n32 = make_set_of_list n32
         and n33 = make_set_of_list n33
         and add = make_set_of_list add in
-        generate_taxon classify add n8 n16 n32 n33 sank dynamics data
+        current_snapshot "end nonadd set2";
+        let r = 
+            generate_taxon classify add n8 n16 n32 n33 sank dynamics data
+        in
+        current_snapshot "end generate taxon";
+        r
     in
     let nodes = 
         match taxa with

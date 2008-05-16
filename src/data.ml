@@ -209,7 +209,7 @@ type cs_d =
     | Dyna of (int * Sequence.s dyna_data)
     (* A static homology character, containing its code, and the character
     * itself *)
-    | Stat of (int * int list option)
+    | Stat of (int * Parser.SC.static_state)
 
 type cs = cs_d * specified
 
@@ -773,93 +773,124 @@ let repack_codes data =
     * reference to the necessary code *)
     (* We first collect the data about all the taxa that we have and build a map
     * of codes, then we do the same about all the characters that we have *)
-    let taxa_counter = ref 0
-    and character_counter = ref 0 in
-    let taxa_map = Hashtbl.create 1667
-    and char_map = Hashtbl.create 1667 in
-    let generic_assign table counter code =
-        if Hashtbl.mem table code then Hashtbl.find table code
-        else 
-            let () = Hashtbl.replace table code !counter in
-            let () = incr counter in
-            !counter - 1
+    let taxa_used_codes = ref []
+    and char_used_codes = ref [] in
+    All_sets.StringMap.iter (fun name code ->
+        taxa_used_codes := code :: !taxa_used_codes) data.taxon_names;
+    Hashtbl.iter (fun _ code ->
+        char_used_codes := code :: !char_used_codes) data.character_names;
+    (* We now sort them *)
+    let taxa_used_codes = List.sort ( - ) !taxa_used_codes
+    and char_used_codes = List.sort ( - ) !char_used_codes in
+    let rec available_codes_generator acc inverted cnt to_check =
+        match to_check with
+        | h :: t ->
+                if h = cnt then 
+                    available_codes_generator acc (max h inverted)
+                    (cnt + 1) t
+                else if cnt < h then 
+                    available_codes_generator (cnt :: acc) inverted 
+                    (cnt + 1) to_check
+                else assert false
+        | [] -> (acc, inverted, cnt)
     in
-    let taxa_assign = generic_assign taxa_map taxa_counter
-    and char_assign = generic_assign char_map character_counter in
-    let () =
-        let lst = All_sets.StringMap.fold (fun _ code acc -> code :: acc)
-        data.taxon_names [] in
-        let lst = List.sort compare lst in
-        List.iter (fun x -> ignore (taxa_assign x)) lst
+    let available_taxa_codes, greatest_taxa_code, taxa_counter = 
+        match taxa_used_codes with
+        | h :: t ->
+                available_codes_generator [] 0 h taxa_used_codes
+        | [] -> [], 0, 0
     in
-    let taxon_names = 
-        All_sets.StringMap.map taxa_assign data.taxon_names in
-    let taxon_codes =
-        All_sets.StringMap.fold (fun name code acc -> All_sets.IntegerMap.add
-        code name acc) taxon_names All_sets.IntegerMap.empty
+    let available_char_codes, greatest_char_code, character_counter  = 
+        match char_used_codes with
+        | h :: t -> available_codes_generator [] 0 h char_used_codes
+        | [] -> [], 0, 0
     in
-    let character_names, character_codes, character_specs =
-        let names = Hashtbl.create 1667 in
-        let codes = Hashtbl.create 1667 in
-        let specs = Hashtbl.create 1667 in
-        Hashtbl.iter (fun code spec ->
-            let code = char_assign code in
-            Hashtbl.replace specs code spec) data.character_specs;
-        Hashtbl.iter (fun name code ->
+    let rec process_available recode_function check data used_code available_codes =
+        match available_codes with
+        | av :: ta ->
+                if check data used_code then
+                    let uc = used_code in
+                    let data = recode_function data uc av in
+                    process_available recode_function check data (uc - 1) ta
+                else 
+                    process_available recode_function check data (used_code - 1)
+                    available_codes
+        | [] -> data
+    in
+    let recode_taxon data used_code available_code =
+        (* Fix taxon names *)
+        let taxon_codes, name =
+            let name = All_sets.IntegerMap.find used_code data.taxon_codes in
+            let taxon_codes = All_sets.IntegerMap.remove used_code
+            data.taxon_codes in
+            All_sets.IntegerMap.add available_code name taxon_codes, name
+        in
+        let taxon_names = 
+            let taxon_names = All_sets.StringMap.remove name data.taxon_names
+            in
+            All_sets.StringMap.add name available_code taxon_names
+        in
+        let () =
             try 
-                let code = char_assign code in
-                Hashtbl.replace names name code;
-                Hashtbl.replace codes code name;
+                let taxon_characters = Hashtbl.find data.taxon_characters used_code in
+                Hashtbl.remove data.taxon_characters used_code;
+                Hashtbl.replace data.taxon_characters available_code taxon_characters;
             with
-            | Not_found -> ()) data.character_names;
-        names, codes, specs
+            | Not_found -> ()
+        in
+        let root_at = 
+            match data.root_at with
+            | None -> None
+            | Some x when x = used_code -> Some available_code
+            | x -> x
+        in
+        { data with taxon_codes = taxon_codes; taxon_names = taxon_names;
+        root_at = root_at }
     in
-    let taxon_characters =
-        let taxon_characters = Hashtbl.create 1667 in
+    let recode_character data used_code available_code =
+        let () = 
+            try 
+                let name = Hashtbl.find data.character_codes used_code in
+                Hashtbl.remove data.character_names name;
+                Hashtbl.remove data.character_codes used_code;
+                Hashtbl.remove data.character_specs used_code;
+                Hashtbl.replace data.character_codes available_code name;
+                Hashtbl.replace data.character_names name available_code;
+            with
+            | Not_found -> ()
+        in
+        let () = 
+            try 
+                let spec = Hashtbl.find data.character_specs used_code in
+                Hashtbl.replace data.character_specs available_code spec;
+            with
+            | Not_found -> ()
+        in
         Hashtbl.iter (fun code chars ->
-            let table = Hashtbl.create 1667 in
-            Hashtbl.iter (fun code char ->
-                let code = char_assign code in
-                Hashtbl.add table code
-                (match char with
-                | (Dyna (_, d)), x -> 
-                        ((Dyna (code, d)), x)
-                | (Stat (_, d)), x ->
-                        ((Stat (code, d)), x))) chars;
-            Hashtbl.add taxon_characters (taxa_assign code) table) 
+                try 
+                    let char = Hashtbl.find chars used_code in
+                    Hashtbl.remove chars used_code;
+                    Hashtbl.replace chars available_code 
+                    (match char with
+                    | (Dyna (_, d)), x -> 
+                            ((Dyna (available_code, d)), x)
+                    | (Stat (_, d)), x ->
+                            ((Stat (available_code, d)), x));
+                with
+                | Not_found -> ())
         data.taxon_characters;
-       taxon_characters
+        data
     in
-    let remap = List.map ~f:char_assign in
-    let non_additive_8 = remap data.non_additive_8
-    and non_additive_16 = remap data.non_additive_16
-    and non_additive_32 = remap data.non_additive_32
-    and non_additive_33 = remap data.non_additive_33
-    and additive = remap data.additive
-    and sankoff = List.map remap data.sankoff
-    and dynamics = remap data.dynamics 
-    and root_at = 
-        match data.root_at with
-        | None -> None
-        | Some x -> Some (taxa_assign x)
+    let data = 
+        let check data code = 
+            All_sets.IntegerMap.mem code data.taxon_codes
+        in
+        process_available recode_taxon check data greatest_taxa_code
+        available_taxa_codes 
     in
-    { data with
-        taxon_names = taxon_names;
-        taxon_codes = taxon_codes;
-        taxon_characters = taxon_characters;
-        character_names = character_names;
-        character_codes = character_codes;
-        character_specs = character_specs;
-        non_additive_33 = non_additive_33;
-        non_additive_32 = non_additive_32;
-        non_additive_16 = non_additive_16;
-        non_additive_8 = non_additive_8;
-        additive = additive;
-        sankoff = sankoff;
-        dynamics = dynamics;
-        root_at = root_at; 
-        number_of_taxa = !taxa_counter;
-        character_code_gen = ref !character_counter; }
+    let check data code = Hashtbl.mem data.character_codes code in
+    process_available recode_character check data greatest_char_code 
+    available_char_codes
 
 let process_parsed_sequences tcmfile tcm tcm3 annotated alphabet 
     file dyna_state data res =
@@ -3028,11 +3059,19 @@ let to_faswincladfile data filename =
     let state_to_string code t =
         match t with
         | None -> "?%!"
-        | Some [] -> "-%!"
-        | Some [item] -> (string_of_int item) ^ "%!"
         | Some lst ->
-                let lst = List.sort ~cmp:( - ) lst in
-                "[" ^ String.concat sep (List.map string_of_int lst) ^ "]%!"
+                let lst =
+                    match lst with
+                    | `List lst -> lst
+                    | `Bits lst -> BitSet.to_list lst 
+                in
+                match lst with
+                | [] -> "-%!"
+                | [item] -> (string_of_int item) ^ "%!" 
+                | lst ->
+                        let lst = List.sort ~cmp:( - ) lst in
+                        "[" ^ String.concat sep 
+                        (List.map string_of_int lst) ^ "]%!"
     in
     let produce_character fo taxon charset code =
         let _ =
@@ -3504,10 +3543,17 @@ let process_prealigned analyze_tcm data code : (string * Parser.SC.file_output) 
         Hashtbl.fold process_taxon data.taxon_characters ([||], [], [])
     in
     let newenc = 
+        let table = Hashtbl.create 1667 in
+        Array.iter (fun ((alph, enc) as r) ->
+            if not (Hashtbl.mem table r) then
+                let alph = Alphabet.to_sequential alph in
+                let alph = Parser.SC.generate_alphabet (Some alph) enc in
+                Hashtbl.replace table r alph) enc;
+
         Array.init (Array.length enc) (fun pos ->
-            let alph, enc = enc.(pos) in
-            let alph = Alphabet.to_sequential alph in
-            Parser.SC.of_old_spec character_name (Some alph) enc pos) 
+            let alph = Hashtbl.find table enc.(pos) in
+            let _, enc = enc.(pos) in
+            Parser.SC.of_old_spec character_name alph enc pos) 
     in
     let matrix = 
         let matrix = Array.of_list matrix in

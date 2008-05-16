@@ -483,12 +483,14 @@ module SC : sig
         st_observed_used : (int, int) Hashtbl.t option;
     }
 
-    type static_state = int list option
+    type static_state = [ `Bits of BitSet.t | `List of int list ]  option
 
+    val static_state_to_list : 
+        [ `Bits of BitSet.t | `List of int list ] -> int list
     (** [spec_of_alph alphabet missing gap] generates a specification that can read
     * the elements in the [alphabet] using when the matrix represents [missing]
     * data and [gaps] as specified. *)
-    val spec_of_alph : string list -> string -> string -> string -> static_spec
+    val spec_of_alph : Alphabet.a -> string -> string -> static_spec
 
     (** [to_string v] outputs a string representation of the static_specification
     * [v] *)
@@ -516,10 +518,13 @@ module SC : sig
     * states in the [static_spec] field) *)
     val fill_observed : file_output -> unit
 
+    val generate_alphabet : Alphabet.a option -> OldHennig.Encoding.s ->
+        Alphabet.a
+
     (** [of_old_spec filename alph old position] converts an old static homology
     * specification to the new style. *)
     val of_old_spec : 
-        string -> Alphabet.a option -> OldHennig.Encoding.s -> int -> 
+        string -> Alphabet.a -> OldHennig.Encoding.s -> int -> 
             static_spec
 
     (** Symmetric to the previous one, but for the observed state of a taxon *)

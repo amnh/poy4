@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2844 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2846 $"
 
 module IntSet = All_sets.Integers
 
@@ -2756,18 +2756,19 @@ END
               { run with data =
                       { run.data with Data.root_at = where } }
             | `RootName name ->
-                    try folder run 
-                    (`Root (Some (Data.taxon_code name run.data))) with
-                    | Not_found -> 
-                            let msg = 
-                                "Terminal@ " ^ StatusCommon.escape name ^ 
-                                "@ not@ found.@ To@ set@ the@ root@ I@ "
-                                ^ "must@ have@ loaded@ some@ data@ for@ it.@ "
-                                ^ "The@ assigned@ root@ " ^ 
-                                "will@ remain@ unchanged."
-                            in
-                            Status.user_message Status.Error msg;
-                            run
+                    if All_sets.StringMap.mem name run.data.Data.taxon_names then
+                        folder run 
+                        (`Root (Some (Data.taxon_code name run.data)))
+                    else
+                        let msg = 
+                            "Terminal@ " ^ StatusCommon.escape name ^ 
+                            "@ not@ found.@ To@ set@ the@ root@ I@ "
+                            ^ "must@ have@ loaded@ some@ data@ for@ it.@ "
+                            ^ "The@ assigned@ root@ " ^ 
+                            "will@ remain@ unchanged."
+                        in
+                        let () = Status.user_message Status.Error msg in
+                        run
               
 
 let deal_with_error output_file run tmp err =

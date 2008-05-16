@@ -17,8 +17,8 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: nonaddCS.ml 2787 2008-04-28 15:44:27Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2787 $"
+(* $Id: nonaddCS.ml 2846 2008-05-16 15:43:09Z andres $ *)
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2846 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters
@@ -434,8 +434,9 @@ let of_parser data codes (elts, code) n =
                 let elt =
                     let elt = 
                         match elt with
-                        | Some x -> x
                         | None -> observed
+                        | Some (`List x) -> x
+                        | Some (`Bits x) -> BitSet.to_list x
                     in
                     List.fold_left (fun acc item -> acc lor (matcher item)) 0 
                     elt
@@ -454,6 +455,7 @@ let is_potentially_informative elts =
             match x with
             | None -> None
             | Some x -> 
+                    let x = Parser.SC.static_state_to_list x in
                     Some 
                     (List.fold_left 
                     (fun acc x -> All_sets.Integers.add x acc) 
@@ -493,7 +495,8 @@ let min_cost elts =
 *)
 
 let extract_elements_present elts = 
-    List.fold_right (fun x acc -> match x with None -> acc | Some h -> h :: acc)
+    List.fold_right (fun x acc -> match x with None -> acc | Some h -> 
+        (Parser.SC.static_state_to_list h) :: acc)
     elts []
 
 let max_possible_cost elts =
@@ -512,7 +515,7 @@ let max_possible_cost elts =
         List.fold_left (fun c a -> 
             if List.mem code a then c else c +. 1.) 0. elts
 
-let min_possible_cost elts =
+let min_possible_cost (elts : Parser.SC.static_state list) =
     let elts = extract_elements_present elts in
     let states = 
         let stateset = 
