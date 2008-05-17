@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2846 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2851 $"
 
 module IntSet = All_sets.Integers
 
@@ -740,31 +740,39 @@ let process_characters_handling (run : r) meth =
 let ( --> ) a b = b a 
 
 let process_taxon_filter (run : r) meth = 
-    let data = 
-        match meth with
-        | `IgnoreTaxaFiles files ->
-                files --> List.fold_left Data.process_ignore_file run.data 
-                --> Data.remove_taxa_to_ignore 
-        | `IgnoreTaxa taxa ->
-                taxa --> List.fold_left Data.process_ignore_taxon run.data 
-                --> Data.remove_taxa_to_ignore
-        | `SynonymsFile files ->
-                List.fold_left Data.add_synonyms_file run.data files
-        | `Synonyms taxa ->
-                List.fold_left Data.add_synonym run.data taxa
-        | `AnalyzeOnlyFiles (dont_complement, files) ->
-                files 
-                --> Data.process_analyze_only_file dont_complement run.data 
-                --> Data.remove_taxa_to_ignore
-        | `AnalyzeOnly c ->
-                run.data --> Data.process_analyze_only_taxa c 
-                --> Data.remove_taxa_to_ignore
-        | `Random _ as c ->
-                run.data --> Data.process_analyze_only_taxa c 
-                --> Data.remove_taxa_to_ignore
-    in
-    let data, nodes = Node.load_data data in
-    { run with nodes = nodes; data = data }
+    if 0 < Sexpr.length run.trees then begin
+        let err_msg = 
+            "Selecting@ a@ subset@ of@ taxa@ while@ trees@ " ^
+            "are@ in@ memory@ is@ not@ permitted." 
+        in
+        Status.user_message Status.Error err_msg;
+        failwith "Illegal request of select"
+    end else 
+        let data = 
+            match meth with
+            | `IgnoreTaxaFiles files ->
+                    files --> List.fold_left Data.process_ignore_file run.data 
+                    --> Data.remove_taxa_to_ignore 
+            | `IgnoreTaxa taxa ->
+                    taxa --> List.fold_left Data.process_ignore_taxon run.data 
+                    --> Data.remove_taxa_to_ignore
+            | `SynonymsFile files ->
+                    List.fold_left Data.add_synonyms_file run.data files
+            | `Synonyms taxa ->
+                    List.fold_left Data.add_synonym run.data taxa
+            | `AnalyzeOnlyFiles (dont_complement, files) ->
+                    files 
+                    --> Data.process_analyze_only_file dont_complement run.data 
+                    --> Data.remove_taxa_to_ignore
+            | `AnalyzeOnly c ->
+                    run.data --> Data.process_analyze_only_taxa c 
+                    --> Data.remove_taxa_to_ignore
+            | `Random _ as c ->
+                    run.data --> Data.process_analyze_only_taxa c 
+                    --> Data.remove_taxa_to_ignore
+        in
+        let data, nodes = Node.load_data data in
+        { run with nodes = nodes; data = data }
 
 let sort_trees trees = 
     let t = Sexpr.to_list trees in

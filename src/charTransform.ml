@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: charTransform.ml 2846 2008-05-16 15:43:09Z andres $ *)
+(* $Id: charTransform.ml 2851 2008-05-17 19:10:42Z andres $ *)
 (* Created Fri Jan 13 11:22:18 2006 (Illya Bomash) *)
 
 (** CharTransform implements functions for transforming the set of OTU
@@ -25,7 +25,7 @@
     transformations, and applying a transformation or reverse-transformation to
     a tree. *)
 
-let () = SadmanOutput.register "CharTransform" "$Revision: 2846 $"
+let () = SadmanOutput.register "CharTransform" "$Revision: 2851 $"
 
 let check_assertion_two_nbrs a b c =
     if a <> Tree.get_id b then true
@@ -816,12 +816,11 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
         codes
 
     let rec transform_node_characters trees (data, nodes) (meth : Methods.char_transform)  =
-        let nc = List.map Node.taxon_code nodes in
         let load_transformed_data new_data = 
             let data, nodes =
                 new_data 
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc 
+                --> Node.load_data 
             in
            data, (List.rev nodes)
         in 
@@ -856,7 +855,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                             --> to_tupled_tree
                             --> fun x -> partition_sequences mode sensible chars x data
                             --> Data.categorize 
-                            --> Node.load_data ~taxa:nc
+                            --> Node.load_data 
                         with
                         | No_trees ->
                             Status.user_message Status.Error
@@ -884,7 +883,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 --> (fun d -> Data.prealigned_characters
                 ImpliedAlignment.analyze_tcm d chars)
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc 
+                --> Node.load_data 
         | `MultiStatic_Aprox (chars, remove_non_informative) ->
                 (try
                     let len = Sexpr.length trees in
@@ -896,7 +895,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                             remove_non_informative 
                             acc filter_characters x) (1, data) trees
                     in
-                    data --> Data.categorize --> Node.load_data ~taxa:nc 
+                    data --> Data.categorize --> Node.load_data 
                 with
                 | No_trees ->
                         Status.user_message Status.Error
@@ -918,7 +917,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                     --> process_static_approx "ImpliedAlignment" true chars remove_non_informative data
                     filter_characters 
                     --> Data.categorize
-                    --> Node.load_data ~taxa:nc
+                    --> Node.load_data 
                 with
                 | No_trees ->
                         Status.user_message Status.Error
@@ -934,33 +933,33 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 data 
                 --> Data.transform_weight m 
                 --> Data.categorize 
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Assign_Prep_Cost (filit, chars) ->
                 filit
                 --> Data.assign_prepend data chars
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Assign_Tail_Cost (filit, chars) ->
                 filit
                 --> Data.assign_tail data chars
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Assign_Transformation_Cost_Matrix (file, chars) ->
                 file 
                 --> Data.assign_tcm_to_characters_from_file data chars 
                 --> Data.categorize 
-                --> Node.load_data ~taxa:nc 
+                --> Node.load_data 
         | `Assign_Affine_Gap_Cost (cost, chars) ->
                 (if cost = 0 then (Cost_matrix.Linnear) 
                 else (Cost_matrix.Affine cost))
                 --> Data.assign_affine_gap_cost data chars
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Create_Transformation_Cost_Matrix (trans, gaps, chars) ->
                 gaps 
                 --> Data.assign_transformation_gaps data chars trans 
                 --> Data.categorize 
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Prioritize ->
                 let new_nodes = 
                     trees 
@@ -978,12 +977,12 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 data 
                 --> Data.make_fixed_states chars
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | `Direct_Optimization chars ->
                 data 
                 --> Data.make_direct_optimization chars
                 --> Data.categorize
-                --> Node.load_data ~taxa:nc
+                --> Node.load_data 
         | #Methods.dynamic_char_transform as meth -> begin
               let status = 
                   Status.create "Tranform" None 

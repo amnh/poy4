@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-(* $Id: supports.ml 2821 2008-05-12 15:16:08Z andres $ *)
+(* $Id: supports.ml 2851 2008-05-17 19:10:42Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 2821 $"
+let () = SadmanOutput.register "Support" "$Revision: 2851 $"
 
 let infinity = float_of_int (max_int / 4)
 
@@ -253,10 +253,7 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
                     "TODO: The only resamples supported are Bootstrap and
                     Jackknife"
         in
-        let data, new_otus = 
-            Node.load_data ~taxa:(List.map Node.taxon_code
-            otus) new_data 
-        in
+        let data, new_otus = Node.load_data new_data in
         let trees = 
             let node_data = 
                 List.fold_left (fun acc x ->
