@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2851 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2854 $"
 
 module IntSet = All_sets.Integers
 
@@ -246,7 +246,7 @@ let update_trees_to_data ?(classify=true) force load_data run =
         else run.data, run.nodes 
     in
     let run = { run with nodes = nodes; data = data } in
-    let len = Sexpr.length run.trees in
+    let len = (Sexpr.length run.trees) + (Sexpr.length run.stored_trees) in
     if len > 0 then
         let st = Status.create "Diagnosis"  (Some len) "Recalculating trees" in
         let nodes = 
@@ -254,7 +254,14 @@ let update_trees_to_data ?(classify=true) force load_data run =
                 let code = Node.taxon_code nd in
                 All_sets.IntegerMap.add code nd acc) All_sets.IntegerMap.empty run.nodes
         in
-        let replacer nd = All_sets.IntegerMap.find (Node.taxon_code nd) nodes in
+        let replacer nd = 
+            let code = Node.taxon_code nd in
+            try All_sets.IntegerMap.find code nodes with
+            | Not_found as err-> 
+                    Status.user_message Status.Error 
+                    ("Couldn't find code " ^ string_of_int code);
+                    raise err
+        in
         let doit replacer tree = 
             let are_leaves_different =
                 force || (0 <> 
@@ -278,8 +285,9 @@ let update_trees_to_data ?(classify=true) force load_data run =
                 tree
         in
         let trees = Sexpr.map (doit replacer) run.trees in
+        let stored = Sexpr.map (doit replacer) run.stored_trees in
         Status.finished st;
-        { run with trees = trees }
+        { run with trees = trees; stored_trees = stored }
     else run
 
 let process_transform (run : r) (meth : Methods.transform) =
@@ -822,7 +830,12 @@ let rec process_tree_handling run meth =
         | `Unique -> 
                 let sexpr = Sexpr.to_list run.trees in
 (*                let sexpr = List.rev_map (fun x -> x, x.Ptree.tree) sexpr in*)
-                let res = TS.get_unique sexpr in
+                let res = 
+                    try TS.get_unique sexpr with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "This is the path";
+                            raise err
+                in
                 res
     in
     let trees = Sexpr.of_list trees in
@@ -1004,10 +1017,28 @@ let emit_identifier =
             tree.Ptree.component_root}
         *)
 
-    let encode_trees run =
+    let encode_trees print_msg run =
         (*
         run.trees, run.stored_trees
         *)
+        print_msg "Will encode the trees, first test";
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list run.trees) with
+                    | err -> 
+                            Status.user_message Status.Error "12";
+                            raise err
+                in
+                ()
+            in
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list run.stored_trees) with
+                    | err -> 
+                            Status.user_message Status.Error "11";
+                            raise err
+                in
+                ()
+            in
+        print_msg "The test passed";
         (Sexpr.map extract_tree run.trees), (Sexpr.map extract_tree run.stored_trees)
 
     let toptree tree = 
@@ -1062,21 +1093,60 @@ let emit_identifier =
         { Tree.u_topo = u_topo; d_edges = d_edges; handles = handles; avail_ids
         = []; new_ids = run.data.Data.number_of_taxa + 1 }
 
-    let decode_trees (trees, stored_trees) run =
+    let decode_trees print_msg (trees, stored_trees) run =
         (*
         { run with trees = Sexpr.union trees run.trees; stored_trees =
             Sexpr.union stored_trees run.stored_trees }
         let trees = Sexpr.map (update_codes run tc) trees in  
         *)
-        let my_trees = run.trees 
-        and my_stored = run.stored_trees in
-        let nrun = 
-            let nt = Sexpr.map toptree trees 
-            and nst = Sexpr.map toptree stored_trees in
-            update_trees_to_data true false { run with trees = nt; stored_trees = nst }
-        in
-        { run with trees = Sexpr.union my_trees nrun.trees; stored_trees =
-            Sexpr.union my_stored nrun.stored_trees }
+        try
+            print_msg "Will attempt to decode trees";
+            let my_trees = run.trees 
+            and my_stored = run.stored_trees in
+            let nrun = 
+                let nt = Sexpr.map toptree trees 
+                and nst = Sexpr.map toptree stored_trees in
+                update_trees_to_data true false { run with trees = nt; stored_trees = nst }
+            in
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list my_trees) with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "9";
+                            raise err
+                in
+                ()
+            in
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list my_stored) with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "10";
+                            raise err
+                in
+                ()
+            in
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list nrun.stored_trees) with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "8";
+                            raise err
+                in
+                ()
+            in
+            let () =
+                let _ = try TS.get_unique (Sexpr.to_list nrun.trees) with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "7";
+                            raise err
+                in
+                ()
+            in
+            print_msg "Did the tree decoding";
+            { run with trees = Sexpr.union my_trees nrun.trees; stored_trees =
+                Sexpr.union my_stored nrun.stored_trees }
+        with
+        | Not_found as err -> 
+                print_msg "This occurs during the decoding";
+                raise err
 
     let encode_jackknife run = 
         (run.jackknife_support), (run.data.Data.taxon_codes)
@@ -1890,6 +1960,7 @@ IFDEF USEPARALLEL THEN
             print_msg "Entering Gather Trees";
             (* We define a function to reduce in parallel the results *)
             let receive_trees run other_rank =
+IFDEF USE_LARGE_MESSAGES THEN
                 print_msg "It is time for me to receive the trees!!!!";
                 let tbl = Queue.create () in
                 let got_size = ref false in
@@ -1943,16 +2014,25 @@ IFDEF USEPARALLEL THEN
                 and stored_trees = Sexpr.of_list (Array.to_list !stored_trees) in
                 { run with trees = Sexpr.union run.trees trees; stored_trees =
                     Sexpr.union run.stored_trees stored_trees }
-            in
-            let map_root r =
-                let nr = 
-                    match r.Ptree.root_median with
-                    | None -> None
-                    | Some (x, y) -> Some (x, Node.force y)
+ELSE
+                print_msg "I will use cheap messages";
+                let dec = Mpi.receive other_rank Methods.do_job Mpi.comm_world
                 in
-                { r with Ptree.root_median = nr }
+                print_msg ("Received from " ^ string_of_int other_rank);
+                decode_trees print_msg dec run
+END
             in
             let send_trees run other_rank =
+IFDEF USE_LARGE_MESSAGES THEN
+                let map_root r =
+                    let nr = 
+                        match r.Ptree.root_median with
+                        | None -> None
+                        | Some (x, y) -> Some (x, Node.force y)
+                    in
+                    { r with Ptree.root_median = nr }
+                in
+                print_msg "I will use long messages";
                 let send_msg msg = Mpi.send msg other_rank Methods.do_job
                 Mpi.comm_world
                 in
@@ -1979,15 +2059,17 @@ IFDEF USEPARALLEL THEN
                 Array.iteri (send_tree 0) trees;
                 Array.iteri (send_tree 1) stored_trees;
                 ()
+ELSE
+                print_msg "I will use cheap messages";
+                let enc = encode_trees print_msg run in
+                print_msg ("Sending to " ^ string_of_int other_rank);
+                Mpi.send enc other_rank Methods.do_job
+                Mpi.comm_world
+END
             in
             (*
             let send_trees run other_rank =
-                Mpi.send (encode_trees run) other_rank Methods.do_job
-                Mpi.comm_world
             and receive_trees run other_rank =
-                decode_trees 
-                (Mpi.receive other_rank Methods.do_job Mpi.comm_world)
-                run
             in
             *)
             let reduce_in_pairs bit run =
@@ -2002,15 +2084,21 @@ IFDEF USEPARALLEL THEN
                             receive_trees run other_rank 
                             --> (fun x -> List.fold_left folder x joiner)
                         in
+                        let () = print_msg "Received the trees" in
                         let () = send_trees run other_rank in
+                        let () = print_msg "Sent the selected trees" in
                         run
                     else
                         let () = print_msg "I will wait for reduction" in
                         let () = send_trees run other_rank in
+                        let () = print_msg "Sent the trees" in
                         let run = { run with trees = `Empty; stored_trees =
                             `Empty }
                         in
-                        receive_trees run other_rank 
+                        let () = print_msg "Witing for the selected trees" in
+                        let r = receive_trees run other_rank in
+                        let () = print_msg "Received the selected trees" in
+                        r
                 else List.fold_left folder run joiner
             in
             let rec reduce_them_all bit run =

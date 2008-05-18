@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Ptree" "$Revision: 2848 $"
+let () = SadmanOutput.register "Ptree" "$Revision: 2854 $"
 
 let ndebug = false
 let ndebug_break_delta = false
@@ -1898,8 +1898,19 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
               let (ch1, ch2) = 
                   assert (prev_node <> Tree.get_id node);
                   Tree.other_two_nbrs prev_node node in
-              let a, ad, ao = rec_down (Tree.get_node ch1 tree) our_id in
-              let b, bd, bo = rec_down (Tree.get_node ch2 tree) our_id in
+              let a, ad, ao = 
+                  try rec_down (Tree.get_node ch1 tree) our_id with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "5";
+                            raise err
+
+              in
+              let b, bd, bo = 
+                  try rec_down (Tree.get_node ch2 tree) our_id with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "6";
+                            raise err
+              in
               let a =
                   if collapse our_id ch1 then 
                       get_children a
@@ -1981,9 +1992,14 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
     let never_collapse a b c = false
 
     let collapse_as_needed tree code chld = 
+        flush stdout;
+        try
         let data = get_node_data code tree in
         let datac = get_node_data chld tree in
         Node.is_collapsable `Any data datac
+        with
+        | err -> 
+        raise err
 
 let extract_names pd ptree code = 
     let data = get_node_data code ptree in
@@ -1993,7 +2009,12 @@ let extract_names pd ptree code =
 let extract_codes pd ptree code = string_of_int code
 
 let build_tree_with_codes tree pd = 
+    try
     build_tree tree.tree (extract_codes pd tree) (collapse_as_needed tree) ""
+    with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "4";
+                            raise err
 
 
 let rec fold_2 f acc a b =
@@ -2016,14 +2037,25 @@ let rec compare acc a b =
         | tree :: _ ->
                 let a, _ = Tree.choose_leaf tree.tree in
                 let trees =
+                    try
                     List.rev_map (fun x -> 
                         x, { x with tree = Tree.cannonize_on_leaf a x.tree }) trees 
+                    with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "1";
+                            raise err
                 in
                 let trees = 
+                    try
                     List.rev_map 
                     (fun (x, y) -> x, (let _, z = cannonize (build_tree_with_codes
                     y "") in z)) 
                     trees
+                    with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "2";
+                            raise err
+
                 in
                 let rec remove_duplicated acc = function
                     |  (x, y) :: t -> 
@@ -2032,7 +2064,12 @@ let rec compare acc a b =
                             t) 
                     | [] -> acc
                 in
+                (try
                 remove_duplicated [] trees
+                with
+                    | Not_found as err -> 
+                            Status.user_message Status.Error "3";
+                            raise err)
         | x -> x
 
 let handle_collapse bool = 

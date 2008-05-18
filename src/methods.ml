@@ -18,13 +18,13 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2797 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2854 $"
 
 exception TimedOut
 
 (** Data *)
 
-let do_job = 1
+let do_job = 11
 let process_management = 2
 let io = 3
 let debugging = 4

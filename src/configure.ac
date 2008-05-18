@@ -15,6 +15,7 @@ AC_SUBST(USEGRAPHICS)
 AC_SUBST(USEINTERFACE)
 AC_SUBST(USESHAREDHD)
 AC_SUBST(USEPARALLEL)
+AC_SUBST(USE_LARGE_MESSAGES)
 AC_SUBST(USEWIN32)
 AC_SUBST(USE_LONG_SEQUENCES)
 AC_SUBST(USE_LARGE_ALPHABETS)
@@ -70,6 +71,11 @@ AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi],
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
               [USEPARALLEL=true], 
               [USEPARALLEL=false])
+
+AC_ARG_ENABLE([large-messages], [AS_HELP_STRING([--enable-large-messages], 
+              [When --enable-mpi is selected, this option turns on large messages for tree exchanges. Large messages reduce considerably computation of trees when different processes exchange them, but increase tremendously the message size. Use this option when message size (and the memory consumed to send and receive it) is not a possible bottleneck.])], 
+              [USE_LARGE_MESSAGES=true], 
+              [USE_LARGE_MESSAGES=false])
 
 AC_ARG_ENABLE([shared-hd], [AS_HELP_STRING([--enable-shared-hd],
               [Force POY to support live broadcast of file contents when running in parallel. The default is false.])], [USESHAREDHD=true], [USESHAREDHD=false])
