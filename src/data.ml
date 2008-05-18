@@ -810,7 +810,6 @@ let repack_codes data =
         | av :: ta ->
                 if check data used_code then
                     let uc = used_code in
-                    let () = Printf.printf "Recoding %d to %d\n%!" uc av in
                     let data = recode_function data uc av in
                     process_available recode_function check data (uc - 1) ta
                 else 

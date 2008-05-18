@@ -117,15 +117,8 @@ module OneDirF :
     let compare a b = 
         Node.Standard.compare (force_val a) (force_val b)
 
-    let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
-        let data, nodes = 
-            match taxa, codes with
-            | None, None -> Node.Standard.load_data ~classify data 
-            | Some v, None -> Node.Standard.load_data ~taxa:v ~classify data
-            | None, Some v -> Node.Standard.load_data ~codes:v ~classify data
-            | Some v, Some w -> 
-                    Node.Standard.load_data ~taxa:v ~codes:w ~classify data
-        in 
+    let load_data ?(silent=true) ?(classify=true) data = 
+        let data, nodes = Node.Standard.load_data ~classify data in
         data, List.map to_n nodes
 
     let fix_preliminary x = x
@@ -386,15 +379,8 @@ type nad8 = Node.Standard.nad8 = struct
         adjusted = List.map (recode_anode f) n.adjusted;
     }
 
-    let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
-        let data, nodes = 
-            match taxa, codes with
-            | None, None -> Node.Standard.load_data ~classify data 
-            | Some v, None -> Node.Standard.load_data ~taxa:v ~classify data
-            | None, Some v -> Node.Standard.load_data ~codes:v ~classify data
-            | Some v, Some w -> 
-                    Node.Standard.load_data ~taxa:v ~codes:w ~classify data
-        in 
+    let load_data ?(silent=true) ?(classify=true) data = 
+        let data, nodes = Node.Standard.load_data ~classify data in
         data, List.map to_n nodes
 
     let fix_preliminary x = x

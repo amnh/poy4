@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Node" "$Revision: 2846 $"
+let () = SadmanOutput.register "Node" "$Revision: 2852 $"
 let infinity = float_of_int max_int
 
 let debug = false
@@ -1576,7 +1576,7 @@ let structure_into_sets data (nodes : node_data list) =
     in
     nodes, !data'
 
-let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data = 
+let load_data ?(silent=true) ?(classify=true) data = 
     (* Not only we make the list a set, we filter those characters that have
     * weight 0. *)
     current_snapshot "Node.load_data start";
@@ -1587,25 +1587,17 @@ let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data =
         All_sets.Integers.empty lst
     in
     let is_mem =
-        let belongs_to_code =
-            match codes with
-            | None -> (fun _ -> true)
-            | Some codes -> 
-                    let codes = make_set_of_list codes in
-                    (fun y -> All_sets.Integers.mem y codes)
-        in
         (* We check for informative characters among all the terminals in data
         * *)
         if classify then 
             (* We need to verify if the character is
             potentially informative or not *)
             (fun char -> 
-                belongs_to_code char && 
                 Data.apply_boolean
                 NonaddCS8.is_potentially_informative 
                 AddCS.is_potentially_informative data char
                 && 0. <> Data.get_weight char data)
-        else belongs_to_code
+        else (fun _ -> true)
     in
     let data, generate_taxon = 
         current_snapshot "start nonadd sets";
@@ -1630,40 +1622,36 @@ let load_data ?(silent=true) ?taxa ?codes ?(classify=true) data =
         r
     in
     let nodes = 
-        match taxa with
-        | None ->
-                let ntaxa = 
-                    All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1)
-                    data.Data.taxon_codes 0 
+        let ntaxa = 
+            All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1)
+            data.Data.taxon_codes 0 
+        in
+        let st, finalize = 
+            if not silent then
+                let status = 
+                    Status.create "Loading terminals" (Some ntaxa)
+                    "terminals loaded" 
                 in
-                let st, finalize = 
-                    if not silent then
-                        let status = 
-                            Status.create "Loading terminals" (Some ntaxa)
-                            "terminals loaded" 
-                        in
-                        let cnt = ref 0 in
-                        (fun () -> 
-                            incr cnt; 
-                            Status.achieved status !cnt;
-                            Status.full_report status),
-                        (fun () -> Status.finished status)
-                    else (fun () -> ()), (fun () -> ())
-                in
-                let res = 
-                    All_sets.IntegerMap.fold (fun x _ acc -> 
-                        try 
-                            let res = generate_taxon x acc in
-                            st ();
-                            res
-                        with 
-                        Not_found -> acc)
-                    data.Data.taxon_codes []
-                in
-                finalize ();
-                res
-        | Some taxa ->
-                List.fold_left (fun x y -> generate_taxon y x) [] taxa 
+                let cnt = ref 0 in
+                (fun () -> 
+                    incr cnt; 
+                    Status.achieved status !cnt;
+                    Status.full_report status),
+                (fun () -> Status.finished status)
+            else (fun () -> ()), (fun () -> ())
+        in
+        let res = 
+            All_sets.IntegerMap.fold (fun x _ acc -> 
+                try 
+                    let res = generate_taxon x acc in
+                    st ();
+                    res
+                with 
+                Not_found -> acc)
+            data.Data.taxon_codes []
+        in
+        finalize ();
+        res
     in
     let nodes = 
         let sorted x = List.stable_sort node_contents_compare x in

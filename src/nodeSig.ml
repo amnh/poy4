@@ -137,14 +137,14 @@ module type S = sig
     * characters. See the usage of the function in the Support module *)
     val support_chars : int -> int option -> n -> (float * int) list
 
-    (** [load ?taxa ?codes d] loads the data contained in [d], and creates a tuple 
+    (** [load d] loads the data contained in [d], and creates a tuple 
     * [(a, b)], where [b] is the list of nodes contained in [d], and [d] is an
     * updated [d] that holds the information of the nodes created. The function
     * can optionally take two labled arguments, the list of codes of the [taxa]
     * to be loaded (then the list only contains those taxa), or the list of the
     * [codes] of the characters that are to be loaded. *)
     val load_data : 
-        ?silent:bool -> ?taxa:(int list) -> ?codes:(int list) -> 
+        ?silent:bool -> 
             ?classify:bool -> Data.d -> Data.d * (n list)
 
     (** [n_chars ?acc n] gets the number of characters stored in [n], plus the
