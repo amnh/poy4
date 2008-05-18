@@ -17,9 +17,9 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2703 $"
+let () = SadmanOutput.register "Main" "$Revision: 2853 $"
 
-(* $Id: main.ml 2703 2008-04-14 13:47:52Z andres $ *)
+(* $Id: main.ml 2853 2008-05-18 14:21:15Z andres $ *)
 
 let seed = truncate (Unix.time ())
 
@@ -40,7 +40,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2703 $"
+let () = SadmanOutput.register "Main" "$Revision: 2853 $"
 
 let () = Status.init ()
 
@@ -267,7 +267,7 @@ END
         | err when !Arguments.just_exit ->
                 let msg = StatusCommon.escape (Printexc.to_string err) in
                 Status.user_message Status.Error msg;
-                exit 1
+                raise err
     in
 IFDEF USEPARALLEL THEN
     if 0 = my_rank then
