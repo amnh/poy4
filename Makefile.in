@@ -19,6 +19,7 @@ CFLAGS = $(CPPFLAGS) @CFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 INSTALL = @INSTALL@
+MKDIR_P = @MKDIR_P@
 USEPARALLEL := @USEPARALLEL@
 USE_LARGE_MESSAGES := @USE_LARGE_MESSAGES@
 
@@ -45,6 +46,7 @@ subdirs:	$(SUBDIRS)
 transform = @program_transform_name@
 
 install:
+	$(MKDIR_P) $(bindir)
 	$(INSTALL) ./src/poy $(bindir)/`echo poy | sed -e '$(transform)'`
 
 uninstall:
