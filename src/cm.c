@@ -547,7 +547,7 @@ cm_calc_cost (int *tcm, SEQT a, SEQT b, int a_sz) {
     assert (a_sz >= 0);
     assert ((1 << a_sz) > a);
     assert ((1 << a_sz) > b);
-    res = tcm + cm_calc_cost_position (a, b, a_sz);
+    res = tcm + cm_calc_cost_position_seqt (a, b, a_sz);
     return (*res);
 }
 
