@@ -1,5 +1,5 @@
 /*
- * $Id: nonaddCSc.c 2786 2008-04-28 15:41:39Z andres $
+ * $Id: nonaddCSc.c 2857 2008-05-19 13:22:27Z andres $
  */
 #ifndef _WIN32
 #include <stdint.h>
@@ -921,7 +921,7 @@ char_nonadd_CAML_basic_union_par (value v, value a, value b)
 value
 char_nonadd_CAML_basic_median (value v, value a, value b)
 {
-    CAMLparam2 (a, b);
+    CAMLparam3 (v, a, b);
     nacat na, nb, nres;
     long len;
 
@@ -941,13 +941,13 @@ char_nonadd_CAML_basic_median (value v, value a, value b)
 
     /* Write the median to nres->data */
     nonadd_median (na, nb, nres);
-    CAMLreturn (v);
+    CAMLreturn (Val_unit);
 }
 
 value
 char_nonadd_CAML_reroot_median (value v, value a, value b)
 {
-    CAMLparam2 (a, b);
+    CAMLparam3 (v, a, b);
     nacat na, nb, nres;
     long len;
 
