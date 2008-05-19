@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Scripting" "$Revision: 2854 $"
+let () = SadmanOutput.register "Scripting" "$Revision: 2856 $"
 
 module IntSet = All_sets.Integers
 
@@ -779,6 +779,7 @@ let process_taxon_filter (run : r) meth =
                     run.data --> Data.process_analyze_only_taxa c 
                     --> Data.remove_taxa_to_ignore
         in
+        let data = Data.categorize data in
         let data, nodes = Node.load_data data in
         { run with nodes = nodes; data = data }
 
