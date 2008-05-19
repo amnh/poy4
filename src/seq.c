@@ -478,7 +478,7 @@ seq_CAML_get (value s, value p) {
 
 value
 seq_CAML_set (value s, value p, value v) {
-    CAMLparam2(s, p);
+    CAMLparam3(s, p, v);
     seqt cs;
     int cp, cv;
     Seq_custom_val(cs,s);

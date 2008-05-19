@@ -3953,7 +3953,7 @@ algn_CAML_align_2d (value s1, value s2, value c, value a, value s1p, \
     CAMLlocal1(res);
     res = algn_CAML_simple_2 (s1, s2, c, a, deltawh);
     algn_CAML_backtrack_2d (s1, s2, s1p, s2p, a, c, swaped);
-    return (res);
+    CAMLreturn(res);
 }
 
 value
