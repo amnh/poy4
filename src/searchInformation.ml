@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SearchInformation" "$Revision: 2858 $"
+let () = SadmanOutput.register "SearchInformation" "$Revision: 2867 $"
 
 let handle_tree_information trees acc = function
     | `Number -> 
@@ -70,10 +70,11 @@ let handle_tree_information trees acc = function
             | _ -> storing ^ "s@ with@ costs@ "
                   ^ string_of_float min ^ " to " ^ string_of_float max
                     ^ "@]" ^ 
-                    if cnt > 0 then "@,@[<hov>Best@ cost@ was@ found@ " ^
-                        if cnt > 1 then 
-                            string_of_int cnt ^ "@ times@]" 
-                        else "once@]" 
+                    if cnt > 0 then 
+                        "@,@[<hov>Best@ cost@ in@ " ^ string_of_int cnt ^
+                        (if cnt > 1 then 
+                             "@ trees@]" 
+                        else "@ tree@]")
                     else "")
 
 let append acc h =  acc ^ ",@ " ^ h
