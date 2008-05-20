@@ -1974,7 +1974,7 @@ enum MODE { m_todo, m_vertical, m_horizontal, m_diagonal, m_align } backtrace_mo
 
 void
 backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt sj, \
-        seqt median, seqt resi, seqt resj, const cmt c) {
+        seqt median, seqt medianwg, seqt resi, seqt resj, const cmt c) {
 #define HAS_FLAG(flag) (*direction_matrix & flag)
     enum MODE mode = m_todo;
     int i, j, leni, lenj;
@@ -2005,7 +2005,11 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
             }
         } else if (mode == m_vertical) {
             if (HAS_FLAG(END_VERTICAL)) mode = m_todo;
-            if (!(ic & TMPGAP)) seq_prepend (median, (ic | TMPGAP));
+            if (!(ic & TMPGAP)) {
+                seq_prepend (median, (ic | TMPGAP));
+                seq_prepend (medianwg, (ic | TMPGAP));
+            } 
+            else seq_prepend (medianwg, TMPGAP);
             seq_prepend(resi, ic);
             seq_prepend(resj, TMPGAP);
             i--;
@@ -2013,7 +2017,11 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
             ic = seq_get(si,i);
         } else if (mode == m_horizontal) {
             if (HAS_FLAG(END_HORIZONTAL)) mode = m_todo;
-            if (!(jc & TMPGAP)) seq_prepend (median, (jc | TMPGAP));
+            if (!(jc & TMPGAP)) {
+                seq_prepend (median, (jc | TMPGAP));
+                seq_prepend (medianwg, (jc | TMPGAP));
+            }
+            else seq_prepend (medianwg, TMPGAP);
             seq_prepend (resi, TMPGAP);
             seq_prepend (resj, jc);
             j--;
@@ -2023,6 +2031,7 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
             if (HAS_FLAG(END_BLOCK)) mode = m_todo;
             seq_prepend(resi, ic);
             seq_prepend(resj, jc);
+            seq_prepend(medianwg, TMPGAP);
             i--; 
             j--;
             direction_matrix -= (lenj + 2);
@@ -2035,6 +2044,7 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
             else if (HAS_FLAG(ALIGN_TO_VERTICAL)) mode = m_vertical;
             prep = cm_get_median(c,(ic & (NTMPGAP)),(jc & (NTMPGAP)));
             seq_prepend(median, prep);
+            seq_prepend(medianwg, prep);
             seq_prepend(resi, ic);
             seq_prepend(resj, jc);
             i--; 
@@ -2046,7 +2056,11 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
     }
     while (i != 0) {
         assert (initial_direction_matrix < direction_matrix);
-        if (!(ic & TMPGAP)) seq_prepend (median, (ic | TMPGAP));
+        if (!(ic & TMPGAP)) {
+            seq_prepend (median, (ic | TMPGAP));
+            seq_prepend (medianwg, (ic | TMPGAP));
+        }
+        else seq_prepend (medianwg, TMPGAP);
         seq_prepend(resi, ic);
         seq_prepend(resj, TMPGAP);
         direction_matrix -= (lenj + 1);
@@ -2055,7 +2069,11 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
     }
     while (j != 0) {
         assert (initial_direction_matrix < direction_matrix);
-        if (!(jc & TMPGAP)) seq_prepend (median, (jc | TMPGAP));
+        if (!(jc & TMPGAP)) {
+            seq_prepend (median, (jc | TMPGAP));
+            seq_prepend (medianwg, (jc | TMPGAP));
+        }
+        else seq_prepend (medianwg, TMPGAP);
         seq_prepend (resi, TMPGAP);
         seq_prepend (resj, jc);
         j--;
@@ -2064,6 +2082,7 @@ backtrace_affine (DIRECTION_MATRIX *direction_matrix, const seqt si, const seqt 
     }
     seq_prepend(resi, TMPGAP);
     seq_prepend(resj, TMPGAP);
+    seq_prepend(medianwg,TMPGAP);
     if (TMPGAP != seq_get(median,0)) seq_prepend(median,TMPGAP);
 #undef HAS_FLAG
     return;
@@ -2523,11 +2542,11 @@ algn_fill_plane_3_aff (const seqt si, const seqt sj, int leni, int lenj, \
 
 value
 algn_CAML_align_affine_3 (value si, value sj, value cm, value am, value resi, 
-        value resj, value median) {
+        value resj, value median, value medianwg) {
     CAMLparam4(si,sj,cm,am);
-    CAMLxparam3(resi,resj,median);
+    CAMLxparam4(resi,resj,median,medianwg);
     seqt csi, csj;
-    seqt cresj, cresi, cmedian;
+    seqt cresj, cresi, cmedian, cmedianwg;
     cmt ccm;
     matricest cam;
     int leni, lenj;
@@ -2549,6 +2568,7 @@ algn_CAML_align_affine_3 (value si, value sj, value cm, value am, value resi,
     Seq_custom_val(cresi,resi);
     Seq_custom_val(cresj,resj);
     Seq_custom_val(cmedian,median);
+    Seq_custom_val(cmedianwg,medianwg);
     leni = seq_get_len(csi);
     lenj = seq_get_len(csj);
     if (leni > lenj)
@@ -2574,7 +2594,8 @@ algn_CAML_align_affine_3 (value si, value sj, value cm, value am, value resi,
             direction_matrix, ccm, extend_horizontal, extend_vertical, 
             close_block_diagonal, extend_block_diagonal, prec, gap_open_prec, 
             s_horizontal_gap_extension);
-        backtrace_affine(direction_matrix, csi, csj, cmedian, cresi, cresj, ccm);
+        backtrace_affine(direction_matrix, csi, csj, cmedian, cmedianwg, \
+                cresi, cresj, ccm);
     } else {
         cm_precalc_4algn(ccm,cam,csi);
         initialize_matrices_affine(ccm->gap_open,csj,csi,ccm,close_block_diagonal, 
@@ -2584,7 +2605,8 @@ algn_CAML_align_affine_3 (value si, value sj, value cm, value am, value resi,
             direction_matrix, ccm, extend_horizontal, extend_vertical, 
             close_block_diagonal, extend_block_diagonal, prec, gap_open_prec, 
             s_horizontal_gap_extension);
-        backtrace_affine(direction_matrix, csj, csi, cmedian, cresj, cresi, ccm);
+        backtrace_affine(direction_matrix, csj, csi, cmedian, cmedianwg, \
+                cresj, cresi, ccm);
     }
     CAMLreturn(Val_int(res));
 }
@@ -2592,7 +2614,7 @@ algn_CAML_align_affine_3 (value si, value sj, value cm, value am, value resi,
 value 
 algn_CAML_align_affine_3_bc (value *argv, int argn) {
     return (algn_CAML_align_affine_3 (argv[0], argv[1], argv[2], argv[3], argv[4], \
-                argv[5], argv[6]));
+                argv[5], argv[6], argv[7]));
 }
 
 value

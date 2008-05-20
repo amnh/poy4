@@ -24,7 +24,7 @@
 exception Invalid_Argument of string;;
 exception Invalid_Sequence of (string * string * int);; 
 
-let () = SadmanOutput.register "Sequence" "$Revision: 2804 $"
+let () = SadmanOutput.register "Sequence" "$Revision: 2866 $"
 
 external register : unit -> unit = "seq_CAML_register"
 
@@ -444,7 +444,7 @@ module Align = struct
             "algn_CAML_simple_2"
 
     external c_align_affine_3 : s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> 
-        s -> s -> s -> int = "algn_CAML_align_affine_3_bc"
+        s -> s -> s -> s -> int = "algn_CAML_align_affine_3_bc"
         "algn_CAML_align_affine_3"
 
     external cost_2_affine : s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int =
@@ -452,11 +452,15 @@ module Align = struct
     
 
     let align_affine_3 si sj cm =
-        let resi = create (length si + length sj + 2)
-        and resj = create (length si + length sj + 2) 
-        and median = create (length si + length sj + 2) in
-        let cost = c_align_affine_3 si sj cm Matrix.default resi resj median in
-        (median, resi, resj, cost)
+        let len = length si + length sj + 2 in
+        let resi = create len
+        and resj = create len 
+        and median = create len 
+        and medianwg = create len in
+        let cost = 
+            c_align_affine_3 si sj cm Matrix.default resi resj median
+            medianwg in
+        (median, resi, resj, cost, medianwg)
 
     external c_cost_2_limit :
         s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int -> int -> int ->
@@ -831,7 +835,7 @@ module Align = struct
         let cmp s1 s2 = 
             match Cost_matrix.Two_D.affine c with
             | Cost_matrix.Affine _ ->
-                    let _, s1p, s2p, tc = align_affine_3 s1 s2 c in
+                    let _, s1p, s2p, tc, _ = align_affine_3 s1 s2 c in
                     s1p, s2p, tc
             | _ ->
                     let tc = cost_2 s1 s2 c m in   
@@ -927,7 +931,7 @@ module Align = struct
     let full_median_2 a b cm m = 
         match Cost_matrix.Two_D.affine cm with
         | Cost_matrix.Affine _ ->
-                let m, _, _, _ = align_affine_3 a b cm in
+                let m, _, _, _, _ = align_affine_3 a b cm in
                 m
         | _ ->
                 let a, b, _ = align_2 a b cm m in
@@ -1858,16 +1862,16 @@ END
             create_union true s 
 
         external make_union : 
-            s -> s -> u -> u -> u -> Cost_matrix.Two_D.m -> unit = 
+            s -> s -> s -> u -> u -> u -> Cost_matrix.Two_D.m -> unit = 
                 "union_CAML_make_b" "union_CAML_make"
 
-        let union a b ua ub cm =
+        let union a b m ua ub cm =
             let new_seq, len = 
                 let c = (length ua.seq) + (length ub.seq) + 2 in
                 create c, c
             in
             let u = create_union false new_seq in
-            make_union a b ua ub u cm;
+            make_union a b m ua ub u cm;
             u
 
         let get_seq u = u.seq

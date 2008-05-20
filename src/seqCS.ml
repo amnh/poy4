@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2803 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 2866 $"
 
 
 module Codes = All_sets.IntegerMap
@@ -650,14 +650,14 @@ module DOS = struct
 
     type do_single_sequence = {
             sequence : Sequence.s;
-            aligned_children : packed_algn * packed_algn;
+            aligned_children : packed_algn * packed_algn * packed_algn;
             costs : cost_tuple;
             position : int;
         }
 
     let create seq = {
         sequence = seq;
-        aligned_children = Raw seq, Raw seq;
+        aligned_children = Raw seq, Raw seq, Raw seq;
         costs = { min = 0.0; max = 0.0 };
         position = 0;
     }
@@ -707,23 +707,28 @@ module DOS = struct
         else if Sequence.is_empty b.sequence gap then
             create a.sequence, 0
         else 
-            let seqm, tmpa, tmpb, tmpcost =
+            let seqm, tmpa, tmpb, tmpcost, seqmwg =
                 match Cost_matrix.Two_D.affine h.c2 with
-                | Cost_matrix.Affine _ -> Sequence.Align.align_affine_3
-                a.sequence b.sequence h.c2
+                | Cost_matrix.Affine _ -> 
+                        Sequence.Align.align_affine_3 a.sequence b.sequence h.c2
                 | _ ->
                         let tmpa, tmpb, tmpcost = 
                             Sequence.Align.align_2 a.sequence b.sequence h.c2 Matrix.default
                         in
                         let seqm = Sequence.Align.ancestor_2 tmpa tmpb h.c2 in
-                        seqm, tmpa, tmpb, tmpcost
+                        let seqmwg = 
+                            Sequence.Align.median_2_with_gaps tmpa tmpb h.c2 
+                        in
+                        seqm, tmpa, tmpb, tmpcost, seqmwg
             in
             let rescost = make_cost tmpcost in
             let ba = seq_to_bitset gap tmpa (Raw a.sequence)
-            and bb = seq_to_bitset gap tmpb (Raw b.sequence) in
+            and bb = seq_to_bitset gap tmpb (Raw b.sequence) 
+            and bm = seq_to_bitset gap seqmwg (Raw seqm) in
             assert (tmpa = bitset_to_seq gap ba);
             assert (tmpb = bitset_to_seq gap bb);
-            { sequence = seqm; aligned_children = (ba, bb); costs = rescost;
+            assert (seqmwg = bitset_to_seq gap bm);
+            { sequence = seqm; aligned_children = (ba, bb, bm); costs = rescost;
             position = 0 }, tmpcost
 
     let median_3_no_union h p n c1 c2 =
@@ -748,7 +753,7 @@ module DOS = struct
 
     let median_3_union h p n c1 c2 =
         let gap = Cost_matrix.Two_D.gap h.c2 in
-        let a, b = n.aligned_children in
+        let a, b, _ = n.aligned_children in
         let a = bitset_to_seq gap a
         and b = bitset_to_seq gap b in
         assert (Sequence.length a = Sequence.length b);
@@ -1003,9 +1008,10 @@ module Union = struct
                 let union uniona unionb self =
                     match self with
                     | Heuristic_Selection self ->
-                        let tmpa, tmpb = self.DOS.aligned_children in
+                        let tmpa, tmpb, tmpc = self.DOS.aligned_children in
                         let tmpa = DOS.bitset_to_seq gap tmpa 
-                        and tmpb = DOS.bitset_to_seq gap tmpb in
+                        and tmpb = DOS.bitset_to_seq gap tmpb 
+                        and tmpc = DOS.bitset_to_seq gap tmpc in
                         (match uniona, unionb with
                         | Some uniona, Some unionb ->
                             if Sequence.is_empty uniona.Sequence.Unions.seq gap then
@@ -1014,7 +1020,7 @@ module Union = struct
                             then
                                 Some uniona 
                             else 
-                                Some (Sequence.Unions.union tmpa tmpb uniona unionb
+                                Some (Sequence.Unions.union tmpa tmpb tmpc uniona unionb
                                 c2)
                         | _ -> assert false)
                     | Relaxed_Lifted _ -> None
@@ -1032,7 +1038,7 @@ module Union = struct
         | Some a, Some b ->
                 let sub_factor = 
                     match Cost_matrix.Two_D.affine a.u_c2 with
-                    | Cost_matrix.Affine _ -> 0.9
+                    | Cost_matrix.Affine _ -> 0.8
                     | _ -> 1.0 
                 in
                 let gap = Cost_matrix.Two_D.gap a.u_c2 in

@@ -222,7 +222,7 @@ module Align : sig
      * ukkonen barrier at distance v if flag is set to true *)
     val cost_2 : ?deltaw:int -> s -> s -> Cost_matrix.Two_D.m -> Matrix.m -> int 
 
-    val align_affine_3 : s -> s -> Cost_matrix.Two_D.m -> s * s  * s * int 
+    val align_affine_3 : s -> s -> Cost_matrix.Two_D.m -> s * s * s * int * s
 
     val max_cost_2 : s -> s -> Cost_matrix.Two_D.m -> int
     val verify_cost_2 : int -> s -> s -> Cost_matrix.Two_D.m -> int
@@ -476,7 +476,7 @@ END
 
     val leaf : s -> u
 
-    val union : s -> s -> u -> u -> Cost_matrix.Two_D.m -> u
+    val union : s -> s -> s -> u -> u -> Cost_matrix.Two_D.m -> u
 
     val get_seq : u -> s
 
