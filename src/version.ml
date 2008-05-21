@@ -37,7 +37,7 @@ let rephrase str = Str.global_replace (Str.regexp " +") "@ " str
 
 (* The Version Values *)
 let name = "Spirit"
-let string = "@[@[Welcome to @{<b>P@{<c:yellow>O@}Y@} 4.0." ^
+let string = "@[@[Welcome to @{<b>POY@} 4.0." ^
             (Str.global_replace (Str.regexp " +") "" BuildNumber.build) ^ "@]@." ^
                      rephrase ("@[compiled" ^ CompileFlags.time
                       ^ "with parallel " ^ is_true CompileFlags.str_parallel
