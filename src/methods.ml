@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 
-let () = SadmanOutput.register "Methods" "$Revision: 2863 $"
+let () = SadmanOutput.register "Methods" "$Revision: 2868 $"
 
 exception TimedOut
 
@@ -261,7 +261,7 @@ type implied_alignment =
     (
         (int * int array array All_sets.IntegerMap.t list) list *
         (int * string * int * [ `Deletion | `Insertion ] * int Sexpr.t) Sexpr.t list list
-    ) * (int * int * int Sexpr.t) Sexpr.t list list
+    ) * (int * int Sexpr.t) Sexpr.t list list
 ) list
 
 type ('a, 'b, 'c, 'd) parallel_input = [ 
