@@ -16,9 +16,9 @@ AC_SUBST(USEPARALLEL)
 AC_SUBST(USE_LARGE_MESSAGES)
 AC_SUBST(DOCSTRING)
 AC_SUBST(OCAMLFLAGS)
-AC_SUBST(SVNVERSION)
+AC_SUBST(MERCURIAL)
 
-AC_CHECK_PROGS([SVNVERSION], [svnversion])
+AC_CHECK_PROGS([MERCURIAL], [hg])
 
 AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
               [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none.])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
