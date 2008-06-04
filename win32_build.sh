@@ -42,7 +42,11 @@ while getopts 'uspnom' OPTION; do
 done
 
 if [ $update -eq 1 ]; then
-    if ! svn update; then
+    if ! hg pull; then
+        echo "Repository pull failed ... sorry pal!"
+        exit 1
+    fi
+    if ! hg update; then
         echo "Repository update failed ... sorry pal!"
         exit 1
     fi
@@ -104,7 +108,7 @@ fi
 if [ $make_installers -eq 1 ]; then
     rm -f /cygdrive/c/POY_Installer.exe
     ./create_installers.bat
-    if ! scp /cygdrive/c/POY_Installer.exe ${MACHOST}:poy_distro/distro_generation_scripts/; then
+    if ! scp /cygdrive/c/POY_Installer.exe ${MACHOST}:poy_distro/source_code/binaries/windows/; then
         echo "I could not copy the resulting executable in $MACHOST!"
         exit 1
     fi

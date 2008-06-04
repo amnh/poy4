@@ -1,6 +1,7 @@
 #!/bin/bash
 # MACHOST holdst the URL of the macintosh computer hosting the virtual machine.
 # Script to generate binaries for Linux
+MACHOST=samson
 export PATH=/opt/ocaml-3.10.2/bin:$PATH
 LINUX_DIRECTORY=linux
 mkdir linux
@@ -38,4 +39,4 @@ cat > ./${LINUX_DIRECTORY}/ncurses_poy.command <<EOF
 xterm -e /opt/poy4/Resources/ncurses_poy
 EOF
 chmod a+x ./${LINUX_DIRECTORY}/ncurses_poy.command
-scp -r ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/distro_generation_scripts/
+scp -fr ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/source_code/binaries/
