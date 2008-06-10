@@ -12,7 +12,7 @@ configuration=""
 MACHOST=""
 make_installers=0
 update=0
-version=
+version=${BUILD_VERSION}
 
 while getopts 'uspnom' OPTION; do
     case $OPTION in
@@ -27,9 +27,6 @@ while getopts 'uspnom' OPTION; do
         ;;
         n)
         ncurses=1
-        ;;
-        v)
-        version="$OPTARG"
         ;;
         o)
         configuration="$OPTARG"
@@ -50,7 +47,7 @@ if [ $update -eq 1 ]; then
         echo "Repository pull failed ... sorry pal!"
         exit 1
     fi
-    if ! hg update; then
+    if ! hg update 4.0.${version}; then
         echo "Repository update failed ... sorry pal!"
         exit 1
     fi
