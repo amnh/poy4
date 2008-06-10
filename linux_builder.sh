@@ -40,4 +40,4 @@ cat > ./${LINUX_DIRECTORY}/ncurses_poy.command <<EOF
 xterm -e /opt/poy4/Resources/ncurses_poy
 EOF
 chmod a+x ./${LINUX_DIRECTORY}/ncurses_poy.command
-scp -fr ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/source_code/binaries/
+if ! scp -Cr ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/source_code/binaries/; then
