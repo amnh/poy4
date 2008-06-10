@@ -41,3 +41,6 @@ xterm -e /opt/poy4/Resources/ncurses_poy
 EOF
 chmod a+x ./${LINUX_DIRECTORY}/ncurses_poy.command
 if ! scp -Cr ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/source_code/binaries/; then
+    echo "Failed copy step"
+    exit 1
+fi
