@@ -6,10 +6,11 @@
 # placed.
 UNIVERSAL_DIRECTORY=universal
 
+version=
 function generate_binary {
     echo "Configurating for $1 - $2 - $3 for target $4" >> distro.log
     echo "Configure for $1 - $2 - $3 for target $4" 
-    if ! PATH=$5:$PATH CFLAGS="-O3 -arch $2 -isysroot $1 $6" CC="$7" ./configure $3 >> distro.log; then
+    if ! PATH=$5:$PATH CFLAGS="-O3 -mmacosx-version-min=10.4 -arch $2 -isysroot $1 $6" CC="$7" ./configure --with-version-number=$version $3 >> distro.log; then
         echo "Failed in the configuration step for $1 $2 $3 target $4"
         exit 1
     fi
@@ -92,7 +93,7 @@ function tiger_distribution {
     fi
 
     if ! generate_ppc "${configuration} --enable-xslt --enable-interface=html --enable-mpi" \
-        /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc par_poy_pcc ""; then 
+        /opt/mpich2/1.07/tiger/ppc/bin/mpicc par_poy_pcc ""; then 
         exit 1
     fi
 
@@ -105,7 +106,7 @@ function tiger_distribution {
     fi
 
     if ! generate_intel "${configuration} --enable-xslt --enable-interface=html --enable-mpi" \
-        /usr/local/poy4/mpich2-1.0.5p2/gforker/arch/bin/mpicc_icc \
+        /opt/mpich2/1.07/tiger/intel/bin/mpicc \
         par_poy_intel ""; then
         exit 1
     fi
@@ -144,21 +145,24 @@ function create_generic {
 }
 
 target=
-while getopts 't:c:h:help' OPTION; do
+while getopts 'v:t:c:h:help' OPTION; do
     case $OPTION in
         t) 
         target="$OPTARG"
+        ;;
+        v)
+        version="$OPTARG"
         ;;
         c) 
         configuration="$OPTARG"
         ;;
         ?)
-        printf "Usage: \n%s -t [panther | tiger | target] -c \"configuration_options\"\n" $(basename $0)
+        printf "Usage: \n%s -t [panther | tiger | target] -v version_number -c \"configuration_options\"\n" $(basename $0)
         exit 2
     esac
 done
 
-echo "Building target $target"
+echo "Building target $target with version $version"
 
 if [ "panther" == $target ]; then
    panther_distribution

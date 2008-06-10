@@ -1,4 +1,4 @@
-MERCURIAL := @MERCURIAL@ id -i
+MERCURIAL :=@MERCURIAL@
 
 QuickStart.pdf: QuickStart.tex
 	pdflatex $<; pdflatex $<; pdflatex $< 

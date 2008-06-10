@@ -1271,6 +1271,8 @@ Optional Packages:
   --with-extras           Add the following object files to the final linking
                           rules (needed for windows).
   --with-ocaml-flags      Add the following flags to the ocaml compiler.
+  --with-version-number   Use the configuration provided version number (used
+                          for release purposes only).
 
 Some influential environment variables:
   CC          C compiler command
@@ -2908,6 +2910,15 @@ fi
 # Check whether --with-ocaml-flags was given.
 if test "${with_ocaml_flags+set}" = set; then
   withval=$with_ocaml_flags; OCAMLFLAGS=$withval
+fi
+
+
+
+# Check whether --with-version-number was given.
+if test "${with_version_number+set}" = set; then
+  withval=$with_version_number; MERCURIAL="echo $withval"
+else
+  MERCURIAL="$MERCURIAL id -i"
 fi
 
 
