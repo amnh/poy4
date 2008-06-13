@@ -501,11 +501,10 @@ module M = struct
     * to improve the overall cost of the tree, using only the
     * [AllDirNode.adjusted] field of each. *)
     let rec adjust_tree nodes ptree =
-        let mode = 
-            match !Methods.cost with
-            | `Iterative x -> x
-            | _ -> assert false
-        in
+        match !Methods.cost with
+        | `Normal_plus_Vitamines 
+        | `Normal | `Exhaustive_Weak | `Exhaustive_Strong -> ptree
+        | `Iterative mode -> 
         (* We start by defining a function to adjust one node *)
         let adjust_node chars_to_check ch1o ch2o parento minec mineo ptree =
             match ch1o.AllDirNode.adjusted, ch2o.AllDirNode.adjusted, 
@@ -786,7 +785,7 @@ module M = struct
         (edges, handle) (cost, cbt) ((Tree.Edge (a, b)) as e) =
         let data = Ptree.get_edge_data e ptree in
         let c = AllDirNode.OneDirF.root_cost data in
-        if cost > c then 
+        if abs_float cost > abs_float c then 
             let data = 
                 [{ AllDirNode.lazy_node = data; dir = None; code = -1 }] 
             in
@@ -811,7 +810,7 @@ module M = struct
         in
         let tree = assign_single tree in
         let c = Ptree.get_cost `Adjusted tree in
-        if cost > c then c, lazy tree
+        if abs_float cost > abs_float c then c, lazy tree
         else (cost, cbt)
 
     let blindly_trust_adjusted ptree 
@@ -828,7 +827,7 @@ module M = struct
         in
         let tree = tree --> assign_single --> adjust_tree None in
         let c = Ptree.get_cost `Adjusted tree in
-        if cost > c then c, lazy tree
+        if abs_float cost > abs_float c then c, lazy tree
         else (cost, cbt)
 
     let general_pick_best_root selection_method ptree = 
@@ -1310,8 +1309,9 @@ module M = struct
         | `Normal -> 
                 let root = 
                     let new_roots = create_root h n ptree in
-                    if force || new_roots.Ptree.component_cost < 
-                    root.Ptree.component_cost then
+                    if force || 
+                        (abs_float new_roots.Ptree.component_cost) < 
+                        (abs_float root.Ptree.component_cost) then
                         new_roots
                     else root
                 in
