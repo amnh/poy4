@@ -2074,13 +2074,14 @@ The \poycommand{calculate\_support} command does not output support values by de
             best hits is at most 385 steps.}
 	
 	\poyexample {For Parallel Implementation of \poycommand{search}}
-		               {search(max\_time:0:6:0)}\\
+            {{search(max\_time:0:6:0)}\\
 	                      {search(max\_time:0:6:0)}\\
 	                      {search(max\_time:0:4:0)}\\
             {This series of commands will attempt as many builds, swaps, ratchets, and tree
             fusings as possible within the specified total time of 16 hours.  Trees are exchanged among
              processors at the end of each \poycommand{search} and the best unique trees
-              are then selected and included in the following \poycommand{search} command.}
+              are then selected and included in the following
+              \poycommand{search} command.}}
             \end{poyexamples}
 
 	\begin{poyalso}
