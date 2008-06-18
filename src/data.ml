@@ -291,6 +291,9 @@ type d = {
     ignore_character_set : string list;
     (* The set of loaded trees *)
     trees : string Parser.Tree.t list list;
+    (* The set of codes that belong to the class of Non additive with up to 1
+    * states (useless!) *)
+    non_additive_1 : int list;
     (* The set of codes that belong to the class of Non additive with up to 8
     * states *)
     non_additive_8 : int list;
@@ -365,6 +368,7 @@ let empty () =
         ignore_taxa_set = All_sets.Strings.empty;
         ignore_character_set = [];
         trees = [];
+        non_additive_1 = [];
         non_additive_8 = [];
         non_additive_16 = [];
         non_additive_32 = [];
@@ -1743,6 +1747,7 @@ let categorize data =
     (* We recategorize the data, so we must clear any already-loaded
        data *)
     let data = { data with
+                     non_additive_1 = [];
                      non_additive_8 = [];
                      non_additive_16 = [];
                      non_additive_32 = [];
@@ -1763,7 +1768,10 @@ let categorize data =
                       { data with additive = code :: data.additive }
                 | Parser.SC.STOrdered -> data
                 | Parser.SC.STUnordered ->
-                        if between 2 8 then
+                        if between 0 1 then
+                            { data with non_additive_1 = code ::
+                                data.non_additive_1 }
+                        else if between 2 8 then
                             { data with non_additive_8 = code ::
                                 data.non_additive_8 }
                         else if between 9 16 then
@@ -2339,6 +2347,7 @@ and get_code_from_characters_restricted kind (data : d) (chs : characters) =
         match kind with
         | `Dynamic -> data.dynamics
         | `NonAdditive ->
+                        data.non_additive_1 @
                         data.non_additive_8 @
                         data.non_additive_16 @
                         data.non_additive_32 @
@@ -2347,6 +2356,7 @@ and get_code_from_characters_restricted kind (data : d) (chs : characters) =
         | `Sankoff -> List.flatten data.sankoff
         | `AllDynamic -> data.dynamics
         | `AllStatic -> 
+                        data.non_additive_1 @
                         data.non_additive_8 @
                         data.non_additive_16 @
                         data.non_additive_32 @
@@ -2418,6 +2428,7 @@ let rec get_code_from_characters_restricted kind (data : d) (chs : characters) =
         match kind with
         | `Dynamic -> data.dynamics
         | `NonAdditive ->
+                        data.non_additive_1 @
                         data.non_additive_8 @
                         data.non_additive_16 @
                         data.non_additive_32 @
@@ -2426,6 +2437,7 @@ let rec get_code_from_characters_restricted kind (data : d) (chs : characters) =
         | `Sankoff -> List.flatten data.sankoff
         | `AllDynamic -> data.dynamics
         | `AllStatic -> 
+                        data.non_additive_1 @
                         data.non_additive_8 @
                         data.non_additive_16 @
                         data.non_additive_32 @
@@ -2581,7 +2593,8 @@ let process_ignore_character report data code_set =
                 data.ignore_character_set
         in
         rep "@]@]@]@\n%!";
-        let non_additive_8 = List.filter compare data.non_additive_8
+        let non_additive_1 = List.filter compare data.non_additive_1 
+        and non_additive_8 = List.filter compare data.non_additive_8
         and non_additive_16 = List.filter compare data.non_additive_16
         and non_additive_32 = List.filter compare data.non_additive_32
         and non_additive_33 = List.filter compare data.non_additive_33 
@@ -2594,6 +2607,7 @@ let process_ignore_character report data code_set =
         let sankoff = List.filter (function [] -> false | _ -> true) sankoff in
         { data with
         ignore_character_set = new_cign;
+        non_additive_1 = non_additive_1;
         non_additive_8 = non_additive_8;
         non_additive_16 = non_additive_16;
         non_additive_32 = non_additive_32;
