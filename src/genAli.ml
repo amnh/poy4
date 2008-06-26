@@ -37,10 +37,12 @@ let equal_orientation code1 code2 = compare (abs code1) (abs code2)
 (** [cmp_recost state seq1 seq2 reseq2 re_meth circular] returns
 * the rearrangement distance between two sequence [seq1] and [seq2] *)
 let cmp_recost state seq1 seq2 reseq2 re_meth circular orientation =     
+(*    Utl.printIntArr seq1;
+    Utl.printIntArr seq2; *)
     let seq1, seq2, reseq2 = match orientation with
     | true -> (Array.map get_orientated_code seq1),
-              (Array.map get_orientated_code seq2),
-              (Array.map get_orientated_code reseq2)
+                    (Array.map get_orientated_code seq2),
+                    (Array.map get_orientated_code reseq2)
     | false -> seq1, seq2, reseq2
     in
 
@@ -62,8 +64,9 @@ let cmp_recost state seq1 seq2 reseq2 re_meth circular orientation =
             match re_meth with 
             | `Locus_Inversion cost -> 
                   (UtlGrappa.cmp_inversion_dis seq2 reseq2 circular) * cost  
-            | `Locus_Breakpoint cost ->               
+            | `Locus_Breakpoint cost -> begin               
                   (UtlGrappa.cmp_oriented_breakpoint_dis seq2 reseq2 circular) * cost   
+            end;
         in  
 
         recost1, recost2
@@ -121,6 +124,12 @@ let find_wagner_ali (kept_wag : int) state seq1 seq2 gen_cost_mat gap re_meth ci
                   for pos = 0 to len2 do
                       let partial_seq2 = Utl.insert best_wagner_seq2_arr.(w) pos code2 in 
                       update partial_seq2;
+                      if (state = `Annotated) && (code2 mod 2 = 1) then begin
+                            let partial_seq2 = 
+                                Utl.insert best_wagner_seq2_arr.(w) pos (code2 + 1) 
+                            in 
+                            update partial_seq2;
+                      end 
                   done;     
               done; 
               let subseq2 = Array.sub seq2 0 (len2 + 1) in
