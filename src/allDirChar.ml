@@ -500,7 +500,7 @@ module M = struct
     (* Now we define a function that can adjust all the vertices in the tree
     * to improve the overall cost of the tree, using only the
     * [AllDirNode.adjusted] field of each. *)
-    let rec adjust_tree nodes ptree =
+    let rec adjust_tree max_count nodes ptree =
         match !Methods.cost with
         | `Normal_plus_Vitamines 
         | `Normal | `Exhaustive_Weak | `Exhaustive_Strong -> ptree
@@ -558,7 +558,12 @@ module M = struct
         in
         (* Now we need to be able to adjust the root of the tree, and it's
         * cost, once we have finished adjusting every vertex in the tree *)
-        let adjust_until_nothing_changes ptree = 
+        let adjust_until_nothing_changes max_count ptree = 
+            let max_count = 
+                match max_count with
+                | None -> max_int
+                | Some x -> x
+            in
             let first_affected = 
                 match nodes with
                 | None -> 
@@ -566,27 +571,30 @@ module M = struct
                         ptree.Ptree.node_data 
                 | Some items -> items
             in
-            let adjust_vertices vertex chars_to_check (affected, ptree, changed)
-            =
+            let adjust_vertices vertex chars_to_check 
+            (affected, ptree, changed) =
                 let ptree, ch2, affected = 
                     adjust_vertex chars_to_check affected vertex ptree
                 in
                 affected, ptree, changed || ch2
             in
-            let rec iterator prev_cost affected ptree =
-                let affected, new_ptree, changed =
-                    All_sets.IntegerMap.fold adjust_vertices
-                    affected
-                    (All_sets.IntegerMap.empty, ptree, false)
-                in
-                if changed then 
-                    let new_cost = check_cost_all_handles new_ptree in
-                    if new_cost < prev_cost then
-                        iterator new_cost affected new_ptree
+            let rec iterator count prev_cost affected ptree =
+                if count = 0 then ptree 
+                else
+                    let affected, new_ptree, changed =
+                        All_sets.IntegerMap.fold adjust_vertices
+                        affected
+                        (All_sets.IntegerMap.empty, ptree, false)
+                    in
+                    if changed then 
+                        let new_cost = check_cost_all_handles new_ptree in
+                        if new_cost < prev_cost then
+                            iterator (count - 1) new_cost affected new_ptree
+                        else ptree
                     else ptree
-                else ptree
             in
-            iterator (Ptree.get_cost `Adjusted ptree) first_affected ptree
+            iterator max_count 
+            (Ptree.get_cost `Adjusted ptree) first_affected ptree
         in
         let adjust_root_n_cost handle root a b ptree =
             let pre_ref_codes, fi_ref_codes = get_active_ref_code ptree in  
@@ -647,7 +655,7 @@ module M = struct
         in
         (* Finally, we are ready to assign to all the handles in the tree
         * and adjusted cost *)
-        let ptree = adjust_until_nothing_changes ptree in
+        let ptree = adjust_until_nothing_changes max_count ptree in
         let new_tree = 
             All_sets.Integers.fold adjust_handle ptree.Ptree.tree.Tree.handles
             ptree
@@ -659,8 +667,8 @@ module M = struct
         *)
         new_tree
 
-    let assign_single_and_readjust ptree = 
-        adjust_tree None (assign_single ptree)
+    let assign_single_and_readjust max_count ptree = 
+        adjust_tree max_count None (assign_single ptree)
 
     let refresh_all_edges adjusted ptree =
         let new_edges = 
@@ -825,7 +833,7 @@ module M = struct
             let comp = Some ((`Edge (a, b)), data) in
             Ptree.set_component_cost c None comp handle ptree
         in
-        let tree = tree --> assign_single --> adjust_tree None in
+        let tree = tree --> assign_single --> adjust_tree None None in
         let c = Ptree.get_cost `Adjusted tree in
         if abs_float cost > abs_float c then c, lazy tree
         else (cost, cbt)
@@ -869,15 +877,15 @@ module M = struct
             | `Exhaustive_Weak
             | `Normal_plus_Vitamines
             | `Normal -> internal_downpass true ptree
-            | `Iterative `ApproxD ->
+            | `Iterative (`ApproxD iterations) ->
                     ptree --> internal_downpass true -->
                         pick_best_root -->
                         assign_single --> 
-                        adjust_tree None 
-            | `Iterative `ThreeD ->
+                        adjust_tree iterations None 
+            | `Iterative (`ThreeD iterations) ->
                     ptree --> internal_downpass true --> 
                         pick_best_root --> assign_single -->
-                            adjust_tree None 
+                            adjust_tree iterations None 
                                 
         in
         current_snapshot "AllDirChar.downpass b";
@@ -892,8 +900,8 @@ module M = struct
                 let ptree = pick_best_root ptree in
                 let ptree = assign_single ptree in
                 ptree
-        | `Iterative `ApproxD 
-        | `Iterative `ThreeD -> ptree
+        | `Iterative (`ApproxD _)
+        | `Iterative (`ThreeD _) -> ptree
 
     let create_edge ptree a b =
         let edge1 = (Tree.Edge (a, b)) in
@@ -1099,7 +1107,7 @@ module M = struct
 
     let break_fn ((s1, s2) as a) b =
         match !Methods.cost with
-        | `Iterative `ApproxD ->
+        | `Iterative (`ApproxD _) ->
                 (*
                 Printf.printf "Breaking!!\n%!";
                 let other_neighbors = get_other_neighbors a b None in
@@ -1138,7 +1146,7 @@ module M = struct
                 *)
                 new_tree, v, delta_cost, x, y, z
         *)
-        | `Iterative `ThreeD 
+        | `Iterative (`ThreeD _)
         | `Exhaustive_Weak
         | `Normal_plus_Vitamines
         | `Normal -> break_fn a b
@@ -1216,11 +1224,12 @@ module M = struct
     let join_fn a b c d =
         match !Methods.cost with
         | `Normal -> join_fn a b c d 
-        | `Iterative _ ->
+        | `Iterative (`ThreeD iterations)
+        | `Iterative (`ApproxD iterations) ->
             let tree, ((s1, s2, _) as delta) = join_fn a b c d in
             let other_neighbors = get_other_neighbors ((get_one s1), (get_one
             s2)) tree None in
-            let tree = (adjust_tree other_neighbors
+            let tree = (adjust_tree iterations other_neighbors
             (assign_single (pick_best_root tree))) in
             (*
             Printf.printf "The resulting tree has cost %f\n%!"
@@ -1248,7 +1257,7 @@ module M = struct
         in
         let clade_data = 
             match !Methods.cost with
-            | `Iterative `ThreeD ->
+            | `Iterative (`ThreeD _) ->
                     (match jxn2 with
                     | Tree.Single_Jxn _ -> forcer (Clade clade_data)
                     | Tree.Edge_Jxn (h, n) ->
@@ -1278,11 +1287,11 @@ module M = struct
 
     let cost_fn a b c d e =
         match !Methods.cost with
-        | `Iterative `ApproxD -> 
+        | `Iterative (`ApproxD _) -> 
                 (match cost_fn a b c d e with 
                 | Ptree.Cost x -> Ptree.Cost (0.85 *. x)
                 | x -> x)
-        | `Iterative `ThreeD
+        | `Iterative `ThreeD _
         | `Exhaustive_Weak
         | `Normal_plus_Vitamines
         | `Normal -> cost_fn a b c d e 
@@ -1305,7 +1314,7 @@ module M = struct
         | `Exhaustive_Strong
         | `Exhaustive_Weak
         | `Normal_plus_Vitamines
-        | `Iterative `ApproxD
+        | `Iterative `ApproxD _
         | `Normal -> 
                 let root = 
                     let new_roots = create_root h n ptree in
@@ -1316,7 +1325,7 @@ module M = struct
                     else root
                 in
                 add_component_root ptree h root, []
-        | `Iterative `ThreeD -> 
+        | `Iterative `ThreeD _ -> 
                 add_component_root ptree h root, []
 
     let root_costs tree = 
