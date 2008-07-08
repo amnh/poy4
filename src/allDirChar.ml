@@ -559,6 +559,14 @@ module M = struct
         (* Now we need to be able to adjust the root of the tree, and it's
         * cost, once we have finished adjusting every vertex in the tree *)
         let adjust_until_nothing_changes max_count ptree = 
+            let vertices = 
+                All_sets.Integers.fold (fun x acc  ->
+
+                Tree.post_order_node_visit (fun _ x acc -> Tree.Continue, x ::
+                    acc) x ptree.Ptree.tree acc) ptree.Ptree.tree.Tree.handles
+                    []
+            in
+            let vertices = List.rev vertices in
             let max_count = 
                 match max_count with
                 | None -> max_int
@@ -571,8 +579,7 @@ module M = struct
                         ptree.Ptree.node_data 
                 | Some items -> items
             in
-            let adjust_vertices vertex chars_to_check 
-            (affected, ptree, changed) =
+            let adjust_vertices (affected, ptree, changed) vertex chars_to_check =
                 let ptree, ch2, affected = 
                     adjust_vertex chars_to_check affected vertex ptree
                 in
@@ -582,9 +589,13 @@ module M = struct
                 if count = 0 then ptree 
                 else
                     let affected, new_ptree, changed =
-                        All_sets.IntegerMap.fold adjust_vertices
-                        affected
+                        List.fold_left (fun acc v ->
+                            if All_sets.IntegerMap.mem v affected then
+                                let r = All_sets.IntegerMap.find v affected in
+                                adjust_vertices acc v r
+                            else acc)
                         (All_sets.IntegerMap.empty, ptree, false)
+                        vertices
                     in
                     if changed then 
                         let new_cost = check_cost_all_handles new_ptree in
