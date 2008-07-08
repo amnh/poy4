@@ -567,7 +567,7 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
     in
     let partition_for_other_tabus =
         match join_tabu with
-        | `Partition [] -> 
+        | `Partition _ -> 
                 Some (`Sets (Lazy.force sets))
                 (* TMP
                 Some (`Height 2)
