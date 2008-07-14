@@ -2417,12 +2417,19 @@ The \poycommand{calculate\_support} command does not output support values by de
                 Otherwise, if the argument value is \poyargument{approximate}, then the iterations
                 approximate the three dimensional alignment using pairwise
                 alignments. 
+                For chromosome characters, 
+                the three dimentional alignment for three chromosomes
+                is computed by separating into smaller three dimentional
+                alignments of short sequences whose lengths are smaller 
+                or equalt to \poyargument{min\_3d\_len}. The default value
+                is \texttt{200}.
+
                 If the argument value is \poyargument{exact}, this method improves the tree
                 cost estimation but at the expense of a tremendous execution
                 time. When approximate the execution time footprint is much
                 smaller, and far less memory consumption.
-                The iterative argument 
-                can only be applied to nucleotide sequence characters.
+%                The iterative argument 
+%                can only be applied to nucleotide sequence characters.
                 A heuristic strategy is to apply  \poyargument{iterative} at the 
                 very end of an analysis to polish the final set of trees and perform a final search. 
                 
@@ -3227,6 +3234,16 @@ The \poycommand{calculate\_support} command does not output support values by de
 	                    if they are connected (see Figure \ref{fig:chrom}).
 	                    The default value is \texttt{100}}
                              {minrearrangementlen}
+
+
+                           \argumentdefinition{min\_3d\_len}{\obligatory{\poyint}} 
+                            {The three dimentional alignment for three chromosomes
+                            is computed by separating into smaller three dimentional
+                            alignments of short sequences whose lengths are smaller 
+                            or equalt to \poyargument{min\_3d\_len}. The default value
+                             is \texttt{200}}
+                             {minrearrangementlen}
+
 
  			\begin{figure} [!htbp]
    		 	\begin{center}
