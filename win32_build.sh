@@ -8,13 +8,13 @@ source $HOME/.keychain/${HOSTNAME}-sh
 sequential=0
 parallel=0
 ncurses=0
-configuration=""
+configuration=${CONFIGURE_OPTIONS}
 MACHOST=""
 make_installers=0
 update=0
 version=${BUILD_VERSION}
 
-while getopts 'uspnom' OPTION; do
+while getopts 'uspnm' OPTION; do
     case $OPTION in
         u)
         update=1
@@ -28,15 +28,12 @@ while getopts 'uspnom' OPTION; do
         n)
         ncurses=1
         ;;
-        o)
-        configuration="$OPTARG"
-        ;;
         m)
         make_installers=1
         MACHOST="samson"
         ;;
         ?)
-        printf "Usage: \n%s [OPTION]*\n\n-m HOST create installers in the HOST computer (uses ssh for this step)\n-u update from the subversion repository\n-s compile sequential flat \n-p parallel flat version\n-n compile sequential ncurses\n-o CONFIG compile using the CONFIG options in the configure step." $(basename $0)
+        printf "Usage: \n%s [OPTION]*\n\n-m HOST create installers in the HOST computer (uses ssh for this step)\n-u update from the subversion repository\n-s compile sequential flat \n-p parallel flat version\n-n compile sequential ncurses." $(basename $0)
         exit 2
         ;;
     esac
