@@ -839,7 +839,7 @@ let edge_distance clas nodea nodeb =
                         (* Observe that we REQUIRE the single assignment for
                         * this collpse to be correct. *)
                         let d = 
-                            DynamicCS.distance a.preliminary b.preliminary 
+                            DynamicCS.distance 0. a.preliminary b.preliminary 
                         in
                         a.weight *. d
                 | `Static -> 0.)
@@ -865,7 +865,7 @@ let edge_distance clas nodea nodeb =
 let has_to_single : [ `Add | `Annchrom | `Breakinv | `Chrom | `Genome 
 | `Nonadd | `Sank | `Seq ] list = [`Seq ; `Chrom; `Annchrom; `Breakinv]
 
-let distance_of_type ?(para=None) ?(parb=None) t
+let distance_of_type ?(para=None) ?(parb=None) t missing_distance
     ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =
     let has_t x = List.exists (fun z -> z = x) t
     and filter_dynamic res x = 
@@ -890,7 +890,7 @@ let distance_of_type ?(para=None) ?(parb=None) t
         | Sank a, Sank b when has_sank ->
               a.weight *. SankCS.distance a.final b.final
         | Dynamic a, Dynamic b ->
-              a.weight *. DynamicCS.distance_of_type dy_t a.final b.final
+              a.weight *. DynamicCS.distance_of_type dy_t missing_distance a.final b.final
         | Set a, Set b ->
               (match a.final.smethod with
                | `Strictly_Same ->
@@ -911,7 +911,7 @@ let distance_of_type ?(para=None) ?(parb=None) t
     distance_lists chs1 chs2 0.
 
 
-let distance ?(para=None) ?(parb=None) 
+let distance ?(para=None) ?(parb=None)  missing_distance
     ({characters=chs1} as nodea) ({characters=chs2} as nodeb) =
     let rec distance_two ch1 ch2 =
         match ch1, ch2 with
@@ -926,7 +926,7 @@ let distance ?(para=None) ?(parb=None)
         | Sank a, Sank b ->
               a.weight *. SankCS.distance a.final b.final
         | Dynamic a, Dynamic b ->
-              a.weight *. DynamicCS.distance a.final b.final
+              a.weight *. DynamicCS.distance missing_distance a.final b.final
         | Set a, Set b ->
               (match a.final.smethod with
                | `Strictly_Same ->

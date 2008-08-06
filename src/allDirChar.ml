@@ -124,28 +124,69 @@ module M = struct
                     adjusted_component_cost = AllDirNode.AllDirF.root_cost root;
                 }
 
-    (* We first define a function to check the total cost of a tree for
-    * sequences only! *)
-    let check_cost new_tree handle =
-(*        Printf.fprintf stdout "Checking cost start from handle: %i\n\n\n" handle;
-        flush stdout;*)
-        let edge_visitor (Tree.Edge (a, b)) acc =
+    let adjusted_node_distance a b new_tree = 
             let nda = 
                 (List.hd ((Ptree.get_node_data a
                 new_tree).AllDirNode.adjusted)).AllDirNode.lazy_node
             and ndb = (List.hd ((Ptree.get_node_data b
                 new_tree).AllDirNode.adjusted)).AllDirNode.lazy_node
             in
-            let dist = Node.distance_of_type Node.has_to_single
+            Node.distance_of_type Node.has_to_single 0.
                 (AllDirNode.force_val nda)
                 (AllDirNode.force_val ndb) 
+
+    let parser_tree_with_lengths tree = 
+        let vertex_to_parent vertex parent =
+                match parent with
+                | Some x -> 
+                        adjusted_node_distance x vertex tree 
+                | None -> 0.
+        in
+        let leaf_generator parent vertex = 
+            let d = vertex_to_parent vertex parent in
+            let str = Printf.sprintf "%d:%f" vertex d in
+            Parser.Tree.Leaf str
+        and interior_generator parent vertex ch1 ch2 =
+            match vertex with
+            | None -> Parser.Tree.Node ([ch1; ch2], "root:0")
+            | Some vertex ->
+                    let d = vertex_to_parent vertex parent in
+                    Parser.Tree.Node ([ch1; ch2], string_of_int vertex ^ ":" ^ string_of_float d)
+        in
+        let handle = All_sets.Integers.choose tree.Ptree.tree.Tree.handles in
+        Ptree.post_order_downpass_style leaf_generator interior_generator handle
+        tree
+
+    let list_of_costs tree = 
+        let nodes = 
+            All_sets.IntegerMap.fold (fun a b acc ->
+                match b with
+                | Tree.Interior x -> x :: acc
+                | _ -> acc) tree.Ptree.tree.Tree.u_topo [] 
+        in
+        let htbl = Hashtbl.create 1667 in
+        let weight (a, b, c, d) =
+            let distance a b = 
+                let pair = (a, b) in
+                if Hashtbl.mem htbl pair then
+                    Hashtbl.find htbl pair
+                else 
+                    let d = adjusted_node_distance a b tree in
+                    let () = Hashtbl.add htbl pair d in
+                    let () = Hashtbl.add htbl (b, a) d in
+                    d
             in
-(*            
-            Status.user_message Status.Information
-                ("Dist between " ^ string_of_int a ^ " and " ^ 
-                     string_of_int b ^ " is " ^ string_of_float dist);
-*)           
-            Tree.Continue, dist +. acc
+            distance a b +. distance a c +. distance a d
+        in
+        List.map weight nodes
+
+    (* We first define a function to check the total cost of a tree for
+    * sequences only! *)
+    let check_cost new_tree handle =
+(*        Printf.fprintf stdout "Checking cost start from handle: %i\n\n\n" handle;
+        flush stdout;*)
+        let edge_visitor (Tree.Edge (a, b)) acc =
+            Tree.Continue, (adjusted_node_distance a b new_tree) +. acc
         in
         let real_cost = 
             Tree.pre_order_edge_visit edge_visitor handle new_tree.Ptree.tree 
@@ -500,7 +541,7 @@ module M = struct
     (* Now we define a function that can adjust all the vertices in the tree
     * to improve the overall cost of the tree, using only the
     * [AllDirNode.adjusted] field of each. *)
-    let rec adjust_tree max_count nodes ptree =
+    let rec adjust_tree ?(ignore_initial_cost=false) max_count nodes ptree =
         match !Methods.cost with
         | `Normal_plus_Vitamines 
         | `Normal | `Exhaustive_Weak | `Exhaustive_Strong -> ptree
@@ -585,7 +626,7 @@ module M = struct
                 in
                 affected, ptree, changed || ch2
             in
-            let rec iterator count prev_cost affected ptree =
+            let rec iterator initial_cost count prev_cost affected ptree =
                 if count = 0 then ptree 
                 else
                     let affected, new_ptree, changed =
@@ -597,14 +638,17 @@ module M = struct
                         (All_sets.IntegerMap.empty, ptree, false)
                         vertices
                     in
+                    let new_cost = check_cost_all_handles new_ptree in
                     if changed then 
-                        let new_cost = check_cost_all_handles new_ptree in
-                        if new_cost < prev_cost then
-                            iterator (count - 1) new_cost affected new_ptree
+                        if ignore_initial_cost then
+                            iterator false (count - 1) new_cost affected new_ptree
+                        else
+                            if new_cost < prev_cost then
+                                iterator false (count - 1) new_cost affected new_ptree
                         else ptree
                     else ptree
             in
-            iterator max_count 
+            iterator ignore_initial_cost max_count 
             (Ptree.get_cost `Adjusted ptree) first_affected ptree
         in
         let adjust_root_n_cost handle root a b ptree =
@@ -1282,7 +1326,7 @@ module M = struct
         match jxn1 with
         | Tree.Single_Jxn h ->
                 let d = 
-                    Node.Standard.distance 
+                    Node.Standard.distance 0.
                     (forcer (Clade (Ptree.get_node_data (Tree.int_of_id h)
                     tree)))
                     clade_data
@@ -1293,7 +1337,7 @@ module M = struct
                     Tree.normalize_edge (Tree.Edge (h, n)) tree.Ptree.tree
                 in
                 let ndata = forcer (Edge (h, n)) in
-                let d = Node.Standard.distance clade_data ndata in
+                let d = Node.Standard.distance 0. clade_data ndata in
                 Ptree.Cost d
 
     let cost_fn a b c d e =
