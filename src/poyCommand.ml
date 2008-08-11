@@ -294,6 +294,7 @@ type reporta = [
     | `MstR
     | `TreeCosts
     | `TreesStats
+    | `SearchStats 
     | `TimeDelta of string
     | `SequenceStats of old_identifiers
     | `Ci of old_identifiers option
@@ -856,6 +857,8 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
             (`TreeCosts (file)) :: acc, file
     | `TreesStats ->
             (`TreesStats (file)) :: acc, file
+    | `SearchStats ->
+            (`SearchStats (file)) :: acc, file
     | `TimeDelta str ->
             (`TimeDelta (str, file)) :: acc, file
     | `Consensus v ->
@@ -1403,6 +1406,7 @@ let create_expr () =
                     match x with
                     | Some x -> `Trees x | None -> `Trees [] ] |
                 [ LIDENT "treestats" -> `TreesStats ] |
+                [ LIDENT "searchstats" -> `SearchStats ] |
                 [ LIDENT "treecosts" -> `TreeCosts ] |
                 [ LIDENT "timer"; ":"; x = STRING -> `TimeDelta x ] |
                 [ LIDENT "_mst" -> `MstR ] | 

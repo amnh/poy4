@@ -201,6 +201,7 @@ type report = [
     | `Trees of (information_contained list * string option)
     | `TreeCosts of string option
     | `TreesStats of string option
+    | `SearchStats of string option
     | `TimeDelta of (string * string option)
     | `Clades of string                 (* file prefix *)
     | `CrossReferences of (characters option * string option)
