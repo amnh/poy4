@@ -398,6 +398,7 @@ let dependency_relations (init : Methods.script) =
                 | `MstR filename
                 | `TimeDelta (_, filename)
                 | `TreeCosts filename
+                | `SearchStats filename
                 | `TreesStats filename ->
                         let fn = filename_to_list filename in
                         [(datantrees @fn, fn, init, NonComposable)], 
@@ -1726,6 +1727,8 @@ let script_to_string (init : Methods.script) =
                         "@[report the time delta@]"
                 | `TreeCosts _ ->
                         "@[report the cost of the trees@]"
+                | `SearchStats _ ->
+                        "@[report the search results@]"
                 | `TreesStats _ ->
                         "@[report the tree statistics@]"
                 | `Clades _ ->
@@ -1965,6 +1968,7 @@ let is_master_only (init : Methods.script) =
     | `TimeDelta _
     | `TreeCosts _
     | `TreesStats _
+    | `SearchStats _
     | `Clades _
     | `Save (_, _)
     | `MstR _

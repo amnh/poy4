@@ -988,8 +988,13 @@ module Tree = struct
                 Status.user_message Status.Error msg;
                 raise e
 
-    let stream_of_file file =
-        let ch = new FileStream.stream_reader (FileStream.open_in file) in
+    let stream_of_file is_compressed file =
+        let ch = 
+            if is_compressed then
+                new FileStream.compressed_reader (FileStream.open_in file) 
+            else
+                new FileStream.stream_reader (FileStream.open_in file) 
+        in
         match gen_aux_of_stream_gen true ch with
         | `Stream s -> s
         | `Trees _ -> assert false
@@ -1015,6 +1020,29 @@ module Tree = struct
         in
         let tree, _ = build_cannonic_order tree in
         tree
+
+    exception Illegal_argument
+
+    let cleanup ?newroot f tree =
+        let rec aux_cleanup f tree = 
+            match tree with
+            | Leaf x -> 
+                    if f x then []
+                    else [tree]
+            | Node (chld, x) ->
+                    let res = List.flatten (List.map (aux_cleanup f) chld) in
+                    match res with
+                    | [] | [_] -> res
+                    | y -> [Node (y, x)]
+        in
+        match aux_cleanup f tree with
+        | [] -> None
+        | [x] -> Some x
+        | x -> 
+                match newroot with
+                | None -> raise Illegal_argument
+                | Some y -> Some (Node (x, y))
+
 
 end
 
