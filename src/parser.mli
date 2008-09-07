@@ -149,6 +149,8 @@ module Tree : sig
     val cleanup : ?newroot:'a  -> ('a -> bool) -> 
         'a t -> 'a t option
 
+    val map : ('a -> 'b) -> 'a t -> 'b t
+
 end
 
 
