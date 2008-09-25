@@ -1251,6 +1251,8 @@ Optional Features:
                           default search strategies. If you are analyzing
                           fragments shorted than, say 12.000 bp, you are
                           unlikely to need this option.
+  --enable-xslt           Enable the postprocessing of XML output using XSLT
+                          templates. This option requires libxml2.
   --enable-large-alphabets
                           Enable the analysis of alphabets larger than 255
                           elements. When using this option, more memory will
@@ -2995,6 +2997,15 @@ if test "${enable_long_sequences+set}" = set; then
 else
   USE_LONG_SEQUENCES=false
 fi
+
+
+# Check whether --enable-xslt was given.
+if test "${enable_xslt+set}" = set; then
+  enableval=$enable_xslt; USE_XSLT=true
+else
+  USE_XSLT=false
+fi
+
 
 
 # Check whether --enable-large-alphabets was given.
