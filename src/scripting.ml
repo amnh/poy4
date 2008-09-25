@@ -2933,10 +2933,10 @@ IFDEF USE_XSLT THEN
                     trs;
                     Status.user_message (Status.Output (ofilename, false, []))
                     " </Diagnosis>@\n%!";
-                    Xslt.process filename style file;
+                    Xslt.process filename style file
 ELSE
                     Status.user_message Status.Error 
-                    "This version of POY was not compiled with XSLT support.";
+                    "This version of POY was not compiled with XSLT support."
 END
                     in
                     run
