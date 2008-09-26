@@ -37,7 +37,7 @@ fi
 cp ./src/poy ./$LINUX_DIRECTORY/ncurses_poy
 cat > ./${LINUX_DIRECTORY}/ncurses_poy.command <<EOF
 #!/bin/bash
-xterm -e /opt/poy4/Resources/ncurses_poy
+xterm -e ../Resources/ncurses_poy
 EOF
 chmod a+x ./${LINUX_DIRECTORY}/ncurses_poy.command
 if ! scp -Cr ./${LINUX_DIRECTORY} ${MACHOST}:poy_distro/source_code/binaries/; then
