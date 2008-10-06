@@ -676,7 +676,6 @@ OCAMLTOP
 OCAMLLEX
 OCAMLYACC
 MERCURIAL
-NROFF
 OCAMLFLAGS
 EXTRAS
 XSLT_CONFIG
@@ -2521,7 +2520,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-
 USEWIN32=false
 # System dependent options
 case `../gnu/config.guess` in
@@ -2605,45 +2603,6 @@ fi
 
   test -n "$MERCURIAL" && break
 done
-
-# Extract the first word of "groff", so it can be a program name with args.
-set dummy groff; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_prog_NROFF+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  if test -n "$NROFF"; then
-  ac_cv_prog_NROFF="$NROFF" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_NROFF="groff"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_prog_NROFF" && ac_cv_prog_NROFF="notfound"
-fi
-fi
-NROFF=$ac_cv_prog_NROFF
-if test -n "$NROFF"; then
-  { echo "$as_me:$LINENO: result: $NROFF" >&5
-echo "${ECHO_T}$NROFF" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
 
 
 
@@ -6817,7 +6776,6 @@ OCAMLTOP!$OCAMLTOP$ac_delim
 OCAMLLEX!$OCAMLLEX$ac_delim
 OCAMLYACC!$OCAMLYACC$ac_delim
 MERCURIAL!$MERCURIAL$ac_delim
-NROFF!$NROFF$ac_delim
 OCAMLFLAGS!$OCAMLFLAGS$ac_delim
 EXTRAS!$EXTRAS$ac_delim
 XSLT_CONFIG!$XSLT_CONFIG$ac_delim
@@ -6828,7 +6786,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 70; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 69; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

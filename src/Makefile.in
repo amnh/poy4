@@ -49,7 +49,6 @@ OCAMLTOP := @OCAMLTOP@
 OCAMLLEX := @OCAMLLEX@
 OCAMLYACC := @OCAMLYACC@
 MERCURIAL :=@MERCURIAL@
-NROFF := @NROFF@
 EXTRAS := @EXTRAS@
 OFLAGS := @OCAMLFLAGS@ 
 
@@ -497,11 +496,6 @@ ifeq ($(USEWIN32), true)
 else
 	./latex_helper 
 	rm latex_helper
-endif
-ifeq ($(NROFF), notfound)
-	echo "Could not find groff to create man pages. I will not produce them."
-else
-	groff -mandoc -T ascii manpoy.txt > poy.1
 endif
 
 help.ml: help.txt ocaml-str helpRead.ml
