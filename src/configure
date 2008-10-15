@@ -678,6 +678,7 @@ OCAMLYACC
 MERCURIAL
 OCAMLFLAGS
 EXTRAS
+NATIVEDYNLINK
 XSLT_CONFIG
 CPP
 GREP
@@ -2499,6 +2500,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # What are we going to substitute in the Makefile
+
+
 
 
 
@@ -4422,6 +4425,8 @@ echo "${ECHO_T}$OCAMLVERSION" >&6; }
 case $OCAMLVERSION in
     3.10.*)
     ;;
+    3.11.*)
+    NATIVEDYNLINK="dynlink.cmxa";;
     *)
     { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
@@ -6778,6 +6783,7 @@ OCAMLYACC!$OCAMLYACC$ac_delim
 MERCURIAL!$MERCURIAL$ac_delim
 OCAMLFLAGS!$OCAMLFLAGS$ac_delim
 EXTRAS!$EXTRAS$ac_delim
+NATIVEDYNLINK!$NATIVEDYNLINK$ac_delim
 XSLT_CONFIG!$XSLT_CONFIG$ac_delim
 CPP!$CPP$ac_delim
 GREP!$GREP$ac_delim
@@ -6786,7 +6792,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 69; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 70; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
