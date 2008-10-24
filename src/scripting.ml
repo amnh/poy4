@@ -180,6 +180,8 @@ module type S = sig
         val of_string : string -> unit
     end
 
+    module Node : NodeSig.S with type n = a
+
 end
 
 
@@ -3278,6 +3280,7 @@ let set_console_run r = console_run_val := r
             console_run_val := { run with trees = trees }
     end
 
+    module Node = Node
 end
 
 module FILES = struct
