@@ -68,8 +68,6 @@ ifeq ($(USEWIN32), true)
 	CCOPT := -ccopt -mno-cygwin $(CCOPT)
 endif
 
--include $(PWD)/$(DEPEND)
-
 DEFOPTS :=
 ifeq ($(NATIVEDYNLINK), dynlink.cmxa)
 	DEFOPTS := -DUSE_NATIVEDYNLINK $(DEFOPTS)
@@ -737,4 +735,6 @@ else
 	-cclib -L./graphps -cclib -L./ -cclib -lcamlgrappa $(GRAPHICS) unix.cma camlp4o.cma str.cma \
 	bigarray.cma $^ $(LIBS) 
 endif
+
+-include $(PWD)/$(DEPEND)
 

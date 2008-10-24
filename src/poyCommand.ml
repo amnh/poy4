@@ -1945,7 +1945,8 @@ let create_expr () =
         summary_class:
             [ 
                 [ ":"; LIDENT "individual" -> `Individual ] | 
-                [ ":"; LIDENT "consensus" -> `Consensus ]
+                [ ":"; LIDENT "consensus" -> `Consensus ] |
+                [ ":"; x = STRING -> `InputFile x ]
             ];
         list_of_jackknifea:
             [
