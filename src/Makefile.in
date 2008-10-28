@@ -616,7 +616,7 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 # We have to seed some dependencies in the initial dependency contruction. The
 # following list of depencencies are linnear, that is, the second item depends
 # on the first one.
-.depend: compileFlags.cmo $(SADMAN) poyFile.cmi poyFile.cmo lz.cmo \
+.depend: compileFlags.cmo sadmanOutput.cmo sadman.cmi sadman.cmo poyFile.cmi poyFile.cmo lz.cmo \
 	statusCommon.cmo status.cmi timer.cmi sexpr.cmi enum.cmi tags.cmo \
 	alphabet.cmi all_sets.cmi fileStream.cmo sequence.cmi bitSet.cmi \
 	parser.cmi config.h \
