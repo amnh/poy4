@@ -336,34 +336,30 @@ status.ml: $(INTERFACE)
 
 # The libraries
 status_ncurses.cma : dequeue.cmo status.cmi ncurses.o ncursesML.cmo \
-	poyFile.cmo lz.cmo statusCommon.cmo status_ncurses.ml
+	poyFile.cmo lz.cmo statusCommon.cmo status_ncurses.ml config.h
 	cp status_ncurses.ml status.ml
 	$(OCAMLC) $(CCOPT) -custom -g -a -o $(@) ncurses.o \
 	ncursesML.cmo dequeue.cmo statusCommon.cmo status.ml $(MKLIBOPT) \
 	$(PROFILE) $(LIBS) 
 
 status_gtk2.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_gtk2.ml
-	cp status_gtk2.ml status.ml
+	cp status_gtk2.ml status.ml config.h
 	$(OCAMLC) -custom -g -a -o $@ -I +lablgtk2 statusCommon.cmo status.ml \
 	$(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_cocoa.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_cocoa.ml \
-	PoyStatus.o PoyController.o CocoaCaml.o
+	PoyStatus.o PoyController.o CocoaCaml.o config.h
 	cp status_cocoa.ml status.ml
 	$(OCAMLC) -custom -g -a -o $@ PoyStatus.o PoyController.o \
 	CocoaCaml.o statusCommon.cmo status.ml $(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_html.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_html.ml
-	cp status_html.ml status.ml
+	cp status_html.ml status.ml config.h
 	$(OCAMLC) -custom -g -a -o $@ statusCommon.cmo status.ml $(MKLIBOPT) \
 	$(CCOPT) $(PROFILE)
 
-status.cmo: config.h status.ml
-	$(OCAMLC) -custom -g -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmo \
-		status.ml $(MKLIBOPT)  $(CCOPT) $(PROFILE)
-
 status_flat.cma: config.h poyExtension.cmo poyFile.cmo lz.cmo statusCommon.cmo \
-	status.cmi status_flat.ml
+	status.cmi status_flat.ml config.h
 	cp status_flat.ml status.ml
 	$(OCAMLC) -custom -g -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmo \
 		status.ml $(MKLIBOPT)  $(CCOPT) $(PROFILE)
@@ -384,35 +380,31 @@ sadmanlib.cma: $(SADMAN)
 	$(OCAMLC) -a -o $@ $^ $(CCOPT) $(MKLIBOPT)
 
 status_ncurses.cmxa : dequeue.cmx status.cmi ncurses.o ncursesML.cmx \
-	poyFile.cmx lz.cmx statusCommon.cmx status_ncurses.ml
+	poyFile.cmx lz.cmx statusCommon.cmx status_ncurses.ml config.h
 	cp status_ncurses.ml status.ml
 	$(OCAMLOPT) $(CCOPT) -a -o $@ \
 	ncurses.o dequeue.cmx ncursesML.cmx \
 	statusCommon.cmx status.ml $(MKLIBOPT) $(PROFILE) $(LIBS) 
 
-status_html.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx status_html.ml
+status_html.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx \
+	status_html.ml config.h
 	cp status_html.ml status.ml
 	$(OCAMLOPT) -a -o $@ statusCommon.cmx status.ml $(MKLIBOPT) \
 	$(CCOPT) $(PROFILE)
 
-status.cmx: config.h status.ml
-	$(OCAMLOPT) -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmx status.ml \
-		$(MKLIBOPT) $(CCOPT) $(PROFILE)
-
-status_flat.cmxa: config.h poyExtension.cmo status.cmi poyFile.cmx lz.cmx \
-	statusCommon.cmx status_flat.ml
+status_flat.cmxa: poyExtension.cmo status.cmi poyFile.cmx lz.cmx \
+	statusCommon.cmx status_flat.ml config.h
 	cp status_flat.ml status.ml
 	$(OCAMLOPT) -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmx status.ml \
 		$(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_gtk2.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx status_gtk2.ml
-	cp status_gtk2.ml status.ml
+	cp status_gtk2.ml status.ml config.h
 	$(OCAMLOPT) -a -o $@ -I +lablgtk2 statusCommon.cmx status.ml \
 	$(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_cocoa.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx \
-	status_cocoa.ml PoyStatus.o \
-	PoyController.o CocoaCaml.o
+	status_cocoa.ml PoyStatus.o PoyController.o CocoaCaml.o config.h
 	cp status_cocoa.ml status.ml
 	$(OCAMLOPT) -a -o $@ PoyStatus.o PoyController.o \
 	CocoaCaml.o statusCommon.cmx status.ml $(MKLIBOPT) $(CCOPT) $(PROFILE)
@@ -559,7 +551,7 @@ depend/sampler.mldepend: sampler.ml
 sampler.cmo: tree.cmi timer.cmi statusCommon.cmo status.cmi sequence.cmi \
     sadmanOutput.cmi ptree.cmi nodeSig.cmo methods.cmo edge.cmi all_sets.cmi 
 	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) sampler.ml
-sampler.cmx: tree.cmx timer.cmx statusCommon.cmx status.cmx sequence.cmx \
+sampler.cmx: tree.cmx timer.cmx statusCommon.cmx $(INTERFACE) sequence.cmx \
     sadmanOutput.cmx ptree.cmx nodeSig.cmx methods.cmx edge.cmx all_sets.cmx 
 	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c sampler.ml
 depend/tabus.mldepend: tabus.ml
@@ -568,7 +560,7 @@ tabus.cmo: utl.cmi unionTree.cmo tree.cmi timer.cmi status.cmi \
     sparceMatrix.cmi searchInformation.cmo sadmanOutput.cmi ptree.cmi \
     nodeSig.cmo edge.cmi all_sets.cmi 
 	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) tabus.ml
-tabus.cmx: utl.cmx unionTree.cmx tree.cmx timer.cmx status.cmx \
+tabus.cmx: utl.cmx unionTree.cmx tree.cmx timer.cmx $(INTERFACE) \
     sparceMatrix.cmx searchInformation.cmx sadmanOutput.cmx ptree.cmx \
     nodeSig.cmx edge.cmx all_sets.cmx 
 	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c tabus.ml
@@ -591,7 +583,7 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 
 ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlc -v -g ultrametric.ml -package ocamlgraph -linkpkg
-ultrametric.cmx: status.cmx ultrametric.cmi ultrametric.ml
+ultrametric.cmx: $(INTERFACE) ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlopt -v ultrametric.ml -package ocamlgraph -linkpkg
 
 hennigParser.cmi: poyExtension.cmo hennig.cmo hennigParser.mly
