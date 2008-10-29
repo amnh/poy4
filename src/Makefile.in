@@ -567,7 +567,7 @@ depend/tabus.mldepend: tabus.ml
 tabus.cmo: utl.cmi unionTree.cmo tree.cmi timer.cmi status.cmi \
     sparceMatrix.cmi searchInformation.cmo sadmanOutput.cmi ptree.cmi \
     nodeSig.cmo edge.cmi all_sets.cmi 
-	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) sampler.ml
+	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) tabus.ml
 tabus.cmx: utl.cmx unionTree.cmx tree.cmx timer.cmx status.cmx \
     sparceMatrix.cmx searchInformation.cmx sadmanOutput.cmx ptree.cmx \
     nodeSig.cmx edge.cmx all_sets.cmx 
