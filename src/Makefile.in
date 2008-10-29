@@ -589,20 +589,8 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 # We have to seed some dependencies in the initial dependency contruction. The
 # following list of depencencies are linnear, that is, the second item depends
 # on the first one.
-.depend: poyExtension.cmo compileFlags.cmo sadmanOutput.cmi sadmanOutput.cmo sadman.cmi sadman.cmo poyFile.cmi poyFile.cmo gz-0.5.7/gz.cmi gz-0.5.7/gz.cmo lz.cmo \
-	statusCommon.cmo status.cmi $(INTERFACE) timer.cmi sexpr.cmi enum.cmi tags.cmo \
-	alphabet.cmi all_sets.cmi fileStream.cmo matrix.cmi cost_matrix.cmi sequence.cmi bitSet.cmi \
-	parser.cmi config.h \
-	poyExtension.cmo nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c \
-	nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml *.ml *.mli *.c *.h grappa/*.ml* graphps/*.ml*
-	$(OCAMLDEP) $(OCAML_INCLUDES) \
-	$(filter-out $(DOCFILTER), $(wildcard *.ml)) \
-	$(filter-out $(DOCFILTER:.ml=.mli), $(wildcard *.mli)) > .depend 
-	$(OCAMLDEP) $(PREPROCESSOR) $(CAMLP4PROCESSED) $(CAMLP4PROCESSED:.ml=.mli) >> .depend
-	$(OCAMLDEP) $(OPTIONSPREPROCESSOR) $(OPTIONPREPROCESSED) status.mli scripting.mli >> .depend
-ifneq ($(USEWIN32), true)
-	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c >> .depend
-endif
+.depend: 
+	touch depend/touch
 
 ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlc -v -g ultrametric.ml -package ocamlgraph -linkpkg
