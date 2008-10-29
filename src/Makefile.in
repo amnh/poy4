@@ -354,7 +354,7 @@ status_cocoa.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_cocoa.ml
 	CocoaCaml.o statusCommon.cmo status.ml $(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_html.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_html.ml
-	cp status_html.ml status.ml config.h
+	cp status_html.ml status.ml 
 	$(OCAMLC) -custom -g -a -o $@ statusCommon.cmo status.ml $(MKLIBOPT) \
 	$(CCOPT) $(PROFILE)
 
