@@ -518,7 +518,7 @@ else
 	rm latex_helper
 endif
 
-help.ml: ../doc/commands.tex
+help.ml: ocaml-str ../doc/commands.tex
 	./ocaml-str
 
 help.cmx: help.ml ocaml-str
@@ -533,7 +533,7 @@ help.cmo: help.ml ocaml-str
 help.html: ../doc/commands.tex ocaml-str
 	./ocaml-str -html
 # Static loading to support OS X and Cygwin...
-ocaml-str: helpRead.ml
+ocaml-str: help.txt helpRead.ml
 	$(OCAMLC) str.cma helpRead.ml -o ocaml-str
 
 # Poy Parser needs to be preprocessed and remove the unsafe option
@@ -550,6 +550,8 @@ depend/poyExtension.mldepend: poyExtension.ml
 	$(OCAMLDEP) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $< > $@
 depend/poyCommand.mldepend: poyCommand.ml
 	$(OCAMLDEP) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $< > $@
+commandLexer.ml: commandLexer.mll
+	$(OCAMLLEX) commandLexer.mll
 poyCommand.cmo: commandLexer.cmo poyCommand.ml
 	ocamlc $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c poyCommand.ml
 poyCommand.cmx: commandLexer.cmx poyCommand.ml
@@ -714,12 +716,12 @@ else
 		-cclib -L./graphps -cclib -L./ -cclib -lmlgz -cclib -lcamlgrappa $(GRAPHICS) unix.cma camlp4o.cma str.cma \
 		bigarray.cma $^ $(LIBS) 
 endif
-
-#include $(DEPEND)
-automatically_generated=status.ml buildNumber.ml help.ml nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml hennigParser.ml hennigLexer.ml hennigParser.mli
-include $(addprefix depend/, $(addsuffix depend, $(wildcard *.ml))) 
-include $(addprefix depend/, $(addsuffix depend, $(wildcard *.mli)))
-include $(addprefix depend/, $(addsuffix depend, $(automatically_generated)))
+automatically_generated=status.ml buildNumber.ml help.ml nonaddCS8.ml \
+						nonaddCS16.ml nonaddCS32.ml hennigParser.ml \
+						hennigLexer.ml hennigParser.mli commandLexer.ml
+ifeq (,$(findstring clean, $(MAKECMDGOALS)))
+include $(addprefix depend/, $(addsuffix depend, $(wildcard *.mli) $(wildcard *.ml) $(automatically_generated))) 
 ifneq ($(USEWIN32), true)
 include depend/cdepends
+endif
 endif

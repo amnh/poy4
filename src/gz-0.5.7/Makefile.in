@@ -76,6 +76,8 @@ findlib-install: all
 clean:
 	rm -f *.cm* *.a *.so *.o *.opt ocamlgz test test.opt
 
+distclean: clean
+
 ifdef OCAMLDOC
 doc : doc/index.html
 doc/index.html : gz.mli 
