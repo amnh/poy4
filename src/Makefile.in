@@ -287,7 +287,7 @@ clean::
 		mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml \
 		nonaddCS32.ml nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml \
 		hennigParser.mli hennigLexer.ml nexusParser.ml nexusParser.mli \
-		nexusLexier.ml status.ml ocaml-str poy_server \
+		nexusLexier.ml status.ml ocaml-str poy_server help.ml \
 	$(LOCAL_CLEAN) 
 	@for subs in $(SUBDIRS); do \
 	  cd $$subs; \
@@ -312,13 +312,8 @@ ctags: *.c
 	ctags -o ctags *.c
 
 # Runtime options
-buildNumber.cmx: $(filter-out help.ml, $(filter-out buildNumber.ml, $(wildcard *.ml))) *.c *.mli grappa/*.ml grappa/*.mli graphps/*.mli graphps/*.ml grappa/*.c grappa/*.h gz-0.5.7/*.c gz-0.5.7/*.h gz-0.5.7/*.ml gz-0.5.7/*.mli
+buildNumber.ml: $(filter-out help.ml, $(filter-out buildNumber.ml, $(wildcard *.ml))) *.c *.mli grappa/*.ml grappa/*.mli graphps/*.mli graphps/*.ml grappa/*.c grappa/*.h gz-0.5.7/*.c gz-0.5.7/*.h gz-0.5.7/*.ml gz-0.5.7/*.mli
 	echo "let build = \" " `$(MERCURIAL)` "\"" > buildNumber.ml
-	$(OCAMLOPT) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c buildNumber.ml $(PROFILE:-unsafe=) $(CCOPT:-unsafe)
-
-buildNumber.cmo: $(filter-out help.ml, $(filter-out buildNumber.ml, $(wildcard *.ml))) *.c *.mli grappa/*.ml grappa/*.mli graphps/*.mli graphps/*.ml grappa/*.c grappa/*.h gz-0.5.7/*.c gz-0.5.7/*.h gz-0.5.7/*.ml gz-0.5.7/*.mli
-	echo "let build = \" " `$(MERCURIAL)` "\"" > buildNumber.ml
-	$(OCAMLC) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c buildNumber.ml $(CCOPT:-unsafe)
 
 
 compileFlags.ml: ./config.log
@@ -716,12 +711,10 @@ else
 		-cclib -L./graphps -cclib -L./ -cclib -lmlgz -cclib -lcamlgrappa $(GRAPHICS) unix.cma camlp4o.cma str.cma \
 		bigarray.cma $^ $(LIBS) 
 endif
-automatically_generated=status.ml buildNumber.ml help.ml nonaddCS8.ml \
-						nonaddCS16.ml nonaddCS32.ml hennigParser.ml \
-						hennigLexer.ml hennigParser.mli commandLexer.ml
 ifeq (,$(findstring clean, $(MAKECMDGOALS)))
-include $(addprefix depend/, $(addsuffix depend, $(wildcard *.mli) $(wildcard *.ml) $(automatically_generated))) 
+include $(addprefix depend/, $(addsuffix depend, $(filter-out help.ml, $(wildcard *.ml)) $(wildcard *.mli) )) 
 ifneq ($(USEWIN32), true)
 include depend/cdepends
 endif
 endif
+

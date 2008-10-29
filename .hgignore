@@ -61,3 +61,6 @@ mpoy.dSYM
 mpoy_console.dSYM
 poy_test
 universal
+depend/*.mldepend
+depend/*.mlidepend
+depend/cdepends
