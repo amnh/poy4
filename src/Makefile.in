@@ -282,11 +282,12 @@ all_libs: status_ncurses.cma status_flat.cma sequences.cma distances.cma \
 -include Makefile.local
 
 clean::
-	rm -f .depend *.annot *.cmi *.cmo *.cmx* *.o *.a *.so \
-	mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml \
-	nonaddCS32.ml nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml \
-	hennigParser.mli hennigLexer.ml nexusParser.ml nexusParser.mli \
-	nexusLexier.ml status.ml ocaml-str poy_server \
+	rm -f depend/*.mldepend depend/*.mlidepend depend/cdepends *.annot *.cmi \
+		*.cmo *.cmx* *.o *.a *.so \
+		mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml \
+		nonaddCS32.ml nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml \
+		hennigParser.mli hennigLexer.ml nexusParser.ml nexusParser.mli \
+		nexusLexier.ml status.ml ocaml-str poy_server \
 	$(LOCAL_CLEAN) 
 	@for subs in $(SUBDIRS); do \
 	  cd $$subs; \
@@ -400,7 +401,7 @@ status_html.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx status_html.ml
 	$(CCOPT) $(PROFILE)
 
 status.cmx: config.h status.ml
-	$(OCAMLOPT) -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmx status.ml \
+	$(OCAMLOPT) -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmx status.ml \
 		$(MKLIBOPT) $(CCOPT) $(PROFILE)
 
 status_flat.cmxa: config.h poyExtension.cmo status.cmi poyFile.cmx lz.cmx \
@@ -453,12 +454,6 @@ graph: all_libs
 	$(FOR_DOC_FILES) || true
 
 subdirs: $(SUBDIRS)
-
-parser.cmo: fileStream.cmo parser.cmi parser.ml 
-	$(OCAMLC) $(OCAML_INCLUDES:-unsafe=) -c $(DEBUG:-unsafe=) parser.ml
-
-parser.cmx: fileStream.cmx parser.ml 
-	$(OCAMLOPT) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c parser.ml $(PROFILE:-unsafe=) $(CCOPT:-unsafe)
 
 status.cma status.cmxa: ./config.log
 
@@ -523,99 +518,63 @@ else
 	rm latex_helper
 endif
 
-help.cmx: help.txt ocaml-str helpRead.ml
+help.ml: ../doc/commands.tex
 	./ocaml-str
+
+help.cmx: help.ml ocaml-str
 	$(OCAMLOPT) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c help.ml \
 		$(PROFILE:-unsafe=) $(CCOPT:-unsafe)
 
-help.cmo: help.txt ocaml-str helpRead.ml
+help.cmo: help.ml ocaml-str
 	./ocaml-str
 	$(OCAMLC) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c help.ml \
 		$(CCOPT:-unsafe)
 
-help.html: help.txt ocaml-str helpRead.ml
+help.html: ../doc/commands.tex ocaml-str
 	./ocaml-str -html
 # Static loading to support OS X and Cygwin...
-ocaml-str:
+ocaml-str: helpRead.ml
 	$(OCAMLC) str.cma helpRead.ml -o ocaml-str
 
 # Poy Parser needs to be preprocessed and remove the unsafe option
+depend/poyParser.mldepend: poyParser.ml
+	$(OCAMLDEP) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $< > $@
 poyParser.cmo: poyParser.ml
-	ocamlc $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c $<
+	$(OCAMLC) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c $<
+poyParser.cmx: poyParser.ml
+	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OFLAGS:-unsafe=) \
+		$(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c $<
 poyExtension.cmo: poyExtension.ml
-	ocamlc $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c poyExtension.ml
+	$(OCAMLC) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c poyExtension.ml
+depend/poyExtension.mldepend: poyExtension.ml
+	$(OCAMLDEP) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $< > $@
+depend/poyCommand.mldepend: poyCommand.ml
+	$(OCAMLDEP) $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $< > $@
 poyCommand.cmo: commandLexer.cmo poyCommand.ml
 	ocamlc $(PREPROCESSOR:-unsafe=) $(OCAML_INCLUDES:-unsafe=) -c poyCommand.ml
-poyParser.cmx: poyParser.ml
-	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c $<
 poyCommand.cmx: commandLexer.cmx poyCommand.ml
 	$(OCAMLOPT) $(PREPROCESSOR:-unsafe=) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES:-unsafe=) $(CCOPT:-unsafe=) -c poyCommand.ml
 poyParser.cma: poyParser.ml
 	$(OCAMLC) $(PREPROCESSOR:-unsafe=) -I +camlp4 $(OCAML_INCLUDES:-unsafe=) -c $(DEBUG:-unsafe=) $<
-status_gtk2.cmo: status_gtk2.ml
-	$(OCAMLC) -I +lablgtk2 $(OCAML_INCLUDES) -c $(DEBUG) status_gtk2.ml
-main.cmo: poyExtension.cmo arguments.cmo phylo.cmo main.ml config.h
-	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) main.ml
-main.cmx: poyExtension.cmo arguments.cmx phylo.cmx main.ml config.h
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) -c main.ml
-sadmanOutput.cmo: sadmanOutput.cmi sadmanOutput.ml
-	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) sadmanOutput.ml
-sadmanOutput.cmx: sadmanOutput.cmi sadmanOutput.ml
-	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) -c sadmanOutput.ml
-sequence.cmi: config.h poyExtension.cmo matrix.cmi cost_matrix.cmi \
-	alphabet.cmi all_sets.cmi sequence.mli
-	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.mli
-sequence.cmo: config.h poyExtension.cmo sadmanOutput.cmi matrix.cmi \
-	fingerPrint.cmi cost_matrix.cmi alphabet.cmi all_sets.cmi sequence.cmi \
-	sequence.ml
-	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) sequence.ml
-sequence.cmx: config.h poyExtension.cmo sadmanOutput.cmx matrix.cmx \
-	fingerPrint.cmx cost_matrix.cmx alphabet.cmx all_sets.cmx sequence.cmi \
-	sequence.ml
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) \
-		-c sequence.ml
-seqCS.cmo: config.h poyExtension.cmo tags.cmo status.cmi sequence.cmi \
-	sadmanOutput.cmi matrix.cmi intSpec.cmi data.cmi cost_matrix.cmi \
-	alphabet.cmi all_sets.cmi seqCS.ml
-	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) seqCS.ml
-seqCS.cmx: config.h poyExtension.cmo tags.cmx status.cmi sequence.cmi \
-	sadmanOutput.cmi matrix.cmi intSpec.cmi data.cmi cost_matrix.cmi \
-	alphabet.cmi all_sets.cmi seqCS.ml
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) \
-		-c seqCS.ml
-scripting.cmo: config.h poyExtension.cmo poyExtension.cmo scripting.cmi \
-	scripting.ml
-	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) \
-		scripting.ml
-scripting.cmx: config.h poyExtension.cmo poyExtension.cmo scripting.cmi \
-	scripting.ml
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) \
-		-c scripting.ml
-timer.cmo: config.h poyExtension.cmo timer.cmi timer.ml
-	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) timer.ml
-timer.cmx: config.h poyExtension.cmo timer.cmi timer.ml
-	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) -c timer.ml
-fileStream.cmo: config.h gz-0.5.7/gz.cma poyExtension.cmo poyFile.cmo lz.cmo fileStream.ml
-	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) \
-		fileStream.ml
-fileStream.cmx: config.h gz-0.5.7/gz.cmxa poyExtension.cmo poyFile.cmx lz.cmx fileStream.ml
-	$(OCAMLOPT)   $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) -c \
-		fileStream.ml
-statusCommon.cmo: config.h poyExtension.cmo poyFile.cmo gz-0.5.7/gz.cma \
-	lz.cmo statusCommon.ml
-	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) \
-		statusCommon.ml
-statusCommon.cmx: config.h poyExtension.cmo poyFile.cmx gz-0.5.7/gz.cmxa \
-	lz.cmx statusCommon.ml
-	$(OCAMLOPT)   $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) \
-		-c statusCommon.ml
-portal.cmo: poyExtension.cmo phylo.cmo portal.ml
-	$(OCAMLC)   $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) \
-		portal.ml
-portal.cmx: poyExtension.cmo phylo.cmx portal.ml
-	$(OCAMLOPT)   $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) \
-		-c portal.ml
 
+depend/sampler.mldepend: sampler.ml
+	$(OCAMLDEP) $(OCAML_INCLUDES:-unsafe=) $< > $@
+sampler.cmo: tree.cmi timer.cmi statusCommon.cmo status.cmi sequence.cmi \
+    sadmanOutput.cmi ptree.cmi nodeSig.cmo methods.cmo edge.cmi all_sets.cmi 
+	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) sampler.ml
+sampler.cmx: tree.cmx timer.cmx statusCommon.cmx status.cmx sequence.cmx \
+    sadmanOutput.cmx ptree.cmx nodeSig.cmx methods.cmx edge.cmx all_sets.cmx 
+	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c sampler.ml
+depend/tabus.mldepend: tabus.ml
+	$(OCAMLDEP) $(OCAML_INCLUDES:-unsafe=) $< > $@
+tabus.cmo: utl.cmi unionTree.cmo tree.cmi timer.cmi status.cmi \
+    sparceMatrix.cmi searchInformation.cmo sadmanOutput.cmi ptree.cmi \
+    nodeSig.cmo edge.cmi all_sets.cmi 
+	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) sampler.ml
+tabus.cmx: utl.cmx unionTree.cmx tree.cmx timer.cmx status.cmx \
+    sparceMatrix.cmx searchInformation.cmx sadmanOutput.cmx ptree.cmx \
+    nodeSig.cmx edge.cmx all_sets.cmx 
+	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c tabus.ml
 
 # Generics for all the builds
 
@@ -630,9 +589,9 @@ DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
 # We have to seed some dependencies in the initial dependency contruction. The
 # following list of depencencies are linnear, that is, the second item depends
 # on the first one.
-.depend: compileFlags.cmo sadmanOutput.cmo sadman.cmi sadman.cmo poyFile.cmi poyFile.cmo lz.cmo \
+.depend: poyExtension.cmo compileFlags.cmo sadmanOutput.cmi sadmanOutput.cmo sadman.cmi sadman.cmo poyFile.cmi poyFile.cmo gz-0.5.7/gz.cmi gz-0.5.7/gz.cmo lz.cmo \
 	statusCommon.cmo status.cmi $(INTERFACE) timer.cmi sexpr.cmi enum.cmi tags.cmo \
-	alphabet.cmi all_sets.cmi fileStream.cmo sequence.cmi bitSet.cmi \
+	alphabet.cmi all_sets.cmi fileStream.cmo matrix.cmi cost_matrix.cmi sequence.cmi bitSet.cmi \
 	parser.cmi config.h \
 	poyExtension.cmo nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c \
 	nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml *.ml *.mli *.c *.h grappa/*.ml* graphps/*.ml*
@@ -650,50 +609,49 @@ ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 ultrametric.cmx: status.cmx ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlopt -v ultrametric.ml -package ocamlgraph -linkpkg
 
-hennigParser.cmi: hennig.cmo hennigParser.mly
+hennigParser.cmi: poyExtension.cmo hennig.cmo hennigParser.mly
 	$(OCAMLYACC) hennigParser.mly
 	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) hennigParser.mli
 
-hennigParser.ml: hennigParser.cmi
+hennigParser.ml: poyExtension.cmo hennigParser.cmi
 
-hennigLexer.ml: hennig.cmo hennigParser.cmi hennigLexer.mll
+hennigLexer.ml: poyExtension.cmo hennig.cmo hennigParser.cmi hennigLexer.mll
 	$(OCAMLLEX) hennigLexer.mll
 
-commandLexer.ml: commandLexer.mll
-	$(OCAMLLEX) commandLexer.mll
-
-commandLexer.cmo: commandLexer.ml
-	$(OCAMLC) -I +camlp4 -c commandLexer.ml
-
-commandLexer.cmx: commandLexer.ml
-	$(OCAMLOPT) -I +camlp4 -c commandLexer.ml
-
-nexusParser.cmi: nexus.cmo nexusParser.mly
+nexusParser.cmi: poyExtension.cmo nexus.cmo nexusParser.mly
 	$(OCAMLYACC) nexusParser.mly
 	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) nexusParser.mli
 
-nexusParser.ml: nexusParser.cmi
+nexusParser.ml: poyExtension.cmo nexusParser.cmi
 
-nexusLexer.ml: nexus.cmo nexusParser.cmi nexusLexer.mll
+nexusLexer.ml: poyExtension.cmo nexus.cmo nexusParser.cmi nexusLexer.mll
 	$(OCAMLLEX) nexusLexer.mll
 
-.ml.cmo:
-	$(OCAMLC) $(OCAML_INCLUDES) -c $(DEBUG) $<
+%.cmo: %.ml poyExtension.cmo
+	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) $<
 
-.ml.cma:
-	$(OCAMLC) -I +camlp4 $(OCAML_INCLUDES) -c $(DEBUG) $<
+%.cmx: %.ml poyExtension.cmo
+	$(OCAMLOPT) $(OPTIONSPREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c $< $(PROFILE)
 
-.ml.cmx:
-	$(OCAMLOPT) $(OFLAGS) $(OCAML_INCLUDES) $(CCOPT) -c $< $(PROFILE)
+%.cmi: %.mli poyExtension.cmo
+	$(OCAMLC) $(OPTIONSPREPROCESSOR) -I +camlp4 $(OCAML_INCLUDES) $(DEBUG) $<
 
-.mli.cmi:
-	$(OCAMLC) $(OCAML_INCLUDES) $(DEBUG) $<
+depend/%.mlidepend: %.mli poyExtension.cmo 
+	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) $(filter %.mli, $<) > $@
+
+depend/%.mldepend: %.ml poyExtension.cmo 
+	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) $(filter %.ml, $<) > $@
 
 .m.o:
 	$(CC) -I `$(OCAMLC) -where` -c -framework Cocoa $< 
 
 .c.o: config.h
 	$(OCAMLOPT) -ccopt "$(DEFOPTS)" $(CCOPT) -c -I $(INCLUDE) $< $(PROFILE)
+
+depend/cdepends: $(wildcard *.c) nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c
+ifneq ($(USEWIN32), true)
+	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c > depend/cdepends
+endif
 
 mpoy: $(MAIN_OBJS)
 ifeq ($(USEPARALLEL), true)
@@ -769,5 +727,11 @@ else
 		bigarray.cma $^ $(LIBS) 
 endif
 
-include $(DEPEND)
-
+#include $(DEPEND)
+automatically_generated=status.ml buildNumber.ml help.ml nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml hennigParser.ml hennigLexer.ml hennigParser.mli
+include $(addprefix depend/, $(addsuffix depend, $(wildcard *.ml))) 
+include $(addprefix depend/, $(addsuffix depend, $(wildcard *.mli)))
+include $(addprefix depend/, $(addsuffix depend, $(automatically_generated)))
+ifneq ($(USEWIN32), true)
+include depend/cdepends
+endif
