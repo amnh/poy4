@@ -177,10 +177,12 @@ gz-0.5.7/gz.cmxa:
 gz-0.5.7/gz.cma:
 	$(MAKE) -C gz-0.5.7 gz.cma
 
-grappa/grappa.cmxa:
+grappa/grappa.cmxa: grappa/grappa.cmx grappa/libcamlgrappa.a \
+	$(wildcard grappa/*.c) $(wildcard grappa/*.h)
 	$(MAKE) -C grappa grappa.cmxa
 
-grappa/grappa.cma:
+grappa/grappa.cma: grappa/grappa.cmo grappa/libcamlgrappa.a \
+	$(wildcard grappa/*.c) $(wildcard grappa/*.h)
 	$(MAKE) -C grappa grappa.cma
 
 graphps/graphps.cmx: graphps/graphps.mli graphps/graphps.ml
@@ -188,6 +190,9 @@ graphps/graphps.cmx: graphps/graphps.mli graphps/graphps.ml
 
 graphps/graphps.cmo: graphps/graphps.mli graphps/graphps.ml
 	$(MAKE) -C graphps graphps.cmo
+
+grappa/%.o : grappa/%.c
+	$(MAKE) -C grappa $@
 
 # run as "make target DEBUG=-g" to compile a debug executable
 DEBUG = -g
@@ -627,7 +632,7 @@ depend/%.mldepend: %.ml poyExtension.cmo
 
 depend/cdepends: $(wildcard *.c) nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c
 ifneq ($(USEWIN32), true)
-	$(OCAMLOPT) $(CCOPT) -ccopt -MM *.c > depend/cdepends
+	$(OCAMLOPT) $(CCOPT) -ccopt -MM grappa/*.c *.c > depend/cdepends
 endif
 
 mpoy: $(MAIN_OBJS)
@@ -704,7 +709,10 @@ else
 		bigarray.cma $^ $(LIBS) 
 endif
 ifeq (,$(findstring clean, $(MAKECMDGOALS)))
-include $(addprefix depend/, $(addsuffix depend, $(filter-out help.ml, $(wildcard *.ml)) $(wildcard *.mli) )) 
+include $(addprefix depend/, $(addsuffix depend, \
+	$(filter-out help.ml, $(wildcard *.ml)) \
+	$(wildcard ./graphps/*.ml) $(wildcard ./graphps/*.mli) \
+	$(wildcard ./grappa/*.ml) $(wildcard ./grappa/*.mli) $(wildcard *.mli) )) 
 ifneq ($(USEWIN32), true)
 include depend/cdepends
 endif
