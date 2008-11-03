@@ -373,8 +373,7 @@ let process_file mode filename output_file =
     .TP\n\
     --help\n\
     Display this list of options. \n\
-    \n.SH VERSION\n 4.0." ^ (Str.global_replace (Str.regexp " ") ""
-    BuildNumber.build) ^ "\n\
+    \n.SH VERSION\n " ^ Version.version_string ^ "\n\
     .SH COMMANDS\n.P\n\
     For complete documentation go to \
     http://research.amnh.org/scicomp/projects/poy.php.\n\

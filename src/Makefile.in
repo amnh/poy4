@@ -79,32 +79,26 @@ ifeq ($(USE_XSLT), true)
 	DEFOPTS := -DUSE_XSLT $(DEFOPTS)
 endif
 
-ifeq ($(USEINTERFACE), ncurses)
-	INTERFACE = status_ncurses.cma 
-endif
+INTERFACE:=statusCommon.cmo status.cmo
+
 READLINE:=
 ifeq ($(USEINTERFACE), readline)
+	INTERFACE := readlineml.o $(INTERFACE)
 	DEFOPTS := $(DEFOPTS) -DUSEREADLINE
 	CCOPT := $(CCOPT) -cclib -lreadline
-	READLINE := readlineml.o
-	INTERFACE = status_flat.cma 
 endif
-ifeq ($(USEINTERFACE), flat)
-	INTERFACE = status_flat.cma 
+ifeq ($(USEINTERFACE), ncurses)
+	INTERFACE := ncurses.o dequeue.cmo ncursesML.cmo $(INTERFACE)
+	DEFOPTS := $(DEFOPTS) -DUSENCURSES
+	CCOPT := $(CCOPT) -cclib -lncurses
 endif
 ifeq ($(USEINTERFACE), gtk2)
-	INTERFACE = status_gtk2.cma
 	GRAPHICS := lablgtk.cma
 	OCAML_INCLUDES := -I +lablgtk2 $(OCAML_INCLUDES)
 endif
 ifeq ($(USEINTERFACE), cocoa)
-	INTERFACE = status_cocoa.cma
 	CCOPT := -ccopt "-framework Cocoa" $(CCOPT)
 endif
-ifeq ($(USEINTERFACE), html)
-	INTERFACE = status_html.cma
-endif
-
 
 
 ifeq ($(USEGRAPHICS), tk)
@@ -157,10 +151,6 @@ ifeq ($(USEGRAPHICS), ocaml)
 	DEFOPTS := $(DEFOPTS) -DUSEGRAPHICS=1
 endif
 
-ifeq ($(USEINTERFACE), ncurses)
-	DEFOPTS := $(DEFOPTS) -DUSENCURSES
-endif
-
 
 ifeq ($(USEWIN32), true)
 	DEFOPTS := $(DEFOPTS) -DUSEWIN32
@@ -184,6 +174,9 @@ grappa/grappa.cmxa: grappa/grappa.cmx grappa/libcamlgrappa.a \
 grappa/grappa.cma: grappa/grappa.cmo grappa/libcamlgrappa.a \
 	$(wildcard grappa/*.c) $(wildcard grappa/*.h)
 	$(MAKE) -C grappa grappa.cma
+
+grappa/libcamlgrappa.a: grappa/*.c grappa/*.h
+	$(MAKE) -C grappa libcamlgrappa.a
 
 graphps/graphps.cmx: graphps/graphps.mli graphps/graphps.ml
 	$(MAKE) -C graphps graphps.cmx
@@ -278,7 +271,7 @@ UNIT_OBJS = $(BASE_OBJS) test_unit.cmo
 
 SADMAN = sadmanOutput.cmo sadman.cmo
 
-all_libs: status_ncurses.cma status_flat.cma sequences.cma distances.cma \
+all_libs: sequences.cma distances.cma \
 	trees.cma sadmanlib.cma sequences.cmxa distances.cmxa \
 	trees.cmxa parsers.cmxa sadmanlib.cmxa
 
@@ -287,8 +280,8 @@ all_libs: status_ncurses.cma status_flat.cma sequences.cma distances.cma \
 -include Makefile.local
 
 clean::
-	rm -f depend/*.mldepend depend/*.mlidepend depend/cdepends *.annot *.cmi \
-		*.cmo *.cmx* *.o *.a *.so \
+	rm -f depend/*.ml* depend/cdepends *.annot *.cmi \
+		depend/graphps/*.ml* depend/grappa/*.ml* *.cmo *.cmx* *.o *.a *.so \
 		mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml \
 		nonaddCS32.ml nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml \
 		hennigParser.mli hennigLexer.ml nexusParser.ml nexusParser.mli \
@@ -337,38 +330,6 @@ compileFlags.ml: ./config.log
 	echo "let str_interface = \"" `grep USEINTERFACE ./config.log` "\"" >> $@
 	echo "let str_graphics = \"" `grep USEGRAPHICS ./config.log` "\"" >> $@
 
-status.ml: $(INTERFACE)
-
-# The libraries
-status_ncurses.cma : dequeue.cmo status.cmi ncurses.o ncursesML.cmo \
-	poyFile.cmo lz.cmo statusCommon.cmo status_ncurses.ml config.h
-	cp status_ncurses.ml status.ml
-	$(OCAMLC) $(CCOPT) -custom -g -a -o $(@) ncurses.o \
-	ncursesML.cmo dequeue.cmo statusCommon.cmo status.ml $(MKLIBOPT) \
-	$(PROFILE) $(LIBS) 
-
-status_gtk2.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_gtk2.ml
-	cp status_gtk2.ml status.ml config.h
-	$(OCAMLC) -custom -g -a -o $@ -I +lablgtk2 statusCommon.cmo status.ml \
-	$(MKLIBOPT) $(CCOPT) $(PROFILE)
-
-status_cocoa.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_cocoa.ml \
-	PoyStatus.o PoyController.o CocoaCaml.o config.h
-	cp status_cocoa.ml status.ml
-	$(OCAMLC) -custom -g -a -o $@ PoyStatus.o PoyController.o \
-	CocoaCaml.o statusCommon.cmo status.ml $(MKLIBOPT) $(CCOPT) $(PROFILE)
-
-status_html.cma: status.cmi poyFile.cmo lz.cmo statusCommon.cmo status_html.ml
-	cp status_html.ml status.ml 
-	$(OCAMLC) -custom -g -a -o $@ statusCommon.cmo status.ml $(MKLIBOPT) \
-	$(CCOPT) $(PROFILE)
-
-status_flat.cma: config.h poyExtension.cmo poyFile.cmo lz.cmo statusCommon.cmo \
-	status.cmi status_flat.ml config.h
-	cp status_flat.ml status.ml
-	$(OCAMLC) -custom -g -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmo \
-		status.ml $(MKLIBOPT)  $(CCOPT) $(PROFILE)
-
 distances.cma: sequences.cma $(DISTANCE_LIBS)
 	$(OCAMLC) $(OCAML_INCLUDES) -custom -a -o $@ $(^:sequences.cma=) $(MKLIBOPT) $(CCOPT)
 
@@ -384,36 +345,23 @@ sequences.cma: $(SEQUENCE)
 sadmanlib.cma: $(SADMAN)
 	$(OCAMLC) -a -o $@ $^ $(CCOPT) $(MKLIBOPT)
 
-status_ncurses.cmxa : dequeue.cmx status.cmi ncurses.o ncursesML.cmx \
-	poyFile.cmx lz.cmx statusCommon.cmx status_ncurses.ml config.h
+status.ml: config.h $(wildcard status_*.ml)
+ifeq ($(USEINTERFACE), ncurses)
 	cp status_ncurses.ml status.ml
-	$(OCAMLOPT) $(CCOPT) -a -o $@ \
-	ncurses.o dequeue.cmx ncursesML.cmx \
-	statusCommon.cmx status.ml $(MKLIBOPT) $(PROFILE) $(LIBS) 
-
-status_html.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx \
-	status_html.ml config.h
-	cp status_html.ml status.ml
-	$(OCAMLOPT) -a -o $@ statusCommon.cmx status.ml $(MKLIBOPT) \
-	$(CCOPT) $(PROFILE)
-
-status_flat.cmxa: poyExtension.cmo status.cmi poyFile.cmx lz.cmx \
-	statusCommon.cmx status_flat.ml config.h
+else ifeq ($(USEINTERFACE), readline)
 	cp status_flat.ml status.ml
-	$(OCAMLOPT) -a -o $@ $(OPTIONSPREPROCESSOR) statusCommon.cmx status.ml \
-		$(MKLIBOPT) $(CCOPT) $(PROFILE)
-
-status_gtk2.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx status_gtk2.ml
-	cp status_gtk2.ml status.ml config.h
-	$(OCAMLOPT) -a -o $@ -I +lablgtk2 statusCommon.cmx status.ml \
-	$(MKLIBOPT) $(CCOPT) $(PROFILE)
-
-status_cocoa.cmxa: status.cmi poyFile.cmx lz.cmx statusCommon.cmx \
-	status_cocoa.ml PoyStatus.o PoyController.o CocoaCaml.o config.h
+else ifeq ($(USEINTERFACE), flat)
+	cp status_flat.ml status.ml
+else ifeq ($(USEINTERFACE), gtk2)
+	cp status_gtk2.ml status.ml
+else ifeq ($(USEINTERFACE), cocoa)
 	cp status_cocoa.ml status.ml
-	$(OCAMLOPT) -a -o $@ PoyStatus.o PoyController.o \
-	CocoaCaml.o statusCommon.cmx status.ml $(MKLIBOPT) $(CCOPT) $(PROFILE)
+else ifeq ($(USEINTERFACE), html)
+	cp status_html.ml status.ml
+endif
 
+status.cmo: statusCommon.cmo status.cmi status.ml
+status.cmx: statusCommon.cmx status.cmi status.ml
 
 sequences.cmxa: $(SEQUENCE:.cmo=.cmx)
 	$(OCAMLOPT) -a -o $@ $^ $(MKLIBOPT) $(CCOPT) $(PROFILE)
@@ -447,8 +395,6 @@ graph: all_libs
 
 subdirs: $(SUBDIRS)
 
-status.cma status.cmxa: ./config.log
-
 # All the libraries specialized for certain size in the character set.
 # First we define the sed scripts that will replace the names with the
 # approprate needs 
@@ -456,13 +402,13 @@ SED8 = sed "s/nonadd_/nonadd8_/g; s/NONADDSIZE/8/g"
 SED16 = sed "s/nonadd_/nonadd16_/g; s/NONADDSIZE/16/g"
 SED32 = sed "s/nonadd_/nonadd32_/g; s/NONADDSIZE/32/g"
 
-nonaddCS8.ml: parser.cmi nonaddCS.ml
+nonaddCS8.ml: nonaddCS.ml
 	$(SED8) nonaddCS.ml > $@
 
-nonaddCS16.ml: parser.cmi nonaddCS.ml
+nonaddCS16.ml: nonaddCS.ml
 	$(SED16) nonaddCS.ml > $@
 
-nonaddCS32.ml: parser.cmi nonaddCS.ml
+nonaddCS32.ml: nonaddCS.ml
 	$(SED32) nonaddCS.ml > $@
 
 nonaddCSc8.c: nonaddCSc.c
@@ -489,18 +435,19 @@ poy.1: help.txt
 
 # Help file gets made using OCaml script
 help.txt: compileFlags.cmx sadmanOutput.cmx poyFile.cmx lz.cmx statusCommon.cmx \
-	buildNumber.cmx gz-0.5.7/gz.cmxa fileStream.cmx latex.ml ../doc/allcommands.tex
+	buildNumber.cmx gz-0.5.7/gz.cmxa fileStream.cmx buildNumber.cmx version.cmx \
+	latex.ml ../doc/allcommands.tex
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper \
-		-cclib "-L./gz-0.5.7 -lmlgz" -cclib \
-		-L$(OCAMLMPI) mpi.cmxa unix.cmxa str.cmxa compileFlags.cmx \
-		sadmanOutput.cmx poyFile.cmx lz.cmx gz-0.5.7/gz.cmxa statusCommon.cmx fileStream.cmx buildNumber.cmx \
-		latex.ml $(LIBS)
+	-cclib "-L./gz-0.5.7 -lmlgz" -cclib \
+	-L$(OCAMLMPI) mpi.cmxa unix.cmxa str.cmxa compileFlags.cmx \
+	sadmanOutput.cmx poyFile.cmx lz.cmx gz-0.5.7/gz.cmxa statusCommon.cmx \
+	fileStream.cmx buildNumber.cmx version.cmx latex.ml $(LIBS)
 else 
 	$(OCAMLOPT) $(OFLAGS:-unsafe=) $(OCAML_INCLUDES) $(CCOPT) -o latex_helper \
 	unix.cmxa str.cmxa compileFlags.cmx -cclib "-L./gz-0.5.7 -lmlgz" \
-	sadmanOutput.cmx poyFile.cmx lz.cmx gz-0.5.7/gz.cmxa statusCommon.cmx fileStream.cmx buildNumber.cmx \
-	latex.ml $(LIBS)
+	sadmanOutput.cmx poyFile.cmx lz.cmx gz-0.5.7/gz.cmxa statusCommon.cmx \
+	fileStream.cmx buildNumber.cmx version.cmx latex.ml $(LIBS)
 endif
 ifeq ($(USEWIN32), true)
 	./latex_helper.exe 
@@ -574,12 +521,6 @@ tabus.cmx: utl.cmx unionTree.cmx tree.cmx timer.cmx $(INTERFACE) \
 
 .SUFFIXES: .ml .mli .cmo .cmx .cmi .c .o
 
-OPTIONPREPROCESSED = status_flat.ml status.ml seqCS.ml fileStream.ml \
-					 statusCommon.ml sequence.ml sequence.mli timer.ml \
-					 scripting.ml main.ml portal.ml
-
-DOCFILTER = $(CAMLP4PROCESSED) $(OPTIONPREPROCESSED)
-
 # We have to seed some dependencies in the initial dependency contruction. The
 # following list of depencencies are linnear, that is, the second item depends
 # on the first one.
@@ -591,23 +532,24 @@ ultrametric.cmo: status.cmi ultrametric.cmi ultrametric.ml
 ultrametric.cmx: $(INTERFACE) ultrametric.cmi ultrametric.ml
 	ocamlfind ocamlopt -v ultrametric.ml -package ocamlgraph -linkpkg
 
-hennigParser.cmi: poyExtension.cmo hennig.cmo hennigParser.mly
+hennigParser.ml: poyExtension.cmo hennigParser.mly
 	$(OCAMLYACC) hennigParser.mly
-	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) hennigParser.mli
 
-hennigParser.ml: poyExtension.cmo hennigParser.cmi
+hennigParser.mli: hennigParser.ml
 
-hennigLexer.ml: poyExtension.cmo hennig.cmo hennigParser.cmi hennigLexer.mll
-	$(OCAMLLEX) hennigLexer.mll
+hennigLexer.ml: hennigLexer.mll
+	$(OCAMLLEX).opt hennigLexer.mll
 
-nexusParser.cmi: poyExtension.cmo nexus.cmo nexusParser.mly
-	$(OCAMLYACC) nexusParser.mly
+nexusLexer.ml: nexusLexer.mll
+	$(OCAMLLEX).opt nexusLexer.mll
+
+nexusParser.cmi: poyExtension.cmo nexus.cmo nexusParser.mli
 	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) nexusParser.mli
 
-nexusParser.ml: poyExtension.cmo nexusParser.cmi
+nexusParser.ml: nexusParser.mly
+	$(OCAMLYACC) nexusParser.mly
 
-nexusLexer.ml: poyExtension.cmo nexus.cmo nexusParser.cmi nexusLexer.mll
-	$(OCAMLLEX) nexusLexer.mll
+nexusParser.mli: nexusParser.ml
 
 %.cmo: %.ml poyExtension.cmo
 	$(OCAMLC) $(OPTIONSPREPROCESSOR) $(OCAML_INCLUDES) -c $(DEBUG) $<
@@ -632,7 +574,7 @@ depend/%.mldepend: %.ml poyExtension.cmo
 
 depend/cdepends: $(wildcard *.c) nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c
 ifneq ($(USEWIN32), true)
-	$(OCAMLOPT) $(CCOPT) -ccopt -MM grappa/*.c *.c > depend/cdepends
+	$(OCAMLOPT) $(CCOPT) -ccopt "-I grappa" -ccopt -MM grappa/*.c *.c > depend/cdepends
 endif
 
 mpoy: $(MAIN_OBJS)
@@ -709,12 +651,23 @@ else
 		bigarray.cma $^ $(LIBS) 
 endif
 ifeq (,$(findstring clean, $(MAKECMDGOALS)))
+AUTOGENERATED=nonaddCS8.ml nonaddCS16.ml nonaddCS32.ml status.ml \
+				   nexusParser.ml nexusParser.mli hennigParser.ml \
+				   hennigParser.mli nexusLexer.ml hennigLexer.ml \
+				   compileFlags.ml status.ml
 include $(addprefix depend/, $(addsuffix depend, \
-	$(filter-out help.ml, $(wildcard *.ml)) \
+	$(filter-out help.ml, $(AUTOGENERATED) $(wildcard *.ml)) \
 	$(wildcard ./graphps/*.ml) $(wildcard ./graphps/*.mli) \
 	$(wildcard ./grappa/*.ml) $(wildcard ./grappa/*.mli) $(wildcard *.mli) )) 
 ifneq ($(USEWIN32), true)
 include depend/cdepends
 endif
 endif
-
+# One additional dependency
+PREPROCESSED=scripting.cmo seqCS.cmo sequence.cmo statusCommon.cmo timer.cmo
+$(PREPROCESSED): config.h
+$(patsubst %.cmo,%.cmx,$(PREPROCESSED)): config.h
+hennigLexer.cmo: hennigParser.cmi 
+hennigLexer.cmx: hennigParser.cmx
+nexusLexer.cmo: nexusParser.cmi 
+nexusLexer.cmx: nexusParser.cmx
