@@ -6,10 +6,16 @@ MERCURIAL :=@MERCURIAL@
 ../src/version.cmo: 
 	$(MAKE) -C ../src version.cmo
 
-version.tex: ../src/version.cmo makeVersion.ml
+../src/buildNumber.cmo: 
+	$(MAKE) -C ../src buildNumber.cmo
+
+../src/compileFlags.cmo: 
+	$(MAKE) -C ../src compileFlags.cmo
+
+version.tex: ../src/compileFlags.cmo ../src/buildNumber.cmo ../src/version.cmo makeVersion.ml
 	$(OCAML) -noprompt str.cma ../src/compileFlags.cmo ../src/buildNumber.cmo  ../src/version.cmo -I ../src/ makeVersion.ml > version.tex
 
-version: ../src/version.cmo makeVersion.ml
+version: ../src/compileFlags.cmo ../src/buildNumber.cmo ../src/version.cmo makeVersion.ml
 	$(OCAML) -noprompt str.cma ../src/compileFlags.cmo ../src/buildNumber.cmo  ../src/version.cmo -I ../src/ makeVersion.ml -text
 
 QuickStart.pdf: QuickStart.tex
