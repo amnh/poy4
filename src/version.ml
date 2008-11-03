@@ -63,8 +63,6 @@ let option_to_string b =
             b 
             --> append rcstring
             --> append (string_of_int x) 
-            --> append build_string
-            --> append patch_version
 
 let small_version_string = 
     let concatenator x acc = acc ^ string_of_int x in
