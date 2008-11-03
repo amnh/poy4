@@ -294,7 +294,8 @@ clean::
 distclean: clean
 	rm -f Makefile buildNumber.ml commandLexer.ml compileFlags.ml config.h \
 		config.log config.status graphps/Makefile graphps/graphps.o \
-		grappa/Makefile help.ml help.txt manpoy.txt nexusLexer.ml poy.1
+		grappa/Makefile help.ml help.txt manpoy.txt nexusLexer.ml poy.1 \
+		buildNumber.mli compileFlags.mli
 	$(MAKE) -C gz-0.5.7 distclean
 
 depend: .depend
