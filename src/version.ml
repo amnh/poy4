@@ -41,8 +41,8 @@ let major_version = 4
 let minor_version = 1
 let release_version = 0
 let patch_version = Str.global_replace (Str.regexp " +") ""  BuildNumber.build
-type release_options = Development of string | Candidate of int | Official
-let release_option = Development patch_version
+type release_options = Development | Candidate of int | Official
+let release_option = Development 
 
 let ( --> ) a b = b a
 let append a b = b ^ a
@@ -50,14 +50,21 @@ let append a b = b ^ a
 let if_run a f b c = if a then f b c else c 
 
 let option_to_string b =
+    let build_string = " build " 
+    and rcstring = " Release Candidate " in
     match release_option with
-    | Development patch_version -> 
-            b --> append " development build " 
+    | Development ->
+            b 
+            --> append " Development"
+            --> append build_string
             --> append patch_version
     | Official -> b
     | Candidate x ->
-            b --> append "Release Candidate "
-            --> append (string_of_int x)
+            b 
+            --> append rcstring
+            --> append (string_of_int x) 
+            --> append build_string
+            --> append patch_version
 
 let small_version_string = 
     let concatenator x acc = acc ^ string_of_int x in
