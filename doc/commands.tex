@@ -2,7 +2,7 @@
 
 \usepackage[htt]{hyphenat}
 \usepackage{multind}
-\usepackage[pdftitle={POY 4.0 Documentation},pdfauthor={Andres Varon et. al.},
+\usepackage[pdftitle={POY 4 Documentation},pdfauthor={Andres Varon et. al.},
 pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
 \usepackage{color}
 \usepackage{xspace}
@@ -253,6 +253,9 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
 % Hyphenations
 \hyphenation{mo-le-cu-lar an-aly-ses an-aly-sis au-to-ma-ti-cally ho-mo-lo-gy chro-mo-so-me chro-mo-so-me-le-vel op-ti-mi-za-tion}
 
+
+\include{version}
+
 \makeatletter
 \def\thickhrulefill{\leavevmode \leaders \hrule height 1pt\hfill \kern \z@}
 \renewcommand{\maketitle}{\begin{titlepage}%
@@ -263,7 +266,7 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
     \null
     \vskip 50\p@
     \begin{center}
-      {{\huge \texttt{POY} 4.0}
+      {{\huge \texttt{POY} \smallbuildnumber}
       \par 
       \vskip \baselineskip
       \hrule height 1pt 
@@ -271,7 +274,7 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
       \vskip \baselineskip
       Program Documentation 
       \par
-      \small Version 4.0.\buildnumber }\par
+      \small Version \buildnumber }\par
     \end{center}
     \vskip 85\p@
     \begin{flushright}
@@ -288,8 +291,6 @@ pdfkeywords={phylogenetic analysis, direct optimization, POY}]{hyperref}
 }
 
 \makeatother
-
-\include{version}
 
 \author{\textbf{Program and Documentation} \\ Andr\'es Var\'on \\ Le Sy Vinh \\
 Illya Bomash \\ Ward C. Wheeler \\ \bigskip \textbf{Documentation} \\ Ilya T\"emkin \\ Megan Cevasco \\ Kurt M. Pickett \\ Juli\'an Faivovich \\ Taran Grant \\ William Leo Smith}
@@ -351,7 +352,7 @@ All rights reserved. Published 2008
 \vspace*{0.5cm}
 
 \emph{Var\'on, A., L. S. Vinh, I. Bomash, W. C. Wheeler.} 2008.
-\texttt{POY} 4.0.\buildnumber. New York, American Museum of
+\texttt{POY} \buildnumber. New York, American Museum of
 Natural History. Documentation by Var\'on, A., L. S. Vinh, I. Bomash,
 W. Wheeler, I. T\"emkin, M. Cevasco, K. M. Pickett, J. Faivovich, T. Grant, and
 W. L. Smith. \url{http://research.amnh.org/scicomp/projects/poy.php}

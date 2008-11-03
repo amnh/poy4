@@ -17,6 +17,8 @@ AC_SUBST(USE_LARGE_MESSAGES)
 AC_SUBST(DOCSTRING)
 AC_SUBST(OCAMLFLAGS)
 AC_SUBST(MERCURIAL)
+AC_SUBST(OCAML)
+AC_CHECK_PROGS([OCAML], [ocaml])
 
 AC_CHECK_PROGS([MERCURIAL], [hg])
 
@@ -36,9 +38,6 @@ AC_ARG_WITH(extras, [AS_HELP_STRING([--with-extras],
 AC_ARG_WITH(ocaml-flags, [AS_HELP_STRING([--with-ocaml-flags], 
             [Add the following flags to the ocaml compiler.])],
             [OCAMLFLAGS=$withval],[])
-
-AC_ARG_WITH(version-number, [AS_HELP_STRING([--with-version-number], [Use the configuration provided version number (used for release purposes only).])], [MERCURIAL="echo $withval"],[MERCURIAL="$MERCURIAL id -i"])
-
 
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
