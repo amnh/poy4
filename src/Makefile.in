@@ -313,6 +313,7 @@ buildNumber.ml: $(filter-out help.ml, $(filter-out buildNumber.ml, $(wildcard *.
 	echo "let build = \" " `$(MERCURIAL)` "\"" > buildNumber.ml
 	$(OCAMLC) -c -i buildNumber.ml > buildNumber.mli
 
+buildNumber.mli: buildNumber.ml
 
 compileFlags.ml: ./config.log
 	echo "(** automatically generated description of compile-time flags *)" \
@@ -330,6 +331,8 @@ compileFlags.ml: ./config.log
 	echo "let str_interface = \"" `grep USEINTERFACE ./config.log` "\"" >> $@
 	echo "let str_graphics = \"" `grep USEGRAPHICS ./config.log` "\"" >> $@
 	$(OCAMLC) -c -i compileFlags.ml > compileFlags.mli
+
+compileFlags.mli: compileFlags.ml
 
 distances.cma: sequences.cma $(DISTANCE_LIBS)
 	$(OCAMLC) $(OCAML_INCLUDES) -custom -a -o $@ $(^:sequences.cma=) $(MKLIBOPT) $(CCOPT)
