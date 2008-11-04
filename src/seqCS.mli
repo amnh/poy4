@@ -35,13 +35,7 @@ module ProtAff :
         type off_type = Sequence.Unions.off_type
 
         val to_int : Sequence.Unions.int_type -> int
-        type u =
-          Sequence.Unions.u = {
-          seq : Sequence.s;
-          offset : off_type;
-          union_c1 : off_type;
-          union_c2 : off_type;
-        }
+        type u = Sequence.Unions.u 
         val leaf : Sequence.s -> u
         val union :
           Sequence.s ->
