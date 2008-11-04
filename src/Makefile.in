@@ -352,16 +352,26 @@ sadmanlib.cma: $(SADMAN)
 status.ml: config.h $(wildcard status_*.ml)
 ifeq ($(USEINTERFACE), ncurses)
 	cp status_ncurses.ml status.ml
-else ifeq ($(USEINTERFACE), readline)
+else 
+ifeq ($(USEINTERFACE), readline)
 	cp status_flat.ml status.ml
-else ifeq ($(USEINTERFACE), flat)
+else 
+ifeq ($(USEINTERFACE), flat)
 	cp status_flat.ml status.ml
-else ifeq ($(USEINTERFACE), gtk2)
+else 
+ifeq ($(USEINTERFACE), gtk2)
 	cp status_gtk2.ml status.ml
-else ifeq ($(USEINTERFACE), cocoa)
+else 
+ifeq ($(USEINTERFACE), cocoa)
 	cp status_cocoa.ml status.ml
-else ifeq ($(USEINTERFACE), html)
+else 
+ifeq ($(USEINTERFACE), html)
 	cp status_html.ml status.ml
+endif
+endif
+endif
+endif
+endif
 endif
 
 status.cmo: statusCommon.cmo status.cmi status.ml
