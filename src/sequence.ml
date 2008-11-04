@@ -1800,6 +1800,7 @@ module Unions = struct
 IFDEF USE_LONG_SEQUENCES THEN
         type off_type = 
             (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
+	type int_type = int32
         let zero = Int32.zero
         let to_int = Int32.to_int
         let of_int = Int32.of_int
@@ -1807,6 +1808,7 @@ IFDEF USE_LONG_SEQUENCES THEN
 ELSE
         type off_type = 
             (int, Bigarray.int16_signed_elt, Bigarray.c_layout) Bigarray.Array1.t
+	type int_type = int
         let zero = 0
         let to_int x = x
         let of_int x = x

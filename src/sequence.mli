@@ -458,15 +458,16 @@ IFDEF USE_LONG_SEQUENCES THEN
     type off_type =
             (int32, Bigarray.int32_elt, Bigarray.c_layout) 
             Bigarray.Array1.t
+    type int_type = int32
 
-    val to_int : int32 -> int
 ELSE
     type off_type =
             (int, Bigarray.int16_signed_elt, Bigarray.c_layout) 
             Bigarray.Array1.t
-    val to_int : int -> int
+    type int_type = int
 END
 
+    val to_int : int_type -> int
     type u = { 
         seq : s; 
         offset : off_type;

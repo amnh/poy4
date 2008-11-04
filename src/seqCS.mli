@@ -32,10 +32,9 @@ module ProtAff :
     type s = Sequence.s
     module Unions :
       sig
-        type off_type =
-            (int, Bigarray.int16_signed_elt, Bigarray.c_layout)
-            Bigarray.Array1.t
-        val to_int : int -> int
+        type off_type = Sequence.Unions.off_type
+
+        val to_int : Sequence.Unions.int_type -> int
         type u =
           Sequence.Unions.u = {
           seq : Sequence.s;
