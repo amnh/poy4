@@ -161,7 +161,7 @@ module DOS :
       do_single_sequence ->
       do_single_sequence -> 'a -> 'b -> do_single_sequence
     val distance :
-      'a ->
+      Alphabet.a ->
       heuristic -> int -> do_single_sequence -> do_single_sequence -> int
   end
 val max_float : float
