@@ -737,7 +737,8 @@ NOPREPROCESSOR= tabus.ml sampler.ml
 
 .depend13: poyExtension.cmo helpIndex.mli helpIndex.ml analyzer.mli analyzer.ml commandLexer.ml \
 	commandLexer.ml poyCommand.mli scripting.mli scripting.ml \
-	arguments.mli arguments.ml phylo.mli phylo.ml main.mli main.ml  
+	arguments.mli arguments.ml phylo.mli phylo.ml main.mli main.ml \
+	test_scripts.ml test_scripts.mli
 	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) \
 		$(filter-out poyExtension.cmo $(NOPREPROCESSOR) ,$^) > $@
 

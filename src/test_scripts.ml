@@ -63,8 +63,7 @@ let test_with_costs mode cost =
     in
     test_script (test_tree_cost verifier cost)
 
-let test_for_termination () = 
-    test_script (fun _ -> true)
+let test_for_termination () = test_script (fun _ -> true)
 
 let tree_cost : float option ref = ref None
 let tree_cost_less : float option ref = ref None
