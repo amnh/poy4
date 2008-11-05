@@ -111,8 +111,9 @@ else
 	LABLTK =
 endif
 
-PREPROCESSOR = -pp 'camlp4orf pa_extend.cmo'
-PREPROCESSOR_EXTENSION = -pp 'camlp4orf pa_extend.cmo poyExtension.cmo'
+CAMLP4ORF=@CAMLP4ORF@
+PREPROCESSOR = -pp '$(CAMLP4ORF) pa_extend.cmo'
+PREPROCESSOR_EXTENSION = -pp '$(CAMLP4ORF) pa_extend.cmo poyExtension.cmo'
 
 
 # Encapsulate all the options
@@ -152,7 +153,7 @@ ifeq ($(USEWIN32), true)
 	DEFOPTS := $(DEFOPTS) -DUSEWIN32
 endif
 
-OPTIONSPREPROCESSOR := -pp 'camlp4orf poyExtension.cmo $(DEFOPTS)'
+OPTIONSPREPROCESSOR := -pp '$(CAMLP4ORF) poyExtension.cmo $(DEFOPTS)'
 
 
 SUBDIRS = grappa graphps gz-0.5.7
@@ -523,10 +524,10 @@ hennigParser.ml: poyExtension.cmo hennigParser.mly
 hennigParser.mli: hennigParser.ml
 
 hennigLexer.ml: hennigLexer.mll
-	$(OCAMLLEX).opt hennigLexer.mll
+	$(OCAMLLEX) hennigLexer.mll
 
 nexusLexer.ml: nexusLexer.mll
-	$(OCAMLLEX).opt nexusLexer.mll
+	$(OCAMLLEX) nexusLexer.mll
 
 nexusParser.cmi: poyExtension.cmo nexus.cmo nexusParser.mli
 	$(OCAMLC)  $(OCAML_INCLUDES) -c $(DEBUG) nexusParser.mli
