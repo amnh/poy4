@@ -740,7 +740,8 @@ let rec explode_tree tree =
             | `PerturbateNSearch _ -> parallelize_this_command ()
             | `Build (_, x, _) ->
                     (match x with
-                    | `Constraint (_, _, None, _) -> parallelize_only_me ()
+                    | `Constraint (_, _, None, _) ->
+                            do_not_parallelize_me_but_recurse ()
                     | _ -> parallelize_this_command ())
             | `LocalOptimum (_, _, _, _, _, _, _, _, x, _, y) ->
                     if List.exists (fun x -> x = `KeepBestTrees) y then
