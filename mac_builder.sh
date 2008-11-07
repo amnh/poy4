@@ -22,11 +22,6 @@ function generate_binary {
     if [ ! $8 = "" ]; then
         echo "Make OcamlMPI"
         PATH=$5:$PATH make ocamlmpi >> distro.log
-        echo "Make Depend"
-        if ! PATH=$5:$PATH make depend >> distro.log; then
-            echo "Failed in the depend step for $1 $2 $3 target $4"
-            exit 1
-        fi
         echo "Make $8"
         cd src
     fi

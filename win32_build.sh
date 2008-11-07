@@ -59,11 +59,6 @@ if ! make clean; then
     exit 1
 fi
 
-if ! make depend; then
-    echo "I could not make depend ..."
-    exit 1
-fi
-
 if ! make poy; then
     echo "I could not make poy!!! ..."
     exit 1
