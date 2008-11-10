@@ -9,6 +9,8 @@ module type GRAPHICS_TYPE =
     val foreground : color
     val lineto : int -> int -> unit
     val moveto : int -> int -> unit
+    val polyline : (int * int) list -> unit
+    val open_file : string -> unit
     val open_graph : string -> unit
     val plot : int -> int -> unit
     val red : color
@@ -17,6 +19,7 @@ module type GRAPHICS_TYPE =
     val size_y : unit -> int
     val text_size : string -> int * int
     val display : unit -> unit
+    val add_page : unit -> unit
   end
 exception Wrong_format of string
 val get_code : in_channel -> string

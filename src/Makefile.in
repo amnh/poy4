@@ -55,10 +55,31 @@ NATIVEDYNLINK := @NATIVEDYNLINK@
 
 INCLUDE = `$(OCAMLC) -where`
 
-CCOPT :=  -cc $(CC) -cclib "-L./gz-0.5.7 -lmlgz" -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
+CCOPT := -cc $(CC) -cclib "-L./gz-0.5.7 -lmlgz" -ccopt "$(CFLAGS)" -ccopt "-I $(INCLUDE)"
+
+CAMLPDFSOURCES=$(addprefix ./camlpdf-0.3/, utility.ml utility.mli io.ml io.mli \
+	  zlib.ml zlib.mli \
+	  transform.ml transform.mli \
+	  units.ml units.mli \
+	  paper.ml paper.mli \
+	  pdf.ml pdf.mli \
+	  pdfcrypt.ml pdfcrypt.mli \
+	  pdfwrite.ml pdfwrite.mli \
+	  pdfcodec.ml pdfcodec.mli \
+	  pdfread.ml pdfread.mli \
+	  pdfpages.ml pdfpages.mli \
+	  pdfdoc.ml pdfdoc.mli \
+	  pdffun.ml pdffun.mli \
+	  pdfimage.ml pdfimage.mli \
+	  glyphlist.ml glyphlist.mli \
+	  pdftext.ml pdftext.mli \
+      fonttables.ml fonttables.mli \
+	  graphicpdf.ml)
+
+CAMLPDFOBJ=$(subst .ml,.cmo,$(filter-out %.mli,$(CAMLPDFSOURCES)))
 
 OCAMLMPI = ../ocamlmpi/
-OCAML_INCLUDES := -I $(OCAMLMPI) -I +camlp4 -I ./gz-0.5.7 -I ./grappa -I ./graphps $(LABLTK)
+OCAML_INCLUDES := -I $(OCAMLMPI) -I +camlp4 -I ./gz-0.5.7 -I ./grappa -I ./camlpdf-0.3 -I ./graphps $(LABLTK)
 
 ifeq ($(USEWIN32), true)
 	CCOPT := -ccopt -mno-cygwin $(CCOPT)
@@ -241,7 +262,7 @@ ifneq ($(USEWIN32), true)
 	GETRUSAGE := getrusage.o
 endif
 
-BASE_OBJS :=  gz-0.5.7/gz.cma compileFlags.cmo sadmanlib.cma poyFile.cmo lz.cmo \
+BASE_OBJS :=  camlpdf-0.3/zlibstubs.o $(CAMLPDFOBJ) gz-0.5.7/gz.cma compileFlags.cmo sadmanlib.cma poyFile.cmo lz.cmo \
 	memProfiler.cmo enum.cmo bitSet.cmo $(READLINE) sleep.o \
 	timer.cmo $(GETRUSAGE) buildNumber.cmo version.cmo \
 	$(INTERFACE) sexpr.cmo tags.cmo poyFormaters.cmo \
@@ -276,7 +297,9 @@ all_libs: sequences.cma distances.cma \
 
 clean::
 	rm -f .depend* .cdepends *.annot *.cmi \
-		*.cmo *.cmx* *.o *.a *.so \
+		camlpdf-0.3/*.cmo camlpdf-0.3/*.cmx camlpdf-0.3/*.cmi \
+		camlpdf-0.3/*.cma camlpdf-0.3/*.cmxa \
+		camlpdf-0.3/*.o camlpdf-0.3/*.a *.cmo *.cmx* *.o *.a *.so \
 		mpoy_console poy_test mpoy poy *.cma nonaddCS8.ml nonaddCS16.ml \
 		nonaddCS32.ml nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c hennigParser.ml \
 		hennigParser.mli hennigLexer.ml nexusParser.ml nexusParser.mli \
@@ -549,10 +572,10 @@ nexusParser.mli: nexusParser.ml
 .m.o:
 	$(CC) -I `$(OCAMLC) -where` -c -framework Cocoa $< 
 
-.c.o: config.h
-	$(OCAMLOPT) -ccopt "$(DEFOPTS)" $(CCOPT) -c -I $(INCLUDE) $< $(PROFILE)
+%.o: %.c config.h
+	$(OCAMLOPT) -ccopt "$(DEFOPTS)" $(CCOPT) -ccopt "-o $@" -c -I $(INCLUDE) $< $(PROFILE)
 
-.cdepends: $(wildcard *.c) nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c
+.cdepends: $(wildcard *.c) camlpdf-0.3/zlibstubs.c nonaddCSc8.c nonaddCSc16.c nonaddCSc32.c
 ifneq ($(USEWIN32), true)
 	$(OCAMLOPT) $(CCOPT) -ccopt "-I grappa" -ccopt -MM grappa/*.c *.c > .cdepends
 endif
@@ -576,14 +599,14 @@ poy: $(MAIN_OBJS_OPT)
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(EXTRAS) \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-		-cclib -L./graphps -cclib -L./ \
+		-cclib -L./camlpdf-0.3 -cclib -L./graphps -cclib -L./ \
 		-cclib -L$(OCAMLMPI) $(CCOPT) $(PROFILE) -cclib -lmlgz \
 		-cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) \
 		$(NATIVEDYNLINK) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^ $(LIBS) 
 else
 	$(OCAMLOPT) $(PREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(EXTRAS) -verbose -ccopt -v \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-	-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
+	-cclib  -L/usr/lib -cclib -L./camlpdf-0.3 -cclib -L./graphps -cclib -L./  \
 	$(CCOPT) -cclib -lmlgz -cclib -lcamlgrappa $(PROFILE) -o poy \
 	$(GRAPHICS:.cma=.cmxa) $(NATIVEDYNLINK) camlp4fulllib.cmxa unix.cmxa str.cmxa \
 	bigarray.cmxa $^ $(LIBS) 
@@ -593,14 +616,14 @@ poy_server: $(PORTAL_OBJS_OPT)
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(EXTRAS) \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-		-cclib -L./graphps -cclib -L./ \
+		-cclib -L./camlpdf-0.3 -cclib -L./graphps -cclib -L./ \
 		-cclib -L$(OCAMLMPI) $(CCOPT) $(PROFILE) -cclib lmlgz \
 		-cclib -lcamlgrappa -o $@ mpi.cmxa $(GRAPHICS:.cma=.cmxa) \
 		$(NATIVEDYNLINK) camlp4fulllib.cmxa unix.cmxa str.cmxa bigarray.cmxa $^ $(LIBS) 
 else
 	$(OCAMLOPT) $(PREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(EXTRAS) -verbose -ccopt -v \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-		-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
+		-cclib  -L/usr/lib -cclib -L./camlpdf-0.3 -cclib -L./graphps -cclib -L./  \
 		$(CCOPT) -cclib -lmlgz -cclib -lcamlgrappa $(PROFILE) -o $@ \
 		$(GRAPHICS:.cma=.cmxa) $(NATIVEDYNLINK) camlp4fulllib.cmxa unix.cmxa str.cmxa \
 		bigarray.cmxa $^ $(LIBS) 
@@ -609,7 +632,7 @@ endif
 poy_test: $(TEST_OBJS_OPT)
 	$(OCAMLOPT) $(PREPROCESSOR) $(OFLAGS) $(OCAML_INCLUDES) $(EXTRAS) -verbose -ccopt -v \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-		-cclib  -L/usr/lib -cclib -L./graphps -cclib -L./  \
+		-cclib  -L/usr/lib -cclib -L./camlpdf-0.3 -cclib -L./graphps -cclib -L./  \
 		$(CCOPT) -cclib -lmlgz -cclib -lcamlgrappa $(PROFILE) -o poy_test \
 		$(GRAPHICS:.cma=.cmxa) $(NATIVEDYNLINK) camlp4fulllib.cmxa unix.cmxa str.cmxa \
 		bigarray.cmxa $^ $(LIBS) 
@@ -620,13 +643,13 @@ mpoy_console: $(BASE_OBJS) scripting.cmo phylo.cmo poyExtension.cmo
 ifeq ($(USEPARALLEL), true)
 	$(OCAMLTOP) $(PREPROCESSOR) $(OCAML_INCLUDES) -cc mpicc -cclib -L./ \
 		-cclib -L./gz-0.5.7 -cclib -L./grappa \
-		-I $(OCAMLMPI) -cclib -L./graphps -custom -cclib \
+		-I $(OCAMLMPI) -cclib -L./camlpdf-0.3 -cclib -L./graphps -custom -cclib \
 		-L$(OCAMLMPI) $(CCOPT) $(PROFILE) -cclib -lmlgz \
 		-cclib -lcamlgrappa -o $@ mpi.cma $(GRAPHICS) camlp4o.cma unix.cma str.cma \
 		bigarray.cma $^ $(LIBS) 
 else
 	$(OCAMLTOP) $(CCOPT) $(PREPROCESSOR) $(OCAML_INCLUDES) -o $@ \
-		-cclib -L./gz-0.5.7 -cclib -L./grappa \
+		-cclib -L./gz-0.5.7 -cclib -L./grappa -cclib -L./camlpdf-0.3 \
 		-cclib -L./graphps -cclib -L./ -cclib -lmlgz -cclib -lcamlgrappa $(GRAPHICS) unix.cma camlp4o.cma str.cma \
 		bigarray.cma $^ $(LIBS) 
 endif
@@ -721,6 +744,9 @@ NOPREPROCESSOR= tabus.ml sampler.ml
 	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) \
 		$(filter-out poyExtension.cmo $(NOPREPROCESSOR) ,$^) > $@
 
+.dependpdf: $(filter-out %.c, $(CAMLPDFSOURCES))
+	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) $^ > $@
+
 .depend11:  poyExtension.cmo searchInformation.mli searchInformation.ml \
 	chartree.mli chartree.ml sparceMatrix.mli sparceMatrix.ml unionTree.mli \
 	unionTree.ml allDirChar.mli allDirChar.ml dequeue.ml dequeue.mli \
@@ -747,6 +773,7 @@ PREPROCESSED=scripting.cmo seqCS.cmo sequence.cmo statusCommon.cmo timer.cmo
 $(PREPROCESSED): config.h
 
 include .dependbn
+include .dependpdf
 include .depend13
 include .depend12
 include .depend11
