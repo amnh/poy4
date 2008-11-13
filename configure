@@ -665,6 +665,7 @@ LTLIBOBJS'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_version_number
 enable_graphics
 enable_interface
 with_extras
@@ -1360,6 +1361,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-version-number   Use the configuration provided version number (used
+                          for release purposes only).
   --with-extras           Add the following object files to the final linking
                           rules (needed for windows).
   --with-ocaml-flags      Add the following flags to the ocaml compiler.
@@ -3051,6 +3054,15 @@ fi
 
   test -n "$MERCURIAL" && break
 done
+
+
+
+# Check whether --with-version-number was given.
+if test "${with_version_number+set}" = set; then
+  withval=$with_version_number; MERCURIAL="echo $withval"
+else
+  MERCURIAL="$MERCURIAL id -i"
+fi
 
 
 # Check whether --enable-graphics was given.

@@ -3,13 +3,13 @@ MERCURIAL :=@MERCURIAL@
 
 .PHONY: clean distclean version
 
-../src/version.cmo: 
+../src/version.cmo: ../src/version.ml
 	$(MAKE) -C ../src version.cmo
 
-../src/buildNumber.cmo: 
+../src/buildNumber.cmo: ../src/buildNumber.ml
 	$(MAKE) -C ../src buildNumber.cmo
 
-../src/compileFlags.cmo: 
+../src/compileFlags.cmo: ../src/compileFlags.ml
 	$(MAKE) -C ../src compileFlags.cmo
 
 version.tex: ../src/compileFlags.cmo ../src/buildNumber.cmo ../src/version.cmo makeVersion.ml
