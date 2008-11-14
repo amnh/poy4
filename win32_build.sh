@@ -44,7 +44,7 @@ if [ $update -eq 1 ]; then
         echo "Repository pull failed ... sorry pal!"
         exit 1
     fi
-    if ! hg update ${version}; then
+    if ! hg update ${TAG_NUMBER}; then
         echo "Repository update failed ... sorry pal!"
         exit 1
     fi
