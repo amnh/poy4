@@ -538,9 +538,16 @@ let get_weights data =
     data.character_specs []
 
 (* Returns a fresh object with the added synonym from [a] to [b] to [data]. *)
-let add_synonym data (a, b) =
+let rec aux_add_synonym stack data (a, b) =
     (* We need to check if [a] already has an assigned synonym *)
-    if All_sets.StringMap.mem a data.synonyms then begin
+    if (a = b) then begin
+        let msg = String.concat " to " (a :: (List.rev (b :: stack))) in
+        Status.user_message Status.Warning 
+        ("I'm ignoring the self-synonym " ^ msg);
+        data
+    end else if All_sets.StringMap.mem b data.synonyms then begin
+        aux_add_synonym (b :: stack) data (a, All_sets.StringMap.find b data.synonyms)
+    end else if All_sets.StringMap.mem a data.synonyms then begin
         (* Hum ... so we do have a synonym, we need now to check if [(a, b)]
          * is consistent with whatever is stored currently in [data],
          * otherwise this is an exception *)
@@ -561,6 +568,8 @@ let add_synonym data (a, b) =
         let ns = All_sets.StringMap.add a b data.synonyms in
         { data with synonyms = ns }
     end
+
+let add_synonym = aux_add_synonym []
 
 let add_synonyms_file data file = 
     try
