@@ -6,8 +6,14 @@ MERCURIAL :=@MERCURIAL@
 ../src/version.cmo: ../src/version.ml
 	$(MAKE) -C ../src version.cmo
 
+../src/buildNumber.ml:
+	$(MAKE) -C ../src buildNumber.ml 
+
 ../src/buildNumber.cmo: ../src/buildNumber.ml
 	$(MAKE) -C ../src buildNumber.cmo
+
+../src/compileFlags.ml:
+	$(MAKE) -C ../src compileFlags.ml 
 
 ../src/compileFlags.cmo: ../src/compileFlags.ml
 	$(MAKE) -C ../src compileFlags.cmo
