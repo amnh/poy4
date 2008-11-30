@@ -1,4 +1,9 @@
 exception Illegal_Arguments
+
+type union_element = 
+    | Single of Sequence.Unions.u
+    | Array of Sequence.Unions.u array
+
 module Codes :
   sig
     type key = int
@@ -188,9 +193,21 @@ module RL :
       'a * fs_sequences ->
       relaxed_lifted * fs_sequences -> 'b * fs_sequences -> int
   end
+
+module PartitionedDOS : sig
+    type fragment = 
+        | DO of DOS.do_single_sequence
+        | First of DOS.do_single_sequence
+        | Last of DOS.do_single_sequence
+    type partitioned_sequence = fragment array
+    val merge : partitioned_sequence -> DOS.do_single_sequence
+    val empty : Data.clip -> int -> Alphabet.a -> partitioned_sequence
+end
+
 type sequence_characters =
-    Heuristic_Selection of DOS.do_single_sequence
-  | Relaxed_Lifted of (RL.relaxed_lifted * RL.fs_sequences)
+    | Heuristic_Selection of DOS.do_single_sequence
+    | Partitioned of PartitionedDOS.partitioned_sequence
+    | Relaxed_Lifted of (RL.relaxed_lifted * RL.fs_sequences)
 type t = {
   characters : sequence_characters array;
   codes : int array;
@@ -203,7 +220,7 @@ type t = {
 module Union :
   sig
     type ustr = {
-      unions : Sequence.Unions.u option array;
+      unions : union_element option array;
       u_c2 : Cost_matrix.Two_D.m;
       u_alph : Alphabet.a;
       u_codes : int array;
@@ -214,16 +231,16 @@ module Union :
     val poly_saturation : ustr option -> int -> float
     val union : t -> ustr option -> ustr option -> ustr option
     val distance_union : ustr option -> ustr option -> float
-    val get_sequence_union : int -> ustr option -> Sequence.Unions.u option
+    val get_sequence_union : int -> ustr option -> union_element option
   end
 val cardinal : t -> int
 val empty : int -> Cost_matrix.Two_D.m -> Alphabet.a -> t
 val to_union : t -> Union.ustr option
 val to_string : t -> string
 val of_array :
-  Data.dynamic_hom_spec -> (Sequence.s * int) array -> int -> int -> t
+  Data.dynamic_hom_spec -> (Sequence.s array * int) array -> int -> int -> t
 val of_list :
-  Data.dynamic_hom_spec -> (Sequence.s * int) list -> int -> int -> t
+  Data.dynamic_hom_spec -> (Sequence.s array * int) list -> int -> int -> t
 val same_codes : t -> t -> bool
 val readjust :
   [< `ApproxD of 'a | `ThreeD of 'b ] ->

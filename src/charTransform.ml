@@ -542,7 +542,9 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
 
     let insert_union parent union_node (a, b, c, d, e) =
         try 
-            Some (a, b, Node.Union.get_sequence parent a union_node, c, d, e)
+            match Node.Union.get_sequence parent a union_node with
+            | SeqCS.Single x -> Some (a, b, x, c, d, e)
+            | SeqCS.Array _ -> failwith "transfor (direct_optimization) before"
         with
         | Failure "Node.get_sequence: could not find code" -> None
 
@@ -710,7 +712,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                     ([[seqs]], Data.code_taxon taxon data)) sequences
             in
             Data.process_parsed_sequences tcmfile tcm treed 
-            false alph name `Seq data new_data 
+            `DO false alph name `Seq data new_data 
         in
         root 
         --> Node.get_sequences None
@@ -1005,6 +1007,11 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 --> Data.make_fixed_states chars
                 --> Data.categorize
                 --> Node.load_data 
+        | `Partitioned chars ->
+                data
+                --> Data.make_partitioned chars 
+                --> Data.categorize
+                --> Node.load_data
         | `Direct_Optimization chars ->
                 data 
                 --> Data.make_direct_optimization chars

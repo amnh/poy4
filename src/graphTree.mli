@@ -1,37 +1,47 @@
 val leaf_distance : int
 val depth_distance : int
-module type GRAPHICS_TYPE =
-  sig
+module type GRAPHICS_TYPE = sig
+    type display
     type color = int
     val black : color
-    val close_graph : unit -> unit
-    val draw_string : string -> unit
-    val foreground : color
-    val lineto : int -> int -> unit
-    val moveto : int -> int -> unit
-    val polyline : (int * int) list -> unit
-    val open_file : string -> unit
-    val open_graph : string -> unit
-    val plot : int -> int -> unit
+    val close_graph : display -> unit
+    val draw_string : 
+        ?tag:string -> ?link:string -> display -> string -> display
+    val foreground : color 
+    val lineto : ?tag:string -> ?link:string -> display -> int -> int -> display
+    val moveto : display -> int -> int -> display
+    val polyline : display -> (int * int * string option * string option) list -> 
+        display
+    val open_file : string -> display
+    val open_graph : display -> string -> display
+    val plot : display -> int -> int -> display
     val red : color
-    val set_color : color -> unit
-    val size_x : unit -> int
-    val size_y : unit -> int
+    val set_color : display -> color -> display
+    val size_x : display -> int
+    val size_y : display -> int
     val text_size : string -> int * int
-    val display : unit -> unit
-    val add_page : unit -> unit
-  end
+    val display : display -> unit
+    val add_page : display -> display
+end
 exception Wrong_format of string
 val get_code : in_channel -> string
 module Make :
   functor (G : GRAPHICS_TYPE) ->
     sig
-      val draw_edges : int * int -> int * int -> unit
+      val draw_edges : G.display -> int * int -> int * int -> G.display
       val average : (int * int) list -> int ref * int
       val calc_depth_leaves :
         string Parser.Tree.t ->
         int ref -> int ref -> int ref -> int ref -> unit
+      val calc_depth_leaves_diag :
+        Tags.output ->
+        int ref -> int ref -> int ref -> int ref -> unit
       val draw :
-        ?size:string -> ?leafColor:G.color -> string Parser.Tree.t -> unit
-      val disp_tree : string -> string Parser.Tree.t -> unit
+        ?size:string -> ?leafColor:G.color -> G.display ->
+             string Parser.Tree.t -> G.display
+      val draw_diagnosis :
+          ?prefix:string -> ?size:string -> ?leafColor:G.color -> G.display ->
+             Tags.output -> G.display * (Tags.output list)
+      val disp_tree : 
+          G.display -> string -> string Parser.Tree.t -> G.display
     end

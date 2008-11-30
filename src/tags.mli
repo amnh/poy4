@@ -114,8 +114,7 @@ val to_xml :
   unit
 module Alphabet :
   sig val element : string val value : string val code : string end
-module Characters :
-  sig
+module Characters : sig
     val suffix : string
     val character : string
     val additive : string

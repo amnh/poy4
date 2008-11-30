@@ -74,7 +74,7 @@ module OneDirF :
         val saturation : u -> float
         val distance_node : int option -> n -> u -> float
         val compare : u -> u -> int
-        val get_sequence : int option -> int -> u -> Sequence.Unions.u
+        val get_sequence : int option -> int -> u -> SeqCS.union_element
       end
     val compare : n -> n -> int
     val for_support : int -> (int * n) list -> int list -> int list -> n list
@@ -152,7 +152,7 @@ module AllDirF :
         val saturation : u -> float
         val distance_node : int option -> n -> u -> float
         val compare : u -> u -> int
-        val get_sequence : int option -> int -> u -> Sequence.Unions.u
+        val get_sequence : int option -> int -> u -> SeqCS.union_element
       end
     val compare : n -> n -> int
     val for_support : int -> (int * n) list -> int list -> int list -> n list
