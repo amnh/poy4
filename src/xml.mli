@@ -100,7 +100,7 @@ val value_to_string : unstructured -> string
 (** [to_file ch xml] dumps the [xml] in the text channel [ch]. *)
 val to_file : out_channel -> xml -> unit
 
-(** {2 Tags}
+(** {2 Xml}
  *
  * Various tags employed in XML components. Convenient for comparison functions
  * or retrieve particular elments.*)

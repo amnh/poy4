@@ -34,14 +34,14 @@ module Make :
         string Parser.Tree.t ->
         int ref -> int ref -> int ref -> int ref -> unit
       val calc_depth_leaves_diag :
-        Tags.xml ->
+        Xml.xml ->
         int ref -> int ref -> int ref -> int ref -> unit
       val draw :
         ?size:string -> ?leafColor:G.color -> G.display ->
              string Parser.Tree.t -> G.display
       val draw_diagnosis :
           ?prefix:string -> ?size:string -> ?leafColor:G.color -> G.display ->
-             Tags.xml -> G.display * (Tags.xml list)
+             Xml.xml -> G.display * (Xml.xml list)
       val disp_tree : 
           G.display -> string -> string Parser.Tree.t -> G.display
     end

@@ -20,4 +20,4 @@ val display :
   string -> string -> (float * string Parser.Tree.t) array -> unit
 
 val display_diagnosis :
-  string -> string -> Tags.xml Sexpr.t -> unit
+  string -> string -> Xml.xml Sexpr.t -> unit

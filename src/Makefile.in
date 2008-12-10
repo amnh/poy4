@@ -265,7 +265,7 @@ endif
 BASE_OBJS :=  camlpdf-0.3/zlibstubs.o gz-0.5.7/gz.cma compileFlags.cmo sadmanlib.cma poyFile.cmo lz.cmo \
 	memProfiler.cmo enum.cmo bitSet.cmo $(READLINE) sleep.o \
 	timer.cmo $(GETRUSAGE) buildNumber.cmo version.cmo \
-	$(INTERFACE) sexpr.cmo tags.cmo poyFormaters.cmo \
+	$(INTERFACE) sexpr.cmo xml.cmo poyFormaters.cmo \
 	fileStream.cmo sequences.cma $(CAMLPDFOBJ) array_ops.cmo $(PARSER) \
 	distances.cma $(CHARACTER) methods.cmo trees.cma diagnosis.cmo \
 	supports.cmo help.cmo helpIndex.cmo analyzer.cmo \
@@ -685,7 +685,7 @@ NOPREPROCESSOR= tabus.ml sampler.ml
 		$(filter-out poyExtension.cmo $(NOPREPROCESSOR) ,$^) > $@
 
 .depend2: poyExtension.cmo statusCommon.ml statusCommon.ml status.mli status.ml \
-	tags.mli tags.ml poyFormaters.mli poyFormaters.ml fileStream.ml all_sets.mli \
+	xml.mli xml.ml poyFormaters.mli poyFormaters.ml fileStream.ml all_sets.mli \
 	all_sets.ml alphabet.mli alphabet.ml fileStream.ml cost_matrix.mli \
 	cost_matrix.ml matrix.mli matrix.ml primes.mli primes.ml fingerPrint.mli \
 	fingerPrint.ml sequence.mli sequence.ml sexpr.mli sexpr.ml 

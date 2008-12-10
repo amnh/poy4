@@ -256,7 +256,7 @@ val f_codes : t -> All_sets.Integers.t -> t
 val compare_data : t -> t -> int
 val ( --> ) : 'a -> ('a -> 'b) -> 'b
 val to_formatter :
-  Tags.attribute list -> t -> t option -> Data.d -> Tags.xml Sexpr.t list
+  Xml.attribute list -> t -> t option -> Data.d -> Xml.xml Sexpr.t list
 val tabu_distance : t -> float
 val explode :
   t ->
