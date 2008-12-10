@@ -195,7 +195,7 @@ module M :
       (AllDirNode.AllDirF.n, 'a) Ptree.p_tree
     val to_formatter :
       Tags.attributes ->
-      Data.d -> (AllDirNode.AllDirF.n, b) Ptree.p_tree -> Tags.output
+      Data.d -> (AllDirNode.AllDirF.n, b) Ptree.p_tree -> Tags.xml
   end
 module F :
   sig
@@ -215,7 +215,7 @@ module F :
     val incremental_uppass :
       (a, b) Ptree.p_tree -> Ptree.incremental list -> (a, b) Ptree.p_tree
     val to_formatter :
-      Tags.attributes -> Data.d -> (a, b) Ptree.p_tree -> Tags.output
+      Tags.attributes -> Data.d -> (a, b) Ptree.p_tree -> Tags.xml
     val root_costs : (a, b) Ptree.p_tree -> (Tree.edge * float) list
     val unadjust : (a, b) Ptree.p_tree -> (a, b) Ptree.p_tree
   end

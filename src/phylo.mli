@@ -104,7 +104,7 @@ module TreeOps :
     val incremental_uppass :
       (a, b) Ptree.p_tree -> Ptree.incremental list -> (a, b) Ptree.p_tree
     val to_formatter :
-      Tags.attributes -> Data.d -> (a, b) Ptree.p_tree -> Tags.output
+      Tags.attributes -> Data.d -> (a, b) Ptree.p_tree -> Tags.xml
     val root_costs : (a, b) Ptree.p_tree -> (Tree.edge * float) list
     val unadjust : (a, b) Ptree.p_tree -> (a, b) Ptree.p_tree
   end
@@ -143,6 +143,110 @@ module M :
     type b = Edges.e
     type c = CharOps.cs
     type tree = (a, b) Ptree.p_tree
+    module Kml :
+      sig
+        type phylogeny = tree
+        module GIS :
+          sig
+            type point =
+              Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.GIS.point = {
+              latitude : float;
+              longitude : float;
+              altitude : float;
+            }
+            type triangle = point * point * point
+            val horizontal_distance : point -> point -> float
+            val center_points : point -> point -> point
+            val center_triangle : triangle -> point
+          end
+        module TemporalGIS :
+          sig
+            type date = (int * int * int) option
+            type sample =
+              Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.TemporalGIS.sample = {
+              coordinates : GIS.point;
+              date : date;
+            }
+            val min_date : date -> date -> date
+            val csv : string -> (Tags.unstructured, sample) Hashtbl.t
+          end
+        module KTree :
+          sig
+            type simplified_topology =
+                (Tags.xml * TemporalGIS.sample) Parser.Tree.t
+            type node_name = Tags.unstructured
+            type topology =
+              Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KTree.topology = {
+              ancestors :
+                (Tags.unstructured, Tags.xml Tags.contents option) Hashtbl.t;
+              nodes : (Tags.unstructured, Tags.xml) Hashtbl.t;
+              topo : simplified_topology;
+            }
+            val adjust_tree : simplified_topology -> simplified_topology
+            val process : Data.d -> string -> phylogeny -> topology
+            val ancestor :
+              topology -> node_name -> Tags.xml Tags.contents option
+            val children :
+              topology -> node_name -> (node_name * node_name) option
+            val sister : topology -> node_name -> node_name option
+            val node : topology -> node_name -> Tags.xml
+            val is_root : topology -> node_name -> bool
+            val extract_gis : simplified_topology -> TemporalGIS.sample
+          end
+        module KFile :
+          sig
+            type node_information =
+                Data.d ->
+                KTree.topology ->
+                Tags.unstructured ->
+                [ `Bool of bool
+                | `Delayed of unit -> Tags.xml Sexpr.t
+                | `Empty
+                | `Float of float
+                | `FloatFloatTuple of float * float
+                | `Fun of unit -> string
+                | `Int of int
+                | `IntFloatTuple of int * float
+                | `IntTuple of int * int
+                | `Set of Tags.xml Sexpr.t list
+                | `Single of Tags.xml
+                | `String of string ]
+            type create_node =
+                node_information ->
+                Data.d ->
+                KTree.topology ->
+                Tags.xml ->
+                TemporalGIS.sample option ->
+                TemporalGIS.sample option ->
+                TemporalGIS.sample option ->
+                TemporalGIS.sample -> Tags.xml Sexpr.t
+            type adjust_tree =
+                KTree.simplified_topology -> KTree.simplified_topology
+            type styles = unit -> Tags.xml Sexpr.t
+            type folder =
+              Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KFile.folder = {
+              name : string;
+              node_information : node_information;
+              create_node : create_node option;
+            }
+            type plugin =
+              Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KFile.plugin = {
+              folders : folder list;
+              adjust_tree : adjust_tree;
+              styles : styles;
+            }
+            val default : plugin
+            val register_plugin : string -> plugin -> unit
+            val has_plugin : string -> bool
+            val kml :
+              ?plugin:string ->
+              string ->
+              string -> Data.d -> string -> phylogeny Sexpr.t -> unit
+            val create_line :
+              TemporalGIS.sample option ->
+              TemporalGIS.sample -> Tags.xml Tags.contents
+          end
+      end
     type r = (a, b, c) Scripting.run
     type minimum_spanning_tree = tree
     type build = minimum_spanning_tree list
@@ -303,6 +407,109 @@ type a = Nodes.n
 type b = Edges.e
 type c = CharOps.cs
 type tree = (a, b) Ptree.p_tree
+module Kml :
+  sig
+    type phylogeny = tree
+    module GIS :
+      sig
+        type point =
+          Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.GIS.point = {
+          latitude : float;
+          longitude : float;
+          altitude : float;
+        }
+        type triangle = point * point * point
+        val horizontal_distance : point -> point -> float
+        val center_points : point -> point -> point
+        val center_triangle : triangle -> point
+      end
+    module TemporalGIS :
+      sig
+        type date = (int * int * int) option
+        type sample =
+          Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.TemporalGIS.sample = {
+          coordinates : GIS.point;
+          date : date;
+        }
+        val min_date : date -> date -> date
+        val csv : string -> (Tags.unstructured, sample) Hashtbl.t
+      end
+    module KTree :
+      sig
+        type simplified_topology =
+            (Tags.xml * TemporalGIS.sample) Parser.Tree.t
+        type node_name = Tags.unstructured
+        type topology =
+          Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KTree.topology = {
+          ancestors :
+            (Tags.unstructured, Tags.xml Tags.contents option) Hashtbl.t;
+          nodes : (Tags.unstructured, Tags.xml) Hashtbl.t;
+          topo : simplified_topology;
+        }
+        val adjust_tree : simplified_topology -> simplified_topology
+        val process : Data.d -> string -> phylogeny -> topology
+        val ancestor :
+          topology -> node_name -> Tags.xml Tags.contents option
+        val children :
+          topology -> node_name -> (node_name * node_name) option
+        val sister : topology -> node_name -> node_name option
+        val node : topology -> node_name -> Tags.xml
+        val is_root : topology -> node_name -> bool
+        val extract_gis : simplified_topology -> TemporalGIS.sample
+      end
+    module KFile :
+      sig
+        type node_information =
+            Data.d ->
+            KTree.topology ->
+            Tags.unstructured ->
+            [ `Bool of bool
+            | `Delayed of unit -> Tags.xml Sexpr.t
+            | `Empty
+            | `Float of float
+            | `FloatFloatTuple of float * float
+            | `Fun of unit -> string
+            | `Int of int
+            | `IntFloatTuple of int * float
+            | `IntTuple of int * int
+            | `Set of Tags.xml Sexpr.t list
+            | `Single of Tags.xml
+            | `String of string ]
+        type create_node =
+            node_information ->
+            Data.d ->
+            KTree.topology ->
+            Tags.xml ->
+            TemporalGIS.sample option ->
+            TemporalGIS.sample option ->
+            TemporalGIS.sample option ->
+            TemporalGIS.sample -> Tags.xml Sexpr.t
+        type adjust_tree =
+            KTree.simplified_topology -> KTree.simplified_topology
+        type styles = unit -> Tags.xml Sexpr.t
+        type folder =
+          Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KFile.folder = {
+          name : string;
+          node_information : node_information;
+          create_node : create_node option;
+        }
+        type plugin =
+          Scripting.Make(Nodes)(Edges)(TreeOps)(CharOps).Kml.KFile.plugin = {
+          folders : folder list;
+          adjust_tree : adjust_tree;
+          styles : styles;
+        }
+        val default : plugin
+        val register_plugin : string -> plugin -> unit
+        val has_plugin : string -> bool
+        val kml :
+          ?plugin:string ->
+          string -> string -> Data.d -> string -> phylogeny Sexpr.t -> unit
+        val create_line :
+          TemporalGIS.sample option ->
+          TemporalGIS.sample -> Tags.xml Tags.contents
+      end
+  end
 type r = (a, b, c) Scripting.run
 type minimum_spanning_tree = tree
 type build = minimum_spanning_tree list

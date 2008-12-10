@@ -1,6 +1,20 @@
+(*** Producing and processing an XML like data structure.
+*
+* Each character has it's own components, and accessing those components could
+* be cumbersome for many applications, in particular the generations of
+* user-specific kinds of output.  For this reason, the name of the data
+* structure is [xml].
+*
+* This module defines the [xml] type, the tags used by other modules, and
+* some convenience functions to manipulate the types here defined.*)
+
+(** {2 Types} *)
+
 type tag = string
-type value =
-    [ `Bool of bool
+
+(** Unstructured values. *)
+type unstructured =
+    [ `Bool of bool     
     | `Float of float
     | `FloatFloatTuple of float * float
     | `Fun of unit -> string
@@ -8,33 +22,40 @@ type value =
     | `IntFloatTuple of int * float
     | `IntTuple of int * int
     | `String of string ]
+
+(** A structured type can be a Sexpr.t, or a delayed computation that will only
+* be performed if required, producing a Sexpr.t itself. This is a simple
+* structured type because we don't allow a CDATA kind of contents here, which is
+* really an unstructured content from the XML point of view.*)
+type 'b simple_struc =
+    [ `Delayed of (unit -> 'b Sexpr.t)
+    | 'b Sexpr.t ]
+
+(** The official structured type, is any of the simple structured constructures
+* defined in [smiple_struc] and the CDATA, which could hold a unstructured, or some
+* structured contents (for example when holding HTML). *)
 type 'a struc =
-    [ `Delayed of unit -> 'a Sexpr.t
-    | `Empty
-    | `Set of 'a Sexpr.t list
-    | `Single of 'a ]
-val eagerly_compute :
-  [< `Delayed of unit -> ([> 'b Sexpr.t ] as 'a)
-   | `Empty
-   | `Set of 'b Sexpr.t list
-   | `Single of 'b ] ->
-  'a
-type attribute = tag * value
+    [ 'a simple_struc 
+    | `CDATA of [ unstructured | 'a simple_struc] ]
+
+(** An attribute of a tag is a pair consisting of a name of the attribute, which
+* has type [tag], and an attribute unstructured. *)
+type attribute = tag * unstructured
+
+(** The attributes of a tag is simply a list of [attribute]. *)
 type attributes = attribute list
-type output =
-    tag * attributes *
-    [ `Bool of bool
-    | `Delayed of unit -> output Sexpr.t
-    | `Empty
-    | `Float of float
-    | `FloatFloatTuple of float * float
-    | `Fun of unit -> string
-    | `Int of int
-    | `IntFloatTuple of int * float
-    | `IntTuple of int * int
-    | `Set of output Sexpr.t list
-    | `Single of output
-    | `String of string ]
+
+(** The contents of a tag, that is, the contents of an XML node, is either a
+* [unstructured], or a [struc]. *)
+type 'a contents = [ unstructured | 'a struc ]
+
+(** Finally we define the [xml] type, consisting of a triplet, of [tag],
+* [attributes] of the tag, and its [contents], which must hold inside more valid
+* XML, that is, [output]. *)
+type xml = tag * attributes * xml contents
+
+val eagerly_compute : [ 'b simple_struc ] -> 'b Sexpr.t
+
 val make : 'a -> 'b -> 'c -> 'a * 'b * 'c
 val remove_non_alpha_numeric : string -> string
 val value_to_string :
@@ -58,60 +79,7 @@ val print_string :
    | `IntTuple of int * int
    | `String of string ] ->
   unit
-val to_xml :
-  out_channel ->
-  string *
-  (string *
-   [< `Bool of bool
-    | `Float of float
-    | `FloatFloatTuple of float * float
-    | `Fun of unit -> string
-    | `Int of int
-    | `IntFloatTuple of int * float
-    | `IntTuple of int * int
-    | `String of string ])
-  list *
-  [< `Bool of bool
-   | `Delayed of
-       unit ->
-       (string *
-        (string *
-         ([< `Bool of bool
-           | `Float of float
-           | `FloatFloatTuple of float * float
-           | `Fun of unit -> string
-           | `Int of int
-           | `IntFloatTuple of int * float
-           | `IntTuple of int * int
-           | `String of string ]
-          as 'b))
-        list *
-        ([< `Bool of bool
-          | `Delayed of unit -> 'a Sexpr.t
-          | `Empty
-          | `Float of float
-          | `FloatFloatTuple of float * float
-          | `Fun of unit -> string
-          | `Int of int
-          | `IntFloatTuple of int * float
-          | `IntTuple of int * int
-          | `Set of 'a Sexpr.t list
-          | `Single of 'a
-          | `String of string ]
-         as 'c)
-        as 'a)
-       Sexpr.t
-   | `Empty
-   | `Float of float
-   | `FloatFloatTuple of float * float
-   | `Fun of unit -> string
-   | `Int of int
-   | `IntFloatTuple of int * float
-   | `IntTuple of int * int
-   | `Set of 'a Sexpr.t list
-   | `Single of 'a
-   | `String of string ] ->
-  unit
+val to_xml : out_channel -> xml -> unit
 module Alphabet :
   sig val element : string val value : string val code : string end
 module Characters : sig
@@ -245,3 +213,12 @@ module GenomeMap :
     val a_dir_seg : string
     val d_dir_seg : string
   end
+
+module Util : sig
+    val attribute : string -> xml -> unstructured
+    val tag : xml -> string
+    val contents : xml -> xml contents
+    val attributes : xml -> attributes
+    val children : string -> xml -> xml Sexpr.t
+    val value : xml -> unstructured
+end

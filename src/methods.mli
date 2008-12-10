@@ -368,6 +368,7 @@ type char_operations =
 type clear_item = [ `Matrices | `SequencePool ]
 type application =
     [ `Ascii of string option * bool
+    | `KML of (string option * filename * string)
     | `ChangeWDir of string
     | `ClearMemory of clear_item list
     | `ClearRecovered
@@ -418,6 +419,7 @@ type script =
     | `Annchrom_to_Breakinv of characters * chromosome_pam_t list
     | `AnnotatedFiles of simple_input list
     | `Ascii of string option * bool
+    | `KML of (string option * filename * string)
     | `Assign_Affine_Gap_Cost of int * characters
     | `Assign_Prep_Cost of prep_tail_spec * characters
     | `Assign_Tail_Cost of prep_tail_spec * characters

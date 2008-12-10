@@ -212,6 +212,7 @@ type charoper =
 type reporta =
     [ `AllRootsCost
     | `Ascii of bool
+    | `KML of (string * string)
     | `Ci of old_identifiers option
     | `Clades
     | `CompareSequences of bool * old_identifiers * old_identifiers
