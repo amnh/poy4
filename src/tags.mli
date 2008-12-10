@@ -54,34 +54,64 @@ type 'a contents = [ unstructured | 'a structured_xml ]
 * XML, that is, [output]. *)
 type xml = tag * attributes * xml contents
 
-val eagerly_compute : [ 'b structured ] -> 'b Sexpr.t
+(** {2 Utility functions} *)
+(** Some utility functions to operate on [xml]'s. *)
 
-val make : 'a -> 'b -> 'c -> 'a * 'b * 'c
-val remove_non_alpha_numeric : string -> string
-val value_to_string :
-  [< `Bool of bool
-   | `Float of float
-   | `FloatFloatTuple of float * float
-   | `Fun of unit -> string
-   | `Int of int
-   | `IntFloatTuple of int * float
-   | `IntTuple of int * int
-   | `String of string ] ->
-  string
-val print_string :
-  out_channel ->
-  [< `Bool of bool
-   | `Float of float
-   | `FloatFloatTuple of float * float
-   | `Fun of unit -> string
-   | `Int of int
-   | `IntFloatTuple of int * float
-   | `IntTuple of int * int
-   | `String of string ] ->
-  unit
-val to_xml : out_channel -> xml -> unit
+(**  [eagerly_compute s] applies any delayed  computation in the top of 
+* [s] and produces the structured contents available for pattern 
+* matching. *)
+val eagerly_compute : [< xml structured ] -> xml Sexpr.t
+
+
+(** [attribute a xml] retrieves the attribute with name [a] in the [xml]. If
+* the attribute doesn't exists, the function raises Not_found. *)
+val attribute : string -> xml -> unstructured
+
+(** [tag xml] retrieves the tag of the [xml]. *)
+val tag : xml -> string
+
+(** [contents xml] retrieves the contents of [xml]. *)
+val contents : xml -> xml contents
+
+(** [attributes xml] retrieves the list of attributes in [xml]. *)
+val attributes : xml -> attributes
+
+(** [children tag xml] retrieves the children of [xml] with [tag]. *)
+val children : string -> xml -> xml Sexpr.t
+
+(** [value xml] retrieves the contents of [xml] when its contents are
+* [unstructured]. If the contents are really structured, it raises a [Failure
+* "Not a value"] exception. *)
+val value : xml -> unstructured
+
+(** [coherce contents] cohereces any subset of the valid [xml contents] in
+ * to the [xml contents]. This is useful to avoid silly polymorphic variant
+ * errors due to the difficulty of unifying this types. *)
+val coherce : [< xml contents ] -> xml contents
+
+(** Create xml contents. The preferred way to do this, however, is using the
+* poyExtension. [make a b c] is equivalent to (RXML [a] [b] {c}) *)
+val make : tag -> attributes -> xml contents -> xml
+
+(** [value_to_string v] takes an unstructed and outputs a string
+* representation. *)
+val value_to_string : unstructured -> string
+
+(** [to_file ch xml] dumps the [xml] in the text channel [ch]. *)
+val to_file : out_channel -> xml -> unit
+
+(** {2 Tags}
+ *
+ * Various tags employed in XML components. Convenient for comparison functions
+ * or retrieve particular elments.*)
+
 module Alphabet :
-  sig val element : string val value : string val code : string end
+  sig 
+      val element : string 
+      val value : string 
+      val code : string 
+  end
+
 module Characters : sig
     val suffix : string
     val character : string
@@ -213,12 +243,3 @@ module GenomeMap :
     val a_dir_seg : string
     val d_dir_seg : string
   end
-
-module Util : sig
-    val attribute : string -> xml -> unstructured
-    val tag : xml -> string
-    val contents : xml -> xml contents
-    val attributes : xml -> attributes
-    val children : string -> xml -> xml Sexpr.t
-    val value : xml -> unstructured
-end
