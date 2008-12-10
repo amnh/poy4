@@ -27,16 +27,16 @@ type unstructured =
 * be performed if required, producing a Sexpr.t itself. This is a simple
 * structured type because we don't allow a CDATA kind of contents here, which is
 * really an unstructured content from the XML point of view.*)
-type 'b simple_struc =
+type 'b structured =
     [ `Delayed of (unit -> 'b Sexpr.t)
     | 'b Sexpr.t ]
 
 (** The official structured type, is any of the simple structured constructures
 * defined in [smiple_struc] and the CDATA, which could hold a unstructured, or some
 * structured contents (for example when holding HTML). *)
-type 'a struc =
-    [ 'a simple_struc 
-    | `CDATA of [ unstructured | 'a simple_struc] ]
+type 'a structured_xml =
+    [ 'a structured 
+    | `CDATA of [ unstructured | 'a structured] ]
 
 (** An attribute of a tag is a pair consisting of a name of the attribute, which
 * has type [tag], and an attribute unstructured. *)
@@ -46,15 +46,15 @@ type attribute = tag * unstructured
 type attributes = attribute list
 
 (** The contents of a tag, that is, the contents of an XML node, is either a
-* [unstructured], or a [struc]. *)
-type 'a contents = [ unstructured | 'a struc ]
+* [unstructured], or a [structured_xml]. *)
+type 'a contents = [ unstructured | 'a structured_xml ]
 
 (** Finally we define the [xml] type, consisting of a triplet, of [tag],
 * [attributes] of the tag, and its [contents], which must hold inside more valid
 * XML, that is, [output]. *)
 type xml = tag * attributes * xml contents
 
-val eagerly_compute : [ 'b simple_struc ] -> 'b Sexpr.t
+val eagerly_compute : [ 'b structured ] -> 'b Sexpr.t
 
 val make : 'a -> 'b -> 'c -> 'a * 'b * 'c
 val remove_non_alpha_numeric : string -> string
