@@ -195,7 +195,6 @@ type application =
     | `Help of string option
     | `InspectFile of string
     | `Load of string
-    | `Plugin of (string * Methods.plugin_arguments)
     | `PrintWDir
     | `ReDiagnose
     | `ReadScript of string list
@@ -296,7 +295,7 @@ type command =
     | `InspectFile of string
     | `Load of string
     | `Perturb of perturba list
-    | `Plugin of (string * Methods.plugin_arguments)
+    | `Plugin of (string * command Methods.plugin_arguments)
     | `PrintWDir
     | `ReDiagnose
     | `Read of reada list
