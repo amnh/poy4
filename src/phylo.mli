@@ -585,7 +585,7 @@ module Kml :
       end
   end
 type r = (a, b, c) Scripting.run
-val register_plugin : string -> (Methods.plugin_arguments -> r -> r) -> unit
+val register_function : string -> (Methods.plugin_arguments -> r -> r) -> unit
 type minimum_spanning_tree = tree
 type build = minimum_spanning_tree list
 type minimum_spanning_family = minimum_spanning_tree list
