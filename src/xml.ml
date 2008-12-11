@@ -229,6 +229,17 @@ let value ((_, _, c) : xml) =
     | #unstructured as v -> v
     | _ -> failwith "Not a value"
 
+let eagerly_compute x = 
+    match x with
+    | #Sexpr.t as x -> x
+    | `Delayed f -> f ()
+
+let structured (_, _, c) =
+    match c with
+    | #structured as x -> x
+    | _ -> failwith "Not structured"
+
+
 let coherce x = (x :> xml contents)
 
 let make tag atv out = (tag, atv, out)
@@ -256,10 +267,6 @@ let print_string ch = function
     | `Int x -> Printf.fprintf ch "%d" x
     | `Float x -> Printf.fprintf ch "%s" (string_of_float x)
     | `Fun x -> Printf.fprintf ch "%s" (x ())
-let eagerly_compute x = 
-    match x with
-    | #Sexpr.t as x -> x
-    | `Delayed f -> f ()
 
 
 let to_file ch (item : xml) =

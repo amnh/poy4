@@ -84,6 +84,11 @@ val children : string -> xml -> xml Sexpr.t
 * "Not a value"] exception. *)
 val value : xml -> unstructured
 
+(** [value xml] retrieves the contents of [xml] when these are structured. If
+* the contents are really an [unstructured] or [structured_xml] then the
+* function raises a [Failure "Not structured"] exception. *)
+val structured : xml -> xml structured
+
 (** [coherce contents] cohereces any subset of the valid [xml contents] in
  * to the [xml contents]. This is useful to avoid silly polymorphic variant
  * errors due to the difficulty of unifying this types. *)
