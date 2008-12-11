@@ -296,7 +296,7 @@ all_libs: sequences.cma distances.cma \
 -include Makefile.local
 
 clean::
-	rm -f .depend* .cdepends *.annot *.cmi \
+	rm -f .depend* .cdepends *.annot *.cmi str.cmxs \
 		camlpdf-0.3/*.cmo camlpdf-0.3/*.cmx camlpdf-0.3/*.cmi \
 		camlpdf-0.3/*.cma camlpdf-0.3/*.cmxa \
 		camlpdf-0.3/*.o camlpdf-0.3/*.a *.cmo *.cmx* *.o *.a *.so \
