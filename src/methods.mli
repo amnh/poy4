@@ -366,6 +366,15 @@ type char_operations =
     [ `Distance of (taxa * taxa) * characters
     | `Median of (taxa * taxa) * characters ]
 type clear_item = [ `Matrices | `SequencePool ]
+type plugin_arguments = 
+    [ `Empty
+    |`Float of float 
+    | `Int of int
+    | `String of string
+    | `Lident of string
+    | `Labled of (string * plugin_arguments)
+    | `List of plugin_arguments list ]
+
 type application =
     [ `Ascii of string option * bool
     | `KML of (string option * filename * string)
@@ -386,6 +395,7 @@ type application =
     | `Memory of string option
     | `Normal
     | `Normal_plus_Vitamines
+    | `Plugin of (string * plugin_arguments)
     | `PrintWDir
     | `ReDiagnose
     | `Recover
@@ -510,6 +520,7 @@ type script =
     | `Partitioned of characters
     | `PerturbateNSearch of
         transform list * perturb_method * local_optimum * int * timer option
+    | `Plugin of (string * plugin_arguments)
     | `Poyfile of filename list
     | `Prealigned of simple_input * prealigned_costs
     | `Prealigned_Transform of characters

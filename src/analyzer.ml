@@ -157,6 +157,9 @@ let dependency_relations (init : Methods.script) =
     | #Methods.application as meth ->
             let res = 
                 match meth with
+                | `Plugin _ -> 
+                        let all = all [] [] in
+                        [(all, all, init, NonComposable)]
                 | `Version -> [(output, output, init, Invariant)]
                 | `Interactive
                 | `Exit -> 
@@ -1537,6 +1540,8 @@ let script_to_string (init : Methods.script) =
     | #Methods.application as meth ->
             let res = 
                 match meth with
+                | `Plugin _ -> 
+                        "@[execute a plugin function@]"
                 | `Version -> 
                         "@[output the version@]"
                 | `Exit -> 
@@ -1995,6 +2000,7 @@ let is_master_only (init : Methods.script) =
     | `Clades _
     | `Save (_, _)
     | `MstR _
+    | `Plugin _ 
     | `Version -> true
 
 let rec make_remote_files (init : Methods.script) =
