@@ -729,9 +729,11 @@ join_tabu, reroot_tabu, samples)
 
 
 let transform_swap_arguments (lst : swapa list) =
-    let param =
+    let (space, thres, keep, keepm, cclist, origin, traj, break_tabu,
+join_tabu, reroot_tabu, samples) =
         List.fold_left transform_swap swap_default lst in
-    `LocalOptimum param
+    `LocalOptimum (space, thres, keep, keepm, List.rev cclist, origin, traj,
+    break_tabu, join_tabu, reroot_tabu, samples)
 
 (* Fusing *)
 let rec transform_fuse ?(iterations=None) ?(keep=None) ?(replace=`Better)
@@ -792,7 +794,7 @@ let transform_perturb (tr, m, sw, it, timeout) = function
 
 let transform_perturb_arguments x : Methods.script list = 
     let tr, a, b, c, d = List.fold_left transform_perturb perturb_default x in
-    `PerturbateNSearch (tr, a, b, c, d) :: []
+    `PerturbateNSearch (List.rev tr, a, b, c, d) :: []
 
 (* Support *)
 let support_default_swap = `LocalOptimum swap_default
