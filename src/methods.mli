@@ -110,7 +110,7 @@ type char_transform =
     | `Custom_to_Breakinv of characters * chromosome_pam_t list
     | `Direct_Optimization of characters
     | `Fixed_States of characters
-    | `Partitioned of characters
+    | `Partitioned of ([`Clip | `NoClip] * characters)
     | `MultiStatic_Aprox of characters * bool
     | `Prealigned_Transform of characters
     | `Prioritize
@@ -137,7 +137,7 @@ type transform =
     | `Fixed_States of characters
     | `MultiStatic_Aprox of characters * bool
     | `OriginCost of float
-    | `Partitioned of characters
+    | `Partitioned of ([`Clip | `NoClip] * characters)
     | `Prealigned_Transform of characters
     | `Prioritize
     | `RandomizedTerminals
@@ -518,7 +518,7 @@ type script =
     | `OnEachTree of script list * script list
     | `OriginCost of float
     | `ParallelPipeline of int * script list * script list * script list
-    | `Partitioned of characters
+    | `Partitioned of ([`Clip | `NoClip] * characters)
     | `PerturbateNSearch of
         transform list * perturb_method * local_optimum * int * timer option
     | `Plugin of (string * script plugin_arguments)
