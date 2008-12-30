@@ -60,9 +60,9 @@ val map_4 : ('a -> 'b -> 'c -> 'd -> 'e) -> 'a array -> 'b array ->
 val map_5 : ('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'a array -> 'b array -> 
     'c array -> 'd array -> 'e array -> 'f array
 
-val fold_left_2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
-val fold_left_3 : ('a -> 'b -> 'c -> 'd -> 'a) -> 'a -> 'b array -> 'c array ->
+val fold_right_2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b array -> 'c array -> 'a
+val fold_right_3 : ('a -> 'b -> 'c -> 'd -> 'a) -> 'a -> 'b array -> 'c array ->
     'd array -> 'a
-val fold_left_4 : ('a -> 'b -> 'c -> 'd -> 'e -> 'a) -> 'a -> 'b array -> 'c array ->
+val fold_right_4 : ('a -> 'b -> 'c -> 'd -> 'e -> 'a) -> 'a -> 'b array -> 'c array ->
     'd array -> 'e array -> 'a
 (* vim:sw=4 et tw=80 : *)
