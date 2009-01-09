@@ -1,5 +1,6 @@
 (* A program to compute a set of triplets distances (sequences). *)
 let arg = Mpi.init Sys.argv
+let () = Random.self_init ()
 
 let make_triplets arr =
     let res = ref [] in
@@ -31,7 +32,43 @@ let compute_triplet toseq tcm tcm3 ((a, b, c) as triple) =
 let rank = Mpi.comm_rank Mpi.comm_world
 let worldsize = Mpi.comm_size Mpi.comm_world
 
-let compute_triplets file sub indel affine =
+let tip_to_tip arr =
+    let len = Array.length arr in
+    let half = len / 2 in
+    let f = Array.sub arr 0 half
+    and s = Array.sub arr half (len - half) in
+    let s = Array.of_list (List.rev (Array.to_list s)) in
+    let res = ref [] in
+    for i = 0 to (Array.length f) - 1 do
+        res := f.(i) :: s.(i) :: !res;
+    done;
+    if Array.length s > Array.length f then res := s.(half) :: !res;
+    List.rev !res
+
+let terminals_arr seqs treefile =
+    if treefile = "" then
+        let terminals_arr = Array.of_list (List.map fst seqs) in
+        Array_ops.randomize terminals_arr;
+        terminals_arr
+    else
+        match Parser.Tree.of_file (`Local treefile) with
+        | [[tree]] ->
+                let queue = Queue.create () in
+                Queue.push tree queue;
+                let res = ref [] in
+                while not (Queue.is_empty queue) do
+                    match Queue.pop queue with
+                    | Parser.Tree.Leaf str -> res := str :: !res
+                    | Parser.Tree.Node (chld, _) ->
+                            List.iter (fun x -> Queue.push x queue) chld
+                done;
+                let res = List.rev !res in
+                let other = tip_to_tip (Array.of_list res) in
+                Array.of_list (res @ other)
+        | _ -> failwith "We can only accept one tree per input file, no forest"
+
+
+let compute_triplets treefile file sub indel affine =
     let tcm = Scripting.DNA.CM.of_sub_indel_affine sub indel affine in
     let seqs = 
         let seqs = 
@@ -47,14 +84,14 @@ let compute_triplets file sub indel affine =
     let index = Hashtbl.create 1667 in
     List.iter (fun (taxon, seq) -> Hashtbl.add index taxon seq) seqs;
     let tcm3 = Cost_matrix.Three_D.of_two_dim tcm in
-    let terminals_arr = Array.of_list (List.map fst seqs) in
     let compute_triplet = compute_triplet (Hashtbl.find index) in
-    Array_ops.randomize terminals_arr;
+    let terminals_arr = terminals_arr seqs treefile in
     let triplets = make_triplets terminals_arr in
     let triplets = Array.of_list triplets in
     let compute_my_part () =
         let res = ref [] in
-        for i = 0 to (Array.length triplets) - 1 do
+        let mylen = ((Array.length triplets) / worldsize) * worldsize in
+        for i = 0 to mylen - 1 do
             if 0 = (i - rank) mod worldsize then
                 res := (compute_triplet tcm tcm3 triplets.(i)) :: !res;
         done;
@@ -72,16 +109,16 @@ let gap_opening = ref 0
 let indel = ref 1
 let substitution = ref 1
 let input_file = ref ""
-
-let assign x y = x := y
+let tree = ref ""
 
 let parse_list = [
-    ("-gap-opening", (Arg.Int (assign gap_opening)), "Gap opening");
-    ("-indel", (Arg.Int (assign indel)), "Indel");
-    ("-substitution", (Arg.Int (assign substitution)), "Substitution");
+    ("-gap-opening", (Arg.Set_int gap_opening), "Gap opening");
+    ("-indel", (Arg.Set_int indel), "Indel");
+    ("-substitution", (Arg.Set_int substitution), "Substitution");
+    ("-tree", (Arg.Set_string tree), "The guide tree");
 ]
 
-let anon_fun x = assign input_file x
+let anon_fun x = input_file := x
 
 let () = Arg.parse_argv arg  parse_list anon_fun "triplets [OPTIONS] fasta_file.fas"
 
