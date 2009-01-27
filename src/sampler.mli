@@ -103,6 +103,8 @@ module MakeApp :
         class ['a] timed_cancellation :
           [< `Dynamic of unit -> float | `Fixed of float ] ->
           [Node.n, Edge.e] search_manager_sampler
+          class counted_cancellation : int -> [Node.n, Edge.e]
+          search_manager_sampler
       end
 module MakeRes :
   functor (Node : NodeSig.S) ->

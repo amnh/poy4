@@ -276,6 +276,7 @@ type samples =
     | `KeepBestTrees
     | `PrintTrajectory of string option
     | `RootUnionDistr of string option
+    | `MaxTreesEvaluated of int
     | `TimeOut of timer
     | `TimedPrint of float * string option
     | `UnionStats of string option * int ]

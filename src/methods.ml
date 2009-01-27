@@ -415,6 +415,7 @@ type samples = [
     | `KeepBestTrees 
     | `AllVisited of string option
     | `PrintTrajectory of string option
+    | `MaxTreesEvaluated of int
     | `TimeOut of timer 
     | `TimedPrint of (float * string option)
     | `UnionStats of (string option * int)
