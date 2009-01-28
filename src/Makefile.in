@@ -696,8 +696,7 @@ NOPREPROCESSOR= tabus.ml sampler.ml
 	hennigParser.mli hennigParser.ml hennigLexer.ml nexus.ml nexusParser.mli \
 	nexusParser.ml nexusLexer.ml parser.mli parser.ml intSpec.mli intSpec.ml \
 	alphSpec.mli alphSpec.ml wordSpec.mli wordSpec.ml specIndex.mli specIndex.ml \
-	characSpec.mli characSpec.ml hashedFuncs.mli hashedFuncs.ml methods.mli \
-	methods.ml  
+	characSpec.mli characSpec.ml hashedFuncs.mli hashedFuncs.ml methods.ml  
 	$(OCAMLDEP) $(OCAML_INCLUDES) $(OPTIONSPREPROCESSOR) \
 		$(filter-out poyExtension.cmo $(NOPREPROCESSOR) ,$^) > $@
 
