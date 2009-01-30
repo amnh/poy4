@@ -168,6 +168,7 @@ type thresh_trees = [
 type builda = [
     | thresh_trees
     | `Lookahead of int
+    | `Nj
     | `Prebuilt of Methods.filename
     | `Mst
     | `DistancesRnd
@@ -448,9 +449,11 @@ let build_default = (10, build_default_method, [])
 
 let transform_build ((n, (meth : Methods.build_method), (trans :
     Methods.transform list)) as acc) = function
+    | `Nj -> (n, `Nj, trans)
     | `Prebuilt fn -> (n, (`Prebuilt fn), trans)
     | `RandomTree ->
             begin match meth with
+            | `Nj
             | `Prebuilt _ -> acc
             | `Wagner_Ordered x 
             | `Wagner_Distances x 
@@ -484,6 +487,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Constraint _ ->
                     failwith 
                     "Constraint has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             | `Prebuilt _ -> 
                     failwith 
                     "Prebuilt has already been selected as build method."
@@ -502,6 +508,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Constraint _ ->
                     failwith 
                     "Constraint has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             | `Prebuilt _ -> 
                     failwith 
                     "Prebuilt has already been selected as build method."
@@ -520,6 +529,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Branch_and_Bound _ -> 
                     failwith
                     "Branch and bound tree has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             end
     | `Mst ->
             begin match meth with
@@ -535,6 +547,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Branch_and_Bound _ -> 
                     failwith
                     "Branch and bound tree has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             end
     | `Random ->
             begin match meth with
@@ -550,6 +565,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Branch_and_Bound _ -> 
                     failwith
                     "Branch and bound tree has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             end
     | `Ordered ->
             begin match meth with
@@ -565,6 +583,9 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             | `Branch_and_Bound _ -> 
                     failwith
                     "Branch and bound tree has already been selected as build method."
+            | `Nj -> 
+                    failwith 
+                    "Neighbor joining has already been selected as build method."
             end
     | `Threshold x ->
             let converter (a, _, c, d, e) = (a, x, c, d, e) in
@@ -573,6 +594,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
                 | `Branch_and_Bound _
                 | `Constraint _
                 | `Build_Random _
+                | `Nj
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances y -> 
                         `Wagner_Distances (converter y)
@@ -593,6 +615,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
                 | `Branch_and_Bound _
                 | `Constraint _
                 | `Build_Random _
+                | `Nj
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances y -> 
                         `Wagner_Distances (converter y)
@@ -611,6 +634,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
             let nmeth = 
                 match meth with
                 | `Constraint _
+                | `Nj
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances y -> 
                         `Wagner_Distances (converter y)
@@ -632,6 +656,7 @@ let transform_build ((n, (meth : Methods.build_method), (trans :
                 match meth with
                 | `Constraint _
                 | `Branch_and_Bound _
+                | `Nj
                 | `Prebuilt _ -> meth
                 | `Wagner_Distances y -> 
                         `Wagner_Distances (converter y)
@@ -1857,6 +1882,7 @@ let create_expr () =
                     `Branch_and_Bound thresh ] |
                 [ LIDENT "constraint"; x = OPT optional_string -> `Constraint x ]
                         |
+                [ LIDENT "nj" -> `Nj ] | 
                 [ LIDENT "_mst" -> `Mst ] |
                 [ LIDENT "_distances" -> `DistancesRnd ]
             ];
