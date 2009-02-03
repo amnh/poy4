@@ -1128,15 +1128,6 @@ The \poycommand{calculate\_support} command does not output support values by de
             individual character.} 
             {}
 
-        \argumentdefinition{partitioned}{}
-            {Specifies that the data in the list of files hold nucleotide
-            sequences in FASTA format, divided in multiple fragments using the
-            pound sign. All sequences must have the same number of fragments.
-            The tip fragments are aligned at each vertex of the tree after
-            correcting their length, assuming that large length variations would
-            be caused by missing data.} 
-            {readpartitioned}
-            
 	\begin{statement}
             By default, upon importing prealigned sequence data, all the gaps are
              removed and the sequences are treated as dynamic homology characters.
@@ -2974,17 +2965,6 @@ The \poycommand{calculate\_support} command does not output support values by de
             applicable only to dynamic homology characters, and requires a tree
             in memory.}
             {autosequencepartition}
-
-        \argumentdefinition{partitioned}{\poylident}
-            {Simmilar to the previous, with the difference that no tree is
-            required prior the partition, and large sequence length variations
-            at the tips are treated as missing data. If \poylident is clip then
-            a large difference in length in the tips is assumed to be caused by
-            missing data. For clip to take effect, at least two fragments must
-            be found. If \poylident is noclip, then tips are treated like
-            any other fragment.}
-            {transformpartitioned}
-
 
         \argumentdefinition{direct\_optimization}{}
           {Transforms the characters specified so that the initial assignment of sequences to 
