@@ -60,10 +60,10 @@ poy_server: poy xml/swami.xml version
 	cd src; $(MAKE) poy_server
 
 xml/swami.xml: version xml/swami.xml.in
-	export RESULT=`$(OCAML) -noprompt str.cma ./src/compileFlags.cmo ./src/buildNumber.cmo  ./src/version.cmo -I ./src/ ./doc/makeVersion.ml -text`; sed "s/VERSION/$${RESULT}/g" xml/swami.xml.in > xml/swami.xml
+	RESULT=`$(OCAML) -noprompt str.cma ./src/compileFlags.cmo ./src/buildNumber.cmo  ./src/version.cmo -I ./src/ ./doc/makeVersion.ml -text`; sed "s/VERSION/$${RESULT}/g" xml/swami.xml.in > xml/swami.xml
 
 VERSION: version 
-	export RESULT=`$(OCAML) -noprompt str.cma ./src/compileFlags.cmo ./src/buildNumber.cmo  ./src/version.cmo -I ./src/ ./doc/makeVersion.ml -text`; echo "POY $${RESULT}" > VERSION
+	RESULT=`$(OCAML) -noprompt str.cma ./src/compileFlags.cmo ./src/buildNumber.cmo  ./src/version.cmo -I ./src/ ./doc/makeVersion.ml -text`; echo "POY $${RESULT}" > VERSION
 
 .PHONY:	subdirs $(SUBDIRS) clean driver install distclean version
 subdirs:	$(SUBDIRS)
