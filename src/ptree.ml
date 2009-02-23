@@ -2203,22 +2203,25 @@ let jxn_of_handle ptree handle =
                 odebug "Parent node exists");
           Tree.Edge_Jxn (id, par)
 
-let add_or_not addme set counters = 
-    if (not addme) && Tree.CladeFPMap.mem set counters then
-        let res = Tree.CladeFPMap.find set counters in
-        set, Tree.CladeFPMap.add set (res + 1) counters
-    else if not addme then
-        set, Tree.CladeFPMap.add set 1 counters
-    else set, counters
+let add_or_not flag_collapsable addme set counters = 
+    set,
+        (if (not addme) && Tree.CladeFPMap.mem set counters then
+            let res = Tree.CladeFPMap.find set counters in
+            Tree.CladeFPMap.add set (res + 1) counters
+        else if not addme then
+            Tree.CladeFPMap.add set 1 counters
+        else match flag_collapsable with
+        | Some x -> Tree.CladeFPMap.add set x counters
+        | None -> counters)
 
 (* A function that takes a map of counts of sets of terminals, and a tree, and
 * adds the sets defined by tree to the counters *)
-let add_tree_to_counters is_collapsable counters (tree : Tree.u_tree) = 
+let add_tree_to_counters ?flag_collapsable is_collapsable counters (tree : Tree.u_tree) = 
     let rec add_all_clades node prev counters =
         let addme = is_collapsable prev node in
         let add_singleton () =
             let single = All_sets.Integers.singleton node in
-            add_or_not false single counters
+            add_or_not flag_collapsable false single counters
         in
         match Tree.get_node node tree with
         | Tree.Leaf _ 
@@ -2233,7 +2236,7 @@ let add_tree_to_counters is_collapsable counters (tree : Tree.u_tree) =
                 let sidea, counters = add_all_clades a node counters in
                 let sideb, counters = add_all_clades b node counters in
                 let mine = All_sets.Integers.union sidea sideb in
-                add_or_not addme mine counters
+                add_or_not flag_collapsable addme mine counters
     in
     let add_handle tree handle counters = 
         match Tree.get_node handle tree with
@@ -2242,7 +2245,7 @@ let add_tree_to_counters is_collapsable counters (tree : Tree.u_tree) =
                 let sidea, counters = add_all_clades a b counters in
                 let sideb, counters = add_all_clades b a counters in
                 let mine = All_sets.Integers.union sidea sideb in
-                let _, res = add_or_not false mine counters in
+                let _, res = add_or_not flag_collapsable false mine counters in
                 res
         | Tree.Single _ -> 
                 let _, res = add_all_clades handle handle counters in
@@ -2253,7 +2256,7 @@ let add_tree_to_counters is_collapsable counters (tree : Tree.u_tree) =
 let rec make_tree_counters code_generator counters tree = 
     let add_singleton node =
         let single = All_sets.Integers.singleton node in
-        add_or_not false single counters
+        add_or_not None false single counters
     in
     match tree with
     | Parser.Tree.Leaf d -> add_singleton (code_generator d)
@@ -2269,7 +2272,7 @@ let rec make_tree_counters code_generator counters tree =
                 List.fold_left All_sets.Integers.union
                 All_sets.Integers.empty all_sets
             in
-            add_or_not false all_sets counters
+            add_or_not None false all_sets counters
 
 let add_consensus_to_counters counters trees = 
     let new_counter = 
@@ -2280,7 +2283,7 @@ let add_consensus_to_counters counters trees =
     let len = List.length trees in
     (* We proceed to add those clades that appear in all of the trees *)
     Tree.CladeFPMap.fold (fun set count acc ->
-        if count = len then let _, acc = add_or_not false set acc in acc
+        if count = len then let _, acc = add_or_not None false set acc in acc
         else acc) new_counter counters 
 
 let build_a_tree to_string denominator print_frequency coder trees (set, cnt) = 
@@ -2406,7 +2409,7 @@ let extract_bremer to_string sets =
 
 (* A function that returns the bremer support tree based on the set of (costs, 
 * tree) of sets, for the input tree *)
-let bremer to_string cost tree generator files =
+let bremer is_collapsable to_string cost tree generator files =
     let tree_file_handlers = 
         ref (List.map (Parser.Tree.stream_of_file true) files) 
     in
@@ -2455,12 +2458,13 @@ let bremer to_string cost tree generator files =
     in
     (** We create a map with all the sets of clades in the input tree *)
     let map : int Tree.CladeFPMap.t = 
+        let flag_collapsable = 0 in
         let map = 
-            add_tree_to_counters (fun _ _ -> false) Tree.CladeFPMap.empty
+            add_tree_to_counters ~flag_collapsable is_collapsable Tree.CladeFPMap.empty
             tree
         in
         Tree.CladeFPMap.map
-        (fun _ -> max_int) map 
+        (function 0 -> 0 | _ -> max_int) map 
     in
     (* We now update that map with the best length found for each tree not
     * having the clade *)

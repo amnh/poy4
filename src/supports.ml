@@ -714,7 +714,8 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
     let bremer_of_input_file process_cost root to_string data file 
     (trees : (a, b) Ptree.p_tree Sexpr.t) = 
         let process_one_tree tree =
-            Ptree.bremer to_string 
+            Ptree.bremer 
+            (TO.collapse_as_needed tree) to_string
             (int_of_float (Ptree.get_cost `Adjusted tree)) 
             tree.Ptree.tree (generate_sets process_cost data root) file
         in
