@@ -125,6 +125,10 @@ let sets_of_parser data tree =
                 All_sets.IntSet.add union acc, union
     in
     let sets, _ = process tree All_sets.IntSet.empty in
+    All_sets.IntSet.iter (fun x ->
+        All_sets.Integers.iter (fun x ->
+            Printf.printf "%d;" x) x;
+        print_newline ()) sets;
     sets
 
 let get_join_tabu (`LocalOptimum (_, _, _, _, _, _, _, _, join_tabu, _, _)) =
@@ -603,10 +607,10 @@ let rec find_local_optimum ?base_sampler ?queue data emergency_queue
         in
         let breakfn =
             match break_tabu with
-            | `Randomized -> PhyloTabus.random_break
+            | `Randomized -> PhyloTabus.random_break 
             | `DistanceSorted early -> 
                     PhyloTabus.sorted_break early partition_for_other_tabus
-            | `OnlyOnce -> PhyloTabus.only_once_break
+            | `OnlyOnce -> PhyloTabus.only_once_break 
         in
         let joinfn =
             match join_tabu with
