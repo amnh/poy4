@@ -62,7 +62,10 @@ module OneDirF :
     val set_exclude_info : e -> n -> n
     val excludes_median : int option -> n -> n -> e
     val has_excluded : e -> bool
-    module T : sig val add_exclude : All_sets.Integers.t -> n -> n end
+    module T : sig 
+        val add_exclude : All_sets.Integers.t -> n -> n 
+        val remove_exclude : n -> n 
+    end
     module Union :
       sig
         type u
@@ -140,7 +143,10 @@ module AllDirF :
     val set_exclude_info : e -> n -> n
     val excludes_median : int option -> n -> n -> e
     val has_excluded : e -> bool
-    module T : sig val add_exclude : All_sets.Integers.t -> n -> n end
+    module T : sig 
+        val add_exclude : All_sets.Integers.t -> n -> n 
+        val remove_exclude : n -> n 
+    end
     module Union :
       sig
         type u
