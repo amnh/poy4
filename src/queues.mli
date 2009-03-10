@@ -14,6 +14,14 @@ module type S =
     class type search_mgr = [a, b] Ptree.search_mgr
     class first_best_srch_mgr :
       (a, b) Sampler.search_manager_sampler -> search_mgr
+    class standard_tabu_searcher : 
+        (a, b) Sampler.search_manager_sampler -> 
+            All_sets.Integers.t list -> int -> int -> 
+                ((a, b) Ptree.p_tree -> (a, b) Ptree.p_tree) ->
+                    ((a, b) Ptree.p_tree -> All_sets.Integers.t -> (a, b)
+                    Ptree.p_tree) -> ((a, b) Ptree.p_tree -> (a, b)
+                    Ptree.p_tree) ->
+                         search_mgr
     class hold_n_fb_srch_mgr :
       int ->
       Methods.keep_method ->
@@ -68,6 +76,14 @@ module Make :
         class type search_mgr = [a, b] Ptree.search_mgr
         class first_best_srch_mgr :
           (a, b) Sampler.search_manager_sampler -> search_mgr
+        class standard_tabu_searcher : 
+            (a, b) Sampler.search_manager_sampler -> 
+                All_sets.Integers.t list -> int -> int -> 
+                    ((a, b) Ptree.p_tree -> (a, b) Ptree.p_tree) ->
+                        ((a, b) Ptree.p_tree -> All_sets.Integers.t -> (a, b)
+                        Ptree.p_tree) -> ((a, b) Ptree.p_tree -> (a, b)
+                        Ptree.p_tree) ->
+                             search_mgr
         class hold_n_fb_srch_mgr :
           int ->
           Methods.keep_method ->
