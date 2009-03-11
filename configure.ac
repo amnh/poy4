@@ -6,23 +6,23 @@ AC_INIT([POY], [4.0 Beta], poy4@groups.google.com)
 
 # Checks for programs.
 AC_PROG_MAKE_SET
-AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_ARG_PROGRAM
 
 AC_SUBST(USEGRAPHICS)
 AC_SUBST(USEPARALLEL)
-AC_SUBST(USE_LARGE_MESSAGES)
 AC_SUBST(DOCSTRING)
 AC_SUBST(OCAMLFLAGS)
 AC_SUBST(MERCURIAL)
+AC_SUBST(OCAMLC)
 AC_SUBST(OCAML)
-AC_CHECK_PROGS([OCAML], [ocaml])
+AC_SUBST(OCAMLBUILD)
 
 AC_CHECK_PROGS([MERCURIAL], [hg])
-
-AC_ARG_WITH(version-number, [AS_HELP_STRING([--with-version-number], [Use the configuration provided version number (used for release purposes only).])], [MERCURIAL="echo $withval"],[MERCURIAL="$MERCURIAL id -i"])
+AC_CHECK_PROGS([OCAMLC], [ocamlc.opt ocamlc])
+AC_CHECK_PROGS([OCAMLBUILD], [ocamlbuild.native ocamlbuild])
+AC_CHECK_PROGS([OCAML], [ocaml])
 
 AC_ARG_ENABLE([graphics], [AS_HELP_STRING([--enable-graphics],
               [Force POY to support graphical trees on screen. Valid options are none, ocaml, and tk. The default is none.])], [USEGRAPHICS=$enableval], [USEGRAPHICS=none])
@@ -33,23 +33,22 @@ AC_ARG_ENABLE([interface], [AS_HELP_STRING([--enable-interface=interface],
               [USEINTERFACE=$enableval],
               [USEINTERFACE=ncurses])
 
-AC_ARG_WITH(extras, [AS_HELP_STRING([--with-extras], 
-            [Add the following object files to the final linking rules (needed for windows).])],
+AC_ARG_WITH([ocaml-flags], [Add the following flags to the ocaml compiler.],
+            [OCAMLFLAGS=$withval],[])
+
+AC_ARG_WITH([extras], [Add the following object files to the final linking rules (needed for windows).],
             [EXTRAS=$withval],[])
 
-AC_ARG_WITH(ocaml-flags, [AS_HELP_STRING([--with-ocaml-flags], 
-            [Add the following flags to the ocaml compiler.])],
+AC_ARG_WITH(ocaml-flags, [Add the following flags to the ocaml compiler.],
             [OCAMLFLAGS=$withval],[])
+
+AC_ARG_WITH(version-number, [AS_HELP_STRING([--with-version-number], [Use the configuration provided version number (used for release purposes only).])], [MERCURIAL="echo $withval"],[MERCURIAL="$MERCURIAL id -i"])
+
 
 AC_ARG_ENABLE([mpi], [AS_HELP_STRING([--enable-mpi], 
               [Turns on parallel support using MPI. When using MPI remember to set CC to the appropriate mpicc compiler.])], 
               [USEPARALLEL=true], 
               [USEPARALLEL=false])
-
-AC_ARG_ENABLE([large-messages], [AS_HELP_STRING([--enable-large-messages], 
-              [When --enable-mpi is selected, this option turns on large messages for tree exchanges. Large messages reduce considerably computation of trees when different processes exchange them, but increase tremendously the message size. Use this option when message size (and the memory consumed to send and receive it) is not a possible bottleneck.])], 
-              [USE_LARGE_MESSAGES=true], 
-              [USE_LARGE_MESSAGES=false])
 
 AC_SUBST(USESHAREDHD)
 AC_ARG_ENABLE([shared-hd], [AS_HELP_STRING([--enable-shared-hd],
@@ -65,7 +64,6 @@ AC_ARG_ENABLE([xslt], [AS_HELP_STRING([--enable-xslt],
               [Enable the postprocessing of XML output using XSLT templates.  This option requires libxml2.])],
                [USE_XSLT=true],
                [USE_XSLT=false])
-
 
 AC_ARG_ENABLE([large-alphabets], [AS_HELP_STRING([--enable-large-alphabets],
               [Enable the analysis of alphabets larger than 255 elements. When using this option, more memory will be needed to store each tree (4 or 8 times more for 32 and 64 bit computers respectively). This option is only needed for large alphabets if you use custom alphabets. Normal nucleotide, aminoacid, or morphological analyses are nor affected by this option.])],
@@ -112,9 +110,6 @@ esac
 
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile
-                 doc/Makefile
-                 test/Makefile])
-AC_CONFIG_SUBDIRS([ocamlmpi
-                   src])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_SUBDIRS([src])
 AC_OUTPUT

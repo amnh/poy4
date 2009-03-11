@@ -64,3 +64,6 @@ universal
 depend/*.mldepend
 depend/*.mlidepend
 depend/cdepends
+src/_build
+src/_tags
+src/myocamlbuild.ml
