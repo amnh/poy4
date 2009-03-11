@@ -55,7 +55,7 @@ install: poy.native
 	$(MKDIR_P) $(DESTDIR)$(bindir)
 	$(INSTALL) ./src/_build/poy.native $(DESTDIR)$(bindir)/`echo poy | sed -e '$(transform)'`
 	$(MKDIR_P) $(DESTDIR)$(mandir)
-	$(INSTALL) ./src/poy.1 $(DESTDIR)$(mandir)/poy.1
+	$(INSTALL) ./src/_build/poy.1 $(DESTDIR)$(mandir)/poy.1
 
 install_server: install
 	$(INSTALL) ./src/_build/portal.native $(DESTDIR)$(bindir)/`echo portal | sed -e '$(transform)'` 

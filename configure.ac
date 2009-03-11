@@ -6,6 +6,7 @@ AC_INIT([POY], [4.0 Beta], poy4@groups.google.com)
 
 # Checks for programs.
 AC_PROG_MAKE_SET
+AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_ARG_PROGRAM
