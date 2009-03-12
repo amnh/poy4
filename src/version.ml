@@ -42,7 +42,7 @@ let minor_version = 1
 let release_version = 2
 let patch_version = Str.global_replace (Str.regexp " +") ""  BuildNumber.build
 type release_options = Development | Candidate of int | Official
-let release_option = Development
+let release_option = Official
 
 let ( --> ) a b = b a
 let append a b = b ^ a
