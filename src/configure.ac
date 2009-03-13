@@ -229,7 +229,7 @@ case $OCAMLVERSION in
         else 
             AC_MSG_RESULT([no])
             USE_NATIVEDYNLINK="true"
-        fi;;
+        fi
         rm -f str.cmxs*;;
     *)
     AC_MSG_RESULT([no])

@@ -4746,7 +4746,7 @@ $as_echo "yes" >&6; }
             { $as_echo "$as_me:$LINENO: result: no" >&5
 $as_echo "no" >&6; }
             USE_NATIVEDYNLINK="true"
-        fi;;
+        fi
         rm -f str.cmxs*;;
     *)
     { $as_echo "$as_me:$LINENO: result: no" >&5
