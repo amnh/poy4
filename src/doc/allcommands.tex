@@ -2243,18 +2243,13 @@ The \poycommand{calculate\_support} command does not output support values by de
             \argumentdefinition{missing}{\obligatory{\poyint}}
                 {Selects terminals or characters to be included in the analysis
                 based on the proportion of missing data. The
-                integer value sets the maximum percentage of missing
-                data. Terminals or characters that have \emph{more} missing data
-                than defined by the value are included in the analysis.}
+                integer value sets the minimum percentage of missing
+                data to be allowed in the analysis. Terminals or characters that have \emph{more} missing data
+                than the value are included in the analysis.}
                 {}
                
-                \argumentdefinition{not missing}{\obligatory{\poyint}}
-                {Selects terminals or characters to be included from the analysis
-                based on the proportion of missing data. The
-                integer value sets the minimum percentage of missing
-                data. Terminals or characters that have  \emph{less} missing data
-                than defined by the value are included in the analysis.
-                In effect, this selects a complement of data to the argument \poyargument{missing}.}
+            \argumentdefinition{not missing}{\obligatory{\poyint}}
+                {The complement of the previous argument.}
                 {notmissing}
 
                 \begin{statement}
