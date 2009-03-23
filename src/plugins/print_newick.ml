@@ -1,24 +1,25 @@
 let lexer = Genlex.make_lexer [":"; "("; ")"; ","] 
 
 let rec process_root = parser
-    | [< 'Genlex.Kwd "("; x = tree_item; t = tree_list; 'Genlex.Kwd ")" >] ->
-            Parser.Tree.Node (x :: t, "")
-    | [< 'Genlex.Ident name >] ->  
-            Parser.Tree.Leaf name
-and tree_item = parser
-    | [< 'Genlex.Kwd "("; x = tree_item; t = tree_list; 'Genlex.Kwd ")"; 
-        flt = branch_length >] -> 
-            Parser.Tree.Node (x :: t, flt)
-    | [< 'Genlex.Ident name; _ = branch_length >] ->
-            Parser.Tree.Leaf name
+    | [< 'Genlex.Kwd "("; t = tree_list; 'Genlex.Kwd ")" >] -> 
+            Parser.Tree.Node (t, "")
 and tree_list = parser
-    | [< 'Genlex.Kwd ","; x = tree_item; y = tree_list >] -> 
-            x :: y 
-    | [< >] -> 
-            []
+    [< h = tree; t = list_tail >] -> h :: t
+and list_tail = parser
+    | [< 'Genlex.Kwd ","; x = tree; y = list_tail >] -> x :: y 
+    | [< >] -> []
+and tree = parser
+    | [< 'Genlex.Kwd "("; t = tree_list; 'Genlex.Kwd ")"; 
+        flt = branch_length >] -> Parser.Tree.Node (t, flt)
+    | [< 'Genlex.Ident name; _ = branch_length >] -> Parser.Tree.Leaf name
 and branch_length = parser
-    | [< 'Genlex.Kwd ":"; 'Genlex.Float flt >] -> string_of_float flt
+    | [< 'Genlex.Kwd ":"; v = branch_value >] -> v
     | [< >] -> ""
+and branch_value = parser
+    | [< 'Genlex.Float flt >] -> string_of_float flt
+    | [< 'Genlex.Int int >] -> string_of_int int
+    | [< 'Genlex.Ident str >] -> str
+    | [< 'Genlex.String str >] -> str
 
 let process_file filename outputfile =
     let ch = open_in filename in
@@ -32,6 +33,8 @@ let print_tree arguments run =
     | `List [`String inputfile; `String outputfile] ->
             process_file inputfile outputfile;
             run
-    | _ -> failwith "Usage: print_newick (STRING, STRING), where the arguments are the input and output filenames."
+    | _ -> 
+            failwith 
+            "Usage: print_newick (STRING, STRING), where the arguments are the input and output filenames."
 
 let () = Phylo.register_function "print_newick" print_tree
