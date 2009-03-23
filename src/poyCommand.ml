@@ -2038,7 +2038,8 @@ let create_expr () =
         support_names:
             [
                 [ LIDENT "bremer"; ":"; LIDENT "of_file"; ":"; left_parenthesis; 
-                f = STRING; c = INT; x = support_files -> 
+                f = STRING; ","; c = INT; ",";  x = support_files;
+                right_parenthesis -> 
                     `Bremer (Some ((`UseGivenTree (`Local f, int_of_string c)), x)) ] |
                 [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
                 -> y] SEP ",";
