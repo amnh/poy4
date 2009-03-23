@@ -2029,13 +2029,31 @@ let create_expr () =
             [
                 [ ":"; y = support_names -> y ]
             ];
+        support_files :
+            [ 
+                [ x = STRING -> [`Local x] ] | 
+                [ left_parenthesis; x = LIST1 [ y = STRING -> y] SEP ",";
+                right_parenthesis -> (List.map (fun x -> `Local x) x) ]
+            ];
         support_names:
             [
-                [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some [(`Local x)]) ] |
+                [ LIDENT "bremer"; ":"; LIDENT "of_file"; ":"; left_parenthesis; 
+                f = STRING; c = INT; x = support_files -> 
+                    `Bremer (Some ((`UseGivenTree (`Local f, int_of_string c)), x)) ] |
                 [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
                 -> y] SEP ",";
                     right_parenthesis -> 
-                        `Bremer (Some (List.map (fun x -> `Local x) x))] |
+                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
+                        in
+                        `Bremer (Some r)] |
+                [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some
+                (`UseLoadedTree, [(`Local x)])) ] |
+                [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
+                -> y] SEP ",";
+                    right_parenthesis -> 
+                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
+                        in
+                        `Bremer (Some r)] |
                 [ LIDENT "bremer" -> `Bremer None ] |
                 [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
                     match y with
