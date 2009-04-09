@@ -3868,6 +3868,8 @@ module TransformationCostMatrix = struct
 
 end
 
+exception Inconsistent_alphabet_size of (int * int)
+
 module PAlphabet = struct
     let of_file fn orientation init3D = 
         let file = FileStream.Pervasives.open_in fn in
@@ -3909,7 +3911,16 @@ module PAlphabet = struct
             | false  ->  Cost_matrix.Three_D.default 
         in 
         file#close_in;
-        alph, tcm, tcm3
+        if (Alphabet.size alph) <> (Cost_matrix.Two_D.alphabet_size tcm) then
+            begin
+                Status.user_message Status.Error 
+               ("The@ alphabet@ size@ and@ the@ tcm@ matrix@ have@ " ^
+               "inconsistent@ sizes.@ If@ your@ alphabet@ has@ n@ elements@ " ^
+               "then@ the@ tcm@ should@ have@ n+1@ to@ represent@ the@ indel@ "
+               ^ "cost@ in@ the@ last@ column.");
+               raise (Inconsistent_alphabet_size ((Alphabet.size alph),
+               (Cost_matrix.Two_D.alphabet_size tcm)))
+       end else alph, tcm, tcm3
 end
 
 
