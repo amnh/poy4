@@ -102,6 +102,7 @@ let get_recost user_pams =
         match re_meth with
             | `Locus_Breakpoint c -> c
             | `Locus_Inversion c -> c
+            | `Locus_DCJ c -> c
 
 
 

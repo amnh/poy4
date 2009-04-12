@@ -55,7 +55,8 @@ type dyna_state_t = [
 
 
 type re_meth_t = [ `Locus_Breakpoint of int | 
-                   `Locus_Inversion of int ]
+                   `Locus_Inversion of int |
+                   `Locus_DCJ of int ]
 
 type dyna_pam_t = {
     seed_len : int option; (** the minimum length of a segment which is considered as a basic seed *)
@@ -426,6 +427,7 @@ let get_recost user_pams =
         match re_meth with
             | `Locus_Breakpoint c -> c
             | `Locus_Inversion c -> c
+            | `Locus_DCJ c -> c
 
 
 (** [get_locus_indel_cost user_pams] returns the locus indel cost in [pams] *)
@@ -2019,7 +2021,7 @@ let pam_spec_to_formatter (state : dyna_state_t) pam =
     and handle_int = option_to_string (fun x -> `Int x)
     and handle_re_meth x = 
         let conversion =
-            (function `Locus_Breakpoint x | `Locus_Inversion x -> `Int x)
+            (function `Locus_Breakpoint x | `Locus_Inversion x | `Locus_DCJ x -> `Int x)
         in
         match x with
         | Some x -> conversion x
@@ -2126,6 +2128,7 @@ let set_dyna_pam dyna_pam_ls =
     List.fold_left 
     ~f:(fun dyna_pam pam ->
         match pam with
+        | `Locus_DCJ c -> { dyna_pam with re_meth = Some (`Locus_DCJ c) }
         | `Locus_Inversion c -> {dyna_pam with re_meth = Some (`Locus_Inversion c)}
         | `Locus_Breakpoint c -> {dyna_pam with re_meth = Some (`Locus_Breakpoint c)}
         | `Chrom_Breakpoint c -> {dyna_pam with chrom_breakpoint = Some c}

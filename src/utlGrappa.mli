@@ -79,3 +79,5 @@ val cmp_self_breakpoint_dis : int array -> int -> int
  * where [Y] is an ordered permutation of |genome|
  * For example. [genome] = (-6, 1, 5), Y = (1, 5, 6) *)
 val cmp_self_oriented_breakpoint_dis : int array -> int -> int
+
+val cmp_oriented_dcj : int array -> int array -> int -> int

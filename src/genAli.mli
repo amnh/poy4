@@ -31,7 +31,7 @@ val cmp_recost :
   int array ->
   int array ->
   int array ->
-  [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+  [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
   int -> bool -> int * int
 
 
@@ -47,7 +47,7 @@ val cmp_cost :
   int array ->
     Cost_matrix.Two_D.m ->
   int ->
-  [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+  [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
   int -> bool -> int * (int * int) * int array * int array
 
 (**[cmp_cost3 seq1 seq2 seq3 med cost_mat gap re_meth cir sym] returns
@@ -59,7 +59,8 @@ val cmp_cost3 :
   int array ->
   int array ->
   int array array ->
-    int -> [< `Locus_Breakpoint of int | `Locus_Inversion of int ] -> int -> bool -> bool -> int
+    int -> [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of
+    int ] -> int -> bool -> bool -> int
 
 
 (** [find_wagner_ali state seq1 seq2 gen_cost_mat gap re_meth circular]
@@ -72,7 +73,8 @@ val find_wagner_ali :
   int array ->
   int array ->
     Cost_matrix.Two_D.m ->
-  int -> [< `Locus_Breakpoint of int | `Locus_Inversion of int ] -> int -> bool -> int array
+  int -> [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of
+  int ] -> int -> bool -> int array
 
 (** [multi_swap_locus state seq1 seq2 best_seq2 best_cost 
 *                     gen_cost_mat gap re_meth max_swap_med circular num_done_swap] 
@@ -86,7 +88,7 @@ val multi_swap_locus :
   int ->
     Cost_matrix.Two_D.m ->
   int ->
-  [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+  [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
   int -> int -> bool -> int -> int * int array
 
 (** [create_gen_ali state seq1 seq1 gen_cost_mat alpha re_meth max_swap_med circular]
@@ -99,7 +101,7 @@ val create_gen_ali :
   Sequence.s ->
   Cost_matrix.Two_D.m ->
   Alphabet.a ->
-  [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+  [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
   int -> int -> bool -> int * (int * int) * Sequence.s * Sequence.s
 
 (** [create_gen_ali_code state seq1 seq2 gen_cost_mat gen_gap_code 
@@ -113,7 +115,7 @@ val create_gen_ali_code :
   int array ->
   int array array ->
   int ->
-  [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+  [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
   int -> int -> bool -> int * (int * int) * int array * int array
 
 
@@ -129,5 +131,5 @@ val create_gen_ali3 :
     Sequence.s ->
     int array array ->
     Alphabet.a ->
-    [< `Locus_Breakpoint of int | `Locus_Inversion of int ] ->
+    [< `Locus_Breakpoint of int | `Locus_Inversion of int | `Locus_DCJ of int ] ->
     'a -> int -> bool -> bool -> Sequence.s * int

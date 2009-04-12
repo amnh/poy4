@@ -3185,7 +3185,7 @@ The \poycommand{calculate\_support} command does not output support values by de
            {Transforms nucleotide type data into \\ chromosome type data to allow
             rearrangements, inversions, and locus-level indel operations.  The
             chromosome-specific options (\emph{e.g.}  \poyargument{locus\_breakpoint}, 
-            \poyargument{locus\_inversion}, and \poyargument{locus\_indel}) can be specified by the argument
+            \poyargument{locus\_inversion}, \poyargument{locus\_dcj}, and \poyargument{locus\_indel}) can be specified by the argument
             \poyargument{dynamic\_pam} If no \poyargument{dynamic\_pam} values
            are specified, its default values are applied.}
            {seqtochrom}
@@ -3194,7 +3194,8 @@ The \poycommand{calculate\_support} command does not output support values by de
             {Specifies parameters for creating chro\-mosome- and genome-level HTUs (medians).
             The arguments of \poyargument{dynamic\_pam} define homologous blocks within unannotated chromosome sequences using
             (\poyargument{min\_seed\_length}, \poyargument{min\_loci\_len}, and \poyargument{min\_rearranged\_len}); specify the cost
-            of locus-level transformation events: (i.e. \poyargument{locus\_inversion} or \poyargument{locus\_breakpoint},
+            of locus-level transformation events: (i.e.
+            \poyargument{locus\_inversion}, \poyargument{locus\_dcj}, or \poyargument{locus\_breakpoint},
             and \poyargument{locus\_indel});  specify the cost of chromosome-level transformation events: 
             (i.e. \poyargument{chrom\_breakpoint}, and \poyargument{chrom\_indel}); 
             take into account whether the chromosome is linear or circular (\poyargument{circular}); and implement a number of heuristic
@@ -3247,10 +3248,24 @@ The \poycommand{calculate\_support} command does not output support values by de
 		     and $G^\prime$ is the number of breakpoints between them.  Figure \ref{fig:distance} 
                         shows two breakpoints between $G$ and $G^\prime$. The breakpoint can be calculated 
                         easily in linear time.  This argument \emph{cannot} be used in
-                        conjunction with \poyargument{inversion}. The default
+                        conjunction with \poyargument{locus\_inversion} or
+                        \poyargument{locus\_dcj}. The default
                         value of \poyargument{locus\_breakpoint} is \texttt{10}.} 
                         {locusbreakpoint} 
                         
+                        \argumentdefinition{locus\_dcj}{\obligatory{\poyint}}
+                        {Calculates the double cut and join
+                        distance~\cite{yancopoulos:2005}
+                        between two chromosome segments given the cost for each
+                        event specified by the integer value. The inversion distance
+                        takes in consideration rearrangements and
+                        inversions. The dcj distance is normally smaller than
+                        the inversion and breakpoint distances.
+                        This argument \emph{cannot} be used in conjunction with
+                        \poyargument{locus\_breakpoint} or
+                        \poyargument{locus\_inversion}.} 
+                        {locusdcj}  
+
                         \argumentdefinition{locus\_inversion}{\obligatory{\poyint}}
                         {Calculates the inversion distance~\cite{hanenhalliandpevzner1995}
                         between two chromosome segments given the cost for inversion
@@ -3260,8 +3275,11 @@ The \poycommand{calculate\_support} command does not output support values by de
                         them is the number of inversions to convert chromosome or genome $G$ 
                         into $G^\prime$ \cite{hanenhalliandpevzner1995}. Figure \ref{fig:distance} shows one inversion  
                         between $G$ and $G^\prime$. The inversion can be calculated in linear time.
-                        The breakpoint distance is normally larger than inversion distance.
-                        This argument \emph{cannot} be used in conjunction with \poyargument{breakpoint}.} 
+                        The breakpoint distance is normally larger than
+                        inversion distance and dcj distance.
+                        This argument \emph{cannot} be used in conjunction with
+                        \poyargument{locus\_breakpoint} or
+                        \poyargument{locus\_dcj}.} 
                         {locusinversion}  
 
 		     \argumentdefinition{locus\_indel}{\obligatory{(\poyint, \poyfloat)}} 

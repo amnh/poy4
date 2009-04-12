@@ -60,6 +60,7 @@ type identifiers = [
 type chromosome_args = [
     | `Locus_Inversion of int (** the cost of a locus inversion operation inside a chromosome *)
     | `Locus_Breakpoint of int (* the cost of a locus breakpoint operation inside a chromosome *)
+    | `Locus_DCJ of int
     | `Circular of bool (** indicate if the chromosome is circular or not *)
 
     (** [(a, b)] is indel cost of a locus in a chromosome
@@ -1291,6 +1292,8 @@ let create_expr () =
             [
                 [ LIDENT "locus_inversion"; ":"; c = INT -> 
                       `Locus_Inversion (int_of_string c) ]  |
+                [ LIDENT "locus_dcj"; ":"; c = INT ->
+                        `Locus_DCJ (int_of_string c) ] |
                 [ LIDENT "locus_breakpoint"; ":"; c = INT -> 
                       `Locus_Breakpoint (int_of_string c) ]  |
                 [ LIDENT "chrom_breakpoint"; ":"; c = INT -> 
