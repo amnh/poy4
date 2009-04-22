@@ -191,7 +191,6 @@ END
 
 let _ = 
     let initial_script = ref script in
-    let script = ref (Phylo.empty ()) in
     let input = ref "" in
     let proc_command str =
         let () = Sys.catch_break true in
@@ -234,9 +233,9 @@ END
             let res = 
                 Phylo.run 
                 ~output_file:(!(Arguments.dump_file)) 
-                ~start:!script command 
+                ~start:!(Phylo.get_console_run ()) command 
             in
-            script := res;
+            Phylo.set_console_run res;
             if !Arguments.only_run_argument_script then exit 1
             else ()
         with
