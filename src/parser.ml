@@ -3922,7 +3922,7 @@ module PAlphabet = struct
                    ^ "inconsistent@ size@. (orientation@ here@ is@ true@");
                    raise (Inconsistent_alphabet_size ((Alphabet.size alph),
                    (Cost_matrix.Two_D.alphabet_size tcm)))
-             end else alph, tcm, tc3
+             end else alph, tcm, tcm3
         | false ->
             if (Alphabet.size alph) <> (Cost_matrix.Two_D.alphabet_size tcm) then
                 begin
