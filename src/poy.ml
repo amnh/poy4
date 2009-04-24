@@ -233,7 +233,7 @@ END
             let res = 
                 Phylo.run 
                 ~output_file:(!(Arguments.dump_file)) 
-                ~start:!(Phylo.get_console_run ()) command 
+                ~start:(Phylo.get_console_run ()) command 
             in
             Phylo.set_console_run res;
             if !Arguments.only_run_argument_script then exit 1
