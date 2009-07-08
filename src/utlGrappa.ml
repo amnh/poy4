@@ -191,3 +191,135 @@ let cmp_self_oriented_breakpoint_dis (genome : int array)  circular  =
     let ordered_permutation = get_ordered_permutation genome in 
     cmp_oriented_breakpoint_dis genome ordered_permutation circular
 
+
+let is_odd x = 1 = (1 land x)
+
+let create_breakpoint_graph genome = 
+    let len = 2 * ((Array.length genome) + 1) in
+    Array.make len (-1)
+
+let debug = false 
+
+
+let add_grey_edge a b breakpoint_graph = 
+    let apos =
+        (2 * (abs a)) - (if a < 0 then 1 else 0)
+    in
+    let bpos = 
+        (2 * (abs b)) - (if b > 0 then 1 else 0)
+    in
+    if debug then Printf.printf "Adding the edge %d - %d yields %d - %d\n%!" a b apos bpos;
+    breakpoint_graph.(apos) <- (bpos);
+    breakpoint_graph.(bpos) <- (apos)
+
+type color = Black | Grey
+
+let rec find_end color pos bp = 
+    match color with
+    | Black -> 
+            let pos =
+                if is_odd pos then pos - 1
+                else pos + 1
+            in
+            find_end Grey pos bp
+    | Grey -> 
+            if bp.(pos) = ~-1 then pos
+            else find_end Black (bp.(pos)) bp
+
+let print_breakpoint_graph bp =
+    Printf.printf "Will print the breakpoint graph\n%!";
+    Array.iteri (Printf.printf "%d\t%d\n%!") bp
+
+let count_cycles bp =
+    let counter = ref 1 
+    and start = ref 0
+    and cycle_len = ref 0 
+    and current_starting_point = ref 0 
+    and bp_len = Array.length bp 
+    and color = ref Black in
+    while !current_starting_point < bp_len do
+        if bp.(!start) = ~-1 then begin
+            (* We have found a cicle *)
+            while !current_starting_point < bp_len && 
+                bp.(!current_starting_point) = ~-1 do
+                incr current_starting_point;
+            done;
+            start := !current_starting_point;
+            cycle_len := 0;
+            if !start < bp_len && !cycle_len > 2 then incr counter;
+        end else begin
+            let start_contents = bp.(!start) in
+            incr cycle_len;
+            bp.(!start) <- ~-1;
+            match !color with
+            | Black -> 
+                    (* We are pursuing the black edge *)
+                    if is_odd !start then decr start 
+                    else incr start;
+                    color := Grey;
+            | Grey ->
+                    start := start_contents;
+                    color := Black;
+        end;
+    done;
+    !counter
+
+let make_breakpoint_graph genome = 
+    let len = Array.length genome in
+    let bp = create_breakpoint_graph genome in 
+    for i = 0 to len - 2 do
+        add_grey_edge genome.(i) genome.(i + 1) bp;
+    done;
+    if debug then print_breakpoint_graph bp;
+    let grey_first_cap = 
+        if genome.(0) > 0 then (2 * genome.(0)) - 1
+        else genome.(0) * 2
+    in
+    let grey_last_cap =
+        if genome.(len - 1) > 0 then (2 * genome.(len - 1))
+        else (genome.(len - 1) * 2) - 1
+    in
+    let bp_len = Array.length bp in
+    bp.(0) <- grey_first_cap;
+    if debug then Printf.printf "The grey first cap is %d and the other is %d\n%!"
+    grey_first_cap grey_last_cap;
+    bp.(grey_first_cap) <- 0;
+    bp.(bp_len - 1) <- grey_last_cap;
+    bp.(grey_last_cap) <- bp_len - 1;
+    bp
+
+let cmp_cicles genome1 genome2 circular = 
+    let genome2 = snd (standardize genome1 genome2) in
+    let graph = make_breakpoint_graph genome2 in
+    count_cycles graph 
+
+let count_relevant_grays graph =
+    let cnt = ref 0 in
+    let len = Array.length graph in
+    for i = 0 to  len - 1 do 
+        if 1 < (abs (graph.(i) - i)) then incr cnt;
+    done;
+    (!cnt) / 2
+
+let cmp_oriented_dcj genome1 genome2 circular = 
+    if genome2 = genome1 then 0
+    else
+        let genome1, genome2 = standardize genome1 genome2 in
+        let graph = make_breakpoint_graph genome2 in
+        if debug then print_breakpoint_graph graph;
+        let cicles = count_cycles (Array.copy graph) in
+        let breakpoints = count_relevant_grays graph in
+        let res = breakpoints - cicles in
+        if res < 0 then begin
+            Array.iter (Printf.printf "%d ") genome1;
+            print_newline ();
+            Array.iter (Printf.printf "%d ") genome2;
+            print_newline ();
+            print_int breakpoints;
+            print_newline ();
+            print_int cicles;
+            print_breakpoint_graph graph;
+            assert false;
+        end else res
+
+

@@ -1977,6 +1977,12 @@ let warn_if_no_trees_in_memory trees =
         ("There@ are@ no@ active@ trees@ in@ memory!")
     else ()
 
+let parse_tree_file file =
+    let trees = Parser.Tree.of_file file in
+    List.map (function [x] -> x | _ -> 
+        failwith "Input tree contains forest, not just a tree.") 
+    trees
+
 let get_trees_for_support support_class run =
     let do_support support_set x = 
         match support_set with
@@ -2015,15 +2021,26 @@ let get_trees_for_support support_class run =
                         fs)
     in
     match support_class with
-    | `Bremer (Some input_files) ->
-                S.bremer_of_input_file_but_trust_input_cost 
-                (match run.data.Data.root_at with
-                | Some x -> x | None -> failwith "no root?")
-                (fun x -> Data.code_taxon x run.data)
-                run.data
-                input_files
-                run.trees, 
-                "Bremer"
+    | `Bremer (Some (tree_of_interest, input_files)) ->
+            let trees =
+                match tree_of_interest with
+                | `UseLoadedTree ->
+                        Sexpr.map (fun x -> `Loaded x) run.trees
+                | `UseGivenTree (file, cost) ->
+                        let trees = parse_tree_file file in
+                        let trees = 
+                            List.map (fun x -> `Parsed (x, cost)) trees
+                        in
+                        Sexpr.of_list trees
+            in
+            S.bremer_of_input_file_but_trust_input_cost 
+            (match run.data.Data.root_at with
+            | Some x -> x | None -> failwith "no root?")
+            (fun x -> Data.code_taxon x run.data)
+            run.data
+            input_files
+            trees, 
+            "Bremer"
     | `Bremer None ->
             Sexpr.map (S.support_to_string_tree run.data)
             run.bremer_support, "Bremer"

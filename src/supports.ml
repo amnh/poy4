@@ -52,13 +52,15 @@ module type S = sig
 val bremer_of_input_file :
     (Tree.u_tree -> string -> int) -> int ->
         (int -> string) -> Data.d -> Methods.filename list -> 
-            (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+            [ `Parsed of (string Parser.Tree.t * int) | `Loaded of (a, b)
+            Ptree.p_tree ] Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 (** Like [bremer_of_input_file] but trust whatever input cost is provided with
 * each tree .*)
 val bremer_of_input_file_but_trust_input_cost : int ->
     (int -> string) -> Data.d -> Methods.filename list -> 
-        (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+        [ `Parsed of (string Parser.Tree.t * int) | `Loaded of (a, b)
+            Ptree.p_tree ] Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 
 end
@@ -711,13 +713,20 @@ module MakeNormal (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge :
         process_cost data root)) trees) in
         Sexpr.of_list for_brem
 
-    let bremer_of_input_file process_cost root to_string data file 
-    (trees : (a, b) Ptree.p_tree Sexpr.t) = 
+    let bremer_of_input_file process_cost root to_string data file trees = 
         let process_one_tree tree =
+            let collapser, cost, tree =
+                match tree with
+                | `Loaded tree -> 
+                        (TO.collapse_as_needed tree),
+                        (int_of_float (Ptree.get_cost `Adjusted tree)),
+                        `Loaded tree.Ptree.tree
+                | `Parsed (tree, cost) ->
+                        (fun _ _ -> false), cost, `Parsed tree
+            in
             Ptree.bremer 
-            (TO.collapse_as_needed tree) to_string
-            (int_of_float (Ptree.get_cost `Adjusted tree)) 
-            tree.Ptree.tree (generate_sets process_cost data root) file
+            collapser to_string data cost
+            tree (generate_sets process_cost data root) file
         in
         Sexpr.map_status "Bremer of input tree" ~eta:true process_one_tree trees
 

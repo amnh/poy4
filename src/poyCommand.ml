@@ -60,6 +60,7 @@ type identifiers = [
 type chromosome_args = [
     | `Locus_Inversion of int (** the cost of a locus inversion operation inside a chromosome *)
     | `Locus_Breakpoint of int (* the cost of a locus breakpoint operation inside a chromosome *)
+    | `Locus_DCJ of int
     | `Circular of bool (** indicate if the chromosome is circular or not *)
 
     (** [(a, b)] is indel cost of a locus in a chromosome
@@ -1291,6 +1292,8 @@ let create_expr () =
             [
                 [ LIDENT "locus_inversion"; ":"; c = INT -> 
                       `Locus_Inversion (int_of_string c) ]  |
+                [ LIDENT "locus_dcj"; ":"; c = INT ->
+                        `Locus_DCJ (int_of_string c) ] |
                 [ LIDENT "locus_breakpoint"; ":"; c = INT -> 
                       `Locus_Breakpoint (int_of_string c) ]  |
                 [ LIDENT "chrom_breakpoint"; ":"; c = INT -> 
@@ -2029,13 +2032,32 @@ let create_expr () =
             [
                 [ ":"; y = support_names -> y ]
             ];
+        support_files :
+            [ 
+                [ x = STRING -> [`Local x] ] | 
+                [ left_parenthesis; x = LIST1 [ y = STRING -> y] SEP ",";
+                right_parenthesis -> (List.map (fun x -> `Local x) x) ]
+            ];
         support_names:
             [
-                [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some [(`Local x)]) ] |
+                [ LIDENT "bremer"; ":"; LIDENT "of_file"; ":"; left_parenthesis; 
+                f = STRING; ","; c = INT; ",";  x = support_files;
+                right_parenthesis -> 
+                    `Bremer (Some ((`UseGivenTree (`Local f, int_of_string c)), x)) ] |
                 [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
                 -> y] SEP ",";
                     right_parenthesis -> 
-                        `Bremer (Some (List.map (fun x -> `Local x) x))] |
+                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
+                        in
+                        `Bremer (Some r)] |
+                [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some
+                (`UseLoadedTree, [(`Local x)])) ] |
+                [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
+                -> y] SEP ",";
+                    right_parenthesis -> 
+                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
+                        in
+                        `Bremer (Some r)] |
                 [ LIDENT "bremer" -> `Bremer None ] |
                 [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
                     match y with

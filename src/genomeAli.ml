@@ -733,6 +733,8 @@ let create_fast_general_ali chrom_id genome1_ref_code chrom1_seq loci1_ls
     let bp =
         match ali_pam.ChromPam.re_meth with
         | `Locus_Breakpoint bp -> bp
+        | `Locus_DCJ _ -> 
+                failwith "Can not calculate DCJ for multiple chromosome"
         | _ -> failwith "Can not calculate inversion distance for multiple chromosome!"
     in 
 

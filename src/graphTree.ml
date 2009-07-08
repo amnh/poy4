@@ -165,7 +165,7 @@ module Make = functor (G : GRAPHICS_TYPE) -> struct
                        else name
                    in
                    display := 
-                       G.moveto !display (x - (fontWidth * (name_len)) - 3)
+                       G.moveto !display (x - (fst (G.text_size name)) - 3)
                    (avg + fontHeight/2);
                    display := G.draw_string !display name;
                    display := G.set_color !display prev_color;

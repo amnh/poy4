@@ -118,6 +118,7 @@ type transform_cost_matrix = [
 type chromosome_pam_t = [
     | `Locus_Inversion of int
     | `Locus_Breakpoint of int
+    | `Locus_DCJ of int
     | `Chrom_Breakpoint of int
     | `Circular of bool
     | `Locus_Indel_Cost of (int * int)
@@ -193,7 +194,8 @@ type diagnosis = [
 type summary_class = [ `Individual | `Consensus | `InputFile of string ]
 
 type support_output = [
-    | `Bremer of filename list option
+    | `Bremer of 
+        (([`UseLoadedTree | `UseGivenTree of (filename * int)]) * filename list) option
     | `Jackknife of summary_class
     | `Bootstrap of summary_class
 ]

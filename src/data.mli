@@ -52,7 +52,8 @@ type dyna_state_t = [
 
 type re_meth_t = [ (* The cost of a rearrangement event is the argument *)
     | `Locus_Breakpoint of int    
-    | `Locus_Inversion of int ]
+    | `Locus_Inversion of int 
+    | `Locus_DCJ of int ]
 
 type dyna_pam_t = {
     (* The minimum length of a perfect match to start
@@ -440,6 +441,7 @@ val transform_chrom_to_rearranged_seq :
   Methods.dynamic_char_transform -> 'c -> Methods.implied_alignment list -> d
 
 val print : d -> unit
+val myprint : d -> unit
 
 val get_chars_codes : d -> characters -> int list
 val get_chars_codes_comp : d -> bool_characters -> int list

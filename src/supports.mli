@@ -56,13 +56,15 @@ val join_support_trees : (int * Methods.support_tree) list -> Methods.support_tr
 val bremer_of_input_file :
     (Tree.u_tree -> string -> int) -> int ->
         (int -> string) -> Data.d -> Methods.filename list -> 
-            (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+            [ `Parsed of (string Parser.Tree.t * int) | `Loaded of (a, b)
+            Ptree.p_tree ] Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 (** Like [bremer_of_input_file] but trust whatever input cost is provided with
 * each tree in it's annotated information.*)
 val bremer_of_input_file_but_trust_input_cost : int ->
     (int -> string) -> Data.d -> Methods.filename list -> 
-        (a, b) Ptree.p_tree Sexpr.t -> string Parser.Tree.t Sexpr.t
+        [ `Parsed of (string Parser.Tree.t * int) | `Loaded of (a, b)
+            Ptree.p_tree ] Sexpr.t -> string Parser.Tree.t Sexpr.t
 
 
 end

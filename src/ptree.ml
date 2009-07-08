@@ -2230,6 +2230,25 @@ let add_tree_to_counters ?flag_collapsable is_collapsable counters (tree : Tree.
     in
     All_sets.Integers.fold (add_handle tree) (Tree.get_handles tree) counters
 
+let add_parsed_tree_to_counters data counters tree =
+    let make_set x = All_sets.Integers.singleton (Data.taxon_code x data) in
+    let add_or_not' x y = snd (add_or_not (Some 0) false x y) in
+    let rec aux tree counters = 
+        match tree with
+        | Parser.Tree.Leaf name ->
+                let myset = make_set name in
+                add_or_not' myset counters, myset
+        | Parser.Tree.Node (children, _) ->
+                let counters, myset =
+                    List.fold_left (fun (counters, childset) child ->
+                    let counters, others = aux child counters in
+                    counters, All_sets.Integers.union others childset) 
+                    (counters, All_sets.Integers.empty) children
+                in
+                add_or_not' myset counters, myset
+    in
+    fst (aux tree counters)
+
 let rec make_tree_counters code_generator counters tree = 
     let add_singleton node =
         let single = All_sets.Integers.singleton node in
@@ -2384,9 +2403,16 @@ let extract_bremer to_string sets =
     let tree_builder = build_a_tree to_string 1. true coder in
     make_tree min_int coder tree_builder sets
 
+let rec count_leaves (tree : string Parser.Tree.t) =
+    match tree with
+    | Parser.Tree.Node (chld, _) -> 
+            List.fold_left (fun acc c -> (acc + count_leaves c)) 0 chld
+    | Parser.Tree.Leaf _ -> 1
+
+
 (* A function that returns the bremer support tree based on the set of (costs, 
 * tree) of sets, for the input tree *)
-let bremer is_collapsable to_string cost tree generator files =
+let bremer is_collapsable to_string data cost tree generator files =
     let tree_file_handlers = 
         ref (List.map (Parser.Tree.stream_of_file true) files) 
     in
@@ -2394,7 +2420,11 @@ let bremer is_collapsable to_string cost tree generator files =
     * for a tree _not_ containing the set, and a set of clades belonging to a
     * tree, with it's associated cost, and update the map according to the cost
     * for the set of clades, only if better. *)
-    let number_of_leaves = List.length (Tree.get_all_leaves tree) in
+    let number_of_leaves = 
+        match tree with
+        | `Loaded tree -> List.length (Tree.get_all_leaves tree)
+        | `Parsed tree -> count_leaves tree
+    in
     let replace_when_smaller map =
         let map = ref map in
         let cntr = ref 1 in
@@ -2437,8 +2467,13 @@ let bremer is_collapsable to_string cost tree generator files =
     let map : int Tree.CladeFPMap.t = 
         let flag_collapsable = 0 in
         let map = 
-            add_tree_to_counters ~flag_collapsable is_collapsable Tree.CladeFPMap.empty
-            tree
+            match tree with
+            | `Loaded tree ->
+                    add_tree_to_counters ~flag_collapsable 
+                    is_collapsable Tree.CladeFPMap.empty tree
+            | `Parsed tree -> 
+                    add_parsed_tree_to_counters data
+                    Tree.CladeFPMap.empty tree
         in
         Tree.CladeFPMap.map
         (function 0 -> 0 | _ -> max_int) map 

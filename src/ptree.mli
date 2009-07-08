@@ -563,8 +563,9 @@ val extract_bremer :  (All_sets.Integers.elt -> string) ->
 * The resulting tree assigns to each branch the minimum cost found for a tree
 * not containing the child clade of the branch within [sets]. *)
 val bremer :
-    (int -> int -> bool) ->
-    (int -> string) -> int -> Tree.u_tree -> 
+    (int -> int -> bool) -> 
+    (int -> string) -> Data.d -> int -> [ `Parsed of string Parser.Tree.t | `Loaded of
+    Tree.u_tree ] -> 
               ((string Parser.Tree.t * string) -> (int * Tree.CladeFP.CladeSet.t)) ->
           Parser.filename list -> 
               string Parser.Tree.t
