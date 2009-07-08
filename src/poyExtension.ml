@@ -571,10 +571,22 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ ":"; LIDENT "consensus" -> <:expr<`Consensus>> ] |
                 [ ":"; x = flex_string -> <:expr<`InputFile $x$ >> ]
             ];
+        support_files :
+            [ 
+                [ x = flex_string -> exSem_of_list [ <:expr<`Local $x$>> ] ] | 
+                [ left_parenthesis; 
+                    x = LIST1 [ y = flex_string -> <:expr<`Local $y$>> ] SEP ",";
+                    right_parenthesis ->  exSem_of_list x ]
+            ];
         support_names:
             [
-                [ LIDENT "bremer"; ":"; x = flex_string -> <:expr<`Bremer (Some
-            [(`Local $x$)])>>] |
+                [ LIDENT "bremer"; ":"; LIDENT "of_file"; ":"; 
+                    left_parenthesis; f = flex_string; ","; c = flex_integer; ",";
+                    x = support_files; right_parenthesis ->
+                        <:expr<`Bremer (Some
+                        (`UseGivenTree (`Local $f$, $c$), $x$))>>] |
+                [ LIDENT "bremer"; ":"; x = support_files -> 
+                        <:expr<`Bremer (Some (`UseLoadedTree, $x$))>>] |
                 [ LIDENT "bremer" -> <:expr<`Bremer None>> ] |
                 [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
                     match y with
