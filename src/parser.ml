@@ -3108,11 +3108,13 @@ module SC = struct
                         let rec process_range x =
                             match x with
                             | Nexus.Range (a, b) ->
-                                    let a = int_of_string a
+                                    (* 1 base array in NEXUS files *)
+                                    let a = (int_of_string a) - 1
                                     and b = 
                                         match b with
                                         | None -> (Array.length characters) - 1
-                                        | Some b -> int_of_string b in
+                                        | Some b -> 
+                                                (int_of_string b) - 1 in
                                     for i = 
                                         a + start_position to 
                                         b + start_position 
@@ -3122,19 +3124,17 @@ module SC = struct
                                             st_eliminate = true }
                                     done
                             | Nexus.Single v ->
-                                    let v = int_of_string v in
+                                    let v = (int_of_string v) - 1 in
                                     characters.(v) <- 
                                         { characters.(v) with 
                                         st_eliminate = true }
                             | Nexus.Name name ->
                                     let upp_name = 
                                         String.uppercase name 
-                                    and lst = 
-                                        (Array.length characters) - 1 
-                                    in
+                                    and lst = (Array.length characters) in
                                     if "ALL" = upp_name then
                                         process_range 
-                                        (Nexus.Range ("0", 
+                                        (Nexus.Range ("1", 
                                         Some (string_of_int lst)))
                                     else 
                                         let v = 
@@ -3151,9 +3151,11 @@ module SC = struct
             (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned)
 
         let rec apply_on_character_set characters f x =
-            let last = (Array.length characters) - 1 in
+            let last = (Array.length characters) in
             match x with
             | Nexus.Range (a, b) ->
+                    (* Notice that in the input files, the arrays are base 1 not
+                    * 0, therefore we substract 1. *)
                     let a = int_of_string a
                     and b = 
                         match b with
@@ -3161,18 +3163,20 @@ module SC = struct
                         | Some b ->  int_of_string b 
                     in
                     for i = a to b do
-                        f i;
+                        f (i - 1);
                     done
             | Nexus.Single v ->
-                    f (int_of_string v);
+                    (* Notice that in the input files, the arrays are base 1 not
+                    * 0, therefore we substract 1. *)
+                    f ((int_of_string v) - 1);
             | Nexus.Name name ->
                     let up_name = String.uppercase name in
                     if "ALL" = up_name then
                         apply_on_character_set characters f
-                        (Nexus.Range ("0", 
+                        (Nexus.Range ("1", 
                         (Some (string_of_int last))))
                     else if "." = up_name then
-                        f last
+                        f (last - 1)
                     else
                         f (find_character characters name)
 
