@@ -3445,8 +3445,17 @@ module SC = struct
             | Nexus.Error block ->
                     Status.user_message Status.Error
                     ("There@ is@ a@ parsing@ error@ in@ the@ block@ " ^
-                    StatusCommon.escape block ^ ". I@ will@ ignore@ the@ block@ and@ " ^
-                    "continue@ with@ the@ rest@ of@ the@ file.");
+                    StatusCommon.escape block ^ ". I@ have@ rules@ to@ parse@ "
+                    ^ "this@ kind@ of@ block@ but@ something@ is@ wrong@ " ^
+                    "with@ it.@ I@ will@ ignore@ the@ block@ and@ " ^
+                    "continue@ with@ the@ rest@ of@ the@ file,@ but@ I@ " ^
+                    "advice@ you@ to@ verify@ the@ cause@ of@ the@ error.");
+                    acc
+            | Nexus.UnknownBlock block ->
+                    Status.user_message Status.Warning
+                    ("I@ will@ ignore@ the@ block@ " ^ 
+                    StatusCommon.escape block ^
+                    "@ and@ continue@ with@ the@ rest@ of@ the@ NEXUS@ file.");
                     acc
             | Nexus.Assumptions lst ->
                     let table = Hashtbl.create 37 in

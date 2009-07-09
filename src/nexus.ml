@@ -109,6 +109,7 @@ type block =
     pictureformat option * pictureencoding option * source * string) option) 
     | Assumptions of assumption_items list 
     | Error of string
+    | UnknownBlock of string
 
 type tree = 
     | Leaf of (string * float option)
