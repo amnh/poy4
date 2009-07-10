@@ -15,7 +15,7 @@ let parse_error s =
         (s ^ "@ between@ characters@ " ^ b ^ 
         "@ and@ " ^ e)
     with
-    | _ -> Status.user_message Status.Error s
+    | _ -> ()
 
 let report_error text b e =
     let b = string_of_int (b.Lexing.pos_cnum)
@@ -189,7 +189,7 @@ block:
     | BEGIN SETS SEMICOLON list_of_anything ENDNEXUS SEMICOLON
         { Nexus.Ignore $2 }
     | BEGIN IDENT error ENDNEXUS SEMICOLON
-        { Nexus.Error $2 }
+        { Nexus.UnknownBlock $2 }
     | BEGIN TAXA SEMICOLON error ENDNEXUS SEMICOLON  
         { Nexus.Error $2 }
     | BEGIN UNALIGNED SEMICOLON error ENDNEXUS SEMICOLON
@@ -287,10 +287,11 @@ standard_type_set_item:
 standard_type_set:
     | standard_type_set_item COMMA standard_type_set { ($1 :: $3) }
     | standard_type_set_item { [$1] }
+    | { [] }
     ;
 vector_type_set:
     | INTEGER vector_type_set { ($1 :: $2) }
-    | INTEGER { [$1] }
+    | { [] }
     ;
 optional_exset:
     | EXSET optional_set_for_assumptions { $2 }
@@ -369,9 +370,13 @@ tree_list:
     | DATA SEMICOLON tree_list { $1 :: $3 }
     | DATA SEMICOLON { [ $1 ] }
     ;
+identifiers:
+    | IDENT { $1 }
+    | INTEGER { $1 }
+    ;
 pairs_list:
-    | IDENT IDENT COMMA pairs_list { ($1, $2) :: $4 }
-    | IDENT IDENT { [$1, $2] }
+    | identifiers IDENT COMMA pairs_list { ($1, $2) :: $4 }
+    | identifiers IDENT { [$1, $2] }
     ;
 characters:
     | DIMENSIONS optional_taxa_dimensions NCHAR EQUAL INTEGER SEMICOLON 
@@ -679,7 +684,7 @@ tree:
     | do_star IDENT EQUAL single_tree EOF { $4 }
     ;
 single_tree:
-    | IDENT optional_length { Nexus.Leaf ($1, $2) }
+    | identifiers optional_length { Nexus.Leaf ($1, $2) }
     | LPARENT single_tree_list RPARENT optional_label optional_length 
                             { Nexus.Node ($2, $4, $5) }
     ;
