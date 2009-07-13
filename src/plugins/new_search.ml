@@ -39,25 +39,38 @@ let improve_trees (to_improve, already_good) =
 let do_fuse_round run =
     run_script run (CPOY fuse ())
 
+let fail () = 
+    failwith "Usage: search2 ([(hours | minutes | seconds):FLOAT])"
+
 let search_function args run =
-    match args with
-    | `Empty -> 
-            (* We assume that we are using a simple affine gap cost, so we will
-            * use this technique *)
-            (* 5 rounds of the following *)
-            let rec do_iteration iteration run acc =
-                if iteration = 0 then acc
-                else
-                    run
-                    --> build_initial_tree 
-                    --> build_more_trees 10
-                    --> improve_trees
-                    --> merge_trees acc
-                    --> do_iteration (iteration - 1) run
-            in
-            let run = do_iteration 30 run run in
-            do_fuse_round run
-    | _ -> failwith "Usage: search2 (), no more, no less."
+    let time = 
+        match args with
+        | `Empty -> 3600. (* One hour *)
+        | `Labled (name, `Float flt) ->
+                if name = "hours" then
+                    3600. *. flt
+                else if name = "minutes" then
+                    60. *. flt
+                else if name = "seconds" then flt
+                else fail ()
+        | _ -> fail ()
+    in
+    (* We assume that we are using a simple affine gap cost, so we will
+    * use this technique *)
+    (* 5 rounds of the following *)
+    let timer = Timer.start () in
+    let rec do_iteration iteration run acc =
+        if iteration = 0 || time < Timer.get_user timer then acc
+        else
+            run
+            --> build_initial_tree 
+            --> build_more_trees 10
+            --> improve_trees
+            --> merge_trees acc
+            --> do_iteration (iteration - 1) run
+    in
+    let run = do_iteration 10 run run in
+    do_fuse_round run
 
 
 let () = Phylo.register_function "search2" search_function
