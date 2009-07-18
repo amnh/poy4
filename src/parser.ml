@@ -2464,6 +2464,20 @@ module SC = struct
             (function Nexus.FMissing x -> x | _ -> assert false) 
             "?"
 
+        let rec expand_symbol_ranges symbols =
+            match symbols with
+            | x :: "~" :: ((y :: _) as rest) ->
+                    let codex = int_of_string x
+                    and codey = int_of_string y in
+                    let res = ref (expand_symbol_ranges rest) in
+                    for i = codey - 1 downto codex do
+                        res := (string_of_int i)  :: !res
+                    done;
+                    !res
+            | x :: rest -> x :: (expand_symbol_ranges rest)
+            | [] -> []
+
+
         let parse_symbols str = 
             let rec mk pos lst =
                 if pos < 0 then lst 
@@ -2474,7 +2488,8 @@ module SC = struct
                     | x -> 
                             mk (pos - 1) ((String.make 1 x) :: lst)
             in
-            mk ((String.length str) - 1) []
+            let symbols = mk ((String.length str) - 1) [] in
+            expand_symbol_ranges symbols
 
         let parse_equate str =
             let rec create_list pos items str =
@@ -3410,11 +3425,10 @@ module SC = struct
                             | Some x -> x
                         with
                         | _ -> 
-                                try match taxa.(int_of_string name) with
+                                try match taxa.((int_of_string name) - 1) with
                                 | None -> name
                                 | Some x -> x
-                                with
-                                | _ -> name
+                                with | _ -> name
             in
             let rec translate_branch = function
                 | Nexus.Leaf (name, _) -> Tree.Leaf (process_name name)
