@@ -1056,6 +1056,9 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
         [ "NPOY"; s = expr_poy -> 
             <:expr<Phylo.parsed_run (PoyCommand.of_parsed False
             $exSemCom_of_list s$)>> ] |
+        [ "RPOY"; "("; start = expr; ")"; s = expr_poy -> 
+            <:expr<Phylo.run ~start:$start$ (PoyCommand.of_parsed False
+            $exSemCom_of_list s$)>> ] |
         [ "GPOY" -> <:expr<Phylo.get_console_run ()>> ] 
     ];
     END;;
