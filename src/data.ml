@@ -3200,7 +3200,10 @@ let codes_with_same_tcm codes data =
     List.fold_left ~f:assign_matching ~init:[] codes
 
 let rec assign_affine_gap_cost data chars cost =
-    let codes = get_chars_codes_comp data chars in
+    let codes = 
+        get_code_from_characters_restricted_comp `AllDynamic data 
+        chars 
+    in
     let codes = codes_with_same_tcm codes data in
     let codes = List.map (fun (a, b, alph) -> 
         let b = 
