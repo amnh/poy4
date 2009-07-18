@@ -786,9 +786,17 @@ module Tree = struct
             ignore (stream#getch);
             ()
         in
+        let ignore_until_comma () =
+            ignore (stream#read_excl ['('; ')'; ';'; ',']);
+            ()
+        in
         let get_cost_bracket () =
             let res = stream#read_excl close_squared_parenthesis in
             ignore (stream#getch);
+            res
+        in
+        let get_newick_branch_length () =
+            let res = stream#read_excl ['('; ')'; ';'; ','] in
             res
         in
         let read_taxon_name () = 
@@ -804,6 +812,10 @@ module Tree = struct
                     Node (acc, "")
             | '[' -> 
                     ignore_cost_bracket ();
+                    read_branch acc
+            | ',' -> read_branch acc
+            | ':' ->
+                    ignore_until_comma ();
                     read_branch acc
             | v when taxon_name v ->
                     stream#putback v;
@@ -844,6 +856,7 @@ module Tree = struct
                         | End_of_file -> 
                                 let msg = "Unexpected end of file" in
                                 raise (Illegal_tree_format msg)
+                        read_branch []
                     in
                     read_tree acc1 ((res, "") :: acc2)
                 | '*'
@@ -853,6 +866,21 @@ module Tree = struct
                 | '[' -> 
                     let contents = 
                         try get_cost_bracket () with
+                        | End_of_file ->
+                                let msg = "Unexpected end of file" in
+                                raise (Illegal_tree_format msg)
+                    in
+                    let acc2 = 
+                        match acc2 with
+                        | (h, _) :: t -> (h, contents) :: t
+                        | [] -> 
+                                let msg = "Unexpected cost spec" in
+                                raise (Illegal_tree_format msg)
+                    in
+                    read_tree acc1 acc2
+                | ':' ->
+                    let contents = 
+                        try get_newick_branch_length () with
                         | End_of_file ->
                                 let msg = "Unexpected end of file" in
                                 raise (Illegal_tree_format msg)
@@ -901,6 +929,20 @@ module Tree = struct
                 | '[' -> 
                         let contents = 
                             try get_cost_bracket () with
+                            | End_of_file ->
+                                    let msg = "Unexpected end of file" in
+                                    raise (Illegal_tree_format msg)
+                        in
+                        (match !acc2 with
+                        | Some (h, _) -> 
+                                acc2 := None;
+                                (h, contents) 
+                        | None -> 
+                                let msg = "Unexpected cost spec" in
+                                raise (Illegal_tree_format msg))
+                | ':' -> 
+                        let contents = 
+                            try get_newick_branch_length () with
                             | End_of_file ->
                                     let msg = "Unexpected end of file" in
                                     raise (Illegal_tree_format msg)
