@@ -349,6 +349,20 @@ module type S = sig
             phylogeny list 
     end
 
+    module Run : sig
+        type phylogeny = (a, b) Ptree.p_tree
+        type run = r
+        val min_cost : run -> float option
+        val max_cost : run -> float option
+        val all_costs : run -> float list
+        val trees : run -> phylogeny list
+        val set_trees : run -> phylogeny list -> run
+        val data : run -> Data.d
+        val nodes : run -> a list
+        val to_string : run -> bool -> string list list 
+        val of_string : run -> string -> run
+    end
+
     module Runtime : sig
         type phylogeny = (a, b) Ptree.p_tree
         val min_cost : unit -> float option
@@ -4353,28 +4367,56 @@ let set_console_run r = console_run_val := r
             (`Build (1, (`Wagner_Rnd (1, 0.,`Last, [], `UnionBased None)), [])))
     end
 
-
-    module Runtime = struct
+    module Run = struct
         type phylogeny = (a, b) Ptree.p_tree
-        let get_cost cmp () = 
-            let run = get_console_run () in
+        type run = r
+        let get_cost cmp run = 
             Sexpr.fold_left (fun acc x ->
                 match acc with
                 | None -> Some (PhyloTree.get_cost x)
                 | Some y -> Some (cmp y (PhyloTree.get_cost x))) 
             None run.trees
-        let min_cost () = get_cost min ()
-        let max_cost () = get_cost max ()
+        let min_cost run = get_cost min run
+        let max_cost run = get_cost max run
+        let trees run =
+            Sexpr.to_list run.trees
+        let set_trees r trees =
+            let trees = Sexpr.of_list trees in
+            { r with trees = trees }
+        let all_costs run = 
+            let lst = List.rev_map PhyloTree.get_cost (trees run) in
+            List.sort compare lst
+
+        let data run = run.data
+
+        let nodes run = run.nodes
+
+        let to_string run bool =
+            let trees = trees run in
+            List.map (fun x -> PhyloTree.to_string bool x run.data) trees
+
+        let of_string run x = 
+            let trees = PhyloTree.of_string x run.data run.nodes in
+            let trees = Sexpr.of_list trees in
+            { run with trees = trees }
+    end
+
+
+    module Runtime = struct
+        type phylogeny = (a, b) Ptree.p_tree
+        let get_cost cmp = 
+            let run = get_console_run () in
+            Run.get_cost cmp run
+
+        let min_cost () = get_cost min 
+        let max_cost () = get_cost max
         let trees () =
             let run = get_console_run () in
-            Sexpr.to_list run.trees
+            Run.trees run
         let set_trees trees =
-            let trees = Sexpr.of_list trees in
             let r = get_console_run () in
-            set_console_run { r with trees = trees }
-        let all_costs () = 
-            let lst = List.rev_map PhyloTree.get_cost (trees ()) in
-            List.sort compare lst
+            set_console_run (Run.set_trees r trees)
+        let all_costs () = Run.all_costs (get_console_run ())
 
         let data () = 
             let run = get_console_run () in
@@ -4395,6 +4437,7 @@ let set_console_run r = console_run_val := r
             let trees = Sexpr.of_list trees in
             console_run_val := { run with trees = trees }
     end
+
 
     module Node = Node
 end
@@ -4474,7 +4517,7 @@ module DNA = struct
     module Seq = struct
         type s = Sequence.s
         type base = char
-        let gap = '_'
+        let gap = '-'
         let of_string str = 
             Sequence.of_string str alph
         let to_string s =
