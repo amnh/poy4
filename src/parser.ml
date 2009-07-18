@@ -856,7 +856,6 @@ module Tree = struct
                         | End_of_file -> 
                                 let msg = "Unexpected end of file" in
                                 raise (Illegal_tree_format msg)
-                        read_branch []
                     in
                     read_tree acc1 ((res, "") :: acc2)
                 | '*'
