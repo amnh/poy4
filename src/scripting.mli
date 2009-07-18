@@ -322,6 +322,20 @@ val set_console_run : r -> unit
             phylogeny list 
     end
 
+    module Run : sig
+        type phylogeny = (a, b) Ptree.p_tree
+        type run = r
+        val min_cost : run -> float option
+        val max_cost : run -> float option
+        val all_costs : run -> float list
+        val trees : run -> phylogeny list
+        val set_trees : run -> phylogeny list -> run
+        val data : run -> Data.d
+        val nodes : run -> a list
+        val to_string : run -> bool -> string list list 
+        val of_string : run -> string -> run
+    end
+
     module Runtime : sig
         type phylogeny = (a, b) Ptree.p_tree
         val min_cost : unit -> float option
