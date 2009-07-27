@@ -411,8 +411,8 @@ optional_charstatelabels:
     |                                           { [] }
     ;
 charstatelables:
-    | INTEGER IDENT BACKSLASH taxonlist COMMA charstatelables { ($1, $2, $4) :: $6 }
-    | INTEGER IDENT BACKSLASH taxonlist { [] }
+    | INTEGER nexus_word BACKSLASH taxonlist COMMA charstatelables { ($1, $2, $4) :: $6 }
+    | INTEGER nexus_word BACKSLASH taxonlist { [] }
     ;
 optional_statelabels:
     | STATELABELS statelabels SEMICOLON { $2 }
@@ -528,9 +528,12 @@ taxa:
     | DIMENSIONS NTAX EQUAL INTEGER SEMICOLON TAXLABELS taxonlist SEMICOLON 
         { ($4, $7) }
     ;
+nexus_word :
+    | IDENT { $1 }
+    | SINGLEQUOTED { $1 }
+    ;
 taxonlist:
-    | IDENT taxonlist   { $1 :: $2 }
-    | SINGLEQUOTED taxonlist { $1 :: $2 }
+    | nexus_word taxonlist   { $1 :: $2 }
     |                   { [] }
     ;
 characterset_list:

@@ -365,6 +365,7 @@ let dependency_relations (init : Methods.script) =
                 | `Ri (filename, _)
                 | `CompareSequences (filename, _, _, _)
                 | `FasWinClad filename
+                | `Nexus filename
                 | `Dataset filename
                 | `Nodes filename
                 | `TerminalsFiles filename
@@ -1707,6 +1708,8 @@ let script_to_string (init : Methods.script) =
                         sequences@]"
                 | `FasWinClad _ -> 
                         "@[report the phastwinclad file@]"
+                | `Nexus _ -> 
+                        "@[report the nexus file@]"
                 | `Dataset _ ->
                         "@[report the current data under analysis@]"
                 | `Xslt _ ->
@@ -1971,6 +1974,7 @@ let is_master_only (init : Methods.script) =
     | `Ri _
     | `CompareSequences _
     | `FasWinClad _ 
+    | `Nexus _ 
     | `ExplainScript _
     | `PrintWDir 
     | `Memory _ 

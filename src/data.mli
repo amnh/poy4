@@ -488,6 +488,7 @@ val get_recost : dyna_pam_t -> int
 val get_locus_indel_cost : dyna_pam_t -> int * int
 
 val to_faswincladfile : d -> string option -> unit
+val to_nexus : d -> string option -> unit
 
 val report_taxon_file_cross_reference : 
     bool_characters option -> d -> string option -> unit
