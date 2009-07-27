@@ -856,7 +856,6 @@ module Tree = struct
                         | End_of_file -> 
                                 let msg = "Unexpected end of file" in
                                 raise (Illegal_tree_format msg)
-                        read_branch []
                     in
                     read_tree acc1 ((res, "") :: acc2)
                 | '*'
@@ -2736,13 +2735,24 @@ module SC = struct
         let find_character chars name =
             find_position "Character not found" (fun x -> name = x.st_name) chars
 
+        let cleanup_taxon_name taxon =
+            let south = Str.regexp " *$"
+            and north = Str.regexp "^ *" 
+            and space = Str.regexp " " in
+            let taxon = Str.replace_first south "" taxon in
+            let taxon = Str.replace_first north "" taxon in
+            Str.global_replace space "_" taxon
+
+
         let find_taxon taxa name =
+            let name = cleanup_taxon_name name in
             try 
-                find_position ("Taxon " ^ name ^ " not found") (function None -> false | Some x -> name = x) taxa
+                find_position ("Taxon " ^ name ^ " not found") 
+                (function None -> false | Some x -> name = x) taxa
             with
             | Failure _ ->
                     let pos = 
-                        find_position ("Taxon not " ^ name ^ " found") (function None -> true |
+                        find_position ("Taxon " ^ name ^ " not found") (function None -> true |
                         Some _ -> false) taxa 
                     in
                     taxa.(pos) <- Some name;
@@ -2777,11 +2787,18 @@ module SC = struct
             try while true do
                 let line = stream#read_line in
                 let line = 
-                    let line =  Str.split (Str.regexp "[ \t]+") line in
-                    List.filter (function "" -> false | _ -> true) line
+                    match Str.split (Str.regexp "'") line with
+                    | (_ :: _ :: []) as res -> res
+                    | [] -> []
+                    | h :: [] ->
+                            let line =  Str.split (Str.regexp "[ \t]+") line in
+                            List.filter (function "" -> false | _ -> true) line
+                    | _ -> failwith "Multiple single quotes in file"
                 in
                 match line with
                 | taxon :: sequence ->
+                        let taxon = cleanup_taxon_name taxon in
+                        Printf.printf "Adding: %s\n%!" taxon;
                         let adder buf x = 
                             Buffer.add_string buf x; 
                             Buffer.add_string buf " "
@@ -3076,6 +3093,8 @@ module SC = struct
 
         let add_prealigned_characters file chars 
         (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned) =
+            let taxa = Array.map (function None -> None | Some x -> Some
+            (cleanup_taxon_name x)) taxa in
             let form = chars.Nexus.char_format in
             let start_position = !char_cntr in
             let taxa = 
