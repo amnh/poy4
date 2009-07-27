@@ -2685,7 +2685,9 @@ module SC = struct
                         let cnt = ref (-1) in
                         let alph = List.map (fun x -> 
                             incr cnt;
-                            x, !cnt, None) (symbols @ [gap])
+                            x, !cnt, None) (
+                                if List.exists ((=) gap) symbols then symbols
+                                else symbols @ [gap])
                         in
                         Alphabet.list_to_a alph gap None Alphabet.Sequential,
                         (get_equate form) @ more_equates
@@ -2736,11 +2738,11 @@ module SC = struct
 
         let find_taxon taxa name =
             try 
-                find_position "Taxon not found" (function None -> false | Some x -> name = x) taxa
+                find_position ("Taxon " ^ name ^ " not found") (function None -> false | Some x -> name = x) taxa
             with
-            | Failure "Taxon not found" ->
+            | Failure _ ->
                     let pos = 
-                        find_position "Taxon not found" (function None -> true |
+                        find_position ("Taxon not " ^ name ^ " found") (function None -> true |
                         Some _ -> false) taxa 
                     in
                     taxa.(pos) <- Some name;
