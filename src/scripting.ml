@@ -3954,6 +3954,9 @@ END
                     let script = PoyCommand.of_file false script in
                     Analyzer.explain_tree filename script;
                     run
+            | `Nexus filename -> 
+                Data.to_nexus run.data filename;
+                run
             | `FasWinClad filename -> 
                 Data.to_faswincladfile run.data filename;
                 run
