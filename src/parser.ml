@@ -2798,7 +2798,6 @@ module SC = struct
                 match line with
                 | taxon :: sequence ->
                         let taxon = cleanup_taxon_name taxon in
-                        Printf.printf "Adding: %s\n%!" taxon;
                         let adder buf x = 
                             Buffer.add_string buf x; 
                             Buffer.add_string buf " "
