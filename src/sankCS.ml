@@ -178,6 +178,8 @@ let to_string = to_full_string
     
 
 let assert_ninf a x y=
+    a
+    (*
     assert (
         if is_infinity a then begin
          print_string (elt_to_full_string x);
@@ -185,6 +187,7 @@ let assert_ninf a x y=
             false
         end else true);
     a
+    *)
 
 
 
