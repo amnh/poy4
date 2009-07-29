@@ -2421,6 +2421,8 @@ module SC = struct
 
     type static_state = [ `Bits of BitSet.t | `List of int list ] option
 
+    type character_sets = (string, Nexus.charset list) Hashtbl.t
+
     type file_output =
         (string option array * static_spec array * static_state array array * 
         string Tree.t list list * 
@@ -2615,7 +2617,7 @@ module SC = struct
                 Hashtbl.find table_of_alphabets index
             else
                 let r =
-                    let cnt = ref (1) in
+                    let cnt = ref ~-1 in
                     let prepro_symbols = 
                         List.map (fun x -> incr cnt; x, !cnt, None) symbols
                     in
@@ -3091,7 +3093,8 @@ module SC = struct
             Array.append taxa (Array.of_list new_taxa)
 
         let add_prealigned_characters file chars 
-        (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned) =
+        (txn_cntr, char_cntr, taxa, characters, character_set_table, 
+        matrix, trees, unaligned) =
             let taxa = Array.map (function None -> None | Some x -> Some
             (cleanup_taxon_name x)) taxa in
             let form = chars.Nexus.char_format in
@@ -3206,28 +3209,34 @@ module SC = struct
                                         { characters.(v) with 
                                         st_eliminate = true }
                             | Nexus.Name name ->
-                                    let upp_name = 
-                                        String.uppercase name 
-                                    and lst = (Array.length characters) in
-                                    if "ALL" = upp_name then
-                                        process_range 
-                                        (Nexus.Range ("1", 
-                                        Some (string_of_int lst)))
-                                    else 
-                                        let v = 
-                                            if upp_name = "." then
-                                                (Array.length characters) - 1 
-                                            else find_character characters name 
-                                        in
-                                        characters.(v) <-
-                                            { characters.(v) with st_eliminate = true }
+                                    if Hashtbl.mem character_set_table
+                                    (String.uppercase name) then
+                                        List.iter process_range 
+                                        (Hashtbl.find character_set_table
+                                        (String.uppercase name))
+                                    else
+                                        let upp_name = 
+                                            String.uppercase name 
+                                        and lst = (Array.length characters) in
+                                        if "ALL" = upp_name then
+                                            process_range 
+                                            (Nexus.Range ("1", 
+                                            Some (string_of_int lst)))
+                                        else 
+                                            let v = 
+                                                if upp_name = "." then
+                                                    (Array.length characters) - 1 
+                                                else find_character characters name 
+                                            in
+                                            characters.(v) <-
+                                                { characters.(v) with st_eliminate = true }
                         in
                         process_range x
             in
             (* Move on, we are done with this block *)
-            (txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned)
+            (txn_cntr, char_cntr, taxa, characters, character_set_table, matrix, trees, unaligned)
 
-        let rec apply_on_character_set characters f x =
+        let rec apply_on_character_set character_set_table characters f x =
             let last = (Array.length characters) in
             match x with
             | Nexus.Range (a, b) ->
@@ -3247,15 +3256,20 @@ module SC = struct
                     * 0, therefore we substract 1. *)
                     f ((int_of_string v) - 1);
             | Nexus.Name name ->
-                    let up_name = String.uppercase name in
-                    if "ALL" = up_name then
-                        apply_on_character_set characters f
-                        (Nexus.Range ("1", 
-                        (Some (string_of_int last))))
-                    else if "." = up_name then
-                        f (last - 1)
+                    if Hashtbl.mem character_set_table (String.uppercase name) then
+                        List.iter (apply_on_character_set character_set_table
+                        characters f) (Hashtbl.find character_set_table
+                        (String.uppercase name))
                     else
-                        f (find_character characters name)
+                        let up_name = String.uppercase name in
+                        if "ALL" = up_name then
+                            apply_on_character_set character_set_table characters f
+                            (Nexus.Range ("1", 
+                            (Some (string_of_int last))))
+                        else if "." = up_name then
+                            f (last - 1)
+                        else
+                            f (find_character characters name)
 
         let make_ordered_matrix obsv = 
             let rec tail lst = 
@@ -3307,18 +3321,24 @@ module SC = struct
                 let labels = Array.init len (fun x ->
                     Alphabet.match_base labels.(x) character.st_alph, x) in
                 Array.sort (fun (a, _) (b, _) -> a - b) labels;
-                Array.map (fun (_, b) -> b) labels
+                Array.map fst labels
             in
-            let cost_matrix = 
-                Array.init len (fun x ->
-                    Array.init len (fun y ->
-                        int_of_float 
-                        cost_matrix.(permutation_array.(x)).(permutation_array.(y))))
-            in 
-            { character with st_type = STSankoff cost_matrix }
+            let maximum = 1 + (Array.fold_left max (-1) permutation_array) in
+            let resulting_cost_matrix = 
+                Array.make_matrix maximum maximum (max_int / 4) in
+            for i = 0 to len - 1 do
+                for j = 0 to len - 1 do
+                   resulting_cost_matrix.(permutation_array.(i)).(permutation_array.(j))
+                   <- int_of_float cost_matrix.(i).(j);
+                done;
+            done;
+            for i = 0 to maximum - 1 do
+                resulting_cost_matrix.(i).(i) <- 0
+            done;
+            { character with st_type = STSankoff resulting_cost_matrix }
 
         let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, 
-        matrix, trees, unaligned) item =
+        character_set_table, matrix, trees, unaligned) item =
             match item with
             | Nexus.Options (default, polytcount, gapmode) ->
                     let _ =
@@ -3384,7 +3404,7 @@ module SC = struct
                                         match !stepmtx with
                                         | "i" :: t ->
                                                 stepmtx := t;
-                                                max_float
+                                                float_of_int (max_int / 4)
                                         | "." :: t ->
                                                 stepmtx := t;
                                                 0.
@@ -3402,18 +3422,19 @@ module SC = struct
                     in
                     ()
             | Nexus.WeightDef (has_star, name, has_token, set) ->
-                    let set_item weight x =
-                        characters.(x) <- 
-                            { characters.(x) with st_weight = weight }
-                    in
-                    let _ =
-                        match set with
+                    if not has_star then ()
+                    else
+                        let set_item weight x =
+                            characters.(x) <- 
+                                { characters.(x) with st_weight = weight }
+                        in
+                        (match set with
                         | Nexus.Standard items ->
                                 let process_item = function
                                     | Nexus.Code (v, who) ->
                                             let weight = float_of_string v in
                                             List.iter (apply_on_character_set
-                                            characters (set_item
+                                            character_set_table characters (set_item
                                             weight)) who
                                     | Nexus.IName _ ->
                                             failwith "Unexpected name"
@@ -3427,33 +3448,32 @@ module SC = struct
                                         pos + 1)
                                     0 items
                                 in 
-                                ()
-                    in
-                    ()
+                                ())
             | Nexus.TypeDef (has_star, name, has_token, set) ->
-                    let set_typedef clas x =
-                        let clas = String.uppercase clas in
-                        let new_def = 
-                            match clas with
-                            | "ORD" 
-                            | "UNORD"
-                            | "IRREV"
-                            | "IRREV.UP"
-                            | "IRREV.DOWN" -> create_cost_type clas
-                            | name ->
-                                    produce_cost_type_function 
-                                    (Hashtbl.find cost_table name)
+                    if not has_star then () 
+                    else
+                        let set_typedef clas x =
+                            let clas = String.uppercase clas in
+                            let new_def = 
+                                match clas with
+                                | "ORD" 
+                                | "UNORD"
+                                | "IRREV"
+                                | "IRREV.UP"
+                                | "IRREV.DOWN" -> create_cost_type clas
+                                | name ->
+                                        produce_cost_type_function 
+                                        (Hashtbl.find cost_table name)
+                            in
+                            characters.(x) <- new_def characters.(x)
                         in
-                        characters.(x) <- new_def characters.(x)
-                    in
-                    let _ =
-                        match set with
+                        (match set with
                         | Nexus.Standard items ->
                                 let process_item = function
                                     | Nexus.Code (v, who)
                                     | Nexus.IName (v, who) ->
                                             List.iter (apply_on_character_set 
-                                            characters (set_typedef v)) who
+                                            character_set_table characters (set_typedef v)) who
                                 in
                                 List.iter process_item items
                         | Nexus.Vector items ->
@@ -3464,10 +3484,29 @@ module SC = struct
                                         pos + 1) 
                                     0 items
                                 in
-                                ()
-                    in
-                    ()
-            | _ -> ()
+                                ())
+            | Nexus.ExcludeSet (do_star, name, who) -> 
+                    if not do_star then () 
+                    else begin
+                        let set_eliminate x = 
+                            characters.(x) <- { characters.(x) with st_eliminate = true } 
+                        in
+                        match who with
+                        | Nexus.STDVector lst ->
+                                let lst = Array.of_list lst in
+                                Array.iteri (fun pos v ->
+                                    match v with
+                                    | "1" -> set_eliminate pos
+                                    | _ -> ()) lst
+                        | Nexus.STDStandard lst ->
+                                List.iter (apply_on_character_set
+                                character_set_table characters
+                                set_eliminate) lst
+
+                    end
+            | Nexus.AncestralDef _ ->
+                    Status.user_message Status.Warning 
+                    "I will ignore the ANCSTATES"
 
 
         let process_tree tree = 
@@ -3500,7 +3539,7 @@ module SC = struct
             [translate_branch tree]
 
         let process_parsed file 
-        ((txn_cntr, char_cntr, taxa, characters, matrix, trees, unaligned) as acc) 
+        ((txn_cntr, char_cntr, taxa, characters, character_sets, matrix, trees, unaligned) as acc) 
         parsed =
             match parsed with
             | Nexus.Taxa (number, taxa_list) ->
@@ -3511,13 +3550,35 @@ module SC = struct
                             "not match the DIMENSIONS value of the TAXA block")
                         else add_all_taxa txn_cntr taxa taxa_list
                     in
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees,
+                    (txn_cntr, char_cntr, taxa, characters,
+                    character_sets, matrix, trees,
                     unaligned)
             | Nexus.Characters chars -> 
                     add_prealigned_characters file chars 
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees,
+                    (txn_cntr, char_cntr, taxa, characters, character_sets, matrix, trees,
                     unaligned)
             | Nexus.Ignore _ -> acc
+            | Nexus.Sets set_list -> 
+                    (* The list consists of tuples of names and characters *)
+                    List.iter (fun (name, set) ->
+                        match set with
+                        | Nexus.CharacterSet set ->
+                                (try 
+                                    let _ = find_character characters name in
+                                    failwith 
+                                    ("Illegal character set name: " ^ name ^ 
+                                    " already exists as a character.")
+                                with
+                                | _ -> (* This is the normal path *)
+                                        let prepend acc item = item :: acc in
+                                        let set = List.fold_left prepend [] set in
+                                        Hashtbl.add character_sets
+                                        (String.uppercase name) set)
+                        | _ -> 
+                                Status.user_message Status.Warning
+                                ("I will ignore the set " ^ name ^ 
+                                " defined in the NEXUS file.")) set_list;
+                    acc
             | Nexus.Error block ->
                     Status.user_message Status.Error
                     ("There@ is@ a@ parsing@ error@ in@ the@ block@ " ^
@@ -3542,8 +3603,8 @@ module SC = struct
                         generate_parser_friendly translations taxa (process_tree tree)
                     in
                     let newtrees = List.map handle_tree newtrees in
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees @
-                    newtrees, unaligned)
+                    (txn_cntr, char_cntr, taxa, characters, character_sets, 
+                    matrix, trees @ newtrees, unaligned)
             | Nexus.Unaligned data ->
                     let char_spec = 
                         default_static char_cntr file data.Nexus.unal_format 0
@@ -3562,8 +3623,8 @@ module SC = struct
                                 failwith "POY can't handle continuous types"
                     in
                     let res = Fasta.of_string (AlphSeq alph) unal in
-                    (txn_cntr, char_cntr, taxa, characters, matrix, trees, 
-                    ((alph, res) :: unaligned))
+                    (txn_cntr, char_cntr, taxa, characters, character_sets, 
+                    matrix, trees, ((alph, res) :: unaligned))
             | _ -> acc
 
         let of_channel ch file =
@@ -3586,9 +3647,9 @@ module SC = struct
             and taxa = [||]
             and characters = [||] 
             and matrix = [||] in
-            let _, _, taxa, characters, matrix, trees, unaligned =
+            let _, _, taxa, characters, character_set_table, matrix, trees, unaligned =
                 List.fold_left (process_parsed file) 
-                (txn_cntr, char_cntr, taxa, characters, matrix, [], []) parsed
+                (txn_cntr, char_cntr, taxa, characters, Hashtbl.create 97, matrix, [], []) parsed
             in
             let taxa, matrix =
                 (* Now it is time to correct the order of the terminals to 

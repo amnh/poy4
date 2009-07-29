@@ -186,8 +186,8 @@ block:
         { Nexus.Distances $4 }
     | BEGIN ASSUMPTIONS SEMICOLON assumptions ENDNEXUS SEMICOLON
         { Nexus.Assumptions $4 }
-    | BEGIN SETS SEMICOLON list_of_anything ENDNEXUS SEMICOLON
-        { Nexus.Ignore $2 }
+    | BEGIN SETS SEMICOLON sets_block ENDNEXUS SEMICOLON
+        { Nexus.Sets $4 }
     | BEGIN IDENT error ENDNEXUS SEMICOLON
         { Nexus.UnknownBlock $2 }
     | BEGIN TAXA SEMICOLON error ENDNEXUS SEMICOLON  
@@ -200,6 +200,41 @@ block:
         { Nexus.Error $2 }
     | BEGIN SETS SEMICOLON error ENDNEXUS SEMICOLON
         { Nexus.Error $2 }
+    ;
+set_in_block:
+    | CHARSET nexus_word optional_lparent optional_standard_or_vector
+    optional_rparent EQUAL characterset_list { ($2, Nexus.CharacterSet $7) }
+    | STATESET nexus_word optional_lparent optional_standard_or_vector optional_rparent EQUAL characterset_list 
+        { ($2, Nexus.StateSet $7) }
+    | TAXSET nexus_word optional_lparent optional_standard_or_vector optional_rparent EQUAL characterset_list 
+        { ($2, Nexus.TaxonSet $7) } 
+    | TREESET nexus_word optional_lparent optional_standard_or_vector optional_rparent EQUAL characterset_list 
+        { ($2, Nexus.TreeSet $7) }
+    | CHARPARTITION nexus_word partition_contents  { $2, Nexus.CharPartition $3 }
+    | TAXPARTITION nexus_word partition_contents { $2, Nexus.TaxPartition $3 }
+    | TREEPARTITION nexus_word partition_contents { $2, Nexus.TreePartition $3 }
+    ;
+optional_lparent:
+    | LPARENT  { () }
+    | { () }
+    ;
+optional_rparent:
+    | RPARENT { () }
+    | { () }
+    ;
+partition_contents:
+    | do_token EQUAL standard_type_set { Nexus.Standard $3 }
+    | do_token STANDARD EQUAL standard_type_set { Nexus.Standard $4 }
+    | do_token VECTOR EQUAL vector_type_set { Nexus.Vector $4 }
+    ;
+sets_block:
+    | set_in_block SEMICOLON sets_block { $1 :: $3 }
+    | set_in_block SEMICOLON { [$1] }
+    ;
+optional_standard_or_vector:
+    | STANDARD { Some $1 }
+    | VECTOR   { Some $1 }
+    | { None }
     ;
 assumptions:
     | assumption_items assumptions { $1 :: $2 }
@@ -269,15 +304,17 @@ do_token:
     | TOKENS { true }
     | { false }
 do_star:
-    | STAR { false }
-    | { true }
+    | STAR { true }
+    | { false }
 optional_set_for_assumptions:
+    | do_star IDENT EQUAL standard_type_set SEMICOLON 
+        { ($1, $2, false, Nexus.Standard $4) }
     | do_star IDENT do_token EQUAL standard_type_set SEMICOLON 
         { ($1, $2, $3, Nexus.Standard $5) }
     | do_star IDENT STANDARD do_token EQUAL standard_type_set SEMICOLON 
         { ($1, $2, $4, Nexus.Standard $6) }
     | do_star IDENT VECTOR do_token EQUAL vector_type_set SEMICOLON 
-        { ($1, $2, $4,Nexus.Vector $6) }
+        { ($1, $2, $4, Nexus.Vector $6) }
     ;
 standard_type_set_item:
     | INTEGER COLON characterset_list { Nexus.Code ($1, $3) }
@@ -294,7 +331,12 @@ vector_type_set:
     | { [] }
     ;
 optional_exset:
-    | EXSET optional_set_for_assumptions { $2 }
+    | EXSET do_star nexus_word 
+        EQUAL characterset_list SEMICOLON { ($2, $3, Nexus.STDStandard $5) }
+    | EXSET do_star nexus_word STANDARD 
+        EQUAL characterset_list SEMICOLON { ($2, $3, Nexus.STDStandard $6) }
+    | EXSET do_star nexus_word VECTOR 
+        EQUAL vector_type_set SEMICOLON { ($2, $3, Nexus.STDVector $6) }
     ;
 optional_ancstates:
     | ANCSTATES optional_set_for_assumptions { $2 }
@@ -329,10 +371,10 @@ optional_set_pair_list:
     | { [] }
     ;
 set_pair:
-    | TAXON EQUAL characterset     { Nexus.TaxonSet $3 }
-    | CHARACTER EQUAL characterset { Nexus.CharacterSet $3 }
-    | STATE EQUAL characterset      { Nexus.StateSet $3 }
-    | TREE EQUAL characterset        { Nexus.TreeSet $3 }
+    | TAXON EQUAL characterset_list     { Nexus.TaxonSet $3 }
+    | CHARACTER EQUAL characterset_list { Nexus.CharacterSet $3 }
+    | STATE EQUAL characterset_list      { Nexus.StateSet $3 }
+    | TREE EQUAL characterset_list        { Nexus.TreeSet $3 }
     ;
 source:
     | INLINE    {Nexus.Inline }
@@ -531,6 +573,8 @@ taxa:
 nexus_word :
     | IDENT { $1 }
     | SINGLEQUOTED { $1 }
+    | DNA { $1 }
+    | RNA { $1 }
     ;
 taxonlist:
     | nexus_word taxonlist   { $1 :: $2 }
@@ -547,141 +591,9 @@ characterset:
     | IDENT                { Nexus.Name $1 }
     | SINGLEQUOTED         { Nexus.Name $1 }
     | CHAR                 { Nexus.Name (String.make 1 $1) }
-    ;
-list_of_anything:
-    | any_thing_minus_end list_of_anything { () }
-    | any_thing_minus_end { () }
-    ;
-any_thing_minus_end:
-    | TAXA  { () }
-    | DATA  { () }
-    | UNALIGNED  { () }
-    | TREES  { () }
-    | NOTES  { () }
-    | DISTANCES  { () }
-    | ASSUMPTIONS  { () }
-    | SETS  { () }
-    | CHARACTERS { () }
-    | ANCSTATES { () }
-    | AVERAGE { () }
-    | BINHEX { () }
-    | BOTH { () }
-    | CHANGESET { () }
-    | CHAR { () }
-    | CHARACTER { () }
-    | CHARLABELS { () }
-    | CHARPARTITION { () }
-    | CHARSET { () }
-    | CHARSTATELABELS { () }
-    | CODEORDER { () }
-    | CODESET { () }
-    | CODONS { () }
-    | CONDONPOSSET { () }
-    | CONTINUOUS { () }
-    | COUNT { () }
-    | CSTREE { () }
-    | DATA_CSTREE { () }
-    | QUOTED { () }
-    | DATATYPE { () }
-    | DEFTYPE { () }
-    | DIAGONAL { () }
-    | DIMENSIONS { () }
-    | DNA { () }
-    | DROS { () }
-    | ELIMINATE { () }
-    | ENCODE { () }
-    | EPS { () }
-    | EQUATE { () }
-    | EXSET { () }
-    | EXT { () }
-    | EXTENSIONS { () }
-    | FILE { () }
-    | FORMAT { () }
-    | FREQUENCY { () }
-    | GAP { () }
-    | GAPMODE { () }
-    | GENETICCODE { () }
-    | GIF { () }
-    | INDIVIDUALS { () }
-    | INLINE { () }
-    | INTERLEAVE { () }
-    | ITEMS { () }
-    | JPEG { () }
-    | LABELS { () }
-    | LOWER { () }
-    | MAM { () }
-    | MATCHCHAR { () }
-    | MATRIX { () }
-    | MAX { () }
-    | MAXSTEPS { () }
-    | MEDIAN { () }
-    | MIN { () }
-    | MINSTEPS { () }
-    | MISSING { () }
-    | MTDNA { () }
-    | NCHAR { () }
-    | NEWSTATE { () }
-    | NEWTAXA { () }
-    | NONE { () }
-    | NTAX { () }
-    | NUCLEOTIDE { () }
-    | NUCORDER { () }
-    | OPTIONS { () }
-    | PICT { () }
-    | PICTURE { () }
-    | POLYTCOUNT { () }
-    | PROTEIN { () }
-    | RESOURCE { () }
-    | RESPECTCASE { () }
-    | RNA { () }
-    | SAMPLESIZE { () }
-    | SOURCE { () }
-    | STANDARD { () }
-    | STATE { () }
-    | STATELABELS { () }
-    | STATES { () }
-    | STATESET { () }
-    | STATESFORMAT { () }
-    | STATESPRESENT { () }
-    | STDERROR { () }
-    | STEPMATRIX { () }
-    | SYMBOLS { () }
-    | TAXON { () }
-    | TAXLABELS { () }
-    | TAXPARTITION { () }
-    | TAXSET { () }
-    | TEXT { () }
-    | TIFF { () }
-    | TOKENS { () }
-    | TRANSLATE { () }
-    | TRANSPOSE { () }
-    | TREE { () }
-    | TREEPARTITION { () }
-    | TREESET { () }
-    | TRIANGLE { () }
-    | TYPESET { () }
-    | UNIVERSAL { () }
-    | UPPER { () }
-    | USERTYPE { () }
-    | UUENCODE { () }
-    | VARIANCE { () }
-    | VECTOR { () }
-    | WTSET { () }
-    | YEAST { () }
-    | EIDENT { () }
-    | STAR { () }
-    | COLON { () }
-    | IDENT { () }
-    | FLOAT { () }
-    | INTEGER { () }
-    | SEMICOLON  { () }
-    | EQUAL { () }
-    | COMMA { () }
-    | QUOTE { () }
-    | BACKSLASH { () }
-    | DASH { () }
-    | LPARENT { () }
-    | RPARENT { () }
+    | DNA                  { Nexus.Name "DNA" }
+    | RNA                  { Nexus.Name "RNA" }
+    | PROTEIN              { Nexus.Name "PROTEIN" }
     ;
 tree:
     | do_star IDENT EQUAL single_tree EOF { $4 }

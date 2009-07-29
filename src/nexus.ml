@@ -67,12 +67,6 @@ type unalg_data = {
     unal : string;
 }
 
-type set_pair =  
-    | TaxonSet of charset 
-    | CharacterSet of charset 
-    | StateSet of charset 
-    | TreeSet of charset 
-
 type source =  Inline | File | Resource 
 
 type pictureformat =  Pict | Tiff | Eps | Jpeg | Gif 
@@ -85,7 +79,20 @@ type user_type =  StepMatrix of (string * string list) | CSTree of string
 
 type standard_item = 
      Code of (string * charset list) | IName of (string * charset list) 
+
+type standard_list =
+    STDVector of string list | STDStandard of charset list
+
 type set_type =  Standard of standard_item list | Vector of string list 
+
+type set_pair =  
+    | TaxonSet of charset list
+    | CharacterSet of charset list
+    | StateSet of charset list
+    | TreeSet of charset list
+    | CharPartition of set_type
+    | TaxPartition of set_type
+    | TreePartition of set_type
 
 type assumption_set = (bool * string * bool * set_type)
 
@@ -94,7 +101,7 @@ type assumption_items =
     | UserType of (string * user_type)
     | TypeDef of assumption_set
     | WeightDef of assumption_set
-    | ExcludeSet of assumption_set
+    | ExcludeSet of (bool * string * standard_list)
     | AncestralDef of assumption_set
 
 type block = 
@@ -103,6 +110,7 @@ type block =
     | Distances of ((bool * string * string) option * format_options list * string
     list * string)
     | Ignore of string
+    | Sets of (string * set_pair) list
     | Unaligned of unalg_data
     | Trees of ((string * string) list * string list) 
     | Notes of ((set_pair list * source * string) option * (set_pair list *
