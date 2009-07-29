@@ -3375,6 +3375,15 @@ let output_character_types fo output_format data all_of_static =
                 (if output_format = `Hennig then "." else "-") ^
                 (string_of_int (fixit max))
     in
+    let table_of_matrices = Hashtbl.create 97 in
+    let get_name_of_matrix suggested_name matrix = 
+        if Hashtbl.mem table_of_matrices matrix then
+            Some (Hashtbl.find table_of_matrices matrix)
+        else begin
+            Hashtbl.add table_of_matrices matrix suggested_name;
+            None
+        end
+    in
     let print_type is_last cnt (x : (([`Pair of (int * int) | `Single of int]) *
     Parser.SC.st_type) option)  = 
         match x with
@@ -3392,14 +3401,25 @@ let output_character_types fo output_format data all_of_static =
                     "ORD: " ^ output_range range ^
                     (if not is_last then ", " else "")
         | Some ((`Single min) as range, Parser.SC.STSankoff matrix) ->
-                let name = "MATRIX" ^ string_of_int min in
-                let element = output_element name min matrix in
-                if output_format = `Hennig then element
-                else
-                    "@["^ name ^ ":" ^
-                    output_range range ^
-                    (if not is_last then ", " else "") ^
-                    "@]@."
+                        let name, element = 
+                            let name = "MATRIX" ^ string_of_int min in
+                            let final_name = 
+                                get_name_of_matrix name matrix 
+                            in
+                            match final_name with
+                            | None -> name, output_element name min matrix 
+                            | Some name when output_format = `Hennig ->
+                                    name, output_element name min matrix
+                            | Some name when output_format = `Nexus ->
+                                    name, ""
+                        in
+                        if output_format = `Hennig then element
+                        else
+                            "@["^ name ^ ":" ^
+                            output_range range ^
+                            (if not is_last then ", " else "") ^
+                            "@]@."
+
         | Some (((`Pair (min, max)) as range), Parser.SC.STSankoff matrix) ->
                 if output_format = `Hennig then
                     let rec output acc i =
