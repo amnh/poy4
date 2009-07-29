@@ -1444,16 +1444,18 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                     | [] -> result
                     | _ ->
                             let v = List.map extract_stat lst in
-                            let tcm =
+                            let tcm, weight =
                                 match v with
-                                | (_, code) :: _ -> Data.get_tcm code !data
+                                | (_, code) :: _ -> 
+                                        Data.get_tcm code !data,
+                                        Data.get_weight code !data 
                                 | _ -> failwith "This is impossible"
                             in
                             let arr= Array.of_list v in
                             let c, _ = SankCS.of_parser tcm (arr, tcode) code in
                             let c = Sank { preliminary = c; final = c; cost = 0.;
                                           sum_cost = 0.;
-                            weight = 1. } in
+                            weight = weight } in
                             { result with characters = c :: result.characters }
                 in
                 match lsank_chars with
