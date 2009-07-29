@@ -3315,27 +3315,38 @@ module SC = struct
                     ("POY@ does@ not@ support@ the@ " ^
                     x ^ "@ character@ type@ requested.")
 
-        let produce_cost_type_function (labels, cost_matrix) character =
-            let len = Array.length labels in
-            let permutation_array =
-                let labels = Array.init len (fun x ->
-                    Alphabet.match_base labels.(x) character.st_alph, x) in
-                Array.sort (fun (a, _) (b, _) -> a - b) labels;
-                Array.map fst labels
+        let table_of_sankoff_matrices = Hashtbl.create 97
+
+        let produce_cost_type_function ((labels, cost_matrix) as input) character =
+            let cm = 
+                if Hashtbl.mem table_of_sankoff_matrices input then 
+                    Hashtbl.find table_of_sankoff_matrices input
+                else begin
+                    let len = Array.length labels in
+                    let permutation_array =
+                        let labels = Array.init len (fun x ->
+                            Alphabet.match_base labels.(x) character.st_alph, x) in
+                        Array.sort (fun (a, _) (b, _) -> a - b) labels;
+                        Array.map fst labels
+                    in
+                    let maximum = 1 + (Array.fold_left max (-1) permutation_array) in
+                    let resulting_cost_matrix = 
+                        Array.make_matrix maximum maximum (max_int / 4) in
+                    for i = 0 to len - 1 do
+                        for j = 0 to len - 1 do
+                           resulting_cost_matrix.(permutation_array.(i)).(permutation_array.(j))
+                           <- int_of_float cost_matrix.(i).(j);
+                        done;
+                    done;
+                    for i = 0 to maximum - 1 do
+                        resulting_cost_matrix.(i).(i) <- 0
+                    done;
+                    Hashtbl.add table_of_sankoff_matrices input
+                    resulting_cost_matrix;
+                    resulting_cost_matrix
+                end
             in
-            let maximum = 1 + (Array.fold_left max (-1) permutation_array) in
-            let resulting_cost_matrix = 
-                Array.make_matrix maximum maximum (max_int / 4) in
-            for i = 0 to len - 1 do
-                for j = 0 to len - 1 do
-                   resulting_cost_matrix.(permutation_array.(i)).(permutation_array.(j))
-                   <- int_of_float cost_matrix.(i).(j);
-                done;
-            done;
-            for i = 0 to maximum - 1 do
-                resulting_cost_matrix.(i).(i) <- 0
-            done;
-            { character with st_type = STSankoff resulting_cost_matrix }
+            { character with st_type = STSankoff cm }
 
         let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, 
         character_set_table, matrix, trees, unaligned) item =
