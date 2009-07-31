@@ -490,6 +490,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
                     Data.process_trees data filename
             | Parser.Is_Nexus -> 
                     file_type_message "Nexus@ File";
+                    let data = add_file [Data.Characters; Data.Trees] in
                     Data.add_static_file `Nexus data filename 
             | Parser.Is_Unknown ->
                     let data = 
