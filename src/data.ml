@@ -3406,11 +3406,11 @@ let output_character_types fo output_format data all_of_static =
                             let final_name = 
                                 get_name_of_matrix name matrix 
                             in
-                            match final_name with
-                            | None -> name, output_element name min matrix 
-                            | Some name when output_format = `Hennig ->
+                            match final_name, output_format with
+                            | None, _ -> name, output_element name min matrix 
+                            | Some name, `Hennig ->
                                     name, output_element name min matrix
-                            | Some name when output_format = `Nexus ->
+                            | Some name, `Nexus ->
                                     name, ""
                         in
                         if output_format = `Hennig then element
