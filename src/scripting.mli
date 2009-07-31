@@ -419,7 +419,7 @@ module DNA : sig
         (** [of_file str] reads the input file [str], containing a sequence of
         * 25 elements, each corresponding to the left-right, top-down 25
         * elements that would be required for [of_list]. *)
-        val of_file : string -> cm2
+        val of_file : string -> cm2 * int list list 
 
         (** [all_ones ()] is equivalent to [of_sub_indel 1 1] *)
         val all_ones : unit -> cm2

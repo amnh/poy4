@@ -72,6 +72,7 @@ let report_error text b e =
 %token <string> FREQUENCY
 %token <string> GAP
 %token <string> GAPMODE
+%token <string> GAPOPENING
 %token <string> GENETICCODE
 %token <string> GIF
 %token <string> INDIVIDUALS
@@ -136,6 +137,7 @@ let report_error text b e =
 %token <string> TAXLABELS
 %token <string> TAXPARTITION
 %token <string> TAXSET
+%token <string> TCM
 %token <string> TEXT
 %token <string> TIFF
 %token <string> TOKENS
@@ -439,6 +441,12 @@ poy_block:
         { Nexus.CharacterBranch ($4, $7, $10) :: $12}
 
     | LIKELIHOOD model_block poy_block { Nexus.Likelihood $2 :: $3 }
+    | GAPOPENING do_star nexus_word EQUAL standard_type_set SEMICOLON poy_block
+        { (Nexus.GapOpening ($2, $3, $5)) :: $7 }
+    | WTSET do_star nexus_word EQUAL standard_type_set SEMICOLON poy_block
+        { (Nexus.DynamicWeight ($2, $3, $5)) :: $7 }
+    | TCM do_star nexus_word EQUAL standard_type_set SEMICOLON poy_block
+        { (Nexus.Tcm ($2, $3, $5)) :: $7 }
     | { [] }
     ;
 model_block:

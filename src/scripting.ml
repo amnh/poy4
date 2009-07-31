@@ -1442,7 +1442,8 @@ let load_data (meth : Methods.input) data nodes =
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
                 List.fold_left 
-                (fun d f -> Data.process_molecular_file "tcm:(1,2)"
+                (fun d f -> Data.process_molecular_file 
+                    Data.default_tcm_definition
                 Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                 annotated Alphabet.nucleotides 
                 mode  is_prealigned `Seq d f) 
@@ -1457,7 +1458,7 @@ let load_data (meth : Methods.input) data nodes =
                     data files
                 in
                 List.fold_left (fun d f ->
-                    Data.process_molecular_file "tcm:(1,2)"
+                    Data.process_molecular_file Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides `DO false `Chromosome d f) 
                 data files
@@ -1471,7 +1472,7 @@ let load_data (meth : Methods.input) data nodes =
                     data files
                 in
                 let data = List.fold_left (fun d f ->
-                    Data.process_molecular_file "tcm:(1,2)"
+                    Data.process_molecular_file Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides `DO false `Genome d f) 
                 data files
@@ -1489,7 +1490,7 @@ let load_data (meth : Methods.input) data nodes =
                 List.fold_left 
                 (fun d f -> 
                     Data.process_molecular_file 
-                    "tcm:(1,2)" Cost_matrix.Two_D.default_aminoacids
+                    Data.default_tcm_definition Cost_matrix.Two_D.default_aminoacids
                     (Lazy.force Cost_matrix.Three_D.default_aminoacids)
                     annotated Alphabet.aminoacids `DO is_prealigned `Seq d f) 
                 data files
@@ -1501,11 +1502,11 @@ let load_data (meth : Methods.input) data nodes =
                 let init3D = (List.mem (`Init3D true) read_options) in
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
+                let alphabet, twod, matrix, threed =
                     Parser.PAlphabet.of_file alph orientation init3D in
                 if is_prealigned then prealigned_files := [seq] ::
                     !prealigned_files;
-                let tcmfile = FileStream.filename alph in
+                let tcmfile = Data.Input_file (FileStream.filename alph, matrix) in
                 Data.process_molecular_file 
                 tcmfile twod threed annotated alphabet `DO 
                 is_prealigned `Seq data seq 
@@ -1518,9 +1519,11 @@ let load_data (meth : Methods.input) data nodes =
                 let init3D = (List.mem (`Init3D true) read_options) in
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
+                let alphabet, twod, matrix, threed =
                     Parser.PAlphabet.of_file alph orientation init3D 
-                and tcmfile = FileStream.filename alph in
+                in
+                let tcmfile = 
+                    Data.Input_file (FileStream.filename alph, matrix) in
                 Data.process_molecular_file tcmfile twod threed
                 annotated alphabet `DO is_prealigned `Breakinv data seq
         | `ComplexTerminals files ->

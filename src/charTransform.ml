@@ -703,6 +703,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
         let process_partitions data (sequences, character) =
             let name = Data.code_character character data in
             let tcm = Data.get_sequence_tcm character data in
+            let weight = Data.get_weight character data in
             let treed = Data.get_tcm3d data character 
             and tcmfile = Data.get_tcmfile data character in
             let alph = Data.get_alphabet data character in
@@ -711,7 +712,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 List.map (fun (seqs, taxon) ->
                     ([[seqs]], Data.code_taxon taxon data)) sequences
             in
-            Data.process_parsed_sequences tcmfile tcm treed 
+            Data.process_parsed_sequences weight tcmfile tcm treed 
             `DO false alph name `Seq data new_data 
         in
         root 
@@ -962,16 +963,6 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 data 
                 --> Data.transform_weight m 
                 --> Data.categorize 
-                --> Node.load_data 
-        | `Assign_Prep_Cost (filit, chars) ->
-                filit
-                --> Data.assign_prepend data chars
-                --> Data.categorize
-                --> Node.load_data 
-        | `Assign_Tail_Cost (filit, chars) ->
-                filit
-                --> Data.assign_tail data chars
-                --> Data.categorize
                 --> Node.load_data 
         | `Assign_Transformation_Cost_Matrix (file, chars) ->
                 file 

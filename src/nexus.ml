@@ -119,6 +119,10 @@ type likelihood_model =
 type poy_data =          (* trees , characters, (nodes , length) *)
     | CharacterBranch of string list * charset list * (string * float) list
     | Likelihood of likelihood_model list
+    | Tcm of (bool * string * standard_item list)
+    | GapOpening of (bool * string * standard_item list)
+    | DynamicWeight of (bool * string * standard_item list)
+
 type block = 
      Taxa of (string * string list) 
     | Characters of char_data 

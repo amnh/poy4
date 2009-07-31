@@ -263,9 +263,7 @@ let dependency_relations (init : Methods.script) =
                 | `OriginCost _
                 | `Create_Transformation_Cost_Matrix _
                 | `Assign_Affine_Gap_Cost _
-                | `Assign_Tail_Cost _
-                | `Prealigned_Transform _
-                | `Assign_Prep_Cost _ ->
+                | `Prealigned_Transform _ ->
                         [([Data], [Data; Trees; JackBoot; Bremer], init,
                         Linnearizable)]
                 | `RandomizedTerminals 
@@ -1616,8 +1614,6 @@ let script_to_string (init : Methods.script) =
                 | `OriginCost _
                 | `Create_Transformation_Cost_Matrix _
                 | `Assign_Affine_Gap_Cost _
-                | `Assign_Tail_Cost _
-                | `Assign_Prep_Cost _ 
                 | `RandomizedTerminals 
                 | `AlphabeticTerminals
                 | `MultiStatic_Aprox _
@@ -2093,10 +2089,6 @@ let rec make_remote_files (init : Methods.script) =
                 | None -> None
             in
             `Assign_Transformation_Cost_Matrix (a, b)
-    | `Assign_Tail_Cost ((`File a), b) ->
-            `Assign_Tail_Cost ((`File (mr a)), b)
-    | `Assign_Prep_Cost ((`File a), b) ->
-            `Assign_Prep_Cost ((`File (mr a)), b)
     | `LocalOptimum 
             (a, b, c, d, e, f, g, h, (`Partition files), i, j) ->
                 let tm = 

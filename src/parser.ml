@@ -2426,7 +2426,8 @@ module SC = struct
     type file_output =
         (string option array * static_spec array * static_state array array * 
         string Tree.t list list * 
-        ((Alphabet.a * (Sequence.s list list list * taxon) list) list))
+        ((float * int option * (string * (int array array)) option * Alphabet.a * 
+        (Sequence.s list list list * taxon) list) list))
 
     let st_type_to_string = function
         | STOrdered -> "Additive"
@@ -3094,7 +3095,7 @@ module SC = struct
 
         let add_prealigned_characters file chars 
         (txn_cntr, char_cntr, taxa, characters, character_set_table, 
-        matrix, trees, unaligned) =
+        assumptions_table, matrix, trees, unaligned) =
             let taxa = Array.map (function None -> None | Some x -> Some
             (cleanup_taxon_name x)) taxa in
             let form = chars.Nexus.char_format in
@@ -3234,9 +3235,10 @@ module SC = struct
                         process_range x
             in
             (* Move on, we are done with this block *)
-            (txn_cntr, char_cntr, taxa, characters, character_set_table, matrix, trees, unaligned)
+            (txn_cntr, char_cntr, taxa, characters, character_set_table,
+            assumptions_table, matrix, trees, unaligned)
 
-        let rec apply_on_character_set character_set_table characters f x =
+        let rec general_apply_on_character_set find_character character_set_table characters f x =
             let last = (Array.length characters) in
             match x with
             | Nexus.Range (a, b) ->
@@ -3257,19 +3259,23 @@ module SC = struct
                     f ((int_of_string v) - 1);
             | Nexus.Name name ->
                     if Hashtbl.mem character_set_table (String.uppercase name) then
-                        List.iter (apply_on_character_set character_set_table
+                        List.iter (general_apply_on_character_set find_character character_set_table
                         characters f) (Hashtbl.find character_set_table
                         (String.uppercase name))
                     else
                         let up_name = String.uppercase name in
                         if "ALL" = up_name then
-                            apply_on_character_set character_set_table characters f
-                            (Nexus.Range ("1", 
-                            (Some (string_of_int last))))
+                            general_apply_on_character_set find_character character_set_table 
+                            characters f (Nexus.Range ("1", (Some (string_of_int last))))
                         else if "." = up_name then
                             f (last - 1)
                         else
                             f (find_character characters name)
+
+        let apply_on_character_set = general_apply_on_character_set find_character
+
+        let apply_on_unaligned_set = general_apply_on_character_set (fun _ _ ->
+            failwith "UNALIGNED blocks can't have a name") (Hashtbl.create 1)
 
         let make_ordered_matrix obsv = 
             let rec tail lst = 
@@ -3317,15 +3323,20 @@ module SC = struct
 
         let table_of_sankoff_matrices = Hashtbl.create 97
 
-        let produce_cost_type_function ((labels, cost_matrix) as input) character =
-            let cm = 
-                if Hashtbl.mem table_of_sankoff_matrices input then 
-                    Hashtbl.find table_of_sankoff_matrices input
-                else begin
+
+        let generate_substitution_table extend_to_alphabet_size ((labels, cost_matrix) as input)
+        alphabet = 
+            if Hashtbl.mem table_of_sankoff_matrices input then 
+                Hashtbl.find table_of_sankoff_matrices input
+            else begin
+                let resulting_cost_matrix = 
+                    if not extend_to_alphabet_size then 
+                        Array.map (Array.map int_of_float) cost_matrix
+                    else
                     let len = Array.length labels in
                     let permutation_array =
                         let labels = Array.init len (fun x ->
-                            Alphabet.match_base labels.(x) character.st_alph, x) in
+                            Alphabet.match_base labels.(x) alphabet, x) in
                         Array.sort (fun (a, _) (b, _) -> a - b) labels;
                         Array.map fst labels
                     in
@@ -3341,15 +3352,19 @@ module SC = struct
                     for i = 0 to maximum - 1 do
                         resulting_cost_matrix.(i).(i) <- 0
                     done;
-                    Hashtbl.add table_of_sankoff_matrices input
-                    resulting_cost_matrix;
                     resulting_cost_matrix
-                end
-            in
+                in
+                Hashtbl.add table_of_sankoff_matrices input 
+                    resulting_cost_matrix;
+                resulting_cost_matrix
+            end
+
+        let produce_cost_type_function input character =
+            let cm = generate_substitution_table true input character.st_alph in
             { character with st_type = STSankoff cm }
 
-        let update_assumptions cost_table (txn_cntr, char_cntr, taxa, characters, 
-        character_set_table, matrix, trees, unaligned) item =
+        let update_assumptions (txn_cntr, char_cntr, taxa, characters, 
+        character_set_table, cost_table, matrix, trees, unaligned) item =
             match item with
             | Nexus.Options (default, polytcount, gapmode) ->
                     let _ =
@@ -3549,8 +3564,79 @@ module SC = struct
             in
             [translate_branch tree]
 
+        let apply_gap_opening character_set 
+            (txn_cntr, char_cntr, taxa, characters, character_sets,
+            assumptions_table, matrix, trees, unaligned) =
+                let unaligned = Array.of_list (List.rev unaligned) in
+                let assign_gap_opening v pos =
+                    let (w, _, x, y, z) = unaligned.(pos) in
+                    unaligned.(pos) <- (w, (Some v), x , y , z)
+                in
+                List.iter (function 
+                    | Nexus.Code (gap_opening, who) ->
+                            let gap_opening = 
+                                truncate (float_of_string gap_opening) in
+                            List.iter (apply_on_unaligned_set unaligned
+                            (assign_gap_opening gap_opening)) who
+                    | Nexus.IName (_, _) ->
+                            failwith "GAPOPENING must assign integer values to \
+                            the gap opening parameter") character_set;
+                let unaligned = List.rev (Array.to_list unaligned) in
+                (txn_cntr, char_cntr, taxa, characters, character_sets,
+                assumptions_table, matrix, trees, unaligned)
+
+
+        let apply_weight character_set 
+            (txn_cntr, char_cntr, taxa, characters, character_sets,
+            assumptions_table, matrix, trees, unaligned) =
+                let unaligned = Array.of_list (List.rev unaligned) in
+                let assign_weight weight pos =
+                    let (_, w, x, y, z) = unaligned.(pos) in
+                    unaligned.(pos) <- (weight, w, x, y, z)
+                in
+                List.iter (function 
+                    | Nexus.Code (weight, who) ->
+                            let weight = float_of_string weight in
+                            List.iter (apply_on_unaligned_set unaligned
+                            (assign_weight weight)) who
+                    | Nexus.IName (matrix, who) ->
+                            failwith "WTSET in the POY block must assign numbers to \
+                            the gap opening parameter") character_set;
+                let unaligned = List.rev (Array.to_list unaligned) in
+                (txn_cntr, char_cntr, taxa, characters, character_sets,
+                assumptions_table, matrix, trees, unaligned)
+
+        let apply_tcm character_set 
+            (txn_cntr, char_cntr, taxa, characters, character_sets,
+            assumptions_table, matrix, trees, unaligned) =
+                let unaligned = Array.of_list (List.rev unaligned) in
+                let assign_tcm name v pos =
+                    let (w, x, _, y, z) = unaligned.(pos) in
+                    let v = generate_substitution_table false v y in
+                    unaligned.(pos) <- (w, x , (Some (name, v)), y , z)
+                in
+                List.iter (function 
+                    | Nexus.Code (_, _) ->
+                            failwith "TCM must assign a matrix defined \
+                            in the ASSUMPTIONS block, not a code.";
+                    | Nexus.IName (matrix, who) ->
+                            if Hashtbl.mem assumptions_table matrix then 
+                                let table = Hashtbl.find assumptions_table
+                                matrix in
+                                List.iter (apply_on_unaligned_set unaligned 
+                                (assign_tcm matrix table)) who
+                            else
+                                failwith ("TCM must assign a matrix defined \
+                                in the ASSUMPTIONS block. I couldn't find \
+                                the table " ^ matrix)) character_set;
+                let unaligned = List.rev (Array.to_list unaligned) in
+                (txn_cntr, char_cntr, taxa, characters, character_sets,
+                assumptions_table, matrix, trees, unaligned)
+
+
         let process_parsed file 
-        ((txn_cntr, char_cntr, taxa, characters, character_sets, matrix, trees, unaligned) as acc) 
+        ((txn_cntr, char_cntr, taxa, characters, character_sets, assumptions_table, 
+        matrix, trees, unaligned) as acc) 
         parsed =
             match parsed with
             | Nexus.Taxa (number, taxa_list) ->
@@ -3562,12 +3648,12 @@ module SC = struct
                         else add_all_taxa txn_cntr taxa taxa_list
                     in
                     (txn_cntr, char_cntr, taxa, characters,
-                    character_sets, matrix, trees,
+                    character_sets, assumptions_table, matrix, trees,
                     unaligned)
             | Nexus.Characters chars -> 
                     add_prealigned_characters file chars 
-                    (txn_cntr, char_cntr, taxa, characters, character_sets, matrix, trees,
-                    unaligned)
+                    (txn_cntr, char_cntr, taxa, characters, character_sets, 
+                    assumptions_table, matrix, trees, unaligned)
             | Nexus.Ignore _ -> acc
             | Nexus.Sets set_list -> 
                     (* The list consists of tuples of names and characters *)
@@ -3606,16 +3692,15 @@ module SC = struct
                     "@ and@ continue@ with@ the@ rest@ of@ the@ NEXUS@ file.");
                     acc
             | Nexus.Assumptions lst ->
-                    let table = Hashtbl.create 37 in
-                    List.iter (update_assumptions table acc) lst;
+                    List.iter (update_assumptions acc) lst;
                     acc
             | Nexus.Trees (translations, newtrees) ->
                     let handle_tree tree = 
                         generate_parser_friendly translations taxa (process_tree tree)
                     in
                     let newtrees = List.map handle_tree newtrees in
-                    (txn_cntr, char_cntr, taxa, characters, character_sets, 
-                    matrix, trees @ newtrees, unaligned)
+                    (txn_cntr, char_cntr, taxa, characters, character_sets,
+                    assumptions_table, matrix, trees @ newtrees, unaligned)
             | Nexus.Unaligned data ->
                     let char_spec = 
                         default_static char_cntr file data.Nexus.unal_format 0
@@ -3635,8 +3720,21 @@ module SC = struct
                     in
                     let res = Fasta.of_string (AlphSeq alph) unal in
                     (txn_cntr, char_cntr, taxa, characters, character_sets, 
-                    matrix, trees, ((alph, res) :: unaligned))
-            | Nexus.Poy _ -> acc
+                    assumptions_table, matrix, trees, ((1., None, None, alph, res) :: unaligned))
+            | Nexus.Poy items -> 
+                    List.fold_left (fun acc item ->
+                        match item with
+                        | Nexus.CharacterBranch _
+                        | Nexus.Likelihood _ 
+                        | Nexus.DynamicWeight (false, _, _)
+                        | Nexus.Tcm (false, _, _)
+                        | Nexus.GapOpening (false, _, _) -> acc
+                        | Nexus.DynamicWeight (true, name, character_set) ->
+                                apply_weight character_set acc
+                        | Nexus.Tcm (true, name, character_set) ->
+                                apply_tcm character_set acc
+                        | Nexus.GapOpening (true, name, character_set) ->
+                                apply_gap_opening character_set acc) acc items
             | _ -> acc
 
         let of_channel ch file =
@@ -3659,9 +3757,10 @@ module SC = struct
             and taxa = [||]
             and characters = [||] 
             and matrix = [||] in
-            let _, _, taxa, characters, character_set_table, matrix, trees, unaligned =
+            let _, _, taxa, characters, character_set_table, _, matrix, trees, unaligned =
                 List.fold_left (process_parsed file) 
-                (txn_cntr, char_cntr, taxa, characters, Hashtbl.create 97, matrix, [], []) parsed
+                (txn_cntr, char_cntr, taxa, characters, Hashtbl.create 97, 
+                Hashtbl.create 97, matrix, [], []) parsed
             in
             let taxa, matrix =
                 (* Now it is time to correct the order of the terminals to 
@@ -4048,7 +4147,7 @@ module PAlphabet = struct
                     Alphabet.explote alph, true
                 else alph, false
         in
-        let tcm = 
+        let tcm, matrix = 
             try
                 let all_elements = -1 (* we don't allow ambiguities here *) in
                 if do_comb then
@@ -4073,7 +4172,6 @@ module PAlphabet = struct
             | false  ->  Cost_matrix.Three_D.default 
         in 
         file#close_in;
-
         match orientation with
         | true ->
                 if (Alphabet.size alph) > (Cost_matrix.Two_D.alphabet_size
@@ -4084,7 +4182,7 @@ module PAlphabet = struct
                    ^ "inconsistent@ size@. (orientation@ here@ is@ true@");
                    raise (Inconsistent_alphabet_size ((Alphabet.size alph),
                    (Cost_matrix.Two_D.alphabet_size tcm)))
-             end else alph, tcm, tcm3
+             end else alph, tcm, matrix, tcm3
         | false ->
             if (Alphabet.size alph) <> (Cost_matrix.Two_D.alphabet_size tcm) then
                 begin
@@ -4095,7 +4193,7 @@ module PAlphabet = struct
                    ^ "cost@ in@ the@ last@ column.");
                    raise (Inconsistent_alphabet_size ((Alphabet.size alph),
                    (Cost_matrix.Two_D.alphabet_size tcm)))
-             end else alph, tcm, tcm3
+             end else alph, tcm, matrix, tcm3
 
 end
 

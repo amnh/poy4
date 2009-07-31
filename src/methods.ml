@@ -109,8 +109,6 @@ type transform_cost_matrix = [
     | `Assign_Transformation_Cost_Matrix of (filename option * characters)
     | `Create_Transformation_Cost_Matrix of (int * int * characters)
     | `Assign_Affine_Gap_Cost of (int * characters)
-    | `Assign_Tail_Cost of (prep_tail_spec * characters)
-    | `Assign_Prep_Cost of (prep_tail_spec * characters)
 ]
 
 

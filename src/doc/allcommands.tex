@@ -3104,28 +3104,6 @@ The \poycommand{calculate\_support} command does not output support values by de
 	  rather than on sequence fragments) can produce a discrepancy in tree costs.
 	\end{statement}
 
-        \argumentdefinition{trailing\_insertion}{\obligatory{\poystring /(\poyint list)}}
-            {The tail and prepend costs specify the cost of having an insertion of
-            each element in the alphabet at the beginning or end
-            of a sequence. The string is the name of a file containing the cost of
-            a trailing insertion corresponding to each of the elements
-            in the alphabet separated by spaces. The last element in the list is the
-            cost of the indel of a gap (should be 0). Instead of a file, the list can
-            be the input of the argument, in the same order, separated by commas.
-            Synonym of the argument \poyargument{ti}. This method is applicable only to dynamic homology characters.} 
-            {trailinginsertion}
-
-        \argumentdefinition{trailing\_deletion}{\obligatory{\poystring /(\poyint list)}}
-            {The tail and prepend costs specify the cost of having a deletion
-            of each element in the alphabet at the beginning or end
-            of a sequence. The string is the name of a file containing the cost of
-            a trailing deletion corresponding to each of the elements
-            in the alphabet separated by spaces. The last element in the list is the
-            cost of the indel of a gap (should be 0). Instead of a file, the list can
-            be the input of the argument, in the same order, separated by commas.
-            Synonym of the argument \poyargument{td}. This method is applicable only to dynamic homology characters.} 
-            {trailinginsertion}
-
              \argumentdefinition{tcm}{\obligatory{(\poyint, \poyint)}}
             {Defines transformation cost matrix. The first integer value specifies
             substitution cost, the second integer value defines indel cost. By default,

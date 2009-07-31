@@ -117,10 +117,6 @@ type transform_method = [
     | `Tcm of string
     | `Gap of (int * int)
     | `AffGap of int
-    | `TailInput of int array
-    | `TailFile of string
-    | `PrepInput of int array
-    | `PrepFile of string
     | `StaticApproximation of bool
     | `MultiStaticApproximation of bool
     | `Automatic_Static_Aprox of bool
@@ -407,14 +403,6 @@ let transform_transform acc (id, x) =
             | `AffGap (c) ->
                     (`Assign_Affine_Gap_Cost (c, id)) ::
                         acc
-            | `PrepInput x ->
-                    (`Assign_Prep_Cost ((`Array x), id)) :: acc
-            | `PrepFile x ->
-                    (`Assign_Prep_Cost ((`File (`Local x)), id)) :: acc
-            | `TailInput x ->
-                    (`Assign_Tail_Cost ((`Array x), id)) :: acc
-            | `TailFile x ->
-                    (`Assign_Tail_Cost ((`File (`Local x)), id)) :: acc
             | `MultiStaticApproximation noninf -> (`MultiStatic_Aprox (id, noninf)) :: acc
             | `StaticApproximation noninf -> (`Static_Aprox (id, noninf)) :: acc
             | `Automatic_Static_Aprox sens -> (`Automatic_Static_Aprox sens) :: acc
@@ -1235,22 +1223,6 @@ let create_expr () =
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
                     right_parenthesis -> `Gap (int_of_string x, int_of_string y) ] |
                 [ LIDENT "gap_opening"; ":"; x = INT -> `AffGap (int_of_string x) ] |
-                [ LIDENT "trailing_deletion"; ":"; x = STRING -> `TailFile x ] |
-                [ LIDENT "td"; ":"; x = STRING -> `TailFile x ] |
-                [ LIDENT "trailing_deletion"; ":"; left_parenthesis; 
-                    x = LIST1 [ x = INT -> x]  SEP ","; right_parenthesis -> 
-                        `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "td"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
-                    right_parenthesis -> 
-                        `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "trailing_insertion"; ":"; x = STRING -> `PrepFile x ] |
-                [ LIDENT "ti"; ":"; x = STRING -> `PrepFile x ] |
-                [ LIDENT "trailing_insertion"; ":"; left_parenthesis; 
-                    x = LIST1 [ x = INT -> x] SEP ","; right_parenthesis -> 
-                        `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "ti"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
-                    right_parenthesis -> 
-                        `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
                 [ LIDENT "static_approx"; x = OPT informative_characters -> 
                     match x with 
                     | None -> `StaticApproximation true 
