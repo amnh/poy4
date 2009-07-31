@@ -3726,6 +3726,9 @@ let to_nexus data filename =
             | Static _ | Set -> assert false
             | Dynamic spec -> (* We are OK *)
                     fo "@[BEGIN UNALIGNED;@]@.";
+                    fo "[CHARACTER NAME: ";
+                    fo (code_taxon character_code data);
+                    fo "]@.";
                     let alphabet, symbols = 
                         if spec.alph == Alphabet.nucleotides then 
                             "NUCLEOTIDE", []
