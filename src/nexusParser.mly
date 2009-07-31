@@ -307,8 +307,6 @@ do_star:
     | STAR { true }
     | { false }
 optional_set_for_assumptions:
-    | do_star IDENT EQUAL standard_type_set SEMICOLON 
-        { ($1, $2, false, Nexus.Standard $4) }
     | do_star IDENT do_token EQUAL standard_type_set SEMICOLON 
         { ($1, $2, $3, Nexus.Standard $5) }
     | do_star IDENT STANDARD do_token EQUAL standard_type_set SEMICOLON 
