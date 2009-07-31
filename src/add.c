@@ -867,6 +867,8 @@ add_median_3 (add_stt p, add_stt n, add_stt c1, add_stt c2, add_stt res) {
                 else 
                     add_union (tmpmin, tmpmax, p->min[i], p->max[i], \
                             res->min + i, res->max + i);
+                add_intersection (res->min[i], res->max[i], n->min[i], n->max[i], \
+                        res->min + i, res-> max + i);
             }
         }
     }
