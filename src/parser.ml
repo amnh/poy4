@@ -3636,6 +3636,7 @@ module SC = struct
                     let res = Fasta.of_string (AlphSeq alph) unal in
                     (txn_cntr, char_cntr, taxa, characters, character_sets, 
                     matrix, trees, ((alph, res) :: unaligned))
+            | Nexus.Poy _ -> acc
             | _ -> acc
 
         let of_channel ch file =

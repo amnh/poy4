@@ -104,6 +104,21 @@ type assumption_items =
     | ExcludeSet of (bool * string * standard_list)
     | AncestralDef of assumption_set
 
+type likelihood_model = 
+    | Model of string
+    | Variation of string
+    | Variation_Sites of string
+    | Variation_Alpha of string
+    | Variation_Invar of string
+    | Priors of (string * float) list
+    | Chars of charset list
+    | Parameters of float list
+    | GapMode of string
+    | Files of string
+
+type poy_data =          (* trees , characters, (nodes , length) *)
+    | CharacterBranch of string list * charset list * (string * float) list
+    | Likelihood of likelihood_model list
 type block = 
      Taxa of (string * string list) 
     | Characters of char_data 
@@ -118,6 +133,7 @@ type block =
     | Assumptions of assumption_items list 
     | Error of string
     | UnknownBlock of string
+    | Poy of poy_data list
 
 type tree = 
     | Leaf of (string * float option)

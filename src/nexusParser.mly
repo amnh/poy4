@@ -25,6 +25,7 @@ let report_error text b e =
     ^ e ^ " in the " ^ text)
 %}
 %token EOF
+%token <string> ALPHA
 %token <string> ANCSTATES
 %token <string> ASSUMPTIONS
 %token <string> AVERAGE
@@ -34,6 +35,7 @@ let report_error text b e =
 %token <string> CHANGESET
 %token <char> CHAR
 %token <string> CHARACTER
+%token <string> CHARACTERBRANCH
 %token <string> CHARACTERS
 %token <string> CHARLABELS
 %token <string> CHARPARTITION
@@ -78,8 +80,10 @@ let report_error text b e =
 %token <string> ITEMS
 %token <string> JPEG
 %token <string> LABELS
+%token <string> LIKELIHOOD
 %token <string> LOWER
 %token <string> MAM
+%token <string> MAP
 %token <string> MATCHCHAR
 %token <string> MATRIX
 %token <string> MAX
@@ -88,7 +92,9 @@ let report_error text b e =
 %token <string> MIN
 %token <string> MINSTEPS
 %token <string> MISSING
+%token <string> MODEL
 %token <string> MTDNA
+%token <string> NAMES
 %token <string> NCHAR
 %token <string> NEWSTATE
 %token <string> NEWTAXA
@@ -100,15 +106,20 @@ let report_error text b e =
 %token <string> NUCLEOTIDE
 %token <string> NUCORDER
 %token <string> OPTIONS
+%token <string> PARAMETERS
+%token <string> PERCENT
 %token <string> PICT
 %token <string> PICTURE
 %token <string> POLYTCOUNT
+%token <string> POY
+%token <string> PRIORS
 %token <string> PROTEIN
 %token <string> RESOURCE
 %token <string> RESPECTCASE
 %token <string> RNA
 %token <string> SAMPLESIZE
 %token <string> SETS
+%token <string> SITES
 %token <string> SOURCE
 %token <string> STANDARD
 %token <string> STATE
@@ -131,6 +142,7 @@ let report_error text b e =
 %token <string> TRANSLATE
 %token <string> TRANSPOSE
 %token <string> TREE
+%token <string> UTREE
 %token <string> TREEPARTITION
 %token <string> TREES
 %token <string> TREESET
@@ -142,6 +154,7 @@ let report_error text b e =
 %token <string> USERTYPE
 %token <string> UUENCODE
 %token <string> VARIANCE
+%token <string> VARIATION
 %token <string> VECTOR
 %token <string> WTSET
 %token <string> YEAST
@@ -200,6 +213,9 @@ block:
         { Nexus.Error $2 }
     | BEGIN SETS SEMICOLON error ENDNEXUS SEMICOLON
         { Nexus.Error $2 }
+    | BEGIN POY SEMICOLON poy_block ENDNEXUS SEMICOLON
+        { Nexus.Poy $4 }
+    ;
     ;
 set_in_block:
     | CHARSET nexus_word optional_lparent optional_standard_or_vector
@@ -403,20 +419,67 @@ trees:
     | optional_translate tree_list { ($1, $2) }
     ;
 optional_translate:
+    | TRANSLATE names SEMICOLON
+        { snd (List.fold_left (fun (i,acc) x -> (i+1),(string_of_int i,x)::acc) (1,[]) $2) }
     | TRANSLATE pairs_list SEMICOLON { $2 }
     | { [] }
     ;
 tree_list:
-    | DATA SEMICOLON tree_list { $1 :: $3 }
-    | DATA SEMICOLON { [ $1 ] }
+    | optional_tree_prequel DATA SEMICOLON tree_list { $2 :: $4 }
+    | optional_tree_prequel DATA SEMICOLON { [$2] }
     ;
-identifiers:
-    | IDENT { $1 }
-    | INTEGER { $1 }
+optional_tree_prequel:
+    | TREE do_star optional_label EQUAL {$3}
+    | UTREE do_star optional_label EQUAL {$3}
+    | { None }
+    ;
+poy_block:
+    | CHARACTERBRANCH TREES EQUAL names NAMES EQUAL characterset_list SEMICOLON
+                  MAP pairs_list_float SEMICOLON poy_block
+        { Nexus.CharacterBranch ($4, $7, $10) :: $12}
+
+    | LIKELIHOOD model_block poy_block { Nexus.Likelihood $2 :: $3 }
+    | { [] }
+    ;
+model_block:
+    | MODEL EQUAL IDENT SEMICOLON model_block
+            { (Nexus.Model $3) :: $5 }
+    | VARIATION EQUAL IDENT SEMICOLON model_block
+            { (Nexus.Variation $3) :: $5 }
+    | SITES EQUAL INTEGER SEMICOLON model_block
+            { (Nexus.Variation_Sites $3) :: $5 }
+    | PERCENT EQUAL FLOAT SEMICOLON model_block
+            { (Nexus.Variation_Invar $3) :: $5 }
+    | ALPHA EQUAL FLOAT SEMICOLON model_block
+            { (Nexus.Variation_Alpha $3) :: $5 }
+    | PRIORS EQUAL pairs_list_float model_block
+            { (Nexus.Priors $3) :: $4 }
+    | CHARSET EQUAL characterset_list SEMICOLON model_block
+            { (Nexus.Chars $3) :: $5 }
+    | PARAMETERS EQUAL float_list model_block
+            { (Nexus.Parameters $3) :: $4 }
+    | FILE EQUAL QUOTED SEMICOLON model_block
+            { (Nexus.Files $3) :: $5 }
+    | SEMICOLON { [] }
+    ;
+float_list:
+    | FLOAT float_list      { (float_of_string $1) :: $2 }
+    | INTEGER float_list    { (float_of_string $1) :: $2 }
+    | FLOAT SEMICOLON       { [(float_of_string $1)] }
+    | INTEGER SEMICOLON     { [(float_of_string $1)] }
+    ;
+names:
+    | IDENT COMMA names { $1 :: $3 }
+    | INTEGER COMMA names { $1 :: $3 }
+    | IDENT SEMICOLON { [$1] }
     ;
 pairs_list:
     | identifiers IDENT COMMA pairs_list { ($1, $2) :: $4 }
     | identifiers IDENT { [$1, $2] }
+    ;
+pairs_list_float:
+    | IDENT FLOAT COMMA pairs_list_float { ($1,(float_of_string $2)) :: $4 }
+    | IDENT FLOAT SEMICOLON { [($1,(float_of_string $2))] }
     ;
 characters:
     | DIMENSIONS optional_taxa_dimensions NCHAR EQUAL INTEGER SEMICOLON 
@@ -600,6 +663,10 @@ single_tree:
     | identifiers optional_length { Nexus.Leaf ($1, $2) }
     | LPARENT single_tree_list RPARENT optional_label optional_length 
                             { Nexus.Node ($2, $4, $5) }
+    ;
+identifiers:
+    | IDENT { $1 }
+    | INTEGER { $1 }
     ;
 single_tree_list:
     | single_tree COMMA single_tree_list { $1 :: $3 }
