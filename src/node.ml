@@ -831,7 +831,7 @@ let edge_distance clas nodea nodeb =
         | Sank a, Sank b ->
                 (match clas with
                 | `Static | `Any -> 
-                        a.weight *. SankCS.distance a.final b.final
+                        a.weight *. SankCS.edge_distance a.final b.final
                 | `Dynamic -> 0.)
         | Dynamic a, Dynamic b ->
                 (match clas with
@@ -2693,8 +2693,10 @@ module Standard :
         struct
         type e = exclude
         type n = node_data
+        type for_is_collapsable = n 
         type other_n = n
         let to_other x = x
+        let get_for_is_collapsable get_node a _ _ = get_node a
         type nad8 = NonaddCS8.t r
         let recode f n = recode f n
         let fix_preliminary = all_prelim_to_final

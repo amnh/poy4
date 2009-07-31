@@ -29,6 +29,10 @@ module type S = sig
     (** The type of the nodes in the tree. *)
     type n 
     type other_n 
+    type for_is_collapsable
+
+    val get_for_is_collapsable : (int -> n) -> int -> int option 
+        -> int option -> for_is_collapsable
 
     (** The calculation of the nodes in a tree start in a particular vertex. For
     * this reason we have to do two passes: the downpass and the uppass. The
@@ -71,10 +75,6 @@ module type S = sig
     * [node_cost n = distance a b]. *)
     val node_cost : int option -> n -> float
 
-    (** [set_total_cost c n] creates a fresh node [e] such that 
-    * [total_cost e = c], but otherwise undistinguishable from [n]. *)
-(*    val set_total_cost : float -> n -> n*)
-
     (** [update_leaf n] sets as the final state of [n] its preliminary state of
     * [n]. *)
     val update_leaf : n -> n
@@ -92,7 +92,9 @@ module type S = sig
 
     (** [is_collapsable m n] returns true if the edge defined by [m] and [n] can
     * be collapsed in a tree safely (for I/O purposes). *)
-    val is_collapsable : [ `Dynamic | `Static | `Any ] -> n -> n -> bool
+    val is_collapsable : 
+        [ `Dynamic | `Static | `Any ] -> for_is_collapsable ->
+            for_is_collapsable-> bool
 
     (** [to_xml d chan n] outputs in an (obscure) XML format the contents of the
     * ndoe. This functionality is not currently used, and should be removed from
