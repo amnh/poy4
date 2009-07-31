@@ -81,6 +81,7 @@ let report_error text b e =
 %token <string> ITEMS
 %token <string> JPEG
 %token <string> LABELS
+%token <string> LINK
 %token <string> LIKELIHOOD
 %token <string> LOWER
 %token <string> MAM
@@ -140,11 +141,11 @@ let report_error text b e =
 %token <string> TCM
 %token <string> TEXT
 %token <string> TIFF
+%token <string> TITLE
 %token <string> TOKENS
 %token <string> TRANSLATE
 %token <string> TRANSPOSE
 %token <string> TREE
-%token <string> UTREE
 %token <string> TREEPARTITION
 %token <string> TREES
 %token <string> TREESET
@@ -154,6 +155,7 @@ let report_error text b e =
 %token <string> UNIVERSAL
 %token <string> UPPER
 %token <string> USERTYPE
+%token <string> UTREE
 %token <string> UUENCODE
 %token <string> VARIANCE
 %token <string> VARIATION
@@ -182,27 +184,24 @@ header:
     | NEXUS { () }
     ;
 block:
-    | BEGIN TAXA SEMICOLON taxa ENDNEXUS SEMICOLON  
-        { Nexus.Taxa $4 }
-    | BEGIN TAXA SEMICOLON IDENT error ENDNEXUS SEMICOLON 
-        { if $4 = "TITLE" then Status.user_message Status.Error mesquite_error;
-            raise Parsing.Parse_error }
-    | BEGIN CHARACTERS SEMICOLON characters ENDNEXUS SEMICOLON 
-        { Nexus.Characters $4 }
-    | BEGIN DATA SEMICOLON characters ENDNEXUS SEMICOLON
-        { Nexus.Characters $4 }
-    | BEGIN UNALIGNED SEMICOLON unaligned ENDNEXUS SEMICOLON
-        { Nexus.Unaligned $4 }
-    | BEGIN TREES SEMICOLON trees ENDNEXUS SEMICOLON
-        { Nexus.Trees $4 }
-    | BEGIN NOTES SEMICOLON notes ENDNEXUS SEMICOLON 
-        { Nexus.Notes $4 }
-    | BEGIN DISTANCES SEMICOLON distances ENDNEXUS SEMICOLON 
-        { Nexus.Distances $4 }
-    | BEGIN ASSUMPTIONS SEMICOLON assumptions ENDNEXUS SEMICOLON
-        { Nexus.Assumptions $4 }
-    | BEGIN SETS SEMICOLON sets_block ENDNEXUS SEMICOLON
-        { Nexus.Sets $4 }
+    | BEGIN TAXA SEMICOLON mesquite_broken taxa ENDNEXUS SEMICOLON  
+        { Nexus.Taxa $5 }
+    | BEGIN CHARACTERS SEMICOLON mesquite_broken characters ENDNEXUS SEMICOLON 
+        { Nexus.Characters $5 }
+    | BEGIN DATA SEMICOLON mesquite_broken characters ENDNEXUS SEMICOLON
+        { Nexus.Characters $5 }
+    | BEGIN UNALIGNED SEMICOLON mesquite_broken unaligned ENDNEXUS SEMICOLON
+        { Nexus.Unaligned $5 }
+    | BEGIN TREES SEMICOLON mesquite_broken trees ENDNEXUS SEMICOLON
+        { Nexus.Trees $5 }
+    | BEGIN NOTES SEMICOLON mesquite_broken notes ENDNEXUS SEMICOLON 
+        { Nexus.Notes $5 }
+    | BEGIN DISTANCES SEMICOLON mesquite_broken distances ENDNEXUS SEMICOLON 
+        { Nexus.Distances $5 }
+    | BEGIN ASSUMPTIONS SEMICOLON mesquite_broken assumptions ENDNEXUS SEMICOLON
+        { Nexus.Assumptions $5 }
+    | BEGIN SETS SEMICOLON mesquite_broken sets_block ENDNEXUS SEMICOLON
+        { Nexus.Sets $5 }
     | BEGIN IDENT error ENDNEXUS SEMICOLON
         { Nexus.UnknownBlock $2 }
     | BEGIN TAXA SEMICOLON error ENDNEXUS SEMICOLON  
@@ -218,6 +217,13 @@ block:
     | BEGIN POY SEMICOLON poy_block ENDNEXUS SEMICOLON
         { Nexus.Poy $4 }
     ;
+mesquite_broken:
+    | mesquite_broken_items mesquite_broken { $1 :: $2 }
+    | { [] }
+    ;
+mesquite_broken_items:
+    | TITLE any_thing_minus_end  SEMICOLON { () }
+    | LINK any_thing_minus_end EQUAL any_thing_minus_end SEMICOLON { () }
     ;
 set_in_block:
     | CHARSET nexus_word optional_lparent optional_standard_or_vector
@@ -427,13 +433,8 @@ optional_translate:
     | { [] }
     ;
 tree_list:
-    | optional_tree_prequel DATA SEMICOLON tree_list { $2 :: $4 }
+    | DATA SEMICOLON tree_list { $1 :: $3 }
     | { [] }
-    ;
-optional_tree_prequel:
-    | TREE do_star optional_label EQUAL {$3}
-    | UTREE do_star optional_label EQUAL {$3}
-    | { None }
     ;
 poy_block:
     | CHARACTERBRANCH TREES EQUAL names NAMES EQUAL characterset_list SEMICOLON
@@ -665,7 +666,7 @@ characterset:
     | PROTEIN              { Nexus.Name "PROTEIN" }
     ;
 tree:
-    | do_star IDENT EQUAL single_tree EOF { $4 }
+    | do_star nexus_word EQUAL single_tree EOF { $4 }
     ;
 single_tree:
     | identifiers optional_length { Nexus.Leaf ($1, $2) }
@@ -686,6 +687,136 @@ optional_length:
     | { None }
     ;
 optional_label:
-    | IDENT     { Some $1 }
+    | nexus_word     { Some $1 }
     | { None }
+    ;
+any_thing_minus_end:
+    | TAXA  { () }
+    | DATA  { () }
+    | UNALIGNED  { () }
+    | TREES  { () }
+    | NOTES  { () }
+    | DISTANCES  { () }
+    | ASSUMPTIONS  { () }
+    | SETS  { () }
+    | CHARACTERS { () }
+    | ANCSTATES { () }
+    | AVERAGE { () }
+    | BINHEX { () }
+    | BOTH { () }
+    | CHANGESET { () }
+    | CHAR { () }
+    | CHARACTER { () }
+    | CHARLABELS { () }
+    | CHARPARTITION { () }
+    | CHARSTATELABELS { () }
+    | CODEORDER { () }
+    | CODESET { () }
+    | CODONS { () }
+    | CONDONPOSSET { () }
+    | CONTINUOUS { () }
+    | COUNT { () }
+    | CSTREE { () }
+    | QUOTED { () }
+    | DATATYPE { () }
+    | DEFTYPE { () }
+    | DIAGONAL { () }
+    | DIMENSIONS { () }
+    | DNA { () }
+    | DROS { () }
+    | ELIMINATE { () }
+    | ENCODE { () }
+    | EPS { () }
+    | EQUATE { () }
+    | EXSET { () }
+    | EXT { () }
+    | EXTENSIONS { () }
+    | FILE { () }
+    | FORMAT { () }
+    | FREQUENCY { () }
+    | GAP { () }
+    | GAPMODE { () }
+    | GENETICCODE { () }
+    | GIF { () }
+    | INDIVIDUALS { () }
+    | INLINE { () }
+    | INTERLEAVE { () }
+    | ITEMS { () }
+    | JPEG { () }
+    | LABELS { () }
+    | LOWER { () }
+    | MAM { () }
+    | MATCHCHAR { () }
+    | MATRIX { () }
+    | MAX { () }
+    | MAXSTEPS { () }
+    | MEDIAN { () }
+    | MIN { () }
+    | MINSTEPS { () }
+    | MISSING { () }
+    | MTDNA { () }
+    | NCHAR { () }
+    | NEWSTATE { () }
+    | NEWTAXA { () }
+    | NONE { () }
+    | NTAX { () }
+    | NUCLEOTIDE { () }
+    | NUCORDER { () }
+    | OPTIONS { () }
+    | PICT { () }
+    | PICTURE { () }
+    | POLYTCOUNT { () }
+    | PROTEIN { () }
+    | RESOURCE { () }
+    | RESPECTCASE { () }
+    | RNA { () }
+    | SAMPLESIZE { () }
+    | SOURCE { () }
+    | STANDARD { () }
+    | STATE { () }
+    | STATELABELS { () }
+    | STATES { () }
+    | STATESET { () }
+    | STATESFORMAT { () }
+    | STATESPRESENT { () }
+    | STDERROR { () }
+    | STEPMATRIX { () }
+    | SYMBOLS { () }
+    | TAXON { () }
+    | TAXLABELS { () }
+    | TAXPARTITION { () }
+    | TAXSET { () }
+    | TEXT { () }
+    | TIFF { () }
+    | TOKENS { () }
+    | TRANSLATE { () }
+    | TRANSPOSE { () }
+    | TREE { () }
+    | TREEPARTITION { () }
+    | TREESET { () }
+    | TRIANGLE { () }
+    | TYPESET { () }
+    | UNIVERSAL { () }
+    | UPPER { () }
+    | USERTYPE { () }
+    | UUENCODE { () }
+    | VARIANCE { () }
+    | VECTOR { () }
+    | WTSET { () }
+    | YEAST { () }
+    | EIDENT { () }
+    | STAR { () }
+    | COLON { () }
+    | IDENT { () }
+    | FLOAT { () }
+    | INTEGER { () }
+    | SEMICOLON  { () }
+    | EQUAL { () }
+    | COMMA { () }
+    | QUOTE { () }
+    | BACKSLASH { () }
+    | DASH { () }
+    | LPARENT { () }
+    | RPARENT { () }
+    | SINGLEQUOTED { () }
     ;

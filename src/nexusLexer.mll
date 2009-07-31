@@ -58,6 +58,7 @@
         ("ITEMS", fun x -> ITEMS x);
         ("JPEG", fun x -> JPEG x);
         ("LABELS", fun x -> LABELS x);
+        ("LINK", fun x -> LINK x);
         ("LIKELIHOOD", fun x -> LIKELIHOOD x);
         ("LOWER", fun x -> LOWER x); 
         ("MAM", fun x -> MAM x);
@@ -117,6 +118,7 @@
         ("TAXSET", fun x -> TAXSET x);
         ("TCM", fun x -> TCM x);
         ("TEXT", fun x -> TEXT x);
+        ("TITLE", fun x -> TITLE x);
         ("TIFF", fun x -> TIFF x);
         ("TOKENS", fun x -> TOKENS x);
         ("TRANSLATE", fun x -> TRANSLATE x);
@@ -166,6 +168,8 @@ and cstree = parse
 and token = parse
       [ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ]       { token lexbuf } 
       (* skip blanks *)
+    | [ '"' ]           { inquotes lexbuf }
+    | [ '\'' ]           { insinglequotes lexbuf }
     | ['0'-'9']* [ 'a'-'z' 'A'-'Z' '#' '_' '|' '\128'-'\255']+ [ 'a'-'z' 'A'-'Z' '#' '_' '0'-'9' '|' '.' '\128'-'\255']* as id 
         { try
             let string = String.uppercase id in
@@ -174,12 +178,11 @@ and token = parse
             | "PICTURE"
             | "TEXT"
             | "MATRIX" 
+            | "UTREE"
             | "TREE" -> raw lexbuf
             | x -> (Hashtbl.find keyword_table string) id
         with
         | Not_found -> IDENT id }
-    | [ '"' ]           { inquotes lexbuf }
-    | [ '\'' ]           { insinglequotes lexbuf }
     | [ ';' ]           { SEMICOLON }
     | [ ':' ]           { COLON }
     | [ '=' ]           { EQUAL }
@@ -204,8 +207,9 @@ and tree_tokens = parse
     | [ ';' ] { SEMICOLON }
     | [ '(' ] { LPARENT }
     | [ ')' ] { RPARENT }
+    | [ '\'' ] { insinglequotes lexbuf }
     | ['0'-'9']+['.']['0'-'9']* as i { FLOAT i }
     | ['0'-'9']+ as i { INTEGER i }
-    | [^ '(' ')' ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ';' ':' ',' ]+ as i
+    | [^ '\'' '(' ')' ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ';' ':' ',' ]+ as i
         { IDENT i }
     | eof           { EOF }
