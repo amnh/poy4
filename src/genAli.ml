@@ -79,6 +79,31 @@ let cmp_recost state seq1 seq2 reseq2 re_meth circular orientation =
     end 
 
 
+let align cost_matrix a b = 
+    let gap = Cost_matrix.Two_D.gap cost_matrix in
+    let find_max acc arr = Array.fold_left max acc arr in
+    let total_max = ((find_max (find_max 0 a) b) + 1) / 2 in
+    let all_set = Array.make (total_max + 1) 0 in
+    let update_item v pos set =
+        let pos = (pos + 1) / 2 in
+        set.(pos) <- set.(pos) lor v
+    in
+    let alen = (Array.length a) - 1 in
+    for i = 0 to alen do
+        update_item 1 a.(i) all_set;
+    done;
+    let blen = (Array.length b) - 1 in
+    for j = 0 to blen do
+        update_item 2 b.(j) all_set;
+    done;
+    let cost = Array.fold_left (fun acc x ->
+        if x = 0 || x > 2 then acc 
+        else acc + (Cost_matrix.Two_D.cost x gap cost_matrix)) 0 all_set 
+    in
+    cost
+
+
+
 (** [cmp_cost state code1_arr code2_arr recode2_arr 
 *              cost_mat gap re_meth circular] returns
 * the total cost between [seq1] and [reseq2]. Precisely,
@@ -87,10 +112,10 @@ let cmp_cost state code1_arr code2_arr recode2_arr
         (cost_mat : Cost_matrix.Two_D.m) gap re_meth circular orientation = 
     let seq1 = Sequence.of_array code1_arr
     and reseq2 = Sequence.of_array recode2_arr in
-    let alied_seq1, alied_reseq2, editing_cost =  
-        Sequence.Align.align_2 ~first_gap:false seq1 reseq2 cost_mat
-            Matrix.default  
-    in   
+    let alied_seq1, alied_reseq2, _ =  
+        Sequence.Align.align_2 ~first_gap:false seq1 reseq2 cost_mat Matrix.default
+    in
+    let editing_cost = align cost_mat code1_arr recode2_arr in
     let alied_code1_arr = Sequence.to_array alied_seq1 in 
     let alied_recode2_arr = Sequence.to_array alied_reseq2 in 
     let recost1, recost2 = 
