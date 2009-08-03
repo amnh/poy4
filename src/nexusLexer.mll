@@ -188,6 +188,7 @@ and token = parse
     | [ '=' ]           { EQUAL }
     | [ ',' ]           { COMMA }
     | [ '/' ]           { BACKSLASH }
+    | [ '\\' ]          { SLASH }
     | [ '-' ]           { DASH }
     | [ '(']            { LPARENT }
     | [ ')']            { RPARENT }

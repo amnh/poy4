@@ -47,7 +47,7 @@ type format_options =
     | Tokens of bool 
 
 type charset = 
-    Range of (string * string option) | Single of string | Name of string
+    Range of (string * string option * int) | Single of string | Name of string
 
 type char_data = {
     char_taxon_dimensions : string option;

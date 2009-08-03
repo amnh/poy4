@@ -2736,7 +2736,8 @@ module SC = struct
             | Exit -> !pos
 
         let find_character chars name =
-            find_position "Character not found" (fun x -> name = x.st_name) chars
+            find_position ("Character " ^ name ^ " not found") 
+            (fun x -> name = x.st_name) chars
 
         let cleanup_taxon_name taxon =
             let south = Str.regexp " *$"
@@ -3188,22 +3189,24 @@ module SC = struct
                 | Some x ->
                         let rec process_range x =
                             match x with
-                            | Nexus.Range (a, b) ->
+                            | Nexus.Range (a, b, step) ->
                                     (* 1 base array in NEXUS files *)
                                     let a = (int_of_string a) - 1
                                     and b = 
                                         match b with
                                         | None -> (Array.length characters) - 1
-                                        | Some b -> 
-                                                (int_of_string b) - 1 in
-                                    for i = 
-                                        a + start_position to 
-                                        b + start_position 
-                                    do
-                                        characters.(i) <- 
-                                            { characters.(i) with 
-                                            st_eliminate = true }
-                                    done
+                                        | Some b -> (int_of_string b) - 1 
+                                    in
+                                    let rec loop i =
+                                        if i > b + start_position then ()
+                                        else begin
+                                            characters.(i) <- 
+                                                { characters.(i) with 
+                                                st_eliminate = true };
+                                            loop (i + step);
+                                        end;
+                                    in
+                                    loop (a + start_position)
                             | Nexus.Single v ->
                                     let v = (int_of_string v) - 1 in
                                     characters.(v) <- 
@@ -3222,7 +3225,7 @@ module SC = struct
                                         if "ALL" = upp_name then
                                             process_range 
                                             (Nexus.Range ("1", 
-                                            Some (string_of_int lst)))
+                                            Some (string_of_int lst), 1))
                                         else 
                                             let v = 
                                                 if upp_name = "." then
@@ -3241,7 +3244,7 @@ module SC = struct
         let rec general_apply_on_character_set find_character character_set_table characters f x =
             let last = (Array.length characters) in
             match x with
-            | Nexus.Range (a, b) ->
+            | Nexus.Range (a, b, step) ->
                     (* Notice that in the input files, the arrays are base 1 not
                     * 0, therefore we substract 1. *)
                     let a = int_of_string a
@@ -3250,9 +3253,14 @@ module SC = struct
                         | None -> last
                         | Some b ->  int_of_string b 
                     in
-                    for i = a to b do
-                        f (i - 1);
-                    done
+                    let rec loop i =
+                        if i > b then ()
+                        else begin
+                            f (i - 1);
+                            loop (i + step);
+                        end;
+                    in
+                    loop a
             | Nexus.Single v ->
                     (* Notice that in the input files, the arrays are base 1 not
                     * 0, therefore we substract 1. *)
@@ -3266,7 +3274,8 @@ module SC = struct
                         let up_name = String.uppercase name in
                         if "ALL" = up_name then
                             general_apply_on_character_set find_character character_set_table 
-                            characters f (Nexus.Range ("1", (Some (string_of_int last))))
+                            characters f (Nexus.Range ("1", (Some (string_of_int
+                            last)), 1))
                         else if "." = up_name then
                             f (last - 1)
                         else

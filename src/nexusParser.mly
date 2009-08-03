@@ -164,7 +164,7 @@ let report_error text b e =
 %token <string> YEAST
 %token <string> EIDENT
 %token NEXUS SEMICOLON EQUAL COMMA QUOTE BACKSLASH DASH LPARENT RPARENT STAR
-COLON
+COLON SLASH
 %token <string> IDENT
 %token <string> FLOAT
 %token <string> INTEGER
@@ -655,8 +655,8 @@ characterset_list:
     | characterset      { [$1] }
     ;
 characterset:
-    | INTEGER DASH CHAR    { Nexus.Range ($1, None) }
-    | INTEGER DASH INTEGER { Nexus.Range ($1, Some $3) }
+    | INTEGER DASH CHAR optional_step   { Nexus.Range ($1, None, $4) }
+    | INTEGER DASH INTEGER optional_step { Nexus.Range ($1, Some $3, $4) }
     | INTEGER              { Nexus.Single ($1) }
     | IDENT                { Nexus.Name $1 }
     | SINGLEQUOTED         { Nexus.Name $1 }
@@ -664,6 +664,10 @@ characterset:
     | DNA                  { Nexus.Name "DNA" }
     | RNA                  { Nexus.Name "RNA" }
     | PROTEIN              { Nexus.Name "PROTEIN" }
+    ;
+optional_step:
+    | SLASH INTEGER { (int_of_string $2) }
+    | { 1 }
     ;
 tree:
     | do_star nexus_word EQUAL single_tree EOF { $4 }
