@@ -273,11 +273,11 @@ let make_breakpoint_graph genome =
     if debug then print_breakpoint_graph bp;
     let grey_first_cap = 
         if genome.(0) > 0 then (2 * genome.(0)) - 1
-        else genome.(0) * 2
+        else (abs genome.(0)) * 2
     in
     let grey_last_cap =
         if genome.(len - 1) > 0 then (2 * genome.(len - 1))
-        else (genome.(len - 1) * 2) - 1
+        else ((abs genome.(len - 1)) * 2) - 1
     in
     let bp_len = Array.length bp in
     bp.(0) <- grey_first_cap;
