@@ -3584,7 +3584,7 @@ let output_character_types fo output_format data all_of_dynamic all_of_static =
                 match Hashtbl.find data.character_specs code with
                 | Static x -> `Static x.Parser.SC.st_type
                 | Dynamic x -> `Dynamic (x.tcm, x.alph)
-                | Set _ -> assert false
+                | Set -> assert false
             in
             match previous with
             | None -> (acc, Some ((`Single cnt), spec), cnt + 1)
