@@ -88,12 +88,13 @@ module Two_D : sig
     the processed data. Raise an Illegal_Cm_Format if the format can't be
     parsed. *)
     val of_channel: ?orientation:bool -> ?use_comb:bool -> int ->
-        FileStream.greader -> m
+        FileStream.greader -> m * int list list
 
     (** [of_channel_nocomb file] parse the file containing a cost matrix and
         returns the processed data, but without calculating combinations. Raise an
         Illegal_Cm_Format if the format can't be parsed. *)
-    val of_channel_nocomb: ?orientation:bool -> int -> FileStream.greader -> m
+    val of_channel_nocomb: ?orientation:bool -> int -> FileStream.greader -> m *
+    int list list
 
     (** [print ma] prints the matrix ma with alphabet size a in stdout. *)
     val output : out_channel -> m -> unit

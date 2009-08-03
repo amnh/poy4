@@ -35,6 +35,7 @@ let print_tree arguments run =
             run
     | _ -> 
             failwith 
-            "Usage: print_newick (STRING, STRING), where the arguments are the input and output filenames."
+            "Usage: print_newick (STRING, STRING), where the arguments \
+            are the input and output filenames."
 
 let () = Phylo.register_function "print_newick" print_tree

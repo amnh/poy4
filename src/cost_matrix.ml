@@ -540,6 +540,15 @@ module Two_D = struct
         | [] -> failwith "No Alphabet"
         | l ->
                 let w = calculate_alphabet_size l in
+                let matrix_list = 
+                    snd (List.fold_right (fun item (cnt, acc ) ->
+                        match acc with
+                        | [] -> assert false
+                        | (h :: t) ->
+                                if cnt = 0 then
+                                    (w, ([item] :: acc))
+                                else (cnt - 1, ((item :: h) :: t))) l (w, [[]]))
+                in
                 let w, l =
                     if w = all_elements && (not use_comb) then
                         (* We must add a placeholder for the all elements item
@@ -574,7 +583,7 @@ module Two_D = struct
                           let l2 = List.rev !l2 in 
                           fill_cost_matrix ~use_comb:use_comb l2 w2 all_elements
                 in  
-                m;;
+                m, matrix_list;;
 
 
     let of_list ?(use_comb=true) l all_elements =

@@ -831,7 +831,7 @@ let edge_distance clas nodea nodeb =
         | Sank a, Sank b ->
                 (match clas with
                 | `Static | `Any -> 
-                        a.weight *. SankCS.distance a.final b.final
+                        a.weight *. SankCS.edge_distance a.final b.final
                 | `Dynamic -> 0.)
         | Dynamic a, Dynamic b ->
                 (match clas with
@@ -1444,16 +1444,18 @@ let generate_taxon do_classify (laddcode : ms) (lnadd8code : ms)
                     | [] -> result
                     | _ ->
                             let v = List.map extract_stat lst in
-                            let tcm =
+                            let tcm, weight =
                                 match v with
-                                | (_, code) :: _ -> Data.get_tcm code !data
+                                | (_, code) :: _ -> 
+                                        Data.get_tcm code !data,
+                                        Data.get_weight code !data 
                                 | _ -> failwith "This is impossible"
                             in
                             let arr= Array.of_list v in
                             let c, _ = SankCS.of_parser tcm (arr, tcode) code in
                             let c = Sank { preliminary = c; final = c; cost = 0.;
                                           sum_cost = 0.;
-                            weight = 1. } in
+                            weight = weight } in
                             { result with characters = c :: result.characters }
                 in
                 match lsank_chars with
@@ -2691,8 +2693,10 @@ module Standard :
         struct
         type e = exclude
         type n = node_data
+        type for_is_collapsable = n 
         type other_n = n
         let to_other x = x
+        let get_for_is_collapsable get_node a _ _ = get_node a
         type nad8 = NonaddCS8.t r
         let recode f n = recode f n
         let fix_preliminary = all_prelim_to_final

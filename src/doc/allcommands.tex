@@ -1464,7 +1464,11 @@ The \poycommand{calculate\_support} command does not output support values by de
                 number of included characters in each character-type category
                 (\emph{i.e.} additive, non-additive, Sankoff, and molecular) with the corresponding
                 cost regimes, a list of excluded
-                characters, and a list of input files.} 
+                characters, and a list of input files. If the report is directed
+                to a file with extension ``nex'' or ``nexus'' then
+                the output is suitable for a nexus file (including the #NEXUS
+                beginning). Hennig format is produced if the report is directed
+                to a file with extension ``ss'' or ``hen'' or ``hennig''.}
                 {data}
 
             \argumentdefinition{searchstats}{}
@@ -1667,6 +1671,11 @@ The \poycommand{calculate\_support} command does not output support values by de
                         terminals separated with commas, and trees separated
                         with semicolons.}
                         {}
+                        
+                    \argumentdefinition{nexus}{}
+                        {Outputs the trees in the NEXUS format, inside a TREE
+                        block.}
+                        {nexusreport}
 	    \begin{statement}
 	     The \poyargument{hennig} and \poyargument{newick} arguments are 
 	     mutually exclusive.
@@ -1688,7 +1697,13 @@ The \poycommand{calculate\_support} command does not output support values by de
                         default), but if \poycommand{false}--no branches are
                         collapsed.}
                         {}
-                    \end{description}}
+                    \end{description}
+                 If the report is directed
+                to a file with extension ``nex'' or ``nexus'' then
+                the output is suitable for a nexus file (trees inside a TREES
+                block). Hennig format is produced if the report is directed
+                to a file with extension ``ss'' or ``hen'' or ``hennig''. In
+                these two cases, all other formatting options are ignored.}
                 {treesreport}
 
 		\end{argumentgroup}
@@ -1726,6 +1741,18 @@ The \poycommand{calculate\_support} command does not output support values by de
         \begin{argumentgroup}{Exporting static homology data}
             {The following commands export the static homology characters
             currently in memory.}
+
+            \argumentdefinition{nexus}{}
+                {Produces a file in the NEXUS format that contains all the
+                characters currently in memory.  In
+                order to export an implied alignment as a NEXUS file, the
+                characters must first be transformed into static characters
+                using the \poycommand{transform} command (see the Hennig86 example in tutorial \texttt{4.2}): 
+                \begin{flushleft}
+                    \poycommand{transform ((all, static\_approx))} \\
+                    \poycommand{report ("report.nexus", nexus, trees:(nexus))}
+                \end{flushleft}}
+                {}
 
             \argumentdefinition{phastwinclad}{}
                 {Produces a file in the Hennig86 format that contains the
@@ -3066,28 +3093,6 @@ The \poycommand{calculate\_support} command does not output support values by de
 	  data (for example, in calculating support values based on individual nucleotides
 	  rather than on sequence fragments) can produce a discrepancy in tree costs.
 	\end{statement}
-
-        \argumentdefinition{trailing\_insertion}{\obligatory{\poystring /(\poyint list)}}
-            {The tail and prepend costs specify the cost of having an insertion of
-            each element in the alphabet at the beginning or end
-            of a sequence. The string is the name of a file containing the cost of
-            a trailing insertion corresponding to each of the elements
-            in the alphabet separated by spaces. The last element in the list is the
-            cost of the indel of a gap (should be 0). Instead of a file, the list can
-            be the input of the argument, in the same order, separated by commas.
-            Synonym of the argument \poyargument{ti}. This method is applicable only to dynamic homology characters.} 
-            {trailinginsertion}
-
-        \argumentdefinition{trailing\_deletion}{\obligatory{\poystring /(\poyint list)}}
-            {The tail and prepend costs specify the cost of having a deletion
-            of each element in the alphabet at the beginning or end
-            of a sequence. The string is the name of a file containing the cost of
-            a trailing deletion corresponding to each of the elements
-            in the alphabet separated by spaces. The last element in the list is the
-            cost of the indel of a gap (should be 0). Instead of a file, the list can
-            be the input of the argument, in the same order, separated by commas.
-            Synonym of the argument \poyargument{td}. This method is applicable only to dynamic homology characters.} 
-            {trailinginsertion}
 
              \argumentdefinition{tcm}{\obligatory{(\poyint, \poyint)}}
             {Defines transformation cost matrix. The first integer value specifies

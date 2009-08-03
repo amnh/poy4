@@ -192,3 +192,6 @@ val print : node_data -> unit
 val copy_chrom_map : node_data -> node_data -> node_data
 
 val median_counter : int ref
+
+val is_collapsable : [ `Any | `Dynamic | `Static ] -> node_data -> node_data ->
+    bool

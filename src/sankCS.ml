@@ -51,10 +51,8 @@ let cost_plus a b =
 
 let cost_minus a b =
     if is_infinity a then
-        let () = assert (not (is_infinity b)) in
         max_int
     else if is_infinity b then
-        let () = assert (not (is_infinity a)) in
         0
     else a - b
 
@@ -178,6 +176,8 @@ let to_string = to_full_string
     
 
 let assert_ninf a x y=
+    a
+    (*
     assert (
         if is_infinity a then begin
          print_string (elt_to_full_string x);
@@ -185,6 +185,7 @@ let assert_ninf a x y=
             false
         end else true);
     a
+    *)
 
 
 
@@ -352,6 +353,21 @@ let elt_distance tcm a b =
     let b_cost = get_cost b in
     med_cost -. a_cost -. b_cost
 
+let edge_distance a b =
+    let acc = ref 0. in
+    let make_array item = 
+        let arr = Array.make (Array.length item.s) infinity in
+        List.iter (fun x -> 
+            arr.(x) <- 0) item.best_states;
+        { item with s = arr }
+    in
+    for i = Array.length a.elts - 1 downto 0 do
+        acc := !acc +. 
+            (elt_distance a.tcm (make_array a.elts.(i)) (make_array b.elts.(i)))
+    done;
+    let res = !acc in
+    res
+
 let distance a b =
     let tcm = a.tcm in
     let acc = ref 0. in
@@ -411,7 +427,7 @@ let elt_median_3 tcm a n l r =          (* ancestor, node, left, right *)
                     let res = ref [] in
                     Array.iteri (fun pos poscost ->
                         if !cost = poscost then res := pos :: !res
-                        else if !cost < poscost then begin 
+                        else if !cost > poscost then begin 
                             cost := poscost;
                             res := [pos];
                         end;) a.s;

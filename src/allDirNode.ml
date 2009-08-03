@@ -98,16 +98,23 @@ let not_with code n =
             " of " ^ string_of_int (get_code x) ^ " has " ^
             string_of_int (List.length x) ^ " matching values.")
 
-module OneDirF : 
-    NodeSig.S with type e = exclude with type n = a_node with type other_n =
-        Node.Standard.n with type nad8 = Node.Standard.nad8 = struct
+module OneDirF = struct
 
     type n = a_node
     type other_n = Node.Standard.n
 
+    type for_is_collapsable = (n * (n option) * (n option))
+
+
     let to_other x = force_val x
 
     type e = exclude
+
+    let get_for_is_collapsable (get_node : int -> n) (a : int) chld1 chld2 =
+        let pick ch = 
+            match ch with None -> None | Some c -> Some (get_node c) 
+        in
+        ((get_node a, pick chld1, pick chld2) : for_is_collapsable)
 
     let recode f n = 
         lazy_from_fun (fun () -> 
@@ -181,8 +188,21 @@ module OneDirF :
 
     let union_distance _ _ = 0.0
 
-    let is_collapsable clas a b = 
-        apply_f_on_lazy (Node.Standard.is_collapsable clas) a b
+    let is_collapsable clas (a, ach1, ach2) (b, bch1, bch2) = 
+        let get_chld par chld = match chld with None -> par | Some x -> x in
+        let f = Node.is_collapsable clas in
+        match clas with
+        | `Static | `Any ->
+            let ach1 = get_chld a ach1 
+            and ach2 = get_chld a ach2 
+            and bch1 = get_chld b bch1
+            and bch2 = get_chld b bch2 in
+            let median = median None None None a b in
+            let a = median_3 None median a ach1 ach2 
+            and b = median_3 None median b bch1 bch2 in
+            apply_f_on_lazy f a b 
+        | `Dynamic ->
+            apply_f_on_lazy f a b
 
     let to_xml _ _ _ = ()
 
@@ -320,12 +340,18 @@ module OneDirF :
     let force x = force x
 end
 
-module AllDirF : NodeSig.S with type e = exclude with type n = node_data with
-type other_n = Node.Standard.n with
-type nad8 = Node.Standard.nad8 = struct
+module AllDirF = struct
 
     type n = node_data
+    type for_is_collapsable = (n * (n option) * (n option))
     type other_n = Node.Standard.n
+
+    let get_for_is_collapsable get_node a chld1 chld2 =
+        let pick ch = 
+            match ch with None -> None | Some c -> Some (get_node c) 
+        in
+        (get_node a, pick chld1, pick chld2)
+
 
     let to_other x = 
         match x.unadjusted with
@@ -545,27 +571,36 @@ type nad8 = Node.Standard.nad8 = struct
 
     let union_distance _ _ = 0.0
 
-    let rec is_collapsable clas a b =
+    let rec is_collapsable clas 
+        ((a, ach1, ach2) as aacc) ((b, bch1, bch2) as bacc)=
         let acode = taxon_code a
         and bcode = taxon_code b in
         match clas with
         | `Static ->
-                let da = not_with bcode a.unadjusted
-                and db = not_with acode b.unadjusted in
-                OneDirF.is_collapsable `Static da.lazy_node db.lazy_node
+                let get_child code chld =
+                    match chld with
+                    | None -> None 
+                    | Some node -> Some (not_with code node.unadjusted).lazy_node 
+                in
+                let da = (not_with bcode a.unadjusted).lazy_node
+                and db = (not_with acode b.unadjusted).lazy_node 
+                and ach1 = get_child acode ach1
+                and ach2 = get_child acode ach2
+                and bch2 = get_child bcode bch2
+                and bch1 = get_child bcode bch1 in
+                OneDirF.is_collapsable `Static (da, ach1, ach2) (db, bch1, bch2)
         | `Dynamic ->
-                let da = 
-                    match a.adjusted with
-                    | [x] -> x
-                    | _ -> failwith "AllDirNode.is_collapsable 1"
-                and db = 
-                    match b.adjusted with
-                    | [x] -> x
+                let get_adjusted x = 
+                    match x.adjusted with
+                    | [x] -> x.lazy_node, None, None
                     | _ -> failwith "AllDirNode.is_collapsable 1"
                 in
-                OneDirF.is_collapsable `Dynamic da.lazy_node db.lazy_node
+                let da = get_adjusted a
+                and db = get_adjusted b in
+                OneDirF.is_collapsable `Dynamic da db
         | `Any ->
-                (is_collapsable `Static a b) && (is_collapsable `Dynamic a b)
+                (is_collapsable `Static aacc bacc) && 
+                    (is_collapsable `Dynamic aacc bacc)
 
     let to_xml _ _ _ = ()
 

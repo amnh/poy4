@@ -1848,14 +1848,23 @@ let build_trees (tree : Tree.u_tree) str_gen collapse root =
     let never_collapse a b c = false
 
     let collapse_as_needed tree code chld = 
-        flush stdout;
-        try
-        let data = get_node_data code tree in
-        let datac = get_node_data chld tree in
-        Node.is_collapsable `Any data datac
-        with
-        | err -> 
-        raise err
+        let get_node_for_collapsable x = get_node_data x tree in
+        let get_one_side other node =
+            if Tree.is_leaf node tree.tree || Tree.is_single node tree.tree then
+                Node.get_for_is_collapsable 
+                    get_node_for_collapsable node None None
+            else 
+                let a, b = 
+                    let node = get_node node tree in
+                    Tree.other_two_nbrs other node 
+                in
+                Node.get_for_is_collapsable get_node_for_collapsable 
+                    node (Some a) (Some b)
+        in
+        let data = get_one_side chld code in
+        let datac = get_one_side code chld in
+        let result = Node.is_collapsable `Any data datac in
+        result
 
 let extract_names pd ptree code = 
     let data = get_node_data code ptree in

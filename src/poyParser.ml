@@ -462,7 +462,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
             | Parser.Is_XML | Parser.Is_NewSeq ->
                     let data = add_file [Data.Characters] in
                     file_type_message "input@ sequences";
-                    Data.process_molecular_file "tcm:(1,2)" 
+                    Data.process_molecular_file Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default 
                     annotated Alphabet.nucleotides `DO is_prealigned `Seq data filename
             | Parser.Is_Phylip | Parser.Is_Hennig -> 
@@ -490,6 +490,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
                     Data.process_trees data filename
             | Parser.Is_Nexus -> 
                     file_type_message "Nexus@ File";
+                    let data = add_file [Data.Characters; Data.Trees] in
                     Data.add_static_file `Nexus data filename 
             | Parser.Is_Unknown ->
                     let data = 
@@ -498,7 +499,7 @@ let guess_class_and_add_file annotated is_prealigned data filename =
                     in
                     file_type_message "input@ sequences@ (default)";
                     Data.process_molecular_file 
-                    "tcm:(1,2)"
+                    Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides `DO is_prealigned `Seq data filename
             | Parser.Is_ComplexTerminals ->

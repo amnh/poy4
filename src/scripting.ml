@@ -349,6 +349,20 @@ module type S = sig
             phylogeny list 
     end
 
+    module Run : sig
+        type phylogeny = (a, b) Ptree.p_tree
+        type run = r
+        val min_cost : run -> float option
+        val max_cost : run -> float option
+        val all_costs : run -> float list
+        val trees : run -> phylogeny list
+        val set_trees : run -> phylogeny list -> run
+        val data : run -> Data.d
+        val nodes : run -> a list
+        val to_string : run -> bool -> string list list 
+        val of_string : run -> string -> run
+    end
+
     module Runtime : sig
         type phylogeny = (a, b) Ptree.p_tree
         val min_cost : unit -> float option
@@ -1428,7 +1442,8 @@ let load_data (meth : Methods.input) data nodes =
                 if is_prealigned then prealigned_files := files ::
                     !prealigned_files;
                 List.fold_left 
-                (fun d f -> Data.process_molecular_file "tcm:(1,2)"
+                (fun d f -> Data.process_molecular_file 
+                    Data.default_tcm_definition
                 Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                 annotated Alphabet.nucleotides 
                 mode  is_prealigned `Seq d f) 
@@ -1443,7 +1458,7 @@ let load_data (meth : Methods.input) data nodes =
                     data files
                 in
                 List.fold_left (fun d f ->
-                    Data.process_molecular_file "tcm:(1,2)"
+                    Data.process_molecular_file Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides `DO false `Chromosome d f) 
                 data files
@@ -1457,7 +1472,7 @@ let load_data (meth : Methods.input) data nodes =
                     data files
                 in
                 let data = List.fold_left (fun d f ->
-                    Data.process_molecular_file "tcm:(1,2)"
+                    Data.process_molecular_file Data.default_tcm_definition
                     Cost_matrix.Two_D.default Cost_matrix.Three_D.default
                     annotated Alphabet.nucleotides `DO false `Genome d f) 
                 data files
@@ -1475,7 +1490,7 @@ let load_data (meth : Methods.input) data nodes =
                 List.fold_left 
                 (fun d f -> 
                     Data.process_molecular_file 
-                    "tcm:(1,2)" Cost_matrix.Two_D.default_aminoacids
+                    Data.default_tcm_definition Cost_matrix.Two_D.default_aminoacids
                     (Lazy.force Cost_matrix.Three_D.default_aminoacids)
                     annotated Alphabet.aminoacids `DO is_prealigned `Seq d f) 
                 data files
@@ -1487,11 +1502,11 @@ let load_data (meth : Methods.input) data nodes =
                 let init3D = (List.mem (`Init3D true) read_options) in
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
+                let alphabet, twod, matrix, threed =
                     Parser.PAlphabet.of_file alph orientation init3D in
                 if is_prealigned then prealigned_files := [seq] ::
                     !prealigned_files;
-                let tcmfile = FileStream.filename alph in
+                let tcmfile = Data.Input_file (FileStream.filename alph, matrix) in
                 Data.process_molecular_file 
                 tcmfile twod threed annotated alphabet `DO 
                 is_prealigned `Seq data seq 
@@ -1504,9 +1519,11 @@ let load_data (meth : Methods.input) data nodes =
                 let init3D = (List.mem (`Init3D true) read_options) in
                 let data = Data.add_file data [Data.Characters] seq in
                 (* read the alphabet and tcm *)
-                let alphabet, twod, threed =
+                let alphabet, twod, matrix, threed =
                     Parser.PAlphabet.of_file alph orientation init3D 
-                and tcmfile = FileStream.filename alph in
+                in
+                let tcmfile = 
+                    Data.Input_file (FileStream.filename alph, matrix) in
                 Data.process_molecular_file tcmfile twod threed
                 annotated alphabet `DO is_prealigned `Breakinv data seq
         | `ComplexTerminals files ->
@@ -1553,16 +1570,15 @@ let process_input run (meth : Methods.input) =
     let d, nodes = load_data meth run.data run.nodes in
     let run = { run with data = d; nodes = nodes } in
     (* check whether this read any trees *)
-    if [] = d.Data.trees then update_trees_to_data false false run
-    else
-        let () = List.iter (Data.verify_trees run.data) run.data.Data.trees in
-        let trees = List.map (fun (x, _, _) -> x) run.data.Data.trees in
-        let trees = Build.prebuilt trees (run.data, run.nodes) in
-        let trees = Sexpr.to_list trees in
-        let total_trees = (Sexpr.to_list run.trees) @ trees in
-        let total_trees = Sexpr.of_list total_trees in
-        let d = { d with Data.trees = [] } in
-        { run with trees = total_trees; data = d }
+    let run = update_trees_to_data false false run in
+    let () = List.iter (Data.verify_trees run.data) run.data.Data.trees in
+    let trees = List.map (fun (x, _, _) -> x) run.data.Data.trees in
+    let trees = Build.prebuilt trees (run.data, run.nodes) in
+    let trees = Sexpr.to_list trees in
+    let total_trees = (Sexpr.to_list run.trees) @ trees in
+    let total_trees = Sexpr.of_list total_trees in
+    let d = { d with Data.trees = [] } in
+    { run with trees = total_trees; data = d }
 
 let temporary_transform run meth =
     let run1 = process_transform run meth in
@@ -3118,6 +3134,15 @@ let get_character_costs trees =
     let lst = Sexpr.to_list trees in 
     List.map get_character_cost lst
 
+let hennig_extensions = ["ss"; "hennig"; "hen"]
+let nexus_extensions = ["nexus"; "nex"]
+
+let check_suffix filename lst = 
+    match filename with
+    | None -> false
+    | Some filename ->
+            List.exists (Filename.check_suffix filename) lst
+
 IFDEF USEPARALLEL THEN
 (* A function to create a complete mask *)
 let complete_mask com_size =
@@ -3666,7 +3691,6 @@ END
                         let a = 
                             Sexpr.fold_left add_elements a run.stored_trees in
                         Sexpr.fold_left add_elements a run.original_trees
-
                     in
                     List.partition (fun x ->
                         let x = Ptree.Fingerprint.fingerprint x in
@@ -3857,7 +3881,6 @@ END
                                             [|"Character of tree with cost " ^
                                             string_of_float tree_cost; "ci"|] ::
                                                 lst) trees))), "ci")
-
                         | `Ri (filename, ch) ->
                                 (let max_list = 
                                     Data.apply_on_static (fun _ -> 0.)
@@ -3940,6 +3963,9 @@ END
                     let script = PoyCommand.of_file false script in
                     Analyzer.explain_tree filename script;
                     run
+            | `Nexus filename -> 
+                Data.to_nexus run.data filename;
+                run
             | `FasWinClad filename -> 
                 Data.to_faswincladfile run.data filename;
                 run
@@ -3954,11 +3980,17 @@ END
                 Status.resize_history size;
                 run
             | `Dataset filename ->
-                let fmt = (Data.to_formatter [] run.data) in
-                PoyFormaters.data_to_status filename fmt;
-                (* Flush the formatter *)
-                Status.user_message (Status.Output (filename, false, [])) "%!"; 
-                run
+                    if check_suffix filename nexus_extensions then
+                        folder run (`Nexus filename)
+                    else if check_suffix filename hennig_extensions then
+                        folder run (`FasWinClad filename)
+                    else begin
+                       let fmt = (Data.to_formatter [] run.data) in
+                        PoyFormaters.data_to_status filename fmt;
+                        (* Flush the formatter *)
+                        Status.user_message (Status.Output (filename, false, [])) "%!"; 
+                        run
+                    end
             | `Xslt (file, style) ->
                     let () =
 IFDEF USE_XSLT THEN
@@ -4106,8 +4138,15 @@ END
                     Status.user_message fo "@]\n%!";
                     run
             | `Trees (ic, filename) ->
-                PTS.report_trees ic filename run.data run.trees;
-                run
+                    let ic = 
+                        if check_suffix filename nexus_extensions then
+                            [`NexusStyle]
+                        else if check_suffix filename hennig_extensions then
+                            [`HennigStyle]
+                        else ic
+                    in
+                    PTS.report_trees ic filename run.data run.trees;
+                    run
             | `CrossReferences (chars, filename) ->
                 Data.report_taxon_file_cross_reference chars run.data filename;
                 run
@@ -4353,28 +4392,56 @@ let set_console_run r = console_run_val := r
             (`Build (1, (`Wagner_Rnd (1, 0.,`Last, [], `UnionBased None)), [])))
     end
 
-
-    module Runtime = struct
+    module Run = struct
         type phylogeny = (a, b) Ptree.p_tree
-        let get_cost cmp () = 
-            let run = get_console_run () in
+        type run = r
+        let get_cost cmp run = 
             Sexpr.fold_left (fun acc x ->
                 match acc with
                 | None -> Some (PhyloTree.get_cost x)
                 | Some y -> Some (cmp y (PhyloTree.get_cost x))) 
             None run.trees
-        let min_cost () = get_cost min ()
-        let max_cost () = get_cost max ()
+        let min_cost run = get_cost min run
+        let max_cost run = get_cost max run
+        let trees run =
+            Sexpr.to_list run.trees
+        let set_trees r trees =
+            let trees = Sexpr.of_list trees in
+            { r with trees = trees }
+        let all_costs run = 
+            let lst = List.rev_map PhyloTree.get_cost (trees run) in
+            List.sort compare lst
+
+        let data run = run.data
+
+        let nodes run = run.nodes
+
+        let to_string run bool =
+            let trees = trees run in
+            List.map (fun x -> PhyloTree.to_string bool x run.data) trees
+
+        let of_string run x = 
+            let trees = PhyloTree.of_string x run.data run.nodes in
+            let trees = Sexpr.of_list trees in
+            { run with trees = trees }
+    end
+
+
+    module Runtime = struct
+        type phylogeny = (a, b) Ptree.p_tree
+        let get_cost cmp = 
+            let run = get_console_run () in
+            Run.get_cost cmp run
+
+        let min_cost () = get_cost min 
+        let max_cost () = get_cost max
         let trees () =
             let run = get_console_run () in
-            Sexpr.to_list run.trees
+            Run.trees run
         let set_trees trees =
-            let trees = Sexpr.of_list trees in
             let r = get_console_run () in
-            set_console_run { r with trees = trees }
-        let all_costs () = 
-            let lst = List.rev_map PhyloTree.get_cost (trees ()) in
-            List.sort compare lst
+            set_console_run (Run.set_trees r trees)
+        let all_costs () = Run.all_costs (get_console_run ())
 
         let data () = 
             let run = get_console_run () in
@@ -4395,6 +4462,7 @@ let set_console_run r = console_run_val := r
             let trees = Sexpr.of_list trees in
             console_run_val := { run with trees = trees }
     end
+
 
     module Node = Node
 end
@@ -4474,7 +4542,7 @@ module DNA = struct
     module Seq = struct
         type s = Sequence.s
         type base = char
-        let gap = '_'
+        let gap = '-'
         let of_string str = 
             Sequence.of_string str alph
         let to_string s =

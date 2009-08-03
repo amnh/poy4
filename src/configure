@@ -3169,7 +3169,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_lib_termcap_tgetent" >&5
 $as_echo "$ac_cv_lib_termcap_tgetent" >&6; }
 if test "x$ac_cv_lib_termcap_tgetent" = x""yes; then
-  LIBS="-ltermcap $LIBS"
+  USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-ltermcap $LIBS"
 else
   { $as_echo "$as_me:$LINENO: checking for tgetent in -lcurses" >&5
 $as_echo_n "checking for tgetent in -lcurses... " >&6; }
@@ -3305,13 +3305,13 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_lib_ncurses_tgetent" >&5
 $as_echo "$ac_cv_lib_ncurses_tgetent" >&6; }
 if test "x$ac_cv_lib_ncurses_tgetent" = x""yes; then
-  LIBS="-lncurses $LIBS"
+  USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-lncurses $LIBS"
 else
   { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-{ { $as_echo "$as_me:$LINENO: error: The readline interface requires one of the following: termcap, curses, or ncurses.
+{ { $as_echo "$as_me:$LINENO: error: The readline interface requires one of the following libraries: termcap, curses, or ncurses.
 See \`config.log' for more details." >&5
-$as_echo "$as_me: error: The readline interface requires one of the following: termcap, curses, or ncurses.
+$as_echo "$as_me: error: The readline interface requires one of the following libraries: termcap, curses, or ncurses.
 See \`config.log' for more details." >&2;}
    { (exit 1); exit 1; }; }; }
 fi
@@ -3390,16 +3390,16 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_lib_readline_readline" >&5
 $as_echo "$ac_cv_lib_readline_readline" >&6; }
 if test "x$ac_cv_lib_readline_readline" = x""yes; then
-  LIBS="-lreadline $LIBS"; cat >>confdefs.h <<\_ACEOF
+  USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-lreadline $LIBS"; cat >>confdefs.h <<\_ACEOF
 #define HAVE_LIBREADLINE 1
 _ACEOF
 
 else
   { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-{ { $as_echo "$as_me:$LINENO: error: The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.
+{ { $as_echo "$as_me:$LINENO: error: The readline interface requires the readline library. Either install it, or choose the readline interface. See ./configure --help for more information.
 See \`config.log' for more details." >&5
-$as_echo "$as_me: error: The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.
+$as_echo "$as_me: error: The readline interface requires the readline library. Either install it, or choose the readline interface. See ./configure --help for more information.
 See \`config.log' for more details." >&2;}
    { (exit 1); exit 1; }; }; }
 fi
