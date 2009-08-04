@@ -1513,7 +1513,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             | Not_found -> Printf.printf"Get vertices: Not_found \n %!"; None
         in
         let st = 
-            Status.create "test: Implied Alignments" vertices "vertices calculated"
+            Status.create "Implied Alignments" vertices "vertices calculated"
         in
         let convert_data taxon_id data =
             (*Printf.printf "in convert_data, the taxon id is %d, " taxon_id;*)
