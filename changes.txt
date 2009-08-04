@@ -11,13 +11,62 @@ New Features:
       Makefiles. 
     - The distributed binaries are the first to support plugins for
       POY, but the feature is still experimental.
+    - Improved the NEXUS file format support, by adding the POY block,
+      which now includes: GAPOPENING, TCM, and WTSET. All the
+      characters in POY can now be stored in one NEXUS file that can
+      be reloaded later. The support for NEXUS files has improved to
+      allow more transparent interaction with other applications.
+    - POY now interprets all the ASSUMPTION block commands in NEXUS
+      files that the program can apply (e.g. EXSET, TYPESET, and
+      USERTYPE).
+    - Added report (nexus) and report (trees:(nexus)) to generate
+      output in nexus format. 
+    - report ("out.ext", data, trees) produce NEXUS or hennig format
+      depending on ext. If the extension of the filename to which data
+      and trees are generated is "nexus" or "nex" then the data and
+      trees are generated in NEXUS format. If the extension is "hen",
+      "hennig", or "ss", then the format is Hennig86. For example,
+      report ("out.nexus", data,trees) is equivalent to report
+      ("out.nexus", nexus, trees:(nexus)).
+    - Replace spaces with underscores in taxon names of NEXUS files.
+    - Added support to newick files with branch lengths. The branches
+      are ignored.
+    - Added support to 1~4 ranges.
+    - Bremer support values can output on the branches of a consensus
+      tree or any user provided input tree. (See the new commands
+      below.)
+
+New Commands:
+    - report (nexus trees:(nexus)).
+    - transform (dynamic_pam:(locus:dcj:INT))
+    - report (supports:bremer:of_file:("file1", "file2", ...)) 
+
+Features eliminated:
+    - Dropped ti and td
+    - ':' is not accepted in a taxon name, required for newick file
+      format. For example "mytaxon:1" is not an acceptable taxon name
+      anymore.
 
 Bugs Fixed:
+    - Fixed issue 72.
+    - Fixed incorrect description of select (missing) in the
+      documentation.
+    - Annotated chromosomes could produce incorrect costs 
+    - Fixed compilation problems of the portal
+    - Data.get_tcm2d error (Buz Wilson, Katrina Menard).
+    - Sankoff characters where not applied the user defined weight.
+    - Branch collapsing in Sankoff and Additive characters could be
+      incorrect.
+    - Tree scores with additive characters may be incorrect (Taran
+      Grant). This only happened if the additive character had state
+      7.
     - search (constraint) and swap (constraint) have multiple fixes to 
       better guarantee the restrictions set by the constraint.
     - 0 length branches now appear with 0 bremer support when bremer is 
       reported.
     - Fixed compilation error in Mac OS X 64 bits using OCaml 3.11.0.
+    - The total rearrangement cost included indels for rearranged
+      elements.
 
 CHANGES BETWEEN 4.1 and 4.1.1
 
