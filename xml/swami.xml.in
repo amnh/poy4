@@ -19,9 +19,9 @@ important limitation is the hard coded number of input files and file names).
         <version>VERSION</version>
 		<description>Phylogenetic tree inference using dynamic homologies.</description>
 		<authors>Andres Varon, Le Sy Vinh, Illya Bomash, and Ward Wheeler</authors>
-        <reference>Varon, A., L. S. Vinh, I. Bomash, W. C.Wheeler. 2008. POY
-            VERSION. American Museum of Natural History.
-            http://research.amnh.org/scicomp/projects/poy.php</reference>
+        <reference>Varon, A., L. S. Vinh, W. C.Wheeler. 2010. POY version 4:
+            phylogenetic analysis using dynamic homologies. Cladistics. 26: in
+            press.</reference>
 		<category>Phylogeny / Alignment</category>
         <doclink>http://research.amnh.org/scicomp/projects/poy.php</doclink>
 	</head>
