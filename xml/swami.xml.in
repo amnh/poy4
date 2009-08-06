@@ -373,7 +373,7 @@ important limitation is the hard coded number of input files and file names).
 		<parameter type="Results">
 			<name>outputfile</name>
 			<attributes>
-				<filenames>*.pdf *.result</filenames>
+				<filenames>*.pdf *.result *.nexus</filenames>
 			</attributes>
 		</parameter>
 
