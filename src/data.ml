@@ -3399,64 +3399,66 @@ let create_name_and_matrix_for_nexus tcm alph =
             Array.of_list (List.map Array.of_list mtx)
 
 let ouput_poy_nexus_block fo data dynamics =
-    fo "@[BEGIN POY;@]@.";
-    let dynamics = Array.of_list dynamics in
-    let go = Buffer.create 1000 
-    and weights = Buffer.create 1000
-    and tcm = Buffer.create 1000 in
-    Buffer.add_string go "@[GAPOPENING * POYGENERATED = ";
-    Buffer.add_string tcm "@[TCM * POYGENERATED = ";
-    Buffer.add_string weights "@[WTSET * POYWEIGH = ";
-    let len = (Array.length dynamics) - 1 in
-    let add_ab pos posstr a b =
-        Buffer.add_string tcm (make_tcm_name a b);
-        Buffer.add_string tcm ":";
-        Buffer.add_string tcm posstr;
-        if pos < len then Buffer.add_string tcm ","
-        else Buffer.add_string tcm ";@.@]"
-    in
-    let add_name pos posstr name =
-        Buffer.add_string tcm (make_name name);
-        Buffer.add_string tcm ":";
-        Buffer.add_string tcm posstr;
-        if pos < len then Buffer.add_string tcm ","
-        else Buffer.add_string tcm ";@.@]"
-    in
-    let add_go pos posstr x =
-        Buffer.add_string go (string_of_int x);
-        Buffer.add_string go ":";
-        Buffer.add_string go posstr;
-        if pos < len then Buffer.add_string go ","
-        else Buffer.add_string go ";@.@]";
-    in
-    let add_weight pos posstr x =
-        Buffer.add_string weights (string_of_float x);
-        Buffer.add_string weights ":";
-        Buffer.add_string weights posstr;
-        if pos < len then Buffer.add_string weights ","
-        else Buffer.add_string weights ";@.@]";
-    in
-    Array.iteri (fun pos code ->
-        let posstr = string_of_int (pos + 1) in
-        let weight = get_weight code data in
-        add_weight pos posstr weight;
-        match get_tcmfile data code with
-        | Substitution_Indel (a, b) -> 
-                add_ab pos posstr a b;
-                add_go pos posstr 0;
-        | Input_file (name, _) -> 
-                add_name pos posstr name;
-                add_go pos posstr 0;
-        | Substitution_Indel_GapOpening (a, b, x) ->
-                add_ab pos posstr a b;
-                add_go pos posstr x;
-        | Input_file_GapOpening (name, _, x) ->
-                add_name pos posstr name;
-                add_go pos posstr x) dynamics;
-    fo (Buffer.contents tcm);
-    fo (Buffer.contents go);
-    fo (Buffer.contents weights);
-    fo "END;@.@]"
+    if 0 < List.length dynamics then begin
+        fo "@[BEGIN POY;@]@.";
+        let dynamics = Array.of_list dynamics in
+        let go = Buffer.create 1000 
+        and weights = Buffer.create 1000
+        and tcm = Buffer.create 1000 in
+        Buffer.add_string go "@[GAPOPENING * POYGENERATED = ";
+        Buffer.add_string tcm "@[TCM * POYGENERATED = ";
+        Buffer.add_string weights "@[WTSET * POYWEIGH = ";
+        let len = (Array.length dynamics) - 1 in
+        let add_ab pos posstr a b =
+            Buffer.add_string tcm (make_tcm_name a b);
+            Buffer.add_string tcm ":";
+            Buffer.add_string tcm posstr;
+            if pos < len then Buffer.add_string tcm ","
+            else Buffer.add_string tcm ";@.@]"
+        in
+        let add_name pos posstr name =
+            Buffer.add_string tcm (make_name name);
+            Buffer.add_string tcm ":";
+            Buffer.add_string tcm posstr;
+            if pos < len then Buffer.add_string tcm ","
+            else Buffer.add_string tcm ";@.@]"
+        in
+        let add_go pos posstr x =
+            Buffer.add_string go (string_of_int x);
+            Buffer.add_string go ":";
+            Buffer.add_string go posstr;
+            if pos < len then Buffer.add_string go ","
+            else Buffer.add_string go ";@.@]";
+        in
+        let add_weight pos posstr x =
+            Buffer.add_string weights (string_of_float x);
+            Buffer.add_string weights ":";
+            Buffer.add_string weights posstr;
+            if pos < len then Buffer.add_string weights ","
+            else Buffer.add_string weights ";@.@]";
+        in
+        Array.iteri (fun pos code ->
+            let posstr = string_of_int (pos + 1) in
+            let weight = get_weight code data in
+            add_weight pos posstr weight;
+            match get_tcmfile data code with
+            | Substitution_Indel (a, b) -> 
+                    add_ab pos posstr a b;
+                    add_go pos posstr 0;
+            | Input_file (name, _) -> 
+                    add_name pos posstr name;
+                    add_go pos posstr 0;
+            | Substitution_Indel_GapOpening (a, b, x) ->
+                    add_ab pos posstr a b;
+                    add_go pos posstr x;
+            | Input_file_GapOpening (name, _, x) ->
+                    add_name pos posstr name;
+                    add_go pos posstr x) dynamics;
+        fo (Buffer.contents tcm);
+        fo (Buffer.contents go);
+        fo (Buffer.contents weights);
+        fo "END;@.@]"
+    end else ()
 
 let output_character_types fo output_format data all_of_dynamic all_of_static =
     (* We first output the non additive character types *)
