@@ -1,3 +1,14 @@
+CHANGES BETWEEN 4.1.2 and 4.1.2.1
+
+New Features:
+    - Added support for NEXUS output in the portal binary.
+
+Bugs Fixed:
+    - Output of NEXUS files when terminals are filtered, 
+      or dynamic homology characters are not present could 
+      produce errors or a file that POY itself could not 
+      read (Felipe G. Grazziotin).
+
 CHANGES BETWEEN 4.1.1. and 4.1.2
 
 New Features:
