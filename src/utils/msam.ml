@@ -4,6 +4,10 @@ let substitution = ref 8
 let indel = ref 6
 let gap_opening = ref 13
 let input_tree = ref ""
+let fasta_pattern = ref ""
+let tree_pattern = ref ""
+let min_counter_pattern = ref 0
+let max_counter_pattern = ref 0
 
 let () = 
     let parse_list = [
@@ -11,7 +15,19 @@ let () =
         ("-tree", Arg.Set_string input_tree, "Input tree");
         ("-substitution", Arg.Set_int substitution, "Substitution cost");
         ("-indel", Arg.Set_int indel, "Indel cost");
-        ("-gap_opening", Arg.Set_int gap_opening, "Gap opening") ]
+        ("-gap_opening", Arg.Set_int gap_opening, "Gap opening");
+        ("-fasta_pattern", Arg.Set_string fasta_pattern, 
+        "Pattern of fasta files. Every occurrence of NUMBER will be replaced \
+        with a number between -min_counter and -max_counter");
+        ("-tree_pattern", Arg.Set_string tree_pattern,
+        "Same as -fasta_pattern but for the input tree");
+        ("-min_counter", Arg.Set_int min_counter_pattern, 
+        "The minimum integer to be replaced in the -fasta_pattern \
+        and the -tree_pattern");
+        ("-max_counter", Arg.Set_int max_counter_pattern, 
+        "The maximum integer to be replaced in the -fasta_pattern \
+        and the -tree_pattern");
+    ]
     in
     Arg.parse parse_list (fun _ -> ()) "masm [OPTIONS]"
 
@@ -125,14 +141,32 @@ let msam_algorithm tree =
     fst (readjust (AllDirChar.M.check_cost_all_handles tree) tree)
 
 
-let () = 
+let process_file ?counter fasta_file input_tree = 
     (* Read the input data and the input tree, we will discard the diagnosis
     * anyway *)
-    POY read ([!fasta_file])
+    POY read ([fasta_file])
     transform (tcm:([!substitution], [!indel]), gap_opening:[!gap_opening])
-    read ([!input_tree]);
+    read ([input_tree]);
     let trees = Phylo.Runtime.trees () in
     match List.map msam_algorithm trees with
     | [] -> ()
-    | costs -> Printf.printf "%f\n%!" (List.fold_left min (max_float) costs)
+    | costs -> 
+            let cost = List.fold_left min (max_float) costs in
+            match counter with
+            | None -> Printf.printf "%f\n%!" cost
+            | Some counter -> Printf.printf "%d\t%f\n%!" counter cost
+
+let () = 
+    match !fasta_pattern, !tree_pattern with
+    | "", _
+    | _, "" -> process_file !fasta_file !input_tree
+    | fasta_pattern, tree_pattern ->
+            let regex = Str.regexp "NUMBER" in
+            for counter = !min_counter_pattern to !max_counter_pattern do
+                let cnt = string_of_int counter in
+                let fasta_file = Str.global_replace regex cnt fasta_pattern
+                and tree_file = Str.global_replace regex cnt tree_pattern in
+                process_file ~counter fasta_file tree_file;
+                POY wipe ();
+            done
 
