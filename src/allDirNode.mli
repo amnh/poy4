@@ -11,6 +11,7 @@ type node_data = { unadjusted : node_dir list; adjusted : node_dir list; }
 val to_n : 'a -> 'a my_lazy
 val has_code : int -> node_dir -> bool
 val get_code : node_dir list -> int
+val myprint_pairs : node_dir -> unit
 val print_pairs : node_dir -> unit
 val yes_with : int -> node_dir list -> node_dir * node_dir
 val not_with : int -> node_dir list -> node_dir
