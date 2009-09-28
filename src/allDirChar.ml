@@ -296,10 +296,21 @@ module M = struct
             parent current (match side with `Left -> "left" | `Right ->
                 "right");
             *)
+            (*Printf.printf "allDirChar.ml
+            * assign_single_subtree:(parent=%d,current=%d) \n %!"parent
+            * current;*)
+            (* current_d: current direction, initial_d: initial node data*)
             let current_d, initial_d =
                 let tmp = Ptree.get_node_data current ptree in
                 AllDirNode.not_with parent  tmp.AllDirNode.unadjusted, tmp
             in
+            (*Printf.printf "node_data,current un-ad/ad dir list= ( ";
+            List.iter AllDirNode.myprint_pairs initial_d.AllDirNode.unadjusted;
+            Printf.printf "),(";
+            List.iter AllDirNode.myprint_pairs initial_d.AllDirNode.adjusted; 
+            Printf.printf "),pick one from un-ad,don't go back to parent: (";
+            AllDirNode.myprint_pairs current_d;
+            Printf.printf ")\n %!";*)
             let nd, original = 
                 current_d.AllDirNode.lazy_node
                 --> AllDirNode.force_val 
@@ -372,6 +383,7 @@ module M = struct
             let comp = Ptree.get_component_root handle ptree in
             match comp.Ptree.root_median with
             | Some ((`Edge (a, b)) as edge, rootg) ->
+                    (*Printf.printf "assign_single_handle to Edge(%d,%d)\n %!" a b;*)
                     let ptree, root, readjusted = 
                         generate_root_and_assign_it rootg edge ptree 
                     in
@@ -386,6 +398,7 @@ module M = struct
                         (Some (check_cost ptree handle))
                         ptree)
             | Some ((`Single a) as edge, rootg) ->
+                     (*Printf.printf "assign_single_handle to Single(%d)\n %!" a;*)
                     let ptree, root, readjusted = 
                         generate_root_and_assign_it rootg edge ptree 
                     in
