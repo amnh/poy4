@@ -488,6 +488,7 @@ let rec cs_median_3 pn nn c1n c2n p n c1 c2 =
           (match cn.preliminary.smethod with
            | `Strictly_Same ->
                  (* Apply in order to our children *)
+                 
                  let res = map4 (cs_median_3 pn nn c1n c2n)
                      cp.preliminary.set cn.preliminary.set
                      cc1.preliminary.set cc2.preliminary.set in
@@ -643,10 +644,6 @@ let median code old a b =
                 decr median_counter;
                 !median_counter
     in
-    (*
-    Printf.printf "Code of median is %d with children %d and %d\n%!" code 
-    a.taxon_code b.taxon_code;
-    *)
     let new_characters =
         match old with
         | None -> 
@@ -693,7 +690,7 @@ let root_cost root =
 (*     | Some a -> Some (all_prelim_to_final a) in *)
 (*     median old (all_prelim_to_final a) (all_prelim_to_final b) *)
 
-let median_3 p n c1 c2 = 
+let median_3 p n c1 c2 =
     let new_characters = 
         map4 (cs_median_3 p n c1 c2) 
         p.characters n.characters c1.characters c2.characters
@@ -1584,6 +1581,7 @@ let structure_into_sets data (nodes : node_data list) =
     nodes, !data'
 
 let load_data ?(silent=true) ?(classify=true) data = 
+    (*Printf.printf "node.ml load_data -> %!";*)
     (* Not only we make the list a set, we filter those characters that have
     * weight 0. *)
     current_snapshot "Node.load_data start";
@@ -1597,7 +1595,7 @@ let load_data ?(silent=true) ?(classify=true) data =
     let is_mem =
         (* We check for informative characters among all the terminals in data
         * *)
-        if classify then 
+        if classify then
             (* We need to verify if the character is
             potentially informative or not *)
             (fun char -> 
@@ -1616,6 +1614,7 @@ let load_data ?(silent=true) ?(classify=true) data =
         and add = List.filter is_mem data.Data.additive
         and sank = List.map (List.filter is_mem) data.Data.sankoff
         and dynamics = List.filter is_mem data.Data.dynamics in
+        
         current_snapshot "start nonadd set2";
         let n8 = make_set_of_list n8
         and n16 = make_set_of_list n16
@@ -1630,10 +1629,12 @@ let load_data ?(silent=true) ?(classify=true) data =
         r
     in
     let nodes = 
+        (* the num of node is the number of terminal, which can be find from
+        data.taxon_characters, data.taxon_names and data.taxon_codes*)
         let ntaxa = 
             All_sets.IntegerMap.fold (fun _ _ acc -> acc + 1)
             data.Data.taxon_codes 0 
-        in
+        in         
         let st, finalize = 
             if not silent then
                 let status = 
@@ -1665,8 +1666,15 @@ let load_data ?(silent=true) ?(classify=true) data =
         let sorted x = List.stable_sort node_contents_compare x in
         List.map (fun x -> { x with characters = sorted x.characters }) nodes
     in
+    (* just check the nodes *)
+    (*Printf.printf "check the nodes -> \n %!";
+    let _ =
+        List.map (fun x -> Printf.printf " %s \n" (to_string x) ) nodes
+    in
+    print_newline();*)
     let nodes, data = structure_into_sets data nodes in
     current_snapshot "Node.load_data end";
+    (*Printf.printf " <- end of load_data  !!! \n %!";*)
     data, nodes
 
 (* OUTPUT TO XML *)
@@ -1705,6 +1713,7 @@ let fin = [ (Xml.Characters.cclass, `String Xml.Nodes.final) ]
 let sing = [ (Xml.Characters.cclass, `String Xml.Nodes.single) ]
 
 let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mine : cs =
+   (* Printf.printf "node.ml cs_to_single ->\n %!";*)
     match parent_cs, mine with
     | Dynamic parent, Dynamic mine ->
             (* Do we need this only for dynamic characters? I will first get it
@@ -1716,8 +1725,8 @@ let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mi
           let prev_cost, cost, res = 
               DynamicCS.to_single pre_ref_code 
                     root_pre parent.preliminary mine.preliminary 
-            in
-          Dynamic {preliminary = res; final = res; 
+           in
+            Dynamic {preliminary = res; final = res; 
                    cost = (mine.weight *.  cost);
                    sum_cost = (mine.weight *. cost);
                    weight = mine.weight}
@@ -1725,9 +1734,7 @@ let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mi
     | _ -> mine
 
 let to_single (pre_ref_codes, fi_ref_codes) root parent mine = 
-    (*
-    Printf.printf "Assigning single to %d\n%!" mine.taxon_code;
-    *)
+    (*Printf.printf "node.ml to_single on taxon_code= %d\n%!" mine.taxon_code;*)
     match root with
     | Some root ->
           let root_char_opt = List.map (fun c -> Some c) root.characters in 
