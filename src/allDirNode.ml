@@ -66,6 +66,15 @@ let get_code n =
             assert (List.for_all (fun x -> x.code = code) n);
             x.code
     | [] -> failwith "AllDirNode.get_code"
+    
+let myprint_pairs x=
+                let msg =
+                match x.dir with
+                |None -> "No direction"
+                |Some (a,b) ->
+                         string_of_int a ^ ", " ^ string_of_int b
+                in
+                Printf.printf "| %s |" msg
 
 let print_pairs x = 
     let msg = 
