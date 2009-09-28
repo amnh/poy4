@@ -70,6 +70,10 @@ let set a b c =
 
 external prepend : s -> int -> unit = "seq_CAML_prepend";;
 
+let prepend_gap s m =
+    prepend s (Cost_matrix.Two_D.gap m);
+    s
+
 let make_empty a =
     let s = create 1 in
     prepend s (Alphabet.get_gap a);
@@ -243,6 +247,12 @@ let of_string_ls str_ls alph =
 
 let to_string seq alph =
     let len = length seq in
+    let seq,len = 
+        if len=0 then
+            (make_empty alph),1    
+        else
+            seq,len
+    in
     let b = Buffer.create len in
     for i = 0 to len - 1 do
         Buffer.add_string b (Alphabet.match_code (get seq i) alph);
@@ -700,10 +710,16 @@ module Align = struct
                     if dif < lower_limit then lower_limit
                     else v
         in
-        let ls1 = length s1
-        and ls2 = length s2 in
-        assert (ls1 <> 0);
-        assert (ls2 <> 0);
+        let ls1 = length s1 and ls2 = length s2 in
+        let s1,ls1 = 
+          if ls1=0 then (prepend_gap s1 m1),1
+          else s1,ls1
+        in
+        let s2,ls2 =
+            if ls2=0 then (prepend_gap s2 m1),1 
+            else s2,ls2
+        in
+       (* assert (ls1 <> 0); assert (ls2 <> 0); *)
         let gaps = max (count_gaps s1 m1) (count_gaps s2 m1) in
         if ls1 >= ls2 then
             let deltaw = gaps + deltaw_calc ls1 ls2 in
