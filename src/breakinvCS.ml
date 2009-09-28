@@ -134,15 +134,50 @@ let median3 p n c1 c2 =
     let median code  medp res_medians = 
         let med1= IntMap.find code c1.meds in 
         let med2 = IntMap.find code c2.meds in
-        
         let medp12 = Breakinv.find_meds3 medp med1 med2 in
-          IntMap.add code medp12 res_medians 
+        IntMap.add code medp12 res_medians 
 (*        let med12 = Med.find_meds2 med1 med2 p.c2 in 
         IntMap.add code med12 res_medians *)
     in
     let acc = IntMap.empty in
     let medp12_map = IntMap.fold median p.meds acc in
     { n with meds = medp12_map; }
+  (*  
+        
+    if( (n.meds = c1.meds) && (n.meds = c2.meds) ) then
+        begin
+                Printf.printf " !!! in median3, a leaf \n %!";
+                 let median code  medp res_medians = 
+                     let medp12 = n.meds in
+                     IntMap.add code medp12 res_medians 
+(*        let med12 = Med.find_meds2 med1 med2 p.c2 in 
+        IntMap.add code med12 res_medians *)
+                  in
+                  let acc = IntMap.empty in
+                  let medp12_map = IntMap.fold median p.meds acc in
+                 { n with meds = medp12_map; }
+        end
+    else
+        begin
+                    Printf.printf " !!! in median3, not a leaf \n %!";
+
+
+                    (*    print_endline "median3 in BreakinvCS module"; *)
+                    let median code  medp res_medians = 
+                         let med1= IntMap.find code c1.meds in 
+                         let med2 = IntMap.find code c2.meds in
+                         let medp12 = Breakinv.find_meds3 medp med1 med2 in
+                         IntMap.add code medp12 res_medians 
+(*        let med12 = Med.find_meds2 med1 med2 p.c2 in 
+        IntMap.add code med12 res_medians *)
+                    in
+                    let acc = IntMap.empty in
+                    let medp12_map = IntMap.fold median p.meds acc in
+                    { n with meds = medp12_map; }
+        end
+    
+  *)
+
 
 (** [readjust to_adjust modified ch1 ch2 parent mine] returns
 * the readjusted median set [mine] of three breakinv character
