@@ -287,7 +287,6 @@ let create_gen_ali kept_wag state (seq1 : Sequence.s) (seq2 : Sequence.s)
 * where total cost = editing cost + rearrangement cost *)
 let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array) 
         (gen_cost_mat : int array array) gen_gap_code re_meth max_swap_med circular orientation =
-
     let size = Array.length gen_cost_mat in 
     let gen_cost_mat = Array.init (size - 1) 
         (fun i -> Array.init (size - 1) (fun j -> gen_cost_mat.(i + 1).(j + 1))) 
@@ -298,13 +297,10 @@ let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array)
 
     let wag_seq2 = find_wagner_ali kept_wag state seq1 seq2 gen_cost_mat 
         gen_gap_code re_meth circular orientation
-    in 
-
+    in
     let init_cost, recost, alied_seq1, alied_seq2 =  
         cmp_cost state seq1 seq2 wag_seq2 gen_cost_mat gen_gap_code re_meth circular orientation
     in 
-
-
     let _, best_seq2 = 
         match max_swap_med with 
         | 0 -> init_cost, wag_seq2
@@ -312,13 +308,15 @@ let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array)
               multi_swap_locus state seq1 seq2 wag_seq2 init_cost  
                   gen_cost_mat gen_gap_code re_meth max_swap_med circular orientation 0  
     in   
-    
-
-
+     
     let final_cost, recost, alied_seq1, alied_seq2 =   
         cmp_cost state seq1 seq2 best_seq2 gen_cost_mat 
             gen_gap_code re_meth circular orientation
     in   
+    (*Printf.printf "output: alied_seq1/alied_seq2=";
+    Array.iter (Printf.printf "%d,") alied_seq1; Printf.printf ";";
+    Array.iter (Printf.printf "%d,") alied_seq2; 
+    Printf.printf "end of create_gen_ali_code \n"; *)
     final_cost, recost, alied_seq1, alied_seq2  
 
 
