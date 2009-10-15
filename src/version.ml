@@ -39,11 +39,11 @@ let rephrase str = Str.global_replace (Str.regexp " +") "@ " str
 let name = "Spirit"
 let major_version = 4
 let minor_version = 1
-let release_version = 2
-let release_bugpatch = 1
+let release_version = 3
+let release_bugpatch = 0
 let patch_version = Str.global_replace (Str.regexp " +") ""  BuildNumber.build
 type release_options = Development | Candidate of int | Official
-let release_option = Official
+let release_option = Development
 
 let ( --> ) a b = b a
 let append a b = b ^ a
