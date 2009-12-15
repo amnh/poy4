@@ -399,7 +399,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
                 in
                 let a = convert a
                 and b = convert b in
-                let r = 63787000. (* Kilometers *) in
+                let r = 6378.137 (* Kilometers *) in
                 let dist = 
                     r *. acos (((sin a.latitude) *. (sin b.latitude)) +.
                     ((cos a.latitude) *. (cos b.latitude) *. (cos (b.longitude -.
@@ -412,10 +412,11 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
             let latitude_middle a b = (a.latitude +. b.latitude) /. 2. 
 
             let longitude_middle a b = 
-                let dif = a.longitude -. b.longitude in
+                let dif = abs_float (a.longitude -. b.longitude) in
                 let mid = (a.longitude +. b.longitude) /. 2. in
-                if dif > 180. then mid -. 180.
-                else if dif < (-. 180.) then mid +. 180.
+                if dif > 180. then 
+			if mid > 0. then mid -. 180.
+			else mid +. 180.
                 else mid
 
             let altitude_middle a b = 
@@ -968,6 +969,29 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
                 string_of_float point.GIS.latitude ^ "," ^
                 string_of_float point.GIS.altitude)
 
+            let line_to_curve iterations a b =
+                let accumulator = Buffer.create 1667 in
+                let append x =
+                    Buffer.add_string accumulator " ";
+                    Buffer.add_string accumulator x
+                in
+                let rec aux iterations a b =
+                    let center = GIS.center_points a b in
+                    let coords = create_coords center in
+                    if iterations = 0 then begin
+                        append coords;
+                    end else begin
+                        let iterations = iterations - 1 in
+                        aux iterations a center;
+                        append coords;
+                        aux iterations center b
+                    end
+                in
+                Buffer.add_string accumulator (create_coords a);
+                aux iterations a b;
+                append (create_coords b);
+                Buffer.contents accumulator
+
             let create_line parent_gis gis =
                 (PXML -LineString
                     -altitudeMode relativeToGround --
@@ -976,8 +1000,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
                         | None -> `Empty
                         | Some x -> 
                                 `String 
-                                    (create_coords gis.TemporalGIS.coordinates ^ 
-                                    " " ^ create_coords x.TemporalGIS.coordinates)] 
+                                    (line_to_curve 5 gis.TemporalGIS.coordinates x.TemporalGIS.coordinates)]
                     --
                 --)
 
@@ -1030,7 +1053,7 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
                                     String.concat "-" 
                                     (List.map string_of_int [y; m; d])
                                 in
-                                (PXML -TimeSpan -"begin" {`String str} -- --)}
+                                (PXML -TimeSpan -"begin" {`String str} -- -"end" {`String str} -- --)}
                         - description { summary } --
                         - styleUrl "#00" --
                         - Style
@@ -1052,9 +1075,9 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n) (Edge : Edge.
                                 -coordinates 
                                     [ `String (create_coords gis.TemporalGIS.coordinates)  ] --
                             --
-                            { create_line parent_gis gis }
+                            { create_line parent_gis gis } (*
                             { create_line left_gis gis }
-                            { create_line right_gis gis }
+                            { create_line right_gis gis } *)
                         --
                     --)
 
