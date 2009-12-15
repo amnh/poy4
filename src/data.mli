@@ -52,7 +52,8 @@ type dyna_state_t = [
 
 type re_meth_t = [ (* The cost of a rearrangement event is the argument *)
     | `Locus_Breakpoint of int    
-    | `Locus_Inversion of int ]
+    | `Locus_Inversion of int 
+    | `Locus_DCJ of int ]
 
 type dyna_pam_t = {
     (* The minimum length of a perfect match to start
@@ -119,11 +120,18 @@ type dyna_initial_assgn = [
             (Sequence.s array) * 
             ((int, int) Hashtbl.t))  ]
 
+type tcm_definition = 
+    | Substitution_Indel of (int * int)
+    | Input_file of (string * (int list list ))
+    | Substitution_Indel_GapOpening of (int * int * int)
+    | Input_file_GapOpening of (string * (int list list) * int)
+
+val default_tcm_definition : tcm_definition
+
 type dynamic_hom_spec = {
     filename : string;
     fs : string;
-    tcm : string;
-    fo : string;
+    tcm : tcm_definition;
     initial_assignment : dyna_initial_assgn;
     tcm2d : Cost_matrix.Two_D.m;
     tcm3d : Cost_matrix.Three_D.m;
@@ -352,13 +360,14 @@ val get_weight : int -> d -> float
 val get_weights : d -> (int * float) list
 
 val process_parsed_sequences : 
-    string -> Cost_matrix.Two_D.m -> Cost_matrix.Three_D.m 
+    float ->
+    tcm_definition -> Cost_matrix.Two_D.m -> Cost_matrix.Three_D.m 
     -> dyna_initial_assgn -> bool ->
     Alphabet.a -> string -> dyna_state_t -> d -> 
     (Sequence.s list list list * Parser.taxon) list -> d
             
 
-val process_molecular_file : string -> Cost_matrix.Two_D.m ->
+val process_molecular_file : tcm_definition -> Cost_matrix.Two_D.m ->
     Cost_matrix.Three_D.m -> bool -> Alphabet.a -> dyna_initial_assgn-> bool -> 
         dyna_state_t -> d -> Parser.filename -> d
 
@@ -391,7 +400,7 @@ val get_sequence_tcm : int -> d -> Cost_matrix.Two_D.m
 
 val get_tcm2d : d -> int -> Cost_matrix.Two_D.m 
 val get_tcm3d : d -> int -> Cost_matrix.Three_D.m 
-val get_tcmfile : d -> int -> string
+val get_tcmfile : d -> int -> tcm_definition
 
 val get_sequence_alphabet : int -> d -> Alphabet.a
 
@@ -440,6 +449,7 @@ val transform_chrom_to_rearranged_seq :
   Methods.dynamic_char_transform -> 'c -> Methods.implied_alignment list -> d
 
 val print : d -> unit
+val myprint : d -> unit
 
 val get_chars_codes : d -> characters -> int list
 val get_chars_codes_comp : d -> bool_characters -> int list
@@ -462,12 +472,6 @@ val assign_transformation_gaps :
 val assign_affine_gap_cost : 
     d -> bool_characters -> Cost_matrix.cost_model -> d
 
-val assign_tail : 
-    d -> bool_characters -> [ `File of Parser.filename | `Array of int array ] -> d
-
-val assign_prepend : 
-    d -> bool_characters -> [ `File of Parser.filename | `Array of int array ] -> d
-
 val assign_tcm_to_characters_from_file :
     d -> bool_characters -> Parser.filename option -> d
 
@@ -486,6 +490,7 @@ val get_recost : dyna_pam_t -> int
 val get_locus_indel_cost : dyna_pam_t -> int * int
 
 val to_faswincladfile : d -> string option -> unit
+val to_nexus : d -> string option -> unit
 
 val report_taxon_file_cross_reference : 
     bool_characters option -> d -> string option -> unit

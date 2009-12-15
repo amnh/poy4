@@ -1513,7 +1513,7 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             | Not_found -> Printf.printf"Get vertices: Not_found \n %!"; None
         in
         let st = 
-            Status.create "test: Implied Alignments" vertices "vertices calculated"
+            Status.create "Implied Alignments" vertices "vertices calculated"
         in
         let convert_data taxon_id data =
             (*Printf.printf "in convert_data, the taxon id is %d, " taxon_id;*)
@@ -1617,12 +1617,10 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         
         match Tree.get_node handle ptree.Ptree.tree with
         | Tree.Single self -> 
-                Printf.printf "tree is single\n %!";
                 let a, b = convert_node None ptree () self ([], []) in
                 Status.finished st;
                 AssList.elements a, b
         | _ ->
-                Printf.printf "not a single tree \n %!";
               let self, other, root  =      
                   let root = Ptree.get_component_root handle ptree in  
                   match root.Ptree.root_median with
@@ -1694,33 +1692,22 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                         in
                         match Ptree.get_node self ptree with
                         | Tree.Interior (_, a, b, c) ->
-                               (* Printf.printf "tree.interior: (%d, %d, %d, %d) \n %!" self a
-                                b c;*)
                                 let myd = Ptree.get_node_data  self ptree in
                                 let my_ia = 
                                     convert_data self
                                     (get_dynamic_data (Some other) myd)
                                 in
                                 let self = Some self in
-                                (*Printf.printf "\n traverser directionA NO.%d
-                                * %! \n" a;*)
                                 let my_ia = tree_traverser my_ia self a in
-                                (*Printf.printf "\n traverser directionB NO.%d
-                                * %! \n" b;*)
                                 let my_ia = tree_traverser my_ia self b in
-                                (*Printf.printf "\n traverser directionC NO.%d
-                                * %! \n" c;*)
                                 tree_traverser my_ia self c
                         | Tree.Leaf (_, b) ->
-                                (*Printf.printf "tree.leaf: %d, %!" self;*)
                                 let myd = Ptree.get_node_data self ptree in
                                 let my_ia = 
                                     convert_data self (get_dynamic_data (Some b) myd)
                                 in
-                                (*Printf.printf "traverser NO.b %! \n";*)
                                 tree_traverser my_ia (Some self) b
                         | Tree.Single _ ->
-                                (*Printf.printf "single tree\n %!";*)
                                 let data = Ptree.get_node_data self ptree in
                                 convert_data (Node.taxon_code data) 
                                 (get_dynamic_data None data)

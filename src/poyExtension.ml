@@ -571,10 +571,22 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                 [ ":"; LIDENT "consensus" -> <:expr<`Consensus>> ] |
                 [ ":"; x = flex_string -> <:expr<`InputFile $x$ >> ]
             ];
+        support_files :
+            [ 
+                [ x = flex_string -> exSem_of_list [ <:expr<`Local $x$>> ] ] | 
+                [ left_parenthesis; 
+                    x = LIST1 [ y = flex_string -> <:expr<`Local $y$>> ] SEP ",";
+                    right_parenthesis ->  exSem_of_list x ]
+            ];
         support_names:
             [
-                [ LIDENT "bremer"; ":"; x = flex_string -> <:expr<`Bremer (Some
-            [(`Local $x$)])>>] |
+                [ LIDENT "bremer"; ":"; LIDENT "of_file"; ":"; 
+                    left_parenthesis; f = flex_string; ","; c = flex_integer; ",";
+                    x = support_files; right_parenthesis ->
+                        <:expr<`Bremer (Some
+                        (`UseGivenTree (`Local $f$, $c$), $x$))>>] |
+                [ LIDENT "bremer"; ":"; x = support_files -> 
+                        <:expr<`Bremer (Some (`UseLoadedTree, $x$))>>] |
                 [ LIDENT "bremer" -> <:expr<`Bremer None>> ] |
                 [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
                     match y with
@@ -612,6 +624,7 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
                     <:expr<`GraphicConsensus $handle_optional x$>> ] | 
                 [ LIDENT "clades" -> <:expr<`Clades>> ] |
                 [ LIDENT "phastwinclad" -> <:expr<`FasWinClad>> ] | 
+                [ LIDENT "nexus" -> <:expr<`Nexus>> ] | 
                 [ LIDENT "seq_stats"; ":"; ch = old_identifiers ->
                     <:expr<`SequenceStats $ch$>> ] |
                 [ LIDENT "ci"; x = OPT optional_old_identifiers -> <:expr<`Ci
@@ -768,6 +781,8 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             [
                 [ LIDENT "locus_inversion"; ":"; c = flex_integer -> 
                       <:expr<`Locus_Inversion $c$>> ]  |
+                [ LIDENT "locus_dcj"; ":"; c = flex_integer -> 
+                      <:expr<`Locus_DCJ $c$>> ]  |
                 [ LIDENT "locus_breakpoint"; ":"; c = flex_integer -> 
                       <:expr<`Locus_Breakpoint $c$>> ]  |
                 [ LIDENT "chrom_breakpoint"; ":"; c = flex_integer -> 
@@ -1053,6 +1068,9 @@ module POYLanguage (Syntax : Camlp4Syntax) = struct
             $exSemCom_of_list s$)>> ] |
         [ "NPOY"; s = expr_poy -> 
             <:expr<Phylo.parsed_run (PoyCommand.of_parsed False
+            $exSemCom_of_list s$)>> ] |
+        [ "RPOY"; "("; start = expr; ")"; s = expr_poy -> 
+            <:expr<Phylo.run ~start:$start$ (PoyCommand.of_parsed False
             $exSemCom_of_list s$)>> ] |
         [ "GPOY" -> <:expr<Phylo.get_console_run ()>> ] 
     ];

@@ -84,7 +84,7 @@ type input = [
 
 
 type information_contained = 
-    [ `Nothing | `Cost | `HennigStyle | `Total  | `Newick | `Margin of int |
+    [ `Nothing | `Cost | `HennigStyle | `NexusStyle | `Total  | `Newick | `Margin of int |
     `Collapse of bool ]
 
 type taxon_and_characters = [
@@ -109,8 +109,6 @@ type transform_cost_matrix = [
     | `Assign_Transformation_Cost_Matrix of (filename option * characters)
     | `Create_Transformation_Cost_Matrix of (int * int * characters)
     | `Assign_Affine_Gap_Cost of (int * characters)
-    | `Assign_Tail_Cost of (prep_tail_spec * characters)
-    | `Assign_Prep_Cost of (prep_tail_spec * characters)
 ]
 
 
@@ -118,6 +116,7 @@ type transform_cost_matrix = [
 type chromosome_pam_t = [
     | `Locus_Inversion of int
     | `Locus_Breakpoint of int
+    | `Locus_DCJ of int
     | `Chrom_Breakpoint of int
     | `Circular of bool
     | `Locus_Indel_Cost of (int * int)
@@ -218,6 +217,7 @@ type report = [
     | `Consensus of (string option * float option)
     | `GraphicConsensus of (string option * float option)
     | `FasWinClad of string option
+    | `Nexus of string option
     | `SequenceStats of (string option * characters)
     | `Ci of (string option * characters option)
     | `Ri of (string option * characters option)

@@ -54,9 +54,14 @@ let cmp_recost state seq1 seq2 reseq2 re_meth circular orientation =
                   let com_seq1_arr, com_reseq2_arr = Utl.get_common seq1 reseq2 equal_orientation in 
                   (match re_meth with 
                   | `Locus_Inversion cost -> 
-                        (UtlGrappa.cmp_inversion_dis com_seq1_arr com_reseq2_arr circular) * cost  
+                        (UtlGrappa.cmp_inversion_dis com_seq1_arr com_reseq2_arr 
+                        circular) * cost  
                   | `Locus_Breakpoint cost ->                                       
-                        (UtlGrappa.cmp_oriented_breakpoint_dis com_seq1_arr com_reseq2_arr circular) * cost)                     
+                        (UtlGrappa.cmp_oriented_breakpoint_dis com_seq1_arr 
+                        com_reseq2_arr circular) * cost                     
+                  | `Locus_DCJ cost ->
+                        (UtlGrappa.cmp_oriented_dcj com_seq1_arr com_reseq2_arr
+                        circular) * cost)
             | _ -> 0
         in 
 
@@ -64,13 +69,39 @@ let cmp_recost state seq1 seq2 reseq2 re_meth circular orientation =
             match re_meth with 
             | `Locus_Inversion cost -> 
                   (UtlGrappa.cmp_inversion_dis seq2 reseq2 circular) * cost  
-            | `Locus_Breakpoint cost -> begin               
+            | `Locus_Breakpoint cost -> 
                   (UtlGrappa.cmp_oriented_breakpoint_dis seq2 reseq2 circular) * cost   
-            end;
+              | `Locus_DCJ cost ->
+                    (UtlGrappa.cmp_oriented_dcj seq2 reseq2 circular) * cost
         in  
 
         recost1, recost2
     end 
+
+
+let align cost_matrix a b = 
+    let gap = Cost_matrix.Two_D.gap cost_matrix in
+    let find_max acc arr = Array.fold_left max acc arr in
+    let total_max = ((find_max (find_max 0 a) b) + 1) / 2 in
+    let all_set = Array.make (total_max + 1) 0 in
+    let update_item v pos set =
+        let pos = (pos + 1) / 2 in
+        set.(pos) <- set.(pos) lor v
+    in
+    let alen = (Array.length a) - 1 in
+    for i = 0 to alen do
+        update_item 1 a.(i) all_set;
+    done;
+    let blen = (Array.length b) - 1 in
+    for j = 0 to blen do
+        update_item 2 b.(j) all_set;
+    done;
+    let cost = Array.fold_left (fun acc x ->
+        if x = 0 || x > 2 then acc 
+        else acc + (Cost_matrix.Two_D.cost x gap cost_matrix)) 0 all_set 
+    in
+    cost
+
 
 
 (** [cmp_cost state code1_arr code2_arr recode2_arr 
@@ -81,10 +112,10 @@ let cmp_cost state code1_arr code2_arr recode2_arr
         (cost_mat : Cost_matrix.Two_D.m) gap re_meth circular orientation = 
     let seq1 = Sequence.of_array code1_arr
     and reseq2 = Sequence.of_array recode2_arr in
-    let alied_seq1, alied_reseq2, editing_cost =  
-        Sequence.Align.align_2 ~first_gap:false seq1 reseq2 cost_mat
-            Matrix.default  
-    in   
+    let alied_seq1, alied_reseq2, _ =  
+        Sequence.Align.align_2 ~first_gap:false seq1 reseq2 cost_mat Matrix.default
+    in
+    let editing_cost = align cost_mat code1_arr recode2_arr in
     let alied_code1_arr = Sequence.to_array alied_seq1 in 
     let alied_recode2_arr = Sequence.to_array alied_reseq2 in 
     let recost1, recost2 = 
@@ -256,7 +287,6 @@ let create_gen_ali kept_wag state (seq1 : Sequence.s) (seq2 : Sequence.s)
 * where total cost = editing cost + rearrangement cost *)
 let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array) 
         (gen_cost_mat : int array array) gen_gap_code re_meth max_swap_med circular orientation =
-
     let size = Array.length gen_cost_mat in 
     let gen_cost_mat = Array.init (size - 1) 
         (fun i -> Array.init (size - 1) (fun j -> gen_cost_mat.(i + 1).(j + 1))) 
@@ -267,13 +297,10 @@ let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array)
 
     let wag_seq2 = find_wagner_ali kept_wag state seq1 seq2 gen_cost_mat 
         gen_gap_code re_meth circular orientation
-    in 
-
+    in
     let init_cost, recost, alied_seq1, alied_seq2 =  
         cmp_cost state seq1 seq2 wag_seq2 gen_cost_mat gen_gap_code re_meth circular orientation
     in 
-
-
     let _, best_seq2 = 
         match max_swap_med with 
         | 0 -> init_cost, wag_seq2
@@ -281,13 +308,15 @@ let create_gen_ali_code kept_wag state (seq1 : int array) (seq2 : int array)
               multi_swap_locus state seq1 seq2 wag_seq2 init_cost  
                   gen_cost_mat gen_gap_code re_meth max_swap_med circular orientation 0  
     in   
-    
-
-
+     
     let final_cost, recost, alied_seq1, alied_seq2 =   
         cmp_cost state seq1 seq2 best_seq2 gen_cost_mat 
             gen_gap_code re_meth circular orientation
     in   
+    (*Printf.printf "output: alied_seq1/alied_seq2=";
+    Array.iter (Printf.printf "%d,") alied_seq1; Printf.printf ";";
+    Array.iter (Printf.printf "%d,") alied_seq2; 
+    Printf.printf "end of create_gen_ali_code \n"; *)
     final_cost, recost, alied_seq1, alied_seq2  
 
 

@@ -60,6 +60,7 @@ type identifiers = [
 type chromosome_args = [
     | `Locus_Inversion of int (** the cost of a locus inversion operation inside a chromosome *)
     | `Locus_Breakpoint of int (* the cost of a locus breakpoint operation inside a chromosome *)
+    | `Locus_DCJ of int
     | `Circular of bool (** indicate if the chromosome is circular or not *)
 
     (** [(a, b)] is indel cost of a locus in a chromosome
@@ -116,10 +117,6 @@ type transform_method = [
     | `Tcm of string
     | `Gap of (int * int)
     | `AffGap of int
-    | `TailInput of int array
-    | `TailFile of string
-    | `PrepInput of int array
-    | `PrepFile of string
     | `StaticApproximation of bool
     | `MultiStaticApproximation of bool
     | `Automatic_Static_Aprox of bool
@@ -305,6 +302,7 @@ type reporta = [
     | `Ri of old_identifiers option
     | `CompareSequences of (bool * old_identifiers * old_identifiers)
     | `FasWinClad
+    | `Nexus
     | `ExplainScript of string
     | `Consensus of float option
     | `GraphicConsensus of float option
@@ -405,14 +403,6 @@ let transform_transform acc (id, x) =
             | `AffGap (c) ->
                     (`Assign_Affine_Gap_Cost (c, id)) ::
                         acc
-            | `PrepInput x ->
-                    (`Assign_Prep_Cost ((`Array x), id)) :: acc
-            | `PrepFile x ->
-                    (`Assign_Prep_Cost ((`File (`Local x)), id)) :: acc
-            | `TailInput x ->
-                    (`Assign_Tail_Cost ((`Array x), id)) :: acc
-            | `TailFile x ->
-                    (`Assign_Tail_Cost ((`File (`Local x)), id)) :: acc
             | `MultiStaticApproximation noninf -> (`MultiStatic_Aprox (id, noninf)) :: acc
             | `StaticApproximation noninf -> (`Static_Aprox (id, noninf)) :: acc
             | `Automatic_Static_Aprox sens -> (`Automatic_Static_Aprox sens) :: acc
@@ -914,6 +904,8 @@ let transform_report ((acc : Methods.script list), file) (item : reporta) =
             (`CompareSequences (file, a, b, c)) :: acc, file
     | `FasWinClad ->
             (`FasWinClad (file)) :: acc, file
+    | `Nexus ->
+            (`Nexus (file)) :: acc, file
     | `ExplainScript script ->
             (`ExplainScript (script, file)) :: acc, file
     | `Clades -> 
@@ -1231,22 +1223,6 @@ let create_expr () =
                 [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
                     right_parenthesis -> `Gap (int_of_string x, int_of_string y) ] |
                 [ LIDENT "gap_opening"; ":"; x = INT -> `AffGap (int_of_string x) ] |
-                [ LIDENT "trailing_deletion"; ":"; x = STRING -> `TailFile x ] |
-                [ LIDENT "td"; ":"; x = STRING -> `TailFile x ] |
-                [ LIDENT "trailing_deletion"; ":"; left_parenthesis; 
-                    x = LIST1 [ x = INT -> x]  SEP ","; right_parenthesis -> 
-                        `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "td"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
-                    right_parenthesis -> 
-                        `TailInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "trailing_insertion"; ":"; x = STRING -> `PrepFile x ] |
-                [ LIDENT "ti"; ":"; x = STRING -> `PrepFile x ] |
-                [ LIDENT "trailing_insertion"; ":"; left_parenthesis; 
-                    x = LIST1 [ x = INT -> x] SEP ","; right_parenthesis -> 
-                        `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
-                [ LIDENT "ti"; ":"; left_parenthesis; x = LIST1 [ x = INT -> x] SEP ",";
-                    right_parenthesis -> 
-                        `PrepInput (Array.of_list (List.map (int_of_string) x)) ] |
                 [ LIDENT "static_approx"; x = OPT informative_characters -> 
                     match x with 
                     | None -> `StaticApproximation true 
@@ -1291,6 +1267,8 @@ let create_expr () =
             [
                 [ LIDENT "locus_inversion"; ":"; c = INT -> 
                       `Locus_Inversion (int_of_string c) ]  |
+                [ LIDENT "locus_dcj"; ":"; c = INT ->
+                        `Locus_DCJ (int_of_string c) ] |
                 [ LIDENT "locus_breakpoint"; ":"; c = INT -> 
                       `Locus_Breakpoint (int_of_string c) ]  |
                 [ LIDENT "chrom_breakpoint"; ":"; c = INT -> 
@@ -1493,6 +1471,7 @@ let create_expr () =
                     | Some x -> Some (float_of_string x)) ] | 
                 [ LIDENT "clades" -> `Clades ] |
                 [ LIDENT "phastwinclad" -> `FasWinClad ] | 
+                [ LIDENT "nexus" -> `Nexus ] | 
                 [ LIDENT "seq_stats"; ":"; ch = old_identifiers ->
                     `SequenceStats ch ] |
                 [ LIDENT "ci"; ":"; ch = old_identifiers -> `Ci (Some ch) ] |
@@ -1808,6 +1787,7 @@ let create_expr () =
             [
                 [ LIDENT "_cost" -> `Cost ] |
                 [ LIDENT "hennig" -> `HennigStyle ] |
+                [ LIDENT "nexus" -> `NexusStyle ] |
                 [ LIDENT "total" -> `Total ] |
                 [ LIDENT "newick" -> `Newick ] |
                 [ LIDENT "margin"; ":"; m = INT -> `Margin (int_of_string m) ] |
@@ -2041,20 +2021,10 @@ let create_expr () =
                 f = STRING; ","; c = INT; ",";  x = support_files;
                 right_parenthesis -> 
                     `Bremer (Some ((`UseGivenTree (`Local f, int_of_string c)), x)) ] |
-                [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
-                -> y] SEP ",";
-                    right_parenthesis -> 
-                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
-                        in
-                        `Bremer (Some r)] |
+                [ LIDENT "bremer"; ":"; x = support_files -> 
+                        `Bremer (Some (`UseLoadedTree, x))] |
                 [ LIDENT "bremer"; ":"; x = STRING -> `Bremer (Some
-                (`UseLoadedTree, [(`Local x)])) ] |
-                [ LIDENT "bremer"; ":"; left_parenthesis; x = LIST1 [ y = STRING
-                -> y] SEP ",";
-                    right_parenthesis -> 
-                        let r = `UseLoadedTree, (List.map (fun x -> `Local x) x)
-                        in
-                        `Bremer (Some r)] |
+                    (`UseLoadedTree, [(`Local x)])) ] |
                 [ LIDENT "bremer" -> `Bremer None ] |
                 [ LIDENT "jackknife"; y = OPT [ x = summary_class -> x ] -> 
                     match y with

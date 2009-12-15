@@ -15,6 +15,7 @@ let output_trees = "trees.result"
 let tmp_trees = "bremertrees"
 let output_alignments = "alignments.result"
 let output_analyzed_data = "data.result"
+let output_nexus_data = "data.nexus"
 let output_support = "support.result"
 let output_graph_support = "graphsupport.result"
 let pseudoreplicates = ref None
@@ -155,4 +156,5 @@ let () =
             in
             POY
                 report ([output_analyzed_data], data, cross_references)
+                report ([output_nexus_data], data, trees)
                 exit ()

@@ -4,6 +4,7 @@
     exception Eof
     let keyword_table = Hashtbl.create 53
     let token_table = [
+        ("ALPHA", fun x -> ALPHA x);
         ("ANCSTATES", fun x -> ANCSTATES x);
         ("ASSUMPTIONS", fun x -> ASSUMPTIONS x);
         ("AVERAGE", fun x -> AVERAGE x);
@@ -12,6 +13,7 @@
         ("BOTH", fun x -> BOTH x);
         ("CHANGESET", fun x -> CHANGESET x);
         ("CHARACTER", fun x -> CHARACTER x);
+        ("CHARACTERBRANCH", fun x -> CHARACTERBRANCH x);   (* used in POY block *)
         ("CHARACTERS", fun x -> CHARACTERS x);
         ("CHARLABELS", fun x -> CHARLABELS x);
         ("CHARPARTITION", fun x -> CHARPARTITION x);
@@ -46,6 +48,7 @@
         ("FREQUENCY", fun x -> FREQUENCY x);
         ("GAP", fun x -> GAP x);
         ("GAPMODE", fun x -> GAPMODE x);
+        ("GAPOPENING", fun x -> GAPOPENING x);
         ("GENETICCODE", fun x -> GENETICCODE x);
         ("GIF", fun x -> GIF x);
         ("INDIVIDUALS", fun x -> INDIVIDUALS x);
@@ -55,8 +58,11 @@
         ("ITEMS", fun x -> ITEMS x);
         ("JPEG", fun x -> JPEG x);
         ("LABELS", fun x -> LABELS x);
+        ("LINK", fun x -> LINK x);
+        ("LIKELIHOOD", fun x -> LIKELIHOOD x);
         ("LOWER", fun x -> LOWER x); 
         ("MAM", fun x -> MAM x);
+        ("MAP", fun x -> MAP x);                (* used in POY block *)
         ("MATCHCHAR", fun x -> MATCHCHAR x);
         ("MATRIX", fun x -> MATRIX x);
         ("MAX", fun x -> MAX x);
@@ -66,7 +72,9 @@
         ("MINSTEPS", fun x -> MINSTEPS x);
         ("MISSING", fun x -> MISSING x);
         ("MISSING", fun x -> MISSING x);
+        ("MODEL", fun x -> MODEL x);
         ("MTDNA", fun x -> MTDNA x);
+        ("NAMES", fun x -> NAMES x);            (* used in POY block *)
         ("NCHAR", fun x -> NCHAR x);
         ("NEWSTATE", fun x -> NEWSTATE x);
         ("NEWTAXA", fun x -> NEWTAXA x);
@@ -78,15 +86,20 @@
         ("NUCLEOTIDE", fun x -> NUCLEOTIDE x);
         ("NUCORDER", fun x -> NUCORDER x);
         ("OPTIONS", fun x -> OPTIONS x);
+        ("PARAMETERS", fun x -> PARAMETERS x);
+        ("PERCENT", fun x -> PERCENT x);
         ("PICT", fun x -> PICT x);
         ("PICTURE", fun x -> PICTURE x);
         ("POLYTCOUNT", fun x -> POLYTCOUNT x);
+        ("POY", fun x -> POY x);                (* POY block start *)
+        ("PRIORS", fun x -> PRIORS x);
         ("PROTEIN", fun x -> PROTEIN x);
         ("RESOURCE", fun x -> RESOURCE x);
         ("RESPECTCASE", fun x -> RESPECTCASE x);
         ("RNA", fun x -> RNA x);
         ("SAMPLESIZE", fun x -> SAMPLESIZE x);
         ("SETS", fun x -> SETS x);
+        ("SITES", fun x -> SITES x);
         ("SOURCE", fun x -> SOURCE x);
         ("STANDARD", fun x -> STANDARD x);
         ("STATE", fun x -> STATE x);
@@ -103,7 +116,9 @@
         ("TAXLABELS", fun x -> TAXLABELS x);
         ("TAXPARTITION", fun x -> TAXPARTITION x);
         ("TAXSET", fun x -> TAXSET x);
+        ("TCM", fun x -> TCM x);
         ("TEXT", fun x -> TEXT x);
+        ("TITLE", fun x -> TITLE x);
         ("TIFF", fun x -> TIFF x);
         ("TOKENS", fun x -> TOKENS x);
         ("TRANSLATE", fun x -> TRANSLATE x);
@@ -118,8 +133,10 @@
         ("UNIVERSAL", fun x -> UNIVERSAL x);
         ("UPPER", fun x -> UPPER x);
         ("USERTYPE", fun x -> USERTYPE x);
+        ("UTREE", fun x -> UTREE x);
         ("UUENCODE", fun x -> UUENCODE x);
         ("VARIANCE", fun x -> VARIANCE x);
+        ("VARIATION", fun x -> VARIATION x);
         ("VECTOR", fun x -> VECTOR x);
         ("WTSET", fun x -> WTSET x);
         ("YEAST", fun x -> YEAST x);
@@ -139,7 +156,7 @@ rule raw = parse
 and inquotes = parse
       [^ '"']+['"'] as d     { QUOTED d }
 and insinglequotes = parse 
-      [ ^ '\'']+['\''] as d  { SINGLEQUOTED d }
+      ([ ^ '\'']+ as d) ['\''] { SINGLEQUOTED d }
 and comment = parse
       [ ^ ']' '[']      { comment lexbuf }
     | [ '[']            { incr comment_depth; comment lexbuf }
@@ -151,6 +168,8 @@ and cstree = parse
 and token = parse
       [ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ]       { token lexbuf } 
       (* skip blanks *)
+    | [ '"' ]           { inquotes lexbuf }
+    | [ '\'' ]           { insinglequotes lexbuf }
     | ['0'-'9']* [ 'a'-'z' 'A'-'Z' '#' '_' '|' '\128'-'\255']+ [ 'a'-'z' 'A'-'Z' '#' '_' '0'-'9' '|' '.' '\128'-'\255']* as id 
         { try
             let string = String.uppercase id in
@@ -159,17 +178,17 @@ and token = parse
             | "PICTURE"
             | "TEXT"
             | "MATRIX" 
+            | "UTREE"
             | "TREE" -> raw lexbuf
             | x -> (Hashtbl.find keyword_table string) id
         with
         | Not_found -> IDENT id }
-    | [ '"' ]           { inquotes lexbuf }
-    | [ '\'' ]           { insinglequotes lexbuf }
     | [ ';' ]           { SEMICOLON }
     | [ ':' ]           { COLON }
     | [ '=' ]           { EQUAL }
     | [ ',' ]           { COMMA }
     | [ '/' ]           { BACKSLASH }
+    | [ '\\' ]          { SLASH }
     | [ '-' ]           { DASH }
     | [ '(']            { LPARENT }
     | [ ')']            { RPARENT }
@@ -177,7 +196,7 @@ and token = parse
     | [ '[']            { incr comment_depth; comment lexbuf }
     | ['0'-'9']+ ['.'] ['0'-'9']* as i { FLOAT i }
     | ['0'-'9']+ as i   { INTEGER i }
-    | [ '\''][^ '\'']*['\''] as i { IDENT i }
+    | [ '\'']([^ '\'']* as i) ['\''] { IDENT i }
     | [^ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ] as i            { CHAR i }
     | eof               { raise Eof }
 and tree_tokens = parse
@@ -189,8 +208,9 @@ and tree_tokens = parse
     | [ ';' ] { SEMICOLON }
     | [ '(' ] { LPARENT }
     | [ ')' ] { RPARENT }
+    | [ '\'' ] { insinglequotes lexbuf }
     | ['0'-'9']+['.']['0'-'9']* as i { FLOAT i }
     | ['0'-'9']+ as i { INTEGER i }
-    | [^ '(' ')' ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ';' ':' ',' ]+ as i
+    | [^ '\'' '(' ')' ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ';' ':' ',' ]+ as i
         { IDENT i }
     | eof           { EOF }

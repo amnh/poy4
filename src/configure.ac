@@ -179,10 +179,10 @@ AS_IF([test $USE_XSLT = "true"],
              CFLAGS="$oFLAGS"
              ])
 
-AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[LIBS="-ltermcap $LIBS"], [AC_CHECK_LIB([curses],[tgetent],[LIBS="-lcurses $LIBS"], [AC_CHECK_LIB([ncurses],[tgetent],[LIBS="-lncurses $LIBS"], [AC_MSG_FAILURE([The readline interface requires one of the following: termcap, curses, or ncurses.])])])])],[])
+AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([termcap],[tgetent],[USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-ltermcap $LIBS"], [AC_CHECK_LIB([curses],[tgetent],[LIBS="-lcurses $LIBS"], [AC_CHECK_LIB([ncurses],[tgetent],[USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-lncurses $LIBS"], [AC_MSG_FAILURE([The readline interface requires one of the following libraries: termcap, curses, or ncurses.])])])])],[])
 
 AS_IF([test $USEINTERFACE = "readline"], [AC_CHECK_LIB([readline], [readline],
-      [LIBS="-lreadline $LIBS"; AC_DEFINE(HAVE_LIBREADLINE)], [AC_MSG_FAILURE([The ncurses interface requires the ncurses library. Either install it, or choose the readline interface. See ./configure --help for more information.])])])
+      [USEINTERFACE="readline"; DUSEREADLINE="-DUSEREADLINE"; OUSEREADLINE=",use_readline"; LIBS="-lreadline $LIBS"; AC_DEFINE(HAVE_LIBREADLINE)], [AC_MSG_FAILURE([The readline interface requires the readline library. Either install it, or choose the readline interface. See ./configure --help for more information.])])])
 
 #AS_IF([test $USEPARALLEL = "true"], [AC_CHECK_LIB([$MPILNAME], [MPI_Init],
 #      [LIBS="-l$MPILNAME $LIBS"], [AC_MSG_FAILURE([In order to compile the parallel version, an implemention of MPI is required. However, I failed while checking for $MPILNAME.])])])
@@ -227,7 +227,7 @@ case $OCAMLVERSION in
             DUSE_NATIVEDYNLINK="-DUSE_NATIVEDYNLINK"
         else 
             AC_MSG_RESULT([no])
-            USE_NATIVEDYNLINK="true"
+            NATIVEDYNLINK=""
         fi
         rm -f str.cmxs*;;
     *)

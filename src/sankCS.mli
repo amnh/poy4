@@ -35,6 +35,7 @@ val tcm : t -> cm                       (** Get the cost matrix of a set *)
 val set_tcm : cm -> t -> t              (** Set the cost matrix *)
 val median : t option -> t -> t -> t    (** See {!Character.CharacterSet} *)
 val distance : t -> t -> float          (** See {!Character.CharacterSet} *)
+val edge_distance : t -> t -> float          (** See {!Character.CharacterSet} *)
 val reroot : t -> t -> t -> t
     (** Sankoff has its own clade-rerooting procedure *)
 val compare_codes : t -> t -> int       (** See {!Character.CharacterSet} *)

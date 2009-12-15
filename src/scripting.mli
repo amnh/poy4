@@ -322,6 +322,20 @@ val set_console_run : r -> unit
             phylogeny list 
     end
 
+    module Run : sig
+        type phylogeny = (a, b) Ptree.p_tree
+        type run = r
+        val min_cost : run -> float option
+        val max_cost : run -> float option
+        val all_costs : run -> float list
+        val trees : run -> phylogeny list
+        val set_trees : run -> phylogeny list -> run
+        val data : run -> Data.d
+        val nodes : run -> a list
+        val to_string : run -> bool -> string list list 
+        val of_string : run -> string -> run
+    end
+
     module Runtime : sig
         type phylogeny = (a, b) Ptree.p_tree
         val min_cost : unit -> float option
@@ -405,7 +419,7 @@ module DNA : sig
         (** [of_file str] reads the input file [str], containing a sequence of
         * 25 elements, each corresponding to the left-right, top-down 25
         * elements that would be required for [of_list]. *)
-        val of_file : string -> cm2
+        val of_file : string -> cm2 * int list list 
 
         (** [all_ones ()] is equivalent to [of_sub_indel 1 1] *)
         val all_ones : unit -> cm2
