@@ -217,7 +217,11 @@ case $OCAMLVERSION in
             ;;
         esac
         ;;
-    3.11.*)
+    3.\(0*\)|\(10\).*)
+        AC_MSG_RESULT([no])
+        AC_MSG_FAILURE([POY requires OCaml version 3.10.2 or later to compile.  Please upgrade to the latest version. (You can get it from http://www.ocaml.org)])
+        ;;
+    *)
         NATIVEDYNLINK="dynlink.cmxa"
         AC_MSG_CHECKING([if OCaml supports dynamic linking in this architecture])
         if ${OCAMLOPT} -shared -o str.cmxs str.cmxa ; then
@@ -229,11 +233,8 @@ case $OCAMLVERSION in
             AC_MSG_RESULT([no])
             NATIVEDYNLINK=""
         fi
-        rm -f str.cmxs*;;
-    *)
-    AC_MSG_RESULT([no])
-    AC_MSG_FAILURE([POY requires OCaml version 3.10.2 or later to compile.  Please upgrade to the latest version. (You can get it from http://www.ocaml.org and follow their compilation instructions. It's really easy.)])
-    ;;
+        rm -f str.cmxs*
+        ;;
 esac
 
 # Final fix to compile in windows
