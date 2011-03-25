@@ -291,6 +291,10 @@ module Fasta = struct
         Sequence.prepend s gap;
         s
 
+    let process_taxon_name comment_str name =
+        let regexp = Str.regexp ((Str.quote comment_str)^".*$") in
+        true_trim (Str.replace_first regexp "" name)
+
     let process_file_imp remove_gaps ch alph =
         (* Apparenty ocaml is not making the next tail-recursive function a
          * loop? for some reason I get stack overflow, so I will write it using a
@@ -325,7 +329,7 @@ module Fasta = struct
 
                                   seqs4
                               in 
-                            let result = tmps, !taxon in
+                            let result = tmps, (process_taxon_name "$" !taxon) in
                             res := result :: !res;
                             taxon := line;
                             if (!taxon).[0] = '>'
@@ -358,7 +362,7 @@ module Fasta = struct
                             in           
                             seqs4
                         in
-                        let result = tmps, !taxon in
+                        let result = tmps, (process_taxon_name "$" !taxon) in
                         res := result :: !res;
                         raise Finished
             done;
