@@ -3301,6 +3301,38 @@ let rec assign_affine_gap_cost data chars cost =
         assign_tcm_to_characters acc (`Some a) 
         (Some cost) b) ~init:data codes
 
+let rec assign_prep_tail filler data chars filit =
+    match filit with
+    | `File x ->
+            let ch = new FileStream.file_reader x in
+            let lst = Cost_matrix.Two_D.load_file_as_list ch in
+            ch#close_in;
+            let arr = Array.of_list lst in
+            assign_prep_tail filler data chars (`Array arr)
+    | `Array arr ->
+            let codes = 
+                get_code_from_characters_restricted_comp `AllDynamic data chars
+            in
+            let codes = codes_with_same_tcm codes data in
+            let codes =
+                List.map
+                    (fun (a, b, _,tcmfile) -> 
+                        let b = Cost_matrix.Two_D.clone b in
+                        let () = filler arr b in
+                        (true, a), (fun _ -> b,tcmfile))
+                    codes
+            in
+            List.fold_left 
+                ~f:(fun acc (a, b) ->
+                    assign_tcm_to_characters acc (`Some a) None b) 
+                ~init:data codes
+
+let assign_prepend data chars filit =
+    assign_prep_tail Cost_matrix.Two_D.fill_prepend data chars filit
+
+let assign_tail data chars filit =
+    assign_prep_tail Cost_matrix.Two_D.fill_tail data chars filit
+
 (** [process_complex_terminals data filename] reads a complex terminals file
     ([filename]) and adds the specification to [data].  It will raise
     exceptions if the reading fails. *)

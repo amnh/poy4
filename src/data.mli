@@ -475,6 +475,12 @@ val assign_affine_gap_cost :
 val assign_tcm_to_characters_from_file :
     d -> bool_characters -> Parser.filename option -> d
 
+val assign_prepend :
+        d -> bool_characters -> [`File of FileStream.f | `Array of int array] -> d
+
+val assign_tail :
+        d -> bool_characters -> [`File of FileStream.f | `Array of int array] -> d
+
 val process_complex_terminals :
     d -> Parser.filename -> d
 

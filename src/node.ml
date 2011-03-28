@@ -1713,7 +1713,6 @@ let fin = [ (Xml.Characters.cclass, `String Xml.Nodes.final) ]
 let sing = [ (Xml.Characters.cclass, `String Xml.Nodes.single) ]
 
 let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mine : cs =
-   (* Printf.printf "node.ml cs_to_single ->\n %!";*)
     match parent_cs, mine with
     | Dynamic parent, Dynamic mine ->
             (* Do we need this only for dynamic characters? I will first get it
@@ -1734,7 +1733,6 @@ let rec cs_to_single (pre_ref_code, fi_ref_code) (root : cs option) parent_cs mi
     | _ -> mine
 
 let to_single (pre_ref_codes, fi_ref_codes) root parent mine = 
-    (*Printf.printf "node.ml to_single on taxon_code= %d\n%!" mine.taxon_code;*)
     match root with
     | Some root ->
           let root_char_opt = List.map (fun c -> Some c) root.characters in 
@@ -1780,13 +1778,11 @@ let readjust mode to_adjust ch1 ch2 parent mine =
             { mine with characters = characters; total_cost = total_cost; 
             node_cost = node_cost }
         in
-        (*
-        Status.user_message Status.Information
-        ("The distance was " ^ string_of_float
-        ((distance mine ch1 +. distance mine ch2 +. distance mine parent))
-        ^ " but now it is " ^ string_of_float
-        ((distance res ch1) +. (distance res ch2) +. (distance res parent)));
-        *)
+(*        Status.user_message Status.Information*)
+(*        ("The distance was " ^ string_of_float*)
+(*        ((distance mine ch1 +. distance mine ch2 +. distance mine parent))*)
+(*        ^ " but now it is " ^ string_of_float*)
+(*        ((distance res ch1) +. (distance res ch2) +. (distance res parent)));*)
         res, !modified
 
 let to_single_root (pre_ref_codes, fi_ref_codes) mine = 

@@ -114,6 +114,11 @@ val get_all : a -> int option
 * alphabet [a]. *)
 val get_gap : a -> int
 
+(** [get_missing a] return the constant '?' which we use to represent missing
+    data. This is for all alphabets, thus using '?' as a symbol in the alphabet
+    is not recommended if missing fragments are also being used **)
+val get_missing : a -> string
+
 (** [kind a] returns the kind of the alphabet [a]. *)
 val kind : a -> kind
 

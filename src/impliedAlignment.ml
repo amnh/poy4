@@ -35,7 +35,7 @@ type ias = {
     seq : Sequence.Clip.s;
     codes : (int, int) Hashtbl.t; (* (key=pos -> code) Hashtble *)
     homologous: (int, int Sexpr.t) Hashtbl.t; (* (code, hom_code list) Hashtbl *)
-    indels: (int * string * int * [ `Insertion | `Deletion ] * int Sexpr.t) Sexpr.t; 
+    indels: (int * string * int * [ `Insertion | `Deletion | `Missing ] * int Sexpr.t) Sexpr.t; 
          (** The location and contents of an insertion block 
           * (p * s * l * t * c) Sexpr.t where
           *  p: start indel position 
@@ -84,6 +84,51 @@ module AssList = Set.Make (OrderedTuple)
 
 type cg = (unit -> int)
 
+(* print seq *)
+let print_seq seq = 
+    let single (xxx:Methods.ia_seq) : unit = 
+        match xxx with
+            | `DO x | `First x | `Last x ->
+                output_string stdout "[";
+                Array.iter (fun y -> Printf.printf "[%d]" y) x;
+                output_string stdout "]"
+    in
+    List.iter
+    (fun (d,seq) ->
+        Printf.printf "%d --" d;
+        List.iter
+            (fun each -> 
+                All_sets.IntegerMap.iter
+                    (fun k v -> 
+                        Printf.printf "%d --" k;
+                        Array.iter (fun v -> single v) v;
+                        print_newline ()) 
+                    each)
+            seq)
+    seq
+
+let print_indel indels = 
+    let codes c =
+        List.fold_left 
+            (fun a d -> a^", "^(string_of_int d))
+            "" (Sexpr.to_list c)
+    in
+    List.iter
+      (fun y -> 
+        List.iter
+          (fun x ->
+            Sexpr.iter
+              (function
+                | `Single (s,chars,l,di,cs) ->
+                    Printf.printf "%s in %s: starting at %d of length %d with %s\n%!"
+                        (match di with | `Deletion  -> "Deletion" 
+                                       | `Insertion -> "Insertion"
+                                       | `Missing   -> "Missing")
+                        (codes cs) s l chars 
+                | `Empty | `Set _ -> ())
+              x)
+          y)
+      indels
 
 let fprintf = Printf.fprintf
 
@@ -159,19 +204,18 @@ let print_debug a' b' a b m =
     printem "\n"
 
 let print_algn_debug = false
-let print_anc_debug = false
+let print_anc_debug  = false
 
 let calculate_indels a b alph b_children = 
     (* Create a list with all the starting and ending positions of indels, and
-    * the indel string, with their homologous beginning and ending base
-    * codes *)
+     * the indel string, with their homologous beginning and ending base codes *)
     let in_indel_row = ref `None
     and result_list = ref [] in
     let gap = Alphabet.get_gap alph in
-    assert ( (Sequence.Clip.length a > 1) || (Sequence.Clip.get a 0 != gap) ||
-                 (Sequence.Clip.get b 0 != gap) );
-    assert (Sequence.Clip.length b = Sequence.Clip.length a);
-
+    assert ( (Sequence.Clip.length a > 1) ||
+             (Sequence.Clip.get a 0 != gap ) ||
+             (Sequence.Clip.get b 0 != gap ) );
+    assert ( (Sequence.Clip.length b = Sequence.Clip.length a ) );
 
     let len = Sequence.Clip.length a in
     let assign_in_indel_row i a_gap b_gap =
@@ -266,31 +310,36 @@ let ancestor calculate_median state prealigned all_minus_gap a b
     let lena = Sequence.Clip.length a.seq
     and lenb = Sequence.Clip.length b.seq 
     and gap = Cost_matrix.Two_D.gap cm in
-    let kind =
-        match a.seq with
+    let kind = match a.seq with
         | `DO _ -> `DO
         | `First _ -> `First
         | `Last _ -> `Last
     in
-    let create_gaps len = 
-        Sequence.Clip.init kind (fun _ -> gap) len 
+    let create_gaps len = Sequence.Clip.init kind (fun _ -> gap) len 
     and aempty = (Sequence.Clip.is_empty a.seq gap) && (state = `Seq)
     and bempty = (Sequence.Clip.is_empty b.seq gap) && (state = `Seq) in
     let a', b', nogap, indels, clip_length =
         let anb_indels = `Set [a.indels; b.indels] in
         let a', b', _, nogap, indels, clip_length =
             if aempty && bempty then
-                if lena > lenb then a.seq, a.seq, 0, `A, anb_indels, 0
-                else b.seq, b.seq, 0, `B, anb_indels, 0
+                let ind_a = `Single (0,"", lena, `Missing, achld)
+                and ind_b = `Single (0,"", lenb, `Missing, bchld) in
+                let anb_indels = `Set [ind_a;ind_b;anb_indels] in
+                if lena > lenb then 
+                    a.seq, a.seq, 0, `A, anb_indels, 0
+                else 
+                    b.seq, b.seq, 0, `B, anb_indels, 0
             else if aempty then
-                    (create_gaps lenb), b.seq, 0, `A, anb_indels, 0
+                let anb_indels = `Set [`Single (0,"", lena, `Missing, achld);anb_indels] in
+                (create_gaps lenb), b.seq, 0, `A, anb_indels, 0
             else if bempty then
+                let anb_indels = `Set [`Single (0,"", lenb, `Missing, bchld);anb_indels] in
                 a.seq, (create_gaps lena), 0, `B, anb_indels, 0
             else begin
                 if prealigned then  begin
                     let inds = match lena with
                     | 0 -> `Empty
-                    | _ -> calculate_indels a.seq b.seq alph bchld 
+                    | _ -> calculate_indels a.seq b.seq alph bchld
                     in
                     a.seq, b.seq, 0, `Both, `Set [inds; anb_indels], 0
                 
@@ -2044,6 +2093,8 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 | `Deletion -> 
                         Parser.Unordered_Character (2, false),
                         Parser.Unordered_Character (1, false)
+                | `Missing  -> 
+                        failwith "unsure"
             in
             let taxa_list : All_sets.Integers.t = 
                 Sexpr.fold_left 
@@ -2346,27 +2397,30 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
             let filtered_trees = 
                 List.map 
                     (fun x -> 
-                         let alph = Data.get_alphabet data x in
-                         let gap = Alphabet.get_gap alph in
-                         let tcm = Data.get_sequence_tcm x data in
-                         let kind =
-                             match Hashtbl.find data.Data.character_specs x with
-                             | Data.Dynamic x -> 
-                                     x.Data.state,
-                                     x.Data.initial_assignment
-                             | _ -> assert false
-                         in
-                         let all = 
-                             if 1 = Cost_matrix.Two_D.combine tcm then
-                                 match Alphabet.get_all alph with
-                                 | Some all -> all
-                                 | None -> assert false
-                             else (-1) (* we won't use it anyway *)
-                         in 
-                         kind,
-                         (if 1 = Cost_matrix.Two_D.combine tcm then
-                            fun x -> x land ((lnot gap) land all)
-                         else fun x -> x), filter_fn tree [x]) codes
+                        let alph = Data.get_alphabet data x in
+                        let gap = Alphabet.get_gap alph in
+                        let tcm = Data.get_sequence_tcm x data in
+                        let kind =
+                        match Hashtbl.find data.Data.character_specs x with
+                            | Data.Dynamic x -> 
+                                x.Data.state, x.Data.initial_assignment
+                            | _ -> assert false
+                        in
+                        let all = 
+                            if 1 = Cost_matrix.Two_D.combine tcm then
+                                match Alphabet.get_all alph with
+                                | Some all -> all
+                                | None -> assert false
+                            else (-1) (* we won't use it anyway *)
+                        in 
+                        let assign = 
+                            if 1 = Cost_matrix.Two_D.combine tcm then
+                                fun x -> x land ((lnot gap) land all)
+                            else 
+                                fun x -> x
+                        in
+                        kind, assign, filter_fn tree [x])
+                    codes
             in
             List.map of_tree filtered_trees
         in
@@ -2376,20 +2430,21 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
 
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character
        set) list (of characters) ) list (of taxa) ) of list (of trees) *)
-    let create filter_fn codes data tree = 
-        let codes = (* Check if the codes are sequence codes or not *) 
-            List.filter (fun x -> 
+    let create filter_fn codes data tree =
+        let codes = (* Check if the codes are sequence codes or not *)
+            List.filter (fun x ->
                 if (List.exists (fun y -> x = y) data.Data.dynamics) then true
                 else begin
                     Status.user_message Status.Error
-                    ("The character with code " ^ string_of_int x ^
-                    " is not a sequence character. You have requested an "
-                    ^ "implied alignment of such thing, I will ignore that "
-                    ^ "character for the implied alignment.");
+                        ("The character with code " ^ string_of_int x
+                        ^ " is not a sequence character. You have requested an "
+                        ^ "implied alignment of such thing, I will ignore that "
+                        ^ "character for the implied alignment.");
                     false
                 end) codes
         in
         let _, ia = aux_create_implied_alignment filter_fn codes data tree in
+        List.iter (List.iter (fun ((s,i),_) -> print_indel i)) ia;
         ia
 
     let get_char_codes (chars : Methods.characters)  data =

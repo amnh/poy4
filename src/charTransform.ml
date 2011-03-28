@@ -964,6 +964,16 @@ module Make (Node : NodeSig.S with type other_n = Node.Standard.n)
                 --> Data.transform_weight m 
                 --> Data.categorize 
                 --> Node.load_data 
+        | `Assign_Prep_Cost (filit, chars) ->
+                filit
+                --> Data.assign_prepend data chars
+                --> Data.categorize
+                --> Node.load_data 
+        | `Assign_Tail_Cost (filit, chars) ->
+                filit
+                --> Data.assign_tail data chars
+                --> Data.categorize
+                --> Node.load_data 
         | `Assign_Transformation_Cost_Matrix (file, chars) ->
                 file 
                 --> Data.assign_tcm_to_characters_from_file data chars 

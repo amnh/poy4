@@ -223,8 +223,6 @@ let dependency_relations (init : Methods.script) =
                         in
                         [data, data1, init, compos]
                 | `AnnotatedFiles files ->
-                        (* TODO: Fix this analyzer step, this will be a hard
-                        * stop *)
                         [(data, data, init, NonComposable)]
                 | `Poyfile files
                 | `AutoDetect files
@@ -260,6 +258,8 @@ let dependency_relations (init : Methods.script) =
                 | `ReWeight _
                 | `WeightFactor _
                 | `Assign_Transformation_Cost_Matrix _
+                | `Assign_Tail_Cost _
+                | `Assign_Prep_Cost _
                 | `OriginCost _
                 | `Create_Transformation_Cost_Matrix _
                 | `Assign_Affine_Gap_Cost _
@@ -1613,6 +1613,8 @@ let script_to_string (init : Methods.script) =
                 | `Assign_Transformation_Cost_Matrix _
                 | `OriginCost _
                 | `Create_Transformation_Cost_Matrix _
+                | `Assign_Tail_Cost _
+                | `Assign_Prep_Cost _
                 | `Assign_Affine_Gap_Cost _
                 | `RandomizedTerminals 
                 | `AlphabeticTerminals

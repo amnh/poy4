@@ -265,6 +265,8 @@ let get_all a = a.all
 
 let get_gap a = a.gap
 
+let get_missing _ = "?"
+
 let to_list a =
     let res =
         All_sets.StringMap.fold (fun a b acc -> (a, b) :: acc) a.string_to_code 
