@@ -84,52 +84,6 @@ module AssList = Set.Make (OrderedTuple)
 
 type cg = (unit -> int)
 
-(* print seq *)
-let print_seq seq = 
-    let single (xxx:Methods.ia_seq) : unit = 
-        match xxx with
-            | `DO x | `First x | `Last x ->
-                output_string stdout "[";
-                Array.iter (fun y -> Printf.printf "[%d]" y) x;
-                output_string stdout "]"
-    in
-    List.iter
-    (fun (d,seq) ->
-        Printf.printf "%d --" d;
-        List.iter
-            (fun each -> 
-                All_sets.IntegerMap.iter
-                    (fun k v -> 
-                        Printf.printf "%d --" k;
-                        Array.iter (fun v -> single v) v;
-                        print_newline ()) 
-                    each)
-            seq)
-    seq
-
-let print_indel indels = 
-    let codes c =
-        List.fold_left 
-            (fun a d -> a^", "^(string_of_int d))
-            "" (Sexpr.to_list c)
-    in
-    List.iter
-      (fun y -> 
-        List.iter
-          (fun x ->
-            Sexpr.iter
-              (function
-                | `Single (s,chars,l,di,cs) ->
-                    Printf.printf "%s in %s: starting at %d of length %d with %s\n%!"
-                        (match di with | `Deletion  -> "Deletion" 
-                                       | `Insertion -> "Insertion"
-                                       | `Missing   -> "Missing")
-                        (codes cs) s l chars 
-                | `Empty | `Set _ -> ())
-              x)
-          y)
-      indels
-
 let fprintf = Printf.fprintf
 
 (** [code_generator] returns an unique code for a position in a
@@ -2426,8 +2380,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         in
         codes, operate_on_tree tree
 
-
-
    (** (sequence code list), ( (taxon_id * (aligned_code arrays for each character
        set) list (of characters) ) list (of taxa) ) of list (of trees) *)
     let create filter_fn codes data tree =
@@ -2444,7 +2396,6 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
                 end) codes
         in
         let _, ia = aux_create_implied_alignment filter_fn codes data tree in
-        List.iter (List.iter (fun ((s,i),_) -> print_indel i)) ia;
         ia
 
     let get_char_codes (chars : Methods.characters)  data =
@@ -2477,24 +2428,22 @@ module Make (Node : NodeSig.S) (Edge : Edge.EdgeSig with type n = Node.n) = stru
         in
         codes
     
-    let to_static_homologies ignore filter_fn remove_noninformative 
-            (chars : Methods.characters)  data tree = 
+    let to_static_homologies ignore filter_fn rem_noninform chars data tree =
         let codes = get_char_codes chars data in
         let names = List.map (fun x -> Data.code_character x data) codes in
         let all_to_add = 
-            List.fold_left (fun acc code -> 
-                let prefix = Data.code_character code data in
-                let _, ia = 
-                    aux_create_implied_alignment filter_fn [code] data tree 
-                in
-                assert (1 = List.length ia);
-                let ia = List.hd ia in
-
-                let name = prefix in
-                let separator = ":ia:" in
-                (to_static_character ~separator remove_noninformative name ia data) :: acc) 
-            []
-            codes
+            List.fold_left 
+                (fun acc code ->
+                    let prefix = Data.code_character code data in
+                    let _, ia = aux_create_implied_alignment filter_fn [code] data tree in
+                    assert (1 = List.length ia);
+                    let separator = ":ia:" in
+                    let static_chars =
+                        to_static_character ~separator rem_noninform prefix (List.hd ia) data
+                    in
+                    static_chars :: acc)
+                []
+                codes
         in
         let d = Data.add_multiple_static_parsed_file data all_to_add in
         if ignore then Data.process_ignore_characters false d (`Names names)
