@@ -195,6 +195,10 @@ and token = parse
     | [ '*' ]           { STAR }
     | [ '[']            { incr comment_depth; comment lexbuf }
     | ['0'-'9']+ ['.'] ['0'-'9']* as i { FLOAT i }
+    | ['0'-'9']+ ['.']? ['0'-'9']* ['e' 'E'] ['-' '+']? ['0'-'9']+ as i
+                        { FLOAT i }
+    | ['0'-'9']+ ['.'] ['0'-'9']*  as i
+                        { FLOAT i }
     | ['0'-'9']+ as i   { INTEGER i }
     | [ '\'']([^ '\'']* as i) ['\''] { IDENT i }
     | [^ ' ' '\009' '\010' '\011' '\015' '\014' '\013' '\012' ] as i            { CHAR i }
