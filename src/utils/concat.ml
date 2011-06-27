@@ -20,6 +20,25 @@
 (** Concat takes a list of files (with wildcards), and concatenates common
     species and prints them to a file seperated by '$' symbol. *)
 
+let a = Alphabet.nucleotides
+
+let remove_gaps s2' =
+    let remove_gaps gap seq base = 
+        if base <> gap then 
+            let _ = Sequence.prepend seq base in
+            seq
+        else seq
+    in
+    let res = 
+        Sequence.fold_right 
+            (remove_gaps (Alphabet.get_gap a))
+            (Sequence.create (Sequence.length s2'))
+            (s2')
+    in
+    res
+
+
+
 let load_file file (acc: (Sequence.s list * Parser.taxon) list) = 
     (* let kind = Parser.test_file file in *)
     let datas : (Sequence.s list list list * Parser.taxon) list = 
@@ -34,7 +53,7 @@ let load_file file (acc: (Sequence.s list * Parser.taxon) list) =
                             (fun ps s -> (* list *)
                                 Sequence.concat (ps::s))
                             ps ss)
-                    (Sequence.make_empty Alphabet.nucleotides)
+                    (Sequence.make_empty a)
                     sss
             in
             let added = ref false in
@@ -75,10 +94,16 @@ let () =
         (fun (ss,t) -> 
             Printf.printf "Writing: %s\n" (t^".fasta");
             let out = open_out (t^".fasta") in
+            output_string out (">"^t^"\n");
+            let first = ref true in
             List.iter
                 (fun s ->
-                    output_string out seperated;
-                    Sequence.print out s Alphabet.dna)
+                    let s = remove_gaps s in
+                    let () = 
+                        if !first then first := false 
+                        else output_string out seperated
+                    in
+                    Sequence.print out s a)
                 ss;
             close_out out)
         data
