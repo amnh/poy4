@@ -352,6 +352,11 @@ dispatch begin function
     flag ["c"; "compile"; "use_win32"]
         (S[A"-ccopt"; A"-DUSEWIN32"]);
 
+    (* for GCC 4.5+ linker and ocamlbuild link order fix *)
+    if @CC_NOASNEEDED@ then
+        flag ["ocaml"; "link"]
+            (S [A"-cclib";A"-Wl,--no-as-needed"]);
+
     flag ["c"; "compile"] (S ccompileflags);
     flag ["c"; "link"] (S clinkflags);
     flag ["ocaml"; "compile"] (S ccompileflags);
