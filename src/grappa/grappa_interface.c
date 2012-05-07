@@ -263,8 +263,8 @@ grappa_CAML_inversions (value genes1, value genes2,
     CAMLparam4(genes1, genes2, c_num_genes, dist);
     CAMLlocal3(resulttmp, result, r);
     List intermediate_reversals_list;
-    int num_genes, i, j, inv_dist;
-    struct genome_arr_t *genes1_arr, *genes2_arr;
+    int num_genes, i, /*j,*/ inv_dist;
+    //struct genome_arr_t *genes1_arr, *genes2_arr;
     struct genome_struct *permutation, *origin;
     int *temp_genes;
     Reversal *rev;
