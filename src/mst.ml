@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Mst" "$Revision: 1673 $"
+let () = SadmanOutput.register "Mst" "$Revision: 1165 $"
 
 type mst = (int * float) list All_sets.IntegerMap.t
 

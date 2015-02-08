@@ -28,7 +28,7 @@
  * handle unrooted trees for this kind of operations (remember the tree module has
  * a handle for "Unrooted" trees, meaning that we can safely keep this meaning
  * properly. *)
-let () = SadmanOutput.register "SankCS" "$Revision: 2846 $"
+let () = SadmanOutput.register "SankCS" "$Revision: 1165 $"
 
 
 let infinity = max_int / 4

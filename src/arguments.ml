@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Arguments" "$Revision: 2194 $"
+let () = SadmanOutput.register "Arguments" "$Revision: 1165 $"
 
 let just_exit = ref false
 let only_run_argument_script = ref false

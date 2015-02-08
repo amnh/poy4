@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Sexpr" "$Revision: 2769 $"
+let () = SadmanOutput.register "Sexpr" "$Revision: 1165 $"
 
 type 'a t = [ `Empty | `Set of 'a t list | `Single of 'a ]
 

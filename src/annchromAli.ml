@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AnnchromAli" "$Revision: 911 $"
+let () = SadmanOutput.register "AnnchromAli" "$Revision: 1165 $"
 
 (** The implementation of funtions to calculate the cost, 
 * alignments and medians between annotated chromosomes 

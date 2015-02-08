@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Main" "$Revision: 2853 $"
+let () = SadmanOutput.register "Main" "$Revision: 1165 $"
 
 (* $Id: main.ml 2853 2008-05-18 14:21:15Z andres $ *)
 
@@ -40,7 +40,7 @@ let args =
 
 END
 
-let () = SadmanOutput.register "Main" "$Revision: 2853 $"
+let () = SadmanOutput.register "Main" "$Revision: 1165 $"
 
 let () = Status.init ()
 

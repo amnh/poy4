@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Gen_rtree" "$Revision: 1644 $"
+let () = SadmanOutput.register "Gen_rtree" "$Revision: 1165 $"
 
 (* Module to represent the clusters of a generalized rooted tree. 
    Clusters are represented using BitSets. *) 

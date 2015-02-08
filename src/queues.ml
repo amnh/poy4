@@ -21,7 +21,7 @@
  * be searched. *)
 
 (* $Id: queues.ml 2274 2007-10-05 15:49:42Z andres $ *)
-let () = SadmanOutput.register "Queues" "$Revision: 2274 $"
+let () = SadmanOutput.register "Queues" "$Revision: 1165 $"
 
 (** {1 Types} *)
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Hash_tbl" "$Revision: 1644 $"
+let () = SadmanOutput.register "Hash_tbl" "$Revision: 1165 $"
 
 (** hash_tbl.ml - contains a hash_tbl implementation based on 'A linear time
 * majority tree algorithm' by N. Amenta, St. John etc. Reading that paper is

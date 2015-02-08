@@ -19,7 +19,7 @@
 
 (* $Id: supports.ml 2851 2008-05-17 19:10:42Z andres $ *)
 (* Created Tue Jan 31 16:39:25 2006 (Illya Bomash) *)
-let () = SadmanOutput.register "Support" "$Revision: 2851 $"
+let () = SadmanOutput.register "Support" "$Revision: 1165 $"
 
 let infinity = float_of_int (max_int / 4)
 

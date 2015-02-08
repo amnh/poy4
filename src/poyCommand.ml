@@ -19,7 +19,7 @@
 
 exception Exit 
 
-let () = SadmanOutput.register "PoyCommand" "$Revision: 810 $"
+let () = SadmanOutput.register "PoyCommand" "$Revision: 1165 $"
 
 type read_option_t = [
 | `Init3D of bool

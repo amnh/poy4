@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AddCS" "$Revision: 2846 $"
+let () = SadmanOutput.register "AddCS" "$Revision: 1165 $"
 
 (* Internal only exceptions *)
 exception Success

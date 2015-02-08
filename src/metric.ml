@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** metric.ml:  *)
-let () = SadmanOutput.register "Metric" "$Revision: 1644 $"
+let () = SadmanOutput.register "Metric" "$Revision: 1165 $"
 
 
 module type Norm = sig

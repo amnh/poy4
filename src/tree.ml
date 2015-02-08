@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Tree" "$Revision: 2854 $"
+let () = SadmanOutput.register "Tree" "$Revision: 1165 $"
 
 exception Invalid_Node_Id of int
 exception Invalid_Handle_Id

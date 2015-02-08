@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (* $Id: chartree.ml 2795 2008-04-30 19:04:10Z andres $ *)
-let () = SadmanOutput.register "Chartree" "$Revision: 2795 $"
+let () = SadmanOutput.register "Chartree" "$Revision: 1165 $"
 
 
 (** chartree.ml *)

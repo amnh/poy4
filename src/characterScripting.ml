@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "CharacterScripting" "$Revision: 2794 $"
+let () = SadmanOutput.register "CharacterScripting" "$Revision: 1165 $"
 
 type characters = [
     | `All

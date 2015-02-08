@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (* $Id: nonaddCS.ml 2846 2008-05-16 15:43:09Z andres $ *)
-let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 2846 $"
+let () = SadmanOutput.register "NonaddCS.nonadd_v" "$Revision: 1165 $"
 
 
 (** char_nonadd_c.ml implements sets of equally-weighted non-additive characters

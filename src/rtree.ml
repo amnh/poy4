@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (** rtree.ml - implements a rooted forest. *)
-let () = SadmanOutput.register "Rtree" "$Revision: 1644 $"
+let () = SadmanOutput.register "Rtree" "$Revision: 1165 $"
 
 
 (** Exn raised when node id is invalid. *)

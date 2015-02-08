@@ -111,5 +111,5 @@ let runtime_properties =
     ]
 
 
-let () = register "SadmanOutput" "$Revision: 1902 $"
+let () = register "SadmanOutput" "$Revision: 1165 $"
 

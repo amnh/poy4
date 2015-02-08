@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Parser" "$Revision: 2863 $"
+let () = SadmanOutput.register "Parser" "$Revision: 1165 $"
 
 (* A in-file position specification for error messages. *)
 let ndebug = true

@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 (** This module implements basic functions *)
 
-let () = SadmanOutput.register "Utl" "$Revision: 2653 $"
+let () = SadmanOutput.register "Utl" "$Revision: 1165 $"
 module IntSet = All_sets.Integers
 
 let large_int = 100000000;;

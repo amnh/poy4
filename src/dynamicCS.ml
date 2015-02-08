@@ -17,13 +17,13 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "AllDirChar" "$Revision: 1616 $"
+let () = SadmanOutput.register "AllDirChar" "$Revision: 1165 $"
 
 (** A dynamic character set implementation. 
 * The dynamic character set allows rearrangements *)
 
 exception Illegal_Arguments
-let () = SadmanOutput.register "DynamicCS" "$Revision: 1006 $"
+let () = SadmanOutput.register "DynamicCS" "$Revision: 1165 $"
 
 
 module IntMap = All_sets.IntegerMap

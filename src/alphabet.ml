@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Alphabet" "$Revision: 2844 $"
+let () = SadmanOutput.register "Alphabet" "$Revision: 1165 $"
 
 (* $Id: alphabet.ml 2844 2008-05-14 15:04:28Z vinh $ *)
 

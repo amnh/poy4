@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Diagnosis" "$Revision: 2863 $"
+let () = SadmanOutput.register "Diagnosis" "$Revision: 1165 $"
 
 let debug = true
 

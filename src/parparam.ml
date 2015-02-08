@@ -18,7 +18,7 @@
 (* USA                                                                        *)
 
 (* $Id: parparam.ml 1644 2007-02-14 19:05:47Z andres $ *)
-let () = SadmanOutput.register "Parparam" "$Revision: 1644 $"
+let () = SadmanOutput.register "Parparam" "$Revision: 1165 $"
 
 
 exception Impossible of string;;

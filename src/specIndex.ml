@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SpecIndex" "$Revision: 1805 $"
+let () = SadmanOutput.register "SpecIndex" "$Revision: 1165 $"
 
 open StdLabels
 

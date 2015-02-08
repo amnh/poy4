@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "SearchInformation" "$Revision: 2867 $"
+let () = SadmanOutput.register "SearchInformation" "$Revision: 1165 $"
 
 let handle_tree_information trees acc = function
     | `Number -> 

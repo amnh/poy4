@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Lang" "$Revision: 1644 $"
+let () = SadmanOutput.register "Lang" "$Revision: 1165 $"
 
 (* All the functions to handle properly a POY language file *)
 

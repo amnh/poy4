@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "Build" "$Revision: 2803 $"
+let () = SadmanOutput.register "Build" "$Revision: 1165 $"
 
 let debug_profile_memory = false
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "PoyFormaters" "$Revision: 2399 $"
+let () = SadmanOutput.register "PoyFormaters" "$Revision: 1165 $"
 
 exception Illegal_formater of string
 

@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "StatusCommon" "$Revision: 2797 $"
+let () = SadmanOutput.register "StatusCommon" "$Revision: 1165 $"
 
 (* The common files for all the status interfaces. *)
 

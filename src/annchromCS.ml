@@ -20,7 +20,7 @@
 (** A annotated chromosome character set implementation. 
 * The annotated chromosome character set allows rearrangements *)
 
-let () = SadmanOutput.register "AnnchromCS" "$Revision: 1616 $"
+let () = SadmanOutput.register "AnnchromCS" "$Revision: 1165 $"
 
 
 let fprintf = Printf.fprintf

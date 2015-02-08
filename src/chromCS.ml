@@ -21,7 +21,7 @@
 * The chromosome character set allows rearrangements *)
 
 exception Illegal_Arguments
-let () = SadmanOutput.register "ChromCS" "$Revision: 2780 $"
+let () = SadmanOutput.register "ChromCS" "$Revision: 1165 $"
 
 let fprintf = Printf.fprintf
 

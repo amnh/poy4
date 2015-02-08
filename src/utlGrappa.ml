@@ -17,7 +17,7 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "UtlGrappa" "$Revision: 2783 $"
+let () = SadmanOutput.register "UtlGrappa" "$Revision: 1165 $"
 
 (** utlGrappa module provides functions for rearrangement 
 * operations such as computing inversion, breakpoint distances 

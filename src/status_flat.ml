@@ -17,10 +17,10 @@
 (* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301   *)
 (* USA                                                                        *)
 
-let () = SadmanOutput.register "" "$Revision: 2639 $"
+let () = SadmanOutput.register "" "$Revision: 1165 $"
 
 exception Illegal_update
-let () = SadmanOutput.register "Status_flat" "$Revision: 2639 $"
+let () = SadmanOutput.register "Status_flat" "$Revision: 1165 $"
 
 let _ = Format.pp_set_margin Format.std_formatter 78
 

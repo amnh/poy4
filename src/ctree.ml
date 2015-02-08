@@ -22,7 +22,7 @@
 * Ref: A Linear Time Majority Algorithm for Majority Tree, Amenta,
 * Clarke and St. John, LNCS ... Some of the terminology used here reflects
 * the terminology used in that paper. *)
-let () = SadmanOutput.register "Ctree" "$Revision: 1644 $"
+let () = SadmanOutput.register "Ctree" "$Revision: 1165 $"
 
 
 (* Indicates a double collision in the hash table. *)

@@ -19,7 +19,7 @@
 
 (** A Sequence Character Set implementation *)
 exception Illegal_Arguments
-let () = SadmanOutput.register "SeqCS" "$Revision: 2866 $"
+let () = SadmanOutput.register "SeqCS" "$Revision: 1165 $"
 
 
 module Codes = All_sets.IntegerMap
