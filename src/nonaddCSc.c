@@ -252,6 +252,8 @@ nonadd_print_ptr("alloc",malloc (sizeof(vect) * ((size / BLOCK_LEN) + 1)))
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -314,6 +316,8 @@ nonadd_print (const nacat n, const char *label)
 
 #ifdef _WIN32
 __inline nac
+#elif __clang__
+nac
 #else
 inline nac
 #endif
@@ -333,6 +337,8 @@ static union _vectnac_u *_zero_nonadd_vector = NULL;
 /** Inline function to calculate the median of two elements. */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -372,6 +378,8 @@ nonadd_make_union_par (const nacat au,
 /** Inline function to calculate the median of two elements. */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -416,6 +424,8 @@ nonadd_make_union (const nacat self,
 /** Inline function to calculate the median of two elements. */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -466,6 +476,8 @@ nonadd_median (const nacat a,
 */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -550,6 +562,8 @@ nonadd_median_3 (const nacat _A,       /** Ancestor */
  * Note: what do we do for the stored unions? */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1052,6 +1066,8 @@ char_nonadd_CAML_median_3_mutate (value vA, value vN, value vD1, value vD2,
 
 #ifdef _WIN32
 __inline long
+#elif __clang__
+long
 #else
 inline long
 #endif

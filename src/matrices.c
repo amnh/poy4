@@ -33,6 +33,8 @@
  */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -52,6 +54,8 @@ mat_size_of_3d_matrix (int w, int d, int h, int k) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -71,6 +75,8 @@ mat_clean_direction_matrix (matricest m) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif

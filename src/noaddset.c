@@ -28,6 +28,8 @@
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -37,6 +39,8 @@ intersection (int a, int b) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -48,6 +52,8 @@ unio (int a, int b) {
  * Toward Defining the course of evolution ... by Walter Finch */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -81,6 +87,8 @@ noaddset_downpass (struct storage ch1, struct storage ch2, struct storage p) {
  *   preliminary_is_final should be called to set its final row = to its prel */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -110,6 +118,8 @@ noaddset_uppass (struct storage ch1, struct storage ch2, struct storage gp, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -122,6 +132,8 @@ noaddset_set_preliminary_as_final (struct storage it) {
 
 #ifdef _WIN32
 __inline struct storage 
+#elif __clang__
+struct storage 
 #else
 inline struct storage 
 #endif

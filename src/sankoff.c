@@ -65,6 +65,8 @@
 /* 3. If a better cost is found, then store it. */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -96,6 +98,8 @@ sankoff_sc_down_pre (const int *ch1, const int *ch2, int *p, \
  */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif

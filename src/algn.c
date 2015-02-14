@@ -87,6 +87,8 @@ DIRECTION_MATRIX *_algn_max_direction = NULL;
 #if ( __GNUC__ && __MMX__ )
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -369,6 +371,8 @@ algn_fill_row (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -455,6 +459,8 @@ algn_fill_row (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -501,6 +507,8 @@ algn_fill_ukk_right_cell (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -542,6 +550,8 @@ algn_fill_ukk_left_cell (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -561,6 +571,8 @@ algn_fill_last_column (int *mm, const int *pm, int tlc, int l, DIRECTION_MATRIX 
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -806,6 +818,8 @@ algn_fill_no_extending (const seqt s1, int *prec, int s1_len, \
 /* Simmilar to the previous but when no barriers are set */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -856,6 +870,8 @@ algn_fill_plane (const seqt s1, int *prec, int s1_len, \
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -866,6 +882,8 @@ choose_other (int *compare, int *a, int *b) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -982,6 +1000,8 @@ algn_fill_plane_2 (const seqt s1, int *prec, int s1_len, int s2_len, int *mm, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -1125,6 +1145,8 @@ algn_fill_row_aff (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -1201,6 +1223,8 @@ algn_fill_ukk_right_cell_aff (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void 
+#elif __clang__
+void 
 #else
 inline void 
 #endif
@@ -1275,6 +1299,8 @@ algn_fill_ukk_left_cell_aff (int *mm, const int *pm, const int *gap_row, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1314,6 +1340,8 @@ algn_fill_last_column_aff (int *mm, const int *pm, int tlc, int tlcprev, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1600,6 +1628,8 @@ algn_fill_no_extending_aff (const seqt s1, int *prec, int s1_len, \
 /* Simmilar to the previous but when no barriers are set */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -1674,6 +1704,8 @@ algn_fill_plane_aff (const seqt s1, int *prec, int s1_len, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1715,6 +1747,8 @@ algn_choose_aff_other (int *next_row, int *mm, int **next_dnmm, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -1724,6 +1758,8 @@ HAS_GAP_EXTENSION (SEQT base, const cmt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -1734,6 +1770,8 @@ HAS_GAP_OPENING (SEQT prev, SEQT curr, int gap, int gap_open) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1759,6 +1797,8 @@ FILL_EXTEND_HORIZONTAL_NOBT (int sj_horizontal_extension, int sj_gap_extension, 
 
 #ifdef _WIN32
 __inline DIRECTION_MATRIX
+#elif __clang__
+DIRECTION_MATRIX
 #else
 inline DIRECTION_MATRIX
 #endif
@@ -1788,6 +1828,8 @@ FILL_EXTEND_HORIZONTAL (int sj_horizontal_extension, int sj_gap_extension, int s
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1807,6 +1849,8 @@ FILL_EXTEND_VERTICAL_NOBT (int si_vertical_extension, int si_gap_extension, int 
 
 #ifdef _WIN32
 __inline DIRECTION_MATRIX
+#elif __clang__
+DIRECTION_MATRIX
 #else
 inline DIRECTION_MATRIX
 #endif
@@ -1831,6 +1875,8 @@ FILL_EXTEND_VERTICAL (int si_vertical_extension, int si_gap_extension, int si_ga
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1855,6 +1901,8 @@ FILL_EXTEND_BLOCK_DIAGONAL_NOBT (SEQT si_base, SEQT sj_base, SEQT si_prev_base,
 
 #ifdef _WIN32
 __inline DIRECTION_MATRIX
+#elif __clang__
+DIRECTION_MATRIX
 #else
 inline DIRECTION_MATRIX
 #endif
@@ -2281,6 +2329,8 @@ ASSIGN_MINIMUM (int *final_cost_matrix, int extend_horizontal, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -2405,6 +2455,8 @@ algn_fill_plane_3_aff_nobt (const seqt si, const seqt sj, int leni, int lenj, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -2682,6 +2734,8 @@ algn_CAML_cost_affine_3 (value si, value sj, value cm, value am) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -2806,6 +2860,8 @@ algn_fill_plane_2_aff (const seqt s1, int *prec, int s1_len, int s2_len, int *mm
 /** Fill parallel must have been called before */
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -2834,6 +2890,8 @@ fill_moved (int s3_len, const int *prev_m, const int *upper_m, \
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -2879,6 +2937,8 @@ fill_parallel (int s3_len, const int *prev_m, const int *upper_m, \
  */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -3064,6 +3124,8 @@ algn_fill_cube (const seqt s1, const seqt s2, const int *prec, \
  * */
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -3240,6 +3302,8 @@ algn_fill_cube_ukk (const seqt s1, const seqt s2, const int *prec, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -3270,6 +3334,8 @@ algn_nw_limit (const seqt s1, const seqt s2, const cmt c, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -3284,6 +3350,8 @@ algn_nw (const seqt s1, const seqt s2, const cmt c, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -3545,6 +3613,8 @@ algn_string_of_2d_direction (DIRECTION_MATRIX v) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -3823,6 +3893,8 @@ algn_string_of_3d_direction (char v) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -4018,6 +4090,8 @@ algn_CAML_align_3d_bc (value *argv, int argn) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -4036,6 +4110,8 @@ algn_get_median_2d_with_gaps (seqt s1, seqt s2, cmt m, seqt sm) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -4120,6 +4196,8 @@ algn_correct_blocks_affine (int gap, seqt s, seqt a, seqt b) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -4154,6 +4232,8 @@ algn_ancestor_2 (seqt s1, seqt s2, cmt m, seqt sm ) {
  */
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif

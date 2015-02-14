@@ -26,6 +26,8 @@
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -35,6 +37,8 @@ seq_get_cap (const seqt a) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -44,6 +48,8 @@ seq_get_len (const seqt a) {
 
 #ifdef _WIN32
 __inline SEQT *
+#elif __clang__
+SEQT *
 #else
 inline SEQT *
 #endif
@@ -53,6 +59,8 @@ seq_get_begin (const seqt a) {
 
 #ifdef _WIN32
 __inline SEQT *
+#elif __clang__
+SEQT *
 #else
 inline SEQT *
 #endif
@@ -62,6 +70,8 @@ seq_get_head (const seqt a) {
 
 #ifdef _WIN32
 __inline SEQT *
+#elif __clang__
+SEQT *
 #else
 inline SEQT *
 #endif
@@ -71,6 +81,8 @@ seq_get_end (const seqt a) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -80,6 +92,8 @@ seq_begin (int cap, int len) {
 
 #ifdef _WIN32
 __inline SEQT *
+#elif __clang__
+SEQT *
 #else
 inline SEQT *
 #endif
@@ -91,6 +105,8 @@ seq_get_ptr (const seqt a, int p) {
     
 #ifdef _WIN32
 __inline SEQT 
+#elif __clang__
+SEQT 
 #else
 inline SEQT 
 #endif
@@ -102,6 +118,8 @@ seq_get (const seqt a, int p) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -122,6 +140,8 @@ seq_set (seqt a, int p, SEQT v) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -141,6 +161,8 @@ seq_reverse_ip (seqt cs) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -154,6 +176,8 @@ seq_prepend (seqt a, SEQT v) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -200,6 +224,8 @@ seq_CAML_free_seq (value v) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif

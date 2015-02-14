@@ -30,6 +30,8 @@
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -44,6 +46,8 @@ ceil_log_2 (int v) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -73,6 +77,8 @@ cm_3d_free (cmt c) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -84,6 +90,8 @@ cm_set_a_sz (cmt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -95,6 +103,8 @@ cm_set_a_sz_3d (cm_3dt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -106,6 +116,8 @@ cm_set_gap (cmt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -117,6 +129,8 @@ cm_set_gap_3d (cm_3dt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -129,6 +143,8 @@ cm_set_affine (cmt c, int do_aff, int go) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -141,6 +157,8 @@ cm_set_affine_3d (cm_3dt c, int do_aff, int go) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -151,6 +169,8 @@ cm_get_lcm (cmt c) {
 
 #ifdef _WIN32
 __inline int 
+#elif __clang__
+int 
 #else
 inline int 
 #endif
@@ -161,6 +181,8 @@ cm_get_lcm_3d (cm_3dt c) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -172,6 +194,8 @@ cm_set_lcm (cmt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -183,6 +207,8 @@ cm_set_lcm_3d (cm_3dt c, int v) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -194,6 +220,8 @@ cm_set_combinations (cmt c) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -205,6 +233,8 @@ cm_set_combinations_3d (cm_3dt c) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -216,6 +246,8 @@ cm_unset_combinations (cmt c) {
 
 #ifdef _WIN32
 static __inline void
+#elif __clang__
+static void
 #else
 static inline void
 #endif
@@ -227,6 +259,8 @@ cm_unset_combinations_3d (cm_3dt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -237,6 +271,8 @@ cm_get_combinations (cmt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -405,6 +441,8 @@ cm_set_val_3d (int a_sz, int combinations, int do_aff, int gap_open, \
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -415,6 +453,8 @@ cm_get_alphabet_size (cmt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -425,6 +465,8 @@ cm_get_alphabet_size_3d (cm_3dt c) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -435,6 +477,8 @@ cm_get_gap (const cmt c) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -445,6 +489,8 @@ cm_get_gap_3d (const cm_3dt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -455,6 +501,8 @@ cm_get_affine_flag (cmt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -465,6 +513,8 @@ cm_get_affine_flag_3d (cm_3dt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -475,6 +525,8 @@ cm_get_gap_opening_parameter (cmt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -485,6 +537,8 @@ cm_get_gap_opening_parameter_3d (const cm_3dt c) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -495,6 +549,8 @@ cm_calc_cost_position (int a, int b, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -505,6 +561,8 @@ cm_calc_cost_position_seqt (SEQT a, SEQT b, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -515,6 +573,8 @@ cm_calc_cost_position_3d_seqt (SEQT a, SEQT b, SEQT c, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -525,6 +585,8 @@ cm_calc_cost_position_3d (int a, int b, int c, int a_sz) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -539,6 +601,8 @@ cm_calc_median (SEQT *tcm, SEQT a, SEQT b, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -553,6 +617,8 @@ cm_calc_cost (int *tcm, SEQT a, SEQT b, int a_sz) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -565,6 +631,8 @@ cm_calc_median_3d (SEQT *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -577,6 +645,8 @@ cm_calc_cost_3d (int *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -589,6 +659,8 @@ cm_calc_cost_3d_seqt (SEQT *tcm, SEQT a, SEQT b, SEQT c, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -598,6 +670,8 @@ cm_calc_tmm (int *tmm, int a, int b, int a_sz) {
 
 #ifdef _WIN32
 __inline int
+#elif __clang__
+int
 #else
 inline int
 #endif
@@ -611,6 +685,8 @@ cm_calc_median_position (SEQT a, SEQT b, int a_sz) {
  */
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -620,6 +696,8 @@ cm_get_transformation_cost_matrix (const cmt a) {
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -629,6 +707,8 @@ cm_get_tail_cost (const cmt a) {
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -638,6 +718,8 @@ cm_get_prepend_cost (const cmt a) {
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -647,6 +729,8 @@ cm_get_transformation_cost_matrix_3d (const cm_3dt a) {
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -658,6 +742,8 @@ cm_get_row (int *tcm, SEQT a, int a_sz) {
 
 #ifdef _WIN32
 __inline int *
+#elif __clang__
+int *
 #else
 inline int *
 #endif
@@ -670,6 +756,8 @@ cm_get_row_3d (int *tcm, SEQT a, SEQT b, int a_sz) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -680,6 +768,8 @@ cm_set_value_seqt (SEQT a, SEQT b, SEQT v, SEQT *p, int a_sz) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -729,6 +819,8 @@ cm_get_precal_row (const int *p, SEQT item, int len) {
 
 #ifdef _WIN32
 __inline const int *
+#elif __clang__
+const int *
 #else
 inline const int *
 #endif
@@ -765,6 +857,8 @@ cm_precalc_4algn_3d (const cm_3dt c, int *to, const seqt s) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -775,6 +869,8 @@ cm_set_value_3d_seqt (SEQT a, SEQT b, SEQT c, SEQT v, SEQT *p, int a_sz) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -785,6 +881,8 @@ cm_set_value_3d (int a, int b, int c, int v, int *p, int a_sz) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -796,6 +894,8 @@ cm_set_cost (int a, int b, int v, cmt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -809,6 +909,8 @@ cm_set_worst (int a, int b, int v, cmt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -819,6 +921,8 @@ cm_set_cost_3d (int a, int b, int cp, int v, cm_3dt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -829,6 +933,8 @@ cm_set_prepend (int a, int b, cmt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -839,6 +945,8 @@ cm_set_tail (int a, int b, cmt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -849,6 +957,8 @@ cm_set_median (SEQT a, SEQT b, SEQT v, cmt c) {
 
 #ifdef _WIN32
 __inline void
+#elif __clang__
+void
 #else
 inline void
 #endif
@@ -1254,6 +1364,8 @@ cm_CAML_get_median_3d (value a, value b, value c, value cm) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
@@ -1263,6 +1375,8 @@ cm_get_median (const cmt tmp, SEQT a, SEQT b) {
 
 #ifdef _WIN32
 __inline SEQT
+#elif __clang__
+SEQT
 #else
 inline SEQT
 #endif
