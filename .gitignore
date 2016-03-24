@@ -1,0 +1,10 @@
+Makefile
+_build/
+_tags
+buildNumber.ml
+compileFlags.ml
+config.h
+config.log
+config.status
+myocamlbuild.ml
+poy.native

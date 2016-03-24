@@ -1222,18 +1222,23 @@ let create_expr () =
                 [ LIDENT "clip" -> `Clip ] |
                 [ LIDENT "noclip" -> `NoClip ]
             ];
+        tcm_arguments:
+            [
+                [ x = INT; ","; y = INT ->
+                    `Gap (int_of_string x, int_of_string y)] |
+                [ x = STRING -> `Tcm x ]
+            ];
         transform_method:
             [
                 [ LIDENT "prealigned" -> `Prealigned_Transform ] |
                 [ LIDENT "randomize_terminals" -> `RandomizedTerminals ] |
                 [ LIDENT "alphabetic_terminals" -> `AlphabeticTerminals ] |
-                [ LIDENT "tcm"; ":";  x = STRING -> `Tcm x ] |
                 [ LIDENT "partitioned"; ":"; x = partitioned_mode -> 
                     `Partitioned x ] | 
                 [ LIDENT "fixed_states" -> `Fixed_States ] |
+                [ LIDENT "tcm"; ":"; left_parenthesis; 
+                         x = tcm_arguments; right_parenthesis -> x ] |
                 [ LIDENT "direct_optimization" -> `Direct_Optimization ] |
-                [ LIDENT "tcm"; ":"; left_parenthesis; x = INT; ","; y = INT; 
-                    right_parenthesis -> `Gap (int_of_string x, int_of_string y) ] |
                 [ LIDENT "gap_opening"; ":"; x = INT -> `AffGap (int_of_string x) ] |
                 [ LIDENT "trailing_deletion"; ":"; x = STRING -> `TailFile x ] |
                 [ LIDENT "td"; ":"; x = STRING -> `TailFile x ] |
